@@ -1,0 +1,59 @@
+{
+  "models": {
+    "codex": {
+      "max_input": 14000,
+      "max_output": 2000
+    },
+    "gpt": {
+      "max_input": 12000,
+      "max_output": 1500
+    },
+    "claude": {
+      "max_input": 6000,
+      "max_output": 400
+    },
+    "copilot": {
+      "max_input": 8000,
+      "max_output": 1000
+    },
+    "gemini": {
+      "max_input": 12000,
+      "max_output": 1200
+    }
+  },
+  "routing_rules": [
+    {
+      "intent": "windows_troubleshooting",
+      "model": "claude",
+      "notes": "Yak-shaving commands; keep short; use claude preset"
+    },
+    {
+      "intent": "multi_file_refactor",
+      "model": "codex"
+    },
+    {
+      "intent": "architecture_change",
+      "model": "codex"
+    },
+    {
+      "intent": "bulk_docs",
+      "model": "copilot"
+    },
+    {
+      "intent": "planning_summary",
+      "model": "gemini"
+    },
+    {
+      "intent": "code_review_critic",
+      "model": "claude"
+    }
+  ],
+  "fallbacks": {
+    "codex": "gpt",
+    "gemini": "gpt",
+    "claude": "gpt",
+    "copilot": "gpt"
+  },
+  "halo_hops": 2,
+  "acceptance_criteria_required": true
+}

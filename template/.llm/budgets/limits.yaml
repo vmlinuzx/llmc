@@ -1,0 +1,27 @@
+budgets:
+  default:
+    input_tokens: 12000
+    output_tokens: 1500
+  claude:
+    input_tokens: 6000
+    output_tokens: 400
+  codex:
+    input_tokens: 14000
+    output_tokens: 2000
+  gpt:
+    input_tokens: 12000
+    output_tokens: 1500
+  copilot:
+    input_tokens: 8000
+    output_tokens: 1000
+  gemini:
+    input_tokens: 12000
+    output_tokens: 1200
+
+guardrails:
+  early_stop_on_schema_violation: true
+  streaming_kill_switch_tokens: 800
+
+defaults:
+  halo_hops: 2
+  contracts_required: true

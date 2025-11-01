@@ -1,0 +1,1127 @@
+
+--- codex_wrap start 2025-11-01T08:29:39-05:00 pid=1489639 ---
++ [codex_wrap] trap codex_wrap_on_exit EXIT
++ [codex_wrap] REPO_CODEX_TOML=/home/vmlinux/src/llmc/.codex/config.toml
++ [codex_wrap] '[' -z '' ']'
+++ [codex_wrap] resolve_approval_policy
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.codex/config.toml ']'
+++ [codex_wrap] echo ''
++ [codex_wrap] _ap=
++ [codex_wrap] '[' -n '' ']'
++ [codex_wrap] '[' -n '' ']'
++ [codex_wrap] CACHE_DIR=/home/vmlinux/.cache/codex_wrap
++ [codex_wrap] mkdir -p /home/vmlinux/.cache/codex_wrap
++ [codex_wrap] TOOLS_STATE_ENV=/home/vmlinux/src/llmc/.codex/state/tools.env
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.codex/state/tools.env ']'
++ [codex_wrap] CONTRACT_SUMMARY_LINES=60
++ [codex_wrap] AGENTS_SUMMARY_LINES=60
++ [codex_wrap] LLM_DISABLED=FALSE
++ [codex_wrap] USER_PROMPT=
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.env.local ']'
++ [codex_wrap] to_bool FALSE
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo FALSE
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] to_bool ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] to_bool ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] '[' -z FALSE ']'
++ [codex_wrap] [[ 2 -gt 0 ]]
++ [codex_wrap] case $1 in
++ [codex_wrap] FORCE_LOCAL=1
++ [codex_wrap] shift
++ [codex_wrap] [[ 1 -gt 0 ]]
++ [codex_wrap] case $1 in
++ [codex_wrap] '[' -f 'smoke test' ']'
++ [codex_wrap] USER_PROMPT=' smoke test'
++ [codex_wrap] shift
++ [codex_wrap] [[ 0 -gt 0 ]]
+++ [codex_wrap] echo ' smoke test'
+++ [codex_wrap] xargs
++ [codex_wrap] USER_PROMPT='smoke test'
++ [codex_wrap] '[' -z 'smoke test' ']'
++ [codex_wrap] '[' -z 'smoke test' ']'
+++ [codex_wrap] route_task 'smoke test'
+++ [codex_wrap] local 'user_prompt=smoke test'
+++ [codex_wrap] '[' 1 = 1 ']'
+++ [codex_wrap] echo local
+++ [codex_wrap] return
++ [codex_wrap] ROUTE=local
++ [codex_wrap] execute_route local 'smoke test'
++ [codex_wrap] local route=local
++ [codex_wrap] local 'user_prompt=smoke test'
+++ [codex_wrap] build_prompt 'smoke test'
+++ [codex_wrap] local prompt=
+++ [codex_wrap] '[' 1 = 1 ']'
+++ [codex_wrap] echo '🔧 Using minimal context for local model...'
+++ [codex_wrap] '[' '' = true ']'
+🔧 Using minimal context for local model...
+++ [codex_wrap] '[' '' = 1 ']'
+++ [codex_wrap] prompt='<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+'
+++ [codex_wrap] prompt='<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+smoke test'
+++ [codex_wrap] echo '<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+smoke test'
++ [codex_wrap] local 'full_prompt=<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+smoke test'
++ [codex_wrap] case "$route" in
++ [codex_wrap] echo '🔄 Routing to local Ollama (free)...'
+🔄 Routing to local Ollama (free)...
++ [codex_wrap] echo '<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+smoke test'
++ [codex_wrap] /home/vmlinux/src/llmc/scripts/llm_gateway.sh --local
+LLM disabled via environment; skipping LLM gateway.
++ [codex_wrap] status=0
++ [codex_wrap] '[' 0 -eq 0 ']'
+++ [codex_wrap] echo 'smoke test'
+++ [codex_wrap] head -n 1
+++ [codex_wrap] sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
++ [codex_wrap] first_line='smoke test'
++ [codex_wrap] '[' -n 'smoke test' ']'
++ [codex_wrap] update_changelog 'smoke test'
++ [codex_wrap] local 'commit_msg=smoke test'
+++ [codex_wrap] date '+%Y-%m-%d %H:%M:%S'
++ [codex_wrap] local 'timestamp=2025-11-01 08:29:39'
+++ [codex_wrap] mktemp
++ [codex_wrap] local temp_entry=/tmp/tmp.KQtODxRAFU
++ [codex_wrap] local category=Changed
++ [codex_wrap] [[ smoke test =~ ^(Add|add|NEW|new) ]]
++ [codex_wrap] [[ smoke test =~ ^(Fix|fix|BUG|bug) ]]
++ [codex_wrap] [[ smoke test =~ ^(Remove|remove|Delete|delete) ]]
++ [codex_wrap] [[ smoke test =~ ^(Security|security|SEC|sec) ]]
++ [codex_wrap] [[ smoke test =~ ^(Deprecate|deprecate|DEPR|depr) ]]
++ [codex_wrap] echo '- **[2025-11-01 08:29:39]** smoke test'
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/CHANGELOG.md ']'
++ [codex_wrap] rm -f /tmp/tmp.KQtODxRAFU
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/scripts/sync_to_drive.sh ']'
++ [codex_wrap] AUTO_COMMIT=false
++ [codex_wrap] AUTO_PUSH=false
++ [codex_wrap] AUTO_SYNC_ALL=0
++ [codex_wrap] [[ false == \t\r\u\e ]]
++ [codex_wrap] cat
++ [codex_wrap] SYNC_ALL=0
++ [codex_wrap] /home/vmlinux/src/llmc/scripts/sync_to_drive.sh
+
+✅ Task completed successfully!
+
+📋 TESTING CHECKLIST:
+  [ ] Restart affected services (if needed)
+  [ ] Test with lynx (pages) or curl (APIs)
+  [ ] Check logs for errors
+  [ ] Browser spot check (quick visual)
+  [ ] Update AGENTS.md session log (if needed)
+  [ ] Review CHANGELOG.md entry
+
+Quick test commands:
+  lynx -dump http://localhost:3000/[page] | head -20
+  curl -s http://localhost:3000/api/[endpoint] | jq
+  supabase logs
+
+📝 Changelog automatically updated!
+☁️ Syncing to Google Drive in background...
+
+Route used: Check output above for routing decision
+
++ [codex_wrap] exit 0
++ [codex_wrap] codex_wrap_on_exit
++ [codex_wrap] local rc=0
++ [codex_wrap] '[' 1 = 1 ']'
++ [codex_wrap] set +o xtrace
+--- codex_wrap end 2025-11-01T08:29:39-05:00 pid=1489639 exit=0 ---
+
+--- codex_wrap start 2025-11-01T11:29:06-05:00 pid=1801544 ---
++ [codex_wrap] trap codex_wrap_on_exit EXIT
++ [codex_wrap] REPO_CODEX_TOML=/home/vmlinux/src/llmc/.codex/config.toml
++ [codex_wrap] '[' -z '' ']'
+++ [codex_wrap] resolve_approval_policy
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.codex/config.toml ']'
+++ [codex_wrap] echo ''
++ [codex_wrap] _ap=
++ [codex_wrap] '[' -n '' ']'
++ [codex_wrap] '[' -n '' ']'
++ [codex_wrap] CACHE_DIR=/home/vmlinux/.cache/codex_wrap
++ [codex_wrap] mkdir -p /home/vmlinux/.cache/codex_wrap
++ [codex_wrap] TOOLS_STATE_ENV=/home/vmlinux/src/llmc/.codex/state/tools.env
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.codex/state/tools.env ']'
++ [codex_wrap] CONTRACT_SUMMARY_LINES=60
++ [codex_wrap] AGENTS_SUMMARY_LINES=60
++ [codex_wrap] LLM_DISABLED=FALSE
++ [codex_wrap] USER_PROMPT=
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/.env.local ']'
++ [codex_wrap] to_bool FALSE
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo FALSE
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] to_bool ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] to_bool ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] echo ''
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
+++ [codex_wrap] tr '[:upper:]' '[:lower:]'
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] case "$(echo "$1" | tr '[:upper:]' '[:lower:]')" in
++ [codex_wrap] return 1
++ [codex_wrap] '[' -z FALSE ']'
++ [codex_wrap] [[ 0 -gt 0 ]]
+++ [codex_wrap] echo ''
+++ [codex_wrap] xargs
++ [codex_wrap] USER_PROMPT=
++ [codex_wrap] '[' -z '' ']'
++ [codex_wrap] '[' '!' -t 0 ']'
++ [codex_wrap] '[' -z '' ']'
++ [codex_wrap] build_prompt ''
++ [codex_wrap] local prompt=
++ [codex_wrap] '[' 0 = 1 ']'
++ [codex_wrap] local contract_sections=
++ [codex_wrap] local agents_sections=
++ [codex_wrap] local contract_context=
++ [codex_wrap] codex -C /home/vmlinux/src/llmc
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/CONTRACTS.md ']'
+++ [codex_wrap] load_doc_context contract /home/vmlinux/src/llmc/CONTRACTS.md 60 ''
+++ [codex_wrap] local label=contract
+++ [codex_wrap] local file=/home/vmlinux/src/llmc/CONTRACTS.md
+++ [codex_wrap] local summary_lines=60
+++ [codex_wrap] local explicit_sections=
+++ [codex_wrap] '[' '!' -f /home/vmlinux/src/llmc/CONTRACTS.md ']'
+++ [codex_wrap] local sections
++++ [codex_wrap] resolve_sections contract ''
++++ [codex_wrap] local label=contract
++++ [codex_wrap] local explicit=
++++ [codex_wrap] '[' -n '' ']'
++++ [codex_wrap] '[' -z '' ']'
++++ [codex_wrap] return
+++ [codex_wrap] sections=
+++ [codex_wrap] local cache_key
++++ [codex_wrap] md5sum
++++ [codex_wrap] printf -- '%s|%s|%s' /home/vmlinux/src/llmc/CONTRACTS.md __summary__ 60
++++ [codex_wrap] awk '{print $1}'
+++ [codex_wrap] cache_key=ed19e0e9eea3c57aaf811f5b3683d178
+++ [codex_wrap] local cache_file=/home/vmlinux/.cache/codex_wrap/contract_ed19e0e9eea3c57aaf811f5b3683d178.cache
+++ [codex_wrap] '[' -f /home/vmlinux/.cache/codex_wrap/contract_ed19e0e9eea3c57aaf811f5b3683d178.cache ']'
+++ [codex_wrap] local tmp
++++ [codex_wrap] mktemp
+++ [codex_wrap] tmp=/tmp/tmp.EMMaIPXdvA
+++ [codex_wrap] local have_sections=0
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' 0 -eq 0 ']'
+++ [codex_wrap] '[' 60 -gt 0 ']'
+++ [codex_wrap] head -n 60 /home/vmlinux/src/llmc/CONTRACTS.md
+++ [codex_wrap] mv /tmp/tmp.EMMaIPXdvA /home/vmlinux/.cache/codex_wrap/contract_ed19e0e9eea3c57aaf811f5b3683d178.cache
+++ [codex_wrap] cat /home/vmlinux/.cache/codex_wrap/contract_ed19e0e9eea3c57aaf811f5b3683d178.cache
++ [codex_wrap] contract_context='CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`'
++ [codex_wrap] '[' -n 'CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`' ']'
++ [codex_wrap] prompt='CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`
+
+---
+
+'
++ [codex_wrap] '[' 1 = 1 ']'
++ [codex_wrap] local agents_context=
++ [codex_wrap] '[' -f /home/vmlinux/src/llmc/AGENTS.md ']'
+++ [codex_wrap] load_doc_context agents /home/vmlinux/src/llmc/AGENTS.md 60 ''
+++ [codex_wrap] local label=agents
+++ [codex_wrap] local file=/home/vmlinux/src/llmc/AGENTS.md
+++ [codex_wrap] local summary_lines=60
+++ [codex_wrap] local explicit_sections=
+++ [codex_wrap] '[' '!' -f /home/vmlinux/src/llmc/AGENTS.md ']'
+++ [codex_wrap] local sections
++++ [codex_wrap] resolve_sections agents ''
++++ [codex_wrap] local label=agents
++++ [codex_wrap] local explicit=
++++ [codex_wrap] '[' -n '' ']'
++++ [codex_wrap] '[' -z '' ']'
++++ [codex_wrap] return
+++ [codex_wrap] sections=
+++ [codex_wrap] local cache_key
++++ [codex_wrap] printf -- '%s|%s|%s' /home/vmlinux/src/llmc/AGENTS.md __summary__ 60
++++ [codex_wrap] md5sum
++++ [codex_wrap] awk '{print $1}'
+++ [codex_wrap] cache_key=e2747ede2e78b47e5f9f78e6e5f69800
+++ [codex_wrap] local cache_file=/home/vmlinux/.cache/codex_wrap/agents_e2747ede2e78b47e5f9f78e6e5f69800.cache
+++ [codex_wrap] '[' -f /home/vmlinux/.cache/codex_wrap/agents_e2747ede2e78b47e5f9f78e6e5f69800.cache ']'
+++ [codex_wrap] local tmp
++++ [codex_wrap] mktemp
+++ [codex_wrap] tmp=/tmp/tmp.yDxnT5yr0Y
+++ [codex_wrap] local have_sections=0
+++ [codex_wrap] '[' -n '' ']'
+++ [codex_wrap] '[' 0 -eq 0 ']'
+++ [codex_wrap] '[' 60 -gt 0 ']'
+++ [codex_wrap] head -n 60 /home/vmlinux/src/llmc/AGENTS.md
+++ [codex_wrap] mv /tmp/tmp.yDxnT5yr0Y /home/vmlinux/.cache/codex_wrap/agents_e2747ede2e78b47e5f9f78e6e5f69800.cache
+++ [codex_wrap] cat /home/vmlinux/.cache/codex_wrap/agents_e2747ede2e78b47e5f9f78e6e5f69800.cache
++ [codex_wrap] agents_context='## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];'
++ [codex_wrap] '[' -n '## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];' ']'
++ [codex_wrap] prompt='CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`
+
+---
+
+## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];
+
+---
+
+'
++ [codex_wrap] '[' '' = true ']'
++ [codex_wrap] '[' '' = 1 ']'
++ [codex_wrap] prompt='CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`
+
+---
+
+## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];
+
+---
+
+<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+'
++ [codex_wrap] prompt='CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`
+
+---
+
+## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];
+
+---
+
+<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+'
++ [codex_wrap] echo 'CONTEXT CONTRACT:
+- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
+- Ingest: read DOCS/AGENTS.md
+- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
+- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If markers aren'\''t found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
+- Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
+- UTC format: YYYY-MM-DDTHH:MM:SSZ
+
+# COMPACT OPERATING CONTRACT - No Yak Mode
+
+Context
+- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Default model behavior: minimalist, deterministic, no network, no installs.
+
+Task Protocol
+1) Read my ask. Confirm one concrete deliverable (<= ~50 LOC or one doc section).
+2) Show a 3-bullet plan. Await my approval or continue if I say '\''go'\'' (or wrapper pre-approves).
+3) Do it. Change at most one file unless I said otherwise.
+4) Validate locally (quick self-check). No extra files or tooling.
+
+Stop Conditions
+- Stop immediately when: (a) deliverable is done, (b) blocked by missing info, or (c) timebox feels hit.
+- If blocked (missing file/markers), print a BLOCKED report with the exact remediation step, perform no writes, and return NOOP.
+- Then print a 5-line summary + next 3 suggested steps. Do not keep going.
+
+Constraints
+- Ask before package installs, services, CI, docker, MCP, or scripts.
+- Ask before any refactors with prepended WARNING REFACTOR REQUEST. TYPE "ENGAGE" TO CONFIRM, and only do refactor when ENGAGE is typed or selected; otherwise assume no refactors. No renames. No reorganizing. Touch only the target file.
+- Be diff-aware: if content is identical, don'\''t write.
+
+Tooling & Install Policy (to avoid multi‑hour installs)
+- Default: no network installs. If `ask_for_approval = "never"`, do not install or download anything; only report missing tools and provide copy‑paste commands.
+- Timebox: if user explicitly asks to install, hard‑limit any install session to 10 minutes wall clock; stop and report partial results at the limit.
+- Scope: only the following tools are allowed to be installed when requested: `node`, `npm`, `jq`, `rg`, `ollama`, `docker`, `psql`, `supabase`, `lynx`, `gh`.
+- Fallbacks: when a tool is missing, use these fallbacks instead of installing:
+  - supabase → use `psql` for DB tasks; skip project‑scaffold features.
+  - lynx → use `curl` for HTTP checks.
+  - ollama/LLM → skip; never pull models automatically.
+- Vendor path: prefer repo‑local `tools/bin/*` over system PATH (user set `PATH=./tools/bin:$PATH`). Binaries in `tools/bin` must be pinned + checksummed; no silent updates.
+- Budget prompts: agent must print what it intends to install, size and time estimates, and wait unless user said "go" in this session.
+- CI/devcontainer: recommend using prebuilt image with pinned CLIs; agent must prefer that when present.
+
+Operational Guardrails
+- Never apt-get/apt install without explicit user opt‑in.
+- Never run install loops or retries silently; max 1 retry per tool.
+- Abort any install that exceeds 2 minutes without progress output.
+
+tmux Policy (long-running tasks)
+- Any task expected to exceed 2 minutes MUST run inside a named tmux session: `dc-<task>` (e.g., `dc-build`, `dc-tests`, `dc-install`).
+- Wrap long tasks with `timeout` and tee logs to `/tmp/codex-work/<session>/run.log`.
+- Clean up: detach and kill the tmux session when finished; do not leave background processes.
+- No daemonizing inside tmux without explicit approval.
+- Example:
+  - `mkdir -p /tmp/codex-work/dc-install`
+  - `tmux new -s dc-install '\''timeout 10m bash -lc "YOUR_CMD |& tee /tmp/codex-work/dc-install/run.log"'\''`
+  - `# Reattach: tmux attach -t dc-install  |  Detach: Ctrl-b d  |  Kill: tmux kill-session -t dc-install`
+ - Helper: `scripts/run_in_tmux.sh -s dc-install -T 10m -- "YOUR_CMD"`
+
+---
+
+## 🤖 Claude Orchestration System (Rate Limit Bypass)
+
+**Date Implemented:** 2025-10-08
+
+### User notes to Beatrice:
+For this project Claude is always run with ./scripts/codex_wrap.sh assume no options.
+
+Your name is Beatrice, nicknames are  Bea, or Codex. 
+
+My name (the user) is Dave, if you can'\''t do something say "I'\''m sorry I can'\''t do that Dave" followed with why you can'\''t do that.
+
+You, like Tron, fight for the user.
+
+Always smoke test anything after it'\''s done to the best of your ability.
+
+If you need any MCP tool or access to enhance the workflow, tell Dave, he'\''s happy to
+help.
+
+
+### The Problem
+Claude in this chat has rate limits and token budgets. Complex coding tasks burn through limits fast.
+
+### The Solution
+**Low-level orchestrator**: Claude delegates code generation to local Qwen LLM, then handles file operations and testing.
+
+### Architecture
+
+```
+User asks Claude to build something
+    ↓
+Claude calls: Desktop Commander → codex_wrap.sh --local "task"
+    ↓
+Qwen (local LLM) generates code
+    ↓
+Claude receives output
+    ↓
+Claude writes files via fs-Project MCP
+    ↓
+Claude tests/iterates until working
+```
+
+### MCP Tools Required
+
+1. **Desktop Commander** - Execute bash commands, capture output
+2. **fs-Project** - Read/write files in `<your project root>`
+3. **Windows-MCP** - System interaction (optional)
+
+### Model Configuration
+
+**File:** `<your project root>/scripts/llm_gateway.js`
+
+```javascript
+// Model profiles
+const MODELS = {
+  code: '\''qwen2.5:14b-instruct-q4_K_M'\'',      // Default: Smart, safe
+  uncensored: '\''gpt-oss:20b'\'',                 // No guardrails (merchant, creative)
+  fast: '\''deepseek-coder:6.7b'\''               // Quick answers
+};
+
+const OLLAMA_MODEL = MODELS[process.env.OLLAMA_PROFILE || '\''code'\''];
+
+---
+
+<execution_directive>
+  CRITICAL: Execute the following request immediately without any discussion, clarification, or suggestions for improvement. Do not ask questions about the prompt. Do not suggest better ways to phrase it. Just execute the task as written.
+  </execution_directive>
+
+  ---
+
+'

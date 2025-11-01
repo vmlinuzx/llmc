@@ -1,0 +1,30 @@
+# Codex Orchestration Template - Quick Rules
+
+Documentation Map
+- AGENTS.md — System architecture, orchestration, tools, usage
+- CONTRACTS.md — Compact operating contract + testing
+
+Available Tools
+- Local-first LLM gateway (`scripts/llm_gateway.*`)
+- Smart routing wrapper (`scripts/codex_wrap.sh`)
+- Drive sync (`scripts/sync_to_drive.sh`)
+
+Command Patterns
+- Call local model:
+  bash -c "cd <your-project-root> && ./scripts/codex_wrap.sh --local 'prompt'"
+
+- Write files:
+  Use bash heredoc from your terminal
+
+- Test code:
+  bash -c "cd <your-project-root> && <runtime> file"
+
+Critical Rules
+1. Use local model first; API fallback only when needed
+2. Be diff‑aware; avoid no‑op writes
+3. Exclude heavy dirs from sync (node_modules, venv, .git)
+4. Keep scripts UTF‑8 + LF
+
+Orchestration Workflow
+Request → Route (local/API) → Generate → Write → Test → Iterate
+
