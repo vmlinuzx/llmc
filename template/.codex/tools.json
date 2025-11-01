@@ -1,0 +1,23 @@
+{
+  "cli_tools": [
+    {"id": "rg", "name": "ripgrep", "verify": ["rg --version"], "min_version": "13", "capabilities": ["search"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+|[0-9]+)"},
+    {"id": "fd", "name": "fd", "verify": ["fd --version", "fdfind --version"], "min_version": "8", "capabilities": ["list"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+|[0-9]+)"},
+    {"id": "jq", "name": "jq", "verify": ["jq --version"], "min_version": "1.6", "capabilities": ["json"], "version_pattern": "([0-9]+\\.[0-9]+)"},
+    {"id": "yq", "name": "yq", "verify": ["yq --version"], "min_version": "4", "capabilities": ["yaml"], "version_pattern": "([0-9]+\\.[0-9]+)"},
+    {"id": "node", "name": "node", "verify": ["node -v"], "min_version": "18", "capabilities": ["node"], "version_pattern": "v?([0-9]+\\.[0-9]+\\.[0-9]+)"},
+    {"id": "playwright", "name": "playwright", "verify": ["npx --yes playwright --version"], "min_version": "1.40", "capabilities": ["headless_browser"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+)"},
+    {"id": "lighthouse", "name": "lighthouse", "verify": ["lighthouse --version"], "min_version": "4", "capabilities": ["perf_audit"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+|[0-9]+\\.[0-9]+)"},
+    {"id": "axe", "name": "axe", "verify": ["axe --version", "npx --yes @axe-core/cli --version"], "min_version": "4", "capabilities": ["a11y_scan"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+)"},
+    {"id": "mitmproxy", "name": "mitmproxy", "verify": ["mitmproxy --version"], "min_version": "8", "capabilities": ["http_proxy"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+)"},
+    {"id": "ollama", "name": "ollama", "verify": ["ollama --version"], "min_version": "0.1", "capabilities": ["ollama"], "version_pattern": "([0-9]+\\.[0-9]+\\.[0-9]+)"}
+  ],
+  "mcp_servers": [
+    {"id": "desktop-commander", "capabilities": ["bash_exec", "proc_io"]},
+    {"id": "fs-project", "capabilities": ["fs_rw"]}
+  ],
+  "models": [
+    {"id": "ollama", "profile_env": "OLLAMA_PROFILE", "default_profile": "code", "profiles": {"code": "qwen2.5:14b-instruct-q4_K_M", "uncensored": "gpt-oss:20b", "fast": "deepseek-coder:6.7b"}},
+    {"id": "gemini", "env_key": "GEMINI_API_KEY"}
+  ]
+}
+

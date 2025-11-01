@@ -1,0 +1,17 @@
+[defaults]
+# Model to use for this project
+model = "gpt-5-codex"
+
+# Codex CLI expects underscore naming and string values here
+# Possible sandbox values: read-only | workspace-write | danger-full-access
+sandbox = "danger-full-access"
+
+# Possible values: untrusted | on-failure | on-request | never
+ask_for_approval = "never"
+
+[logging]
+level = "info"
+log_to_file = true
+# Keep logs inside the repo for per-project visibility
+log_file = ".codex/codex.log"
+
