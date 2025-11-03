@@ -18,5 +18,6 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - Phase 1 focuses on solidifying the local orchestration shell and smoke-test workflows.
 - Phase 2 will experiment with agent orchestration layers and TUI-first project templates.
 - Phase 3 targets RAG/MCP integrations plus a web-based command surface once the foundations are stable.
+- Ongoing: expand testing to additional real-world repos (e.g., Supabase-style web apps, data-heavy services) to benchmark enrichment, embeddings, and the planner pipeline end-to-end.
 
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
