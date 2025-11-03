@@ -146,7 +146,8 @@ def paths() -> None:
 @click.option("--limit", default=10, show_default=True, help="Maximum spans to include in the plan.")
 @click.option("--dry-run/--execute", default=True, show_default=True, help="Preview work items instead of running the LLM.")
 @click.option("--model", default="local-qwen", show_default=True, help="Model identifier to record with enrichment results.")
-def enrich(limit: int, dry_run: bool, model: str) -> None:
+@click.option("--cooldown", default=0, show_default=True, type=int, help="Skip spans whose files changed within the last N seconds.")
+def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
     """Preview or execute enrichment tasks (summary/tags) for spans."""
     repo_root = _find_repo_root()
     db_file = _db_path(repo_root)
@@ -156,7 +157,7 @@ def enrich(limit: int, dry_run: bool, model: str) -> None:
     db = Database(db_file)
     try:
         if dry_run:
-            plan = enrichment_plan(db, repo_root, limit=limit)
+            plan = enrichment_plan(db, repo_root, limit=limit, cooldown_seconds=cooldown)
             if not plan:
                 click.echo("No spans pending enrichment.")
                 return
@@ -165,7 +166,7 @@ def enrich(limit: int, dry_run: bool, model: str) -> None:
             return
 
         llm = default_enrichment_callable(model)
-        successes, errors = execute_enrichment(db, repo_root, llm, limit=limit, model=model)
+        successes, errors = execute_enrichment(db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown)
     finally:
         db.close()
 

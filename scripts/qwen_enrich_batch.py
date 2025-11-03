@@ -68,6 +68,12 @@ def parse_args() -> argparse.Namespace:
         help="Optional delay (seconds) between spans.",
     )
     parser.add_argument(
+        "--cooldown",
+        type=int,
+        default=0,
+        help="Skip spans whose source file changed within the last N seconds (default: 0).",
+    )
+    parser.add_argument(
         "--retries",
         type=int,
         default=3,
@@ -281,6 +287,8 @@ def append_metrics(log_path: Path, metrics: dict) -> None:
 def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
+    if args.cooldown:
+        print(f"Cooldown: skipping spans modified within last {args.cooldown}s", file=sys.stderr)
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
 
     db_file = repo_root / ".rag" / "index.db"
@@ -292,7 +300,7 @@ def main() -> int:
             if remaining is not None and remaining <= 0:
                 break
             this_batch = args.batch_size if remaining is None else min(args.batch_size, remaining)
-            plan = enrichment_plan(db, repo_root, limit=this_batch)
+            plan = enrichment_plan(db, repo_root, limit=this_batch, cooldown_seconds=args.cooldown)
             if not plan:
                 print("No more spans pending enrichment.")
                 break
