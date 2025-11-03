@@ -14,6 +14,10 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 3. Dry-run the local model pipeline: `./scripts/codex_wrap.sh --local "write hello world in python"`.
 4. Package a context snapshot when needed: `python tools/create_context_zip.py` (drops the zip in `~/src`).
 
+## Batch Enrichment Tips
+- Use `python scripts/qwen_enrich_batch.py --cooldown 600` (or the `rag enrich --cooldown 600` CLI) to skip spans touched in the last 10 minutes before re-enriching.
+- Cooldowns prevent thrashing while you iterate on a file; once the window expires, the span re-enters the queue automatically.
+
 ## Roadmap Notes
 - Phase 1 focuses on solidifying the local orchestration shell and smoke-test workflows.
 - Phase 2 will experiment with agent orchestration layers and TUI-first project templates.
