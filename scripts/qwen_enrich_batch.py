@@ -20,6 +20,21 @@ from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
 
 EST_TOKENS_PER_SPAN = 350  # keep in sync with tools.rag.cli
+GATEWAY_DEFAULT_TIMEOUT = 300.0
+
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def env_flag(name: str, env: dict[str, str] | None = None) -> bool:
+    env = env or os.environ
+    raw = env.get(name, "").strip().lower()
+    return raw in _TRUTHY
+
+
+def azure_env_available(env: dict[str, str] | None = None) -> bool:
+    env = env or os.environ
+    required = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_KEY", "AZURE_OPENAI_DEPLOYMENT"]
+    return all(env.get(key) for key in required)
 
 
 def parse_args() -> argparse.Namespace:
@@ -95,6 +110,34 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Print prompts and responses for debugging.",
     )
+    parser.add_argument(
+        "--backend",
+        choices=["auto", "ollama", "gateway"],
+        default="auto",
+        help="LLM backend to use (default: auto-detect based on environment).",
+    )
+    parser.add_argument(
+        "--api",
+        action="store_true",
+        help="Shortcut for --backend gateway (prefer API/gateway backend).",
+    )
+    parser.add_argument(
+        "--local",
+        action="store_true",
+        help="Shortcut for --backend ollama (force local Ollama backend).",
+    )
+    parser.add_argument(
+        "--gateway-path",
+        type=Path,
+        default=REPO_ROOT / "scripts" / "llm_gateway.js",
+        help="Path to llm_gateway.js for API-backed calls.",
+    )
+    parser.add_argument(
+        "--gateway-timeout",
+        type=float,
+        default=300.0,
+        help="Timeout (seconds) for gateway-backed completions (default: 300).",
+    )
     return parser.parse_args()
 
 
@@ -150,7 +193,7 @@ Deliverable: ONLY the JSON object."""
     return prompt
 
 
-def call_qwen(
+def call_via_ollama(
     prompt: str,
     repo_root: Path,
     verbose: bool = False,
@@ -216,6 +259,108 @@ def call_qwen(
             time.sleep(max(0.0, retry_wait))
     assert last_error is not None
     raise last_error
+
+
+def call_via_gateway(
+    prompt: str,
+    repo_root: Path,
+    gateway_path: Path,
+    timeout: float = GATEWAY_DEFAULT_TIMEOUT,
+    verbose: bool = False,
+) -> str:
+    if not gateway_path.exists():
+        raise FileNotFoundError(f"llm gateway not found at {gateway_path}")
+
+    env = os.environ.copy()
+    # Ensure LLM is not disabled when delegating to the gateway.
+    env.setdefault("LLM_DISABLED", "false")
+    env.setdefault("NEXT_PUBLIC_LLM_DISABLED", "false")
+
+    args = ["node", str(gateway_path), "--api"]
+    if verbose:
+        args.append("--debug")
+
+    proc = subprocess.run(
+        args,
+        input=prompt,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=str(repo_root),
+        env=env,
+        timeout=timeout,
+    )
+
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"llm gateway failed (exit {proc.returncode}): {proc.stderr.strip() or 'no stderr'}"
+        )
+    output = proc.stdout.strip()
+    if not output:
+        raise RuntimeError("llm gateway returned empty output")
+    return output
+
+
+def call_qwen(
+    prompt: str,
+    repo_root: Path,
+    *,
+    backend: str = "auto",
+    verbose: bool = False,
+    retries: int = 3,
+    retry_wait: float = 2.0,
+    poll_wait: float = 1.5,
+    gateway_path: Path | None = None,
+    gateway_timeout: float = GATEWAY_DEFAULT_TIMEOUT,
+) -> str:
+    backend = backend or "auto"
+    backend = backend.lower()
+    env = os.environ
+    prefer_gateway = (
+        backend == "gateway"
+        or (
+            backend == "auto"
+            and (
+                azure_env_available(env)
+                or env_flag("LLM_GATEWAY_DISABLE_LOCAL", env)
+                or env_flag("LLM_GATEWAY_FORCE_GATEWAY", env)
+            )
+        )
+    )
+
+    errors: list[Exception] = []
+    if prefer_gateway:
+        if gateway_path is None:
+            gateway_path = REPO_ROOT / "scripts" / "llm_gateway.js"
+        try:
+            return call_via_gateway(
+                prompt,
+                repo_root,
+                gateway_path=gateway_path,
+                timeout=gateway_timeout,
+                verbose=verbose,
+            )
+        except Exception as exc:
+            errors.append(exc)
+            if backend == "gateway":
+                raise
+            # Fall through to ollama attempt.
+
+    try:
+        return call_via_ollama(
+            prompt,
+            repo_root,
+            verbose=verbose,
+            retries=retries,
+            retry_wait=retry_wait,
+            poll_wait=poll_wait,
+        )
+    except Exception as exc:
+        errors.append(exc)
+        if errors:
+            msgs = "; ".join(str(e) for e in errors)
+            raise RuntimeError(msgs) from exc
+        raise
 
 
 def extract_json(text: str) -> dict:
@@ -287,6 +432,15 @@ def append_metrics(log_path: Path, metrics: dict) -> None:
 def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
+    backend = args.backend
+    if args.api:
+        backend = "gateway"
+    elif args.local:
+        backend = "ollama"
+
+    if args.verbose:
+        print(f"Backend selection: {backend}", file=sys.stderr)
+
     if args.cooldown:
         print(f"Cooldown: skipping spans modified within last {args.cooldown}s", file=sys.stderr)
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
@@ -316,9 +470,13 @@ def main() -> int:
                     stdout = call_qwen(
                         prompt,
                         repo_root,
+                        backend=backend,
                         verbose=args.verbose,
                         retries=args.retries,
                         retry_wait=args.retry_wait,
+                        poll_wait=1.5,
+                        gateway_path=args.gateway_path,
+                        gateway_timeout=args.gateway_timeout,
                     )
                 except RuntimeError as exc:
                     print(

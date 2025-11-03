@@ -1,9 +1,9 @@
 CONTEXT CONTRACT:
-- Environment: Linux. Canonical repo = /home/$USER/src/glideclubs
-- Ingest: read DOCS/AGENTS.md
-- Write: modify ONLY between <!-- AGENT_DEFS:START --> and <!-- AGENT_DEFS:END -->; also update the list under <!-- AGENTS:START -->.
-- If DOCS/AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
-- If markers aren't found: insert <!-- AGENT_DEFS:START/END --> at file end and stop.
+- Environment: Linux. Canonical repo = /home/$USER/src/llmc
+- Ingest: read AGENTS.md
+- Write: follow instructions in AGENTS.md; avoid editing outside requested sections.
+- If AGENTS.md is missing: create a minimal scaffold and stop (no other edits).
+- If required markers aren't found: add them to AGENTS.md and stop after confirming with Dave.
 - Log: attempt to call agent-memory to record a project memory (file path + short summary). If unavailable, emit a local log line instead; never fail the run due to logging.
 - Output: return a unified diff of AGENTS.md and the memory ID. Do not propose moving paths or using /mnt/c.
 - UTC format: YYYY-MM-DDTHH:MM:SSZ
@@ -11,7 +11,7 @@ CONTEXT CONTRACT:
 # COMPACT OPERATING CONTRACT - No Yak Mode
 
 Context
-- Repo: /home/$USER/src/glideclubs. Stay in repo.
+- Repo: /home/$USER/src/llmc. Stay in repo.
 - Default model behavior: minimalist, deterministic, no network, no installs.
 
 Task Protocol

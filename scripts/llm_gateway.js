@@ -64,6 +64,21 @@ const OLLAMA_MODEL = hasModelOverride ? requestedModelOverride : MODELS[resolved
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const AZURE_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
+const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
+const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || '';
+const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview';
+const AZURE_AVAILABLE = Boolean(AZURE_ENDPOINT && AZURE_KEY && AZURE_DEPLOYMENT);
+const AZURE_FORCE_COMPLETION = envFlag('AZURE_OPENAI_FORCE_COMPLETION') || /gpt-5/i.test(AZURE_DEPLOYMENT);
+const AZURE_MAX_TOKENS = Number.parseInt(process.env.AZURE_OPENAI_MAX_TOKENS || '1024', 10);
+const AZURE_TEMPERATURE_RAW = process.env.AZURE_OPENAI_TEMPERATURE;
+const AZURE_TEMPERATURE = (() => {
+  if (AZURE_TEMPERATURE_RAW === undefined || AZURE_TEMPERATURE_RAW === '') {
+    return AZURE_FORCE_COMPLETION ? null : 0;
+  }
+  const parsed = Number(AZURE_TEMPERATURE_RAW);
+  return Number.isFinite(parsed) ? parsed : null;
+})();
 const BASH_EXECUTABLE = resolveBashExecutable();
 
 // Parse args
@@ -126,6 +141,7 @@ async function main() {
       : (localDisabledByEnv ? 'local disabled via env' : null);
     const canUseLocal = !skipLocalReason;
     const allowFallback = canUseLocal && !forceLocal && !apiDisabledByEnv;
+    const fallbackLabel = AZURE_AVAILABLE ? 'Azure' : 'Gemini';
 
     if (canUseLocal) {
       const routingDetails = [
@@ -139,7 +155,7 @@ async function main() {
         routingDetails.push('forced via --local');
       }
       if (allowFallback) {
-        routingDetails.push('fallback=Gemini');
+        routingDetails.push(`fallback=${fallbackLabel}`);
       }
       console.error(`routing=Local (${routingDetails.join(', ')})`);
 
@@ -163,16 +179,24 @@ async function main() {
       if (localDisabledByEnv) reasons.push('local disabled via env');
       if (!reasons.length) reasons.push('local unavailable');
       if (apiDisabledByEnv) reasons.push('API disabled via env');
-      console.error(`routing=Gemini (${reasons.join('; ')})`);
+      const apiTarget = AZURE_AVAILABLE ? 'Azure' : 'Gemini';
+      console.error(`routing=${apiTarget} (${reasons.join('; ')})`);
       if (apiDisabledByEnv) {
         throw new Error('Gemini usage disabled via LLM_GATEWAY_DISABLE_API=1');
       }
     }
 
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY not set. Set it in .env or export it.');
+    if (AZURE_AVAILABLE) {
+      response = await azureComplete(prompt);
+      console.error('✅ Azure API succeeded');
+      console.log(response);
+      return;
     }
-    
+
+    if (!GEMINI_API_KEY) {
+      throw new Error('No API backend configured. Provide Azure or Gemini credentials.');
+    }
+
     response = await geminiComplete(prompt);
     console.error('✅ API succeeded');
     console.log(response);
@@ -181,6 +205,97 @@ async function main() {
     console.error('❌ Error:', error.message);
     process.exit(1);
   }
+}
+
+async function azureComplete(prompt) {
+  const url = new URL(`${AZURE_ENDPOINT}/openai/deployments/${AZURE_DEPLOYMENT}/chat/completions`);
+  url.searchParams.set('api-version', AZURE_API_VERSION);
+
+  const payload = {
+    messages: [
+      { role: 'system', content: 'You are a helpful AI assistant. Always provide complete, substantive responses in JSON format. Wrap your JSON output in ```json``` code blocks if needed for clarity.' },
+      { role: 'user', content: prompt }
+    ]
+    // Removed response_format for GPT-5 reasoning models - let it output naturally
+  };
+
+  // For GPT-5 reasoning models, use much higher token limits (reasoning tokens + output tokens)
+  const maxTokens = Number.isFinite(AZURE_MAX_TOKENS) && AZURE_MAX_TOKENS > 0 ? AZURE_MAX_TOKENS : 8192;
+  if (AZURE_FORCE_COMPLETION) {
+    payload.max_completion_tokens = maxTokens;
+  } else {
+    payload.max_tokens = maxTokens;
+  }
+
+  if (AZURE_TEMPERATURE !== null) {
+    payload.temperature = AZURE_TEMPERATURE;
+  }
+
+  const body = JSON.stringify(payload);
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': AZURE_KEY,
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, res => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode && res.statusCode >= 400) {
+          return reject(new Error(`Azure API error ${res.statusCode}: ${data}`));
+        }
+        try {
+          const parsed = JSON.parse(data);
+          debugLog('Azure response:', JSON.stringify(parsed, null, 2));
+          
+          const choice = parsed.choices && parsed.choices[0];
+          let content = choice && choice.message && choice.message.content;
+          
+          // Handle empty content from reasoning models
+          if (!content || content.trim() === '') {
+            const reasoning = choice && choice.message && choice.message.reasoning;
+            if (reasoning && reasoning.trim()) {
+              debugLog('Content empty but reasoning present, attempting to extract JSON from reasoning');
+              content = reasoning;
+            } else {
+              const usage = parsed.usage || {};
+              const finishReason = choice && choice.finish_reason;
+              return reject(new Error(
+                `Azure API returned empty content. finish_reason=${finishReason}, ` +
+                `reasoning_tokens=${usage.completion_tokens_details?.reasoning_tokens || 0}, ` +
+                `completion_tokens=${usage.completion_tokens || 0}, ` +
+                `Usage: ${JSON.stringify(usage)}`
+              ));
+            }
+          }
+          
+          // Extract JSON from markdown code blocks if present
+          let extracted = content.trim();
+          const jsonBlockMatch = extracted.match(/```json\s*\n([\s\S]*?)\n```/);
+          if (jsonBlockMatch) {
+            extracted = jsonBlockMatch[1].trim();
+          } else {
+            // Try to find JSON object in the text
+            const jsonMatch = extracted.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              extracted = jsonMatch[0];
+            }
+          }
+          
+          resolve(extracted);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 async function ollamaComplete(prompt) {

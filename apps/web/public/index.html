@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>LLMC Template Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      display: flex;
+      min-height: 100vh;
+      background: #0f172a;
+      color: #f1f5f9;
+    }
+    main {
+      margin: auto;
+      padding: 2.5rem 3rem;
+      max-width: 640px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.75);
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    fieldset {
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    legend {
+      font-weight: 600;
+      padding: 0 0.5rem;
+    }
+    label {
+      display: block;
+      padding: 0.75rem 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    label:hover {
+      background: rgba(59, 130, 246, 0.1);
+    }
+    input[type="radio"] {
+      margin-right: 0.75rem;
+    }
+    p.description {
+      margin: 0.25rem 0 0 2.25rem;
+      font-size: 0.9rem;
+      color: #cbd5f5;
+    }
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      color: #0f172a;
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 30px -10px rgba(37, 99, 235, 0.75);
+    }
+    footer {
+      text-align: center;
+      font-size: 0.85rem;
+      color: rgba(148, 163, 184, 0.85);
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Commodore Grace&#39;s Kit Builder</h1>
+    <p>Select how Codex should run, then download a ready-to-go copy of the template workspace.</p>
+    <form method="POST" action="/generate">
+      <fieldset>
+        <legend>Codex Route</legend>
+        <label>
+          <input type="radio" name="route" value="local" checked />
+          Local &ndash; Use Qwen 14B via Ollama (fast, offline)
+          <p class="description">Minimal context, great for quick single-file fixes when you don&#39;t need the big guns.</p>
+        </label>
+        <label>
+          <input type="radio" name="route" value="api" />
+          API &ndash; Gemini (cost-effective cloud assist)
+          <p class="description">Balanced context and cost; good for medium tasks or when local models are disabled.</p>
+        </label>
+        <label>
+          <input type="radio" name="route" value="codex" />
+          Codex &ndash; Premium orchestration
+          <p class="description">Best quality with full routing. Choose this when scope is fuzzy or mission-critical.</p>
+        </label>
+      </fieldset>
+      <button type="submit">Download Template Zip</button>
+    </form>
+    <footer>
+      <p>Powered by Commodore Grace. She isn&#39;t scared of the danger &mdash; she <strong>is</strong> the danger.</p>
+    </footer>
+  </main>
+</body>
+</html>
