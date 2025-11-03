@@ -20,5 +20,15 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - Phase 3 targets RAG/MCP integrations plus a web-based command surface once the foundations are stable.
 - Ongoing: expand testing to additional real-world repos (e.g., Supabase-style web apps, data-heavy services) to benchmark enrichment, embeddings, and the planner pipeline end-to-end.
 - Upcoming: build a zip-ready "LLMC Toolkit" template (enrichment + planner + embedding wiring, safety rails, verification) for drop-in use across Claude/Gemini/Codex projects.
+- Local query planner: use lightweight model to turn asks into {symbols, files, functions, intents} before retrieval (cuts shotgun pulls by 50–90%).
+- Symbol map over raw code via ctags/tree-sitter to answer many "where/how" questions from signatures without loading bodies.
+- Evidence packs only: fetch enrichment-cited line ranges (+/- 5 lines) instead of whole files.
+- Local re-ranker (cosine/BM25 hybrid) to prune to top 3–5 spans before any paid LLM call.
+- Delta-aware updates so only changed spans re-enrich; answer "what changed" from diffs.
+- Memoize QA by span hash so repeat queries short-circuit with freshness checks.
+- Prefer docstrings/enrichment cards over raw code; fall back to source only when cards flag pitfalls/side-effects.
+- Local doc compressor: pre-bullet README/ADR/issues with IDs and retrieve bullets first.
+- Tool-first answers: use deterministic helpers (AST/query eval) for config/JSON/SQL/regex before LLM.
+- Strict prompt hygiene: single short system prompt and minimal JIT few-shot; trim boilerplate in every call.
 
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
