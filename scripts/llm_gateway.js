@@ -208,9 +208,21 @@ function ollamaCompleteInternal(prompt) {
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
         try {
-          const json = JSON.parse(body);
-          if (json.response) {
-            resolve(json.response);
+          let combined = '';
+          let done = false;
+          for (const line of body.split(/\r?\n/)) {
+            if (!line.trim()) continue;
+            const json = JSON.parse(line);
+            if (typeof json.response === 'string') {
+              combined += json.response;
+            }
+            if (json.done) {
+              done = true;
+              break;
+            }
+          }
+          if (done && combined.trim().length > 0) {
+            resolve(combined);
           } else {
             reject(new Error('No response from Ollama'));
           }
