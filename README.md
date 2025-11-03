@@ -42,3 +42,6 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - Onboarding upgrades: interactive `llmc init` wizard and `llmc doctor` dependency checker to streamline adoption.
 
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
+
+
+See `DOCS/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner).
