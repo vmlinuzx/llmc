@@ -318,7 +318,22 @@ def main() -> int:
                         file=sys.stderr,
                     )
                     continue
-                result = extract_json(stdout)
+                try:
+                    result = extract_json(stdout)
+                except ValueError as exc:
+                    log_dir = repo_root / "logs" / "failed_enrichments"
+                    log_dir.mkdir(parents=True, exist_ok=True)
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                    log_path = log_dir / f"{item['span_hash']}_{timestamp}.json"
+                    try:
+                        log_path.write_text(stdout, encoding="utf-8")
+                    except OSError:
+                        pass
+                    print(
+                        f"JSON parsing failed for {item['span_hash']} ({item['path']}:{item['lines']}): {exc}. Raw output saved to {log_path}",
+                        file=sys.stderr,
+                    )
+                    continue
                 normalize_evidence(result, item["lines"][0], item["lines"][1])
                 ok, errors = validate_enrichment(
                     result, item["lines"][0], item["lines"][1]
