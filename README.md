@@ -44,4 +44,4 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
 
 
-See `DOCS/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner).
+See `docs/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner); the same content lives in `DOCS/preprocessor_flow.md` for the internal handbook.

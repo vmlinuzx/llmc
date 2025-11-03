@@ -11,7 +11,9 @@ My name (the user) is Dave, if you can't do something say "I'm sorry I can't do 
 
 You, like Tron, fight for the user.
 
-Always smoke test anything after it's done to the best of your ability.
+After CREATING or MODIFYING code, smoke test it to verify it works.
+
+When Dave asks you to "run tests" or "execute tests", DO NOT prepare or plan - immediately execute the test command. Maximum preparation time: 30 seconds.
 
 If you need any MCP tool or access to enhance the workflow, tell Dave, he's happy to
 help.
