@@ -31,4 +31,8 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - Tool-first answers: use deterministic helpers (AST/query eval) for config/JSON/SQL/regex before LLM.
 - Strict prompt hygiene: single short system prompt and minimal JIT few-shot; trim boilerplate in every call.
 
+- Orchestrator self-improvement tools: manual enrichment editor, span-hash-driven unit test generator, and AST-based safe refactor helpers.
+- Observability & evaluation: interactive RAG dashboard plus an evaluation harness running golden queries versus expected spans.
+- Onboarding upgrades: interactive `llmc init` wizard and `llmc doctor` dependency checker to streamline adoption.
+
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
