@@ -24,6 +24,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 - Lookup happens automatically in `codex_wrap.sh`, `claude_wrap.sh`, and `gemini_wrap.sh` before any LLM call. Misses are stored after a successful completion.
 - Inspect / manage from the CLI:
   - `python -m tools.cache.cli stats`
+  - `python -m tools.cache.cli list --route codex --limit 5`
   - `python -m tools.cache.cli lookup --route codex --prompt-file prompt.txt`
 - Configuration knobs:
   - `SEMANTIC_CACHE_DISABLED=1` to turn it off.
