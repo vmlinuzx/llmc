@@ -33,6 +33,7 @@ from router import (
     expected_output_tokens,
 )
 
+from tools.rag.config import index_path_for_write
 from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
 
@@ -599,7 +600,7 @@ def main() -> int:
     ledger_path = repo_root / "logs" / "run_ledger.log"
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
 
-    db_file = repo_root / ".rag" / "index.db"
+    db_file = index_path_for_write(repo_root)
     db = Database(db_file)
     processed = 0
     try:
