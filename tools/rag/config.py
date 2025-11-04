@@ -12,6 +12,11 @@ DEFAULT_MODEL = "intfloat/e5-base-v2"
 DEFAULT_MODEL_DIM = 768
 DEFAULT_PASSAGE_PREFIX = "passage: "
 DEFAULT_QUERY_PREFIX = "query: "
+DEFAULT_DEVICE_PREF = "auto"
+DEFAULT_GPU_WAIT = True
+DEFAULT_GPU_MIN_FREE_MB = 1536  # ~1.5 GiB
+DEFAULT_GPU_MAX_RETRIES = 10
+DEFAULT_GPU_RETRY_SECONDS = 30
 
 
 def _to_path(repo_root: Path, value: str) -> Path:
@@ -112,3 +117,34 @@ def embedding_query_prefix() -> str:
 
 def embedding_normalize() -> bool:
     return _env_flag("EMBEDDINGS_NORMALIZE", True)
+
+
+def embedding_device_preference() -> str:
+    return os.getenv("EMBEDDINGS_DEVICE", DEFAULT_DEVICE_PREF).strip().lower()
+
+
+def embedding_wait_for_gpu() -> bool:
+    return _env_flag("EMBEDDINGS_WAIT_FOR_GPU", DEFAULT_GPU_WAIT)
+
+
+def _env_int(name: str, default: int) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+        return value
+    except ValueError:
+        return default
+
+
+def embedding_gpu_min_free_mb() -> int:
+    return _env_int("EMBEDDINGS_GPU_MIN_FREE_MB", DEFAULT_GPU_MIN_FREE_MB)
+
+
+def embedding_gpu_max_retries() -> int:
+    return max(0, _env_int("EMBEDDINGS_GPU_MAX_RETRIES", DEFAULT_GPU_MAX_RETRIES))
+
+
+def embedding_gpu_retry_seconds() -> int:
+    return max(1, _env_int("EMBEDDINGS_GPU_RETRY_SECONDS", DEFAULT_GPU_RETRY_SECONDS))
