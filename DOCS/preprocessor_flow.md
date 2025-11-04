@@ -19,6 +19,18 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 - `python -m tools.rag.cli embed --execute --limit 50`.
 - Default embedding model: `intfloat/e5-base-v2` with `passage:` / `query:` prefixing and L2-normalized vectors (tune via `EMBEDDINGS_MODEL_NAME`, `EMBEDDINGS_PASSAGE_PREFIX`, `EMBEDDINGS_QUERY_PREFIX`).
 - GPU guardrails: the embed step waits for at least ~1.5 GB of free VRAM and automatically falls back to CPU if the card stays busy (tweak via `EMBEDDINGS_WAIT_FOR_GPU`, `EMBEDDINGS_GPU_MIN_FREE_MB`, `EMBEDDINGS_DEVICE`).
+
+## Stage 4 – Semantic Cache (answer reuse)
+- Lookup happens automatically in `codex_wrap.sh`, `claude_wrap.sh`, and `gemini_wrap.sh` before any LLM call. Misses are stored after a successful completion.
+- Inspect / manage from the CLI:
+  - `python -m tools.cache.cli stats`
+  - `python -m tools.cache.cli lookup --route codex --prompt-file prompt.txt`
+- Configuration knobs:
+  - `SEMANTIC_CACHE_DISABLED=1` to turn it off.
+  - `SEMANTIC_CACHE_MIN_SCORE=0.94` (default 0.92) adjusts the cosine hit threshold.
+  - `SEMANTIC_CACHE_DB=/path/to/cache.db` chooses the SQLite store (default `.cache/semantic_cache.db`).
+  - `SEMANTIC_CACHE_ENABLE=0` (alternate disable flag).
+- Entries are keyed by the fully constructed prompt (including RAG context) with embeddings generated via the same E5 backend for similarity checks.
 - Smoke test: `./scripts/embed_smoke_test.sh`.
 - Confirm status: `python -m tools.rag.cli stats` (check Embeddings column).
 - Deterministic hash embeddings keep this stage offline-friendly.
