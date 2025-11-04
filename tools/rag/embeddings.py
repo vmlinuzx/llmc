@@ -2,19 +2,27 @@ from __future__ import annotations
 
 import functools
 import hashlib
+import logging
 import struct
+import time
 from dataclasses import dataclass
-from typing import Iterable, List, Sequence
+from typing import Iterable, List, Sequence, Tuple
 
 from .config import (
+    embedding_device_preference,
+    embedding_gpu_max_retries,
+    embedding_gpu_min_free_mb,
+    embedding_gpu_retry_seconds,
     embedding_model_dim,
     embedding_model_name,
     embedding_normalize,
     embedding_passage_prefix,
     embedding_query_prefix,
+    embedding_wait_for_gpu,
 )
 
 HASH_MODELS = {"hash-emb-v1", "hash", "deterministic"}
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -26,7 +34,7 @@ class EmbeddingSpec:
     normalize: bool
 
 
-def _lru_sentence_transformer(model_name: str):
+def _load_sentence_transformer(model_name: str, device: str):
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:  # pragma: no cover - dependency resolution
@@ -36,11 +44,84 @@ def _lru_sentence_transformer(model_name: str):
         ) from exc
 
     @functools.lru_cache(maxsize=4)
-    def _loader(name: str) -> SentenceTransformer:
-        model = SentenceTransformer(name)
+    def _loader(name: str, dev: str) -> SentenceTransformer:
+        model = SentenceTransformer(name, device=dev)
         return model
 
-    return _loader(model_name)
+    return _loader(model_name, device)
+
+
+def _select_device() -> Tuple[str, str | None]:
+    pref = embedding_device_preference()
+    pref = pref.strip().lower()
+
+    if pref == "cpu":
+        return "cpu", None
+
+    try:
+        import torch
+    except ImportError:
+        return "cpu", "embedding backend: torch not available; using CPU"
+
+    if not torch.cuda.is_available():
+        return "cpu", "embedding backend: CUDA unavailable; using CPU"
+
+    # Determine target GPU index
+    device_index = 0
+    explicit_index = False
+    if pref.startswith("cuda:"):
+        explicit_index = True
+        try:
+            device_index = int(pref.split(":", 1)[1])
+        except ValueError:
+            device_index = 0
+    elif pref in {"cuda", "gpu"}:
+        explicit_index = True
+        device_index = 0
+
+    guard_enabled = embedding_wait_for_gpu()
+    min_free_mb = embedding_gpu_min_free_mb()
+    min_free_bytes = max(0, min_free_mb) * 1024 * 1024
+    retries = embedding_gpu_max_retries() if guard_enabled else 0
+    retry_delay = embedding_gpu_retry_seconds()
+
+    def device_label() -> str:
+        if explicit_index or device_index != 0:
+            return f"cuda:{device_index}"
+        return "cuda"
+
+    last_free_bytes = None
+
+    for attempt in range(retries + 1):
+        try:
+            free_bytes, total_bytes = torch.cuda.mem_get_info(device_index)
+            last_free_bytes = free_bytes
+        except Exception as exc:  # pragma: no cover - defensive guard
+            return "cpu", f"embedding backend: unable to inspect GPU memory ({exc}); falling back to CPU"
+
+        if free_bytes >= min_free_bytes:
+            if attempt > 0:
+                waited = attempt * retry_delay
+                return device_label(), f"embedding backend: GPU free after waiting {waited}s; using {device_label()}"
+            return device_label(), None
+
+        if retries == 0:
+            break
+        if attempt < retries:
+            time.sleep(retry_delay)
+
+    if min_free_bytes == 0:
+        return device_label(), None
+
+    if last_free_bytes is None:
+        return "cpu", "embedding backend: unable to read GPU memory; using CPU"
+
+    free_mb = last_free_bytes / (1024 * 1024)
+    message = (
+        f"embedding backend: GPU busy (free={free_mb:.0f} MiB < {min_free_mb} MiB); "
+        "falling back to CPU"
+    )
+    return "cpu", message
 
 
 def _deterministic_embedding(payload: bytes, dim: int) -> List[float]:
@@ -126,7 +207,10 @@ class HashEmbeddingBackend(EmbeddingBackend):
 class SentenceTransformerBackend(EmbeddingBackend):
     def __init__(self, spec: EmbeddingSpec):
         super().__init__(spec)
-        self._model = _lru_sentence_transformer(spec.model_name)
+        self._device, notice = _select_device()
+        if notice:
+            logger.info(notice)
+        self._model = _load_sentence_transformer(spec.model_name, self._device)
         dimension = getattr(self._model, "get_sentence_embedding_dimension", lambda: None)()
         if isinstance(dimension, int) and dimension > 0:
             self.spec = EmbeddingSpec(

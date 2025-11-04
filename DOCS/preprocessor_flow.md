@@ -18,6 +18,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 ## Stage 3 – Embed
 - `python -m tools.rag.cli embed --execute --limit 50`.
 - Default embedding model: `intfloat/e5-base-v2` with `passage:` / `query:` prefixing and L2-normalized vectors (tune via `EMBEDDINGS_MODEL_NAME`, `EMBEDDINGS_PASSAGE_PREFIX`, `EMBEDDINGS_QUERY_PREFIX`).
+- GPU guardrails: the embed step waits for at least ~1.5 GB of free VRAM and automatically falls back to CPU if the card stays busy (tweak via `EMBEDDINGS_WAIT_FOR_GPU`, `EMBEDDINGS_GPU_MIN_FREE_MB`, `EMBEDDINGS_DEVICE`).
 - Smoke test: `./scripts/embed_smoke_test.sh`.
 - Confirm status: `python -m tools.rag.cli stats` (check Embeddings column).
 - Deterministic hash embeddings keep this stage offline-friendly.
