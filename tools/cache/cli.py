@@ -122,11 +122,84 @@ def stats() -> None:
     conn = sqlite3.connect(str(db_path))
     try:
         total = conn.execute("SELECT COUNT(*) FROM entries").fetchone()[0]
+        per_route = conn.execute(
+            """
+            SELECT route, COUNT(*) AS count
+            FROM entries
+            GROUP BY route
+            ORDER BY count DESC
+            """
+        ).fetchall()
+        routes = {row[0]: row[1] for row in per_route}
     except sqlite3.DatabaseError:
         total = 0
+        routes = {}
     finally:
         conn.close()
-    click.echo(json.dumps({"enabled": True, "entries": total}))
+
+    payload = {"enabled": True, "entries": total, "routes": routes}
+    click.echo(json.dumps(payload))
+
+
+@cli.command()
+@click.option("--route", default=None, help="Filter by route when listing.")
+@click.option("--limit", default=20, show_default=True, help="Maximum entries to display.")
+def list(route: Optional[str], limit: int) -> None:
+    """List recent cache entries."""
+    if not config.cache_enabled():
+        click.echo(json.dumps({"enabled": False}))
+        return
+    repo = Path.cwd()
+    db_path = config.cache_db_path(repo)
+    if not db_path.exists():
+        click.echo(json.dumps({"enabled": True, "entries": []}))
+        return
+
+    import sqlite3
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        if route:
+            rows = conn.execute(
+                """
+                SELECT id, route, provider, created_at, tokens_in, tokens_out, total_cost, prompt_hash
+                FROM entries
+                WHERE route = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (route, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT id, route, provider, created_at, tokens_in, tokens_out, total_cost, prompt_hash
+                FROM entries
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+    except sqlite3.DatabaseError:
+        conn.close()
+        click.echo(json.dumps({"enabled": True, "entries": []}))
+        return
+    conn.close()
+
+    entries = [
+        {
+            "id": row[0],
+            "route": row[1],
+            "provider": row[2],
+            "created_at": row[3],
+            "tokens_in": row[4],
+            "tokens_out": row[5],
+            "total_cost": row[6],
+            "prompt_hash": row[7],
+        }
+        for row in rows
+    ]
+    click.echo(json.dumps({"enabled": True, "entries": entries}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
