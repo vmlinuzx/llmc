@@ -11,6 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from tools.rag.config import index_path_for_read
 from tools.rag.planner import generate_plan
 
 
@@ -66,7 +67,7 @@ def main() -> int:
         return 0
 
     repo_root = args.repo.resolve()
-    db_path = repo_root / ".rag" / "index.db"
+    db_path = index_path_for_read(repo_root)
     if not db_path.exists():
         return 0
 

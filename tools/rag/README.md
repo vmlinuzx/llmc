@@ -13,12 +13,12 @@ python -m tools.rag.cli --help
 
 Key commands:
 
-- `python -m tools.rag.cli index` – full walk of the repo, writes `.rag/index.db` and `spans.jsonl`.
+- `python -m tools.rag.cli index` – full walk of the repo, writes `.rag/index_v2.db` (or the path pointed to by `LLMC_RAG_INDEX_PATH`) plus a versioned spans export.
 - `python -m tools.rag.cli sync --since <commit>` – incremental update based on git diff.
 - `python -m tools.rag.cli sync --stdin` – feed newline-delimited paths via stdin (perfect for editor hooks).
 - `python -m tools.rag.cli stats` – quick counts plus estimated remote tokens avoided (`--json` available).
 - `python -m tools.rag.cli enrich --dry-run` – preview enrichment work items keyed by `span_hash`. Use `--execute` for the built-in deterministic stub (records summary metadata without calling a remote LLM).
-- `python -m tools.rag.cli embed --dry-run` – preview embedding jobs (also keyed by `span_hash`). Use `--execute` to persist deterministic hash-based vectors (defaults: model `hash-emb-v1`, dim 64).
+- `python -m tools.rag.cli embed --dry-run` – preview embedding jobs (also keyed by `span_hash`). Use `--execute` to persist normalized `intfloat/e5-base-v2` vectors with the canonical `"passage: "` prefix (override via `--model` or env vars).
 
 Helper: `scripts/rag_sync.sh <paths...>` feeds files to `rag sync --stdin` and is used by the editor integrations.
 

@@ -12,10 +12,17 @@ else
   PYTHON_BIN="${PYTHON_BIN:-python3}"
 fi
 
-if [ ! -f "$ROOT/.rag/index.db" ]; then
+RAG_INDEX_PATH="${LLMC_RAG_INDEX_PATH:-$ROOT/.rag/index_v2.db}"
+if [ ! -f "$RAG_INDEX_PATH" ] && [ -f "$ROOT/.rag/index.db" ]; then
+  RAG_INDEX_PATH="$ROOT/.rag/index.db"
+fi
+
+if [ ! -f "$RAG_INDEX_PATH" ]; then
   echo "[rag-refresh] No RAG index present; run ./scripts/indexenrich.sh first." >&2
   exit 1
 fi
+
+export LLMC_RAG_INDEX_PATH="$RAG_INDEX_PATH"
 
 CHANGED=()
 while IFS= read -r line; do

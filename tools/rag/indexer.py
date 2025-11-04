@@ -7,13 +7,16 @@ from pathlib import Path
 from typing import Iterable, List, Optional
 
 from .database import Database
+from .config import (
+    ensure_rag_storage,
+    index_path_for_write,
+    rag_dir,
+    spans_export_path as resolve_spans_export_path,
+)
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
 from .utils import find_repo_root, git_changed_paths, git_commit_sha, iter_source_files
 
-RAG_DIR_NAME = ".rag"
-INDEX_DB_NAME = "index.db"
-SPANS_EXPORT = "spans.jsonl"
 EMBED_META = "embed_meta.json"
 
 
@@ -28,19 +31,19 @@ class IndexStats(dict):
 
 
 def repo_paths(repo_root: Path) -> Path:
-    return repo_root / RAG_DIR_NAME
+    return rag_dir(repo_root)
 
 
 def db_path(repo_root: Path) -> Path:
-    return repo_paths(repo_root) / INDEX_DB_NAME
+    return index_path_for_write(repo_root)
 
 
 def spans_export_path(repo_root: Path) -> Path:
-    return repo_paths(repo_root) / SPANS_EXPORT
+    return resolve_spans_export_path(repo_root)
 
 
 def ensure_storage(repo_root: Path) -> None:
-    repo_paths(repo_root).mkdir(parents=True, exist_ok=True)
+    ensure_rag_storage(repo_root)
 
 
 def compute_hash(data: bytes) -> str:

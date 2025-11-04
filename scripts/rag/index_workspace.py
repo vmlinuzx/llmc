@@ -11,7 +11,6 @@ Usage:
 import os
 import sys
 import hashlib
-import mimetypes
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
@@ -67,7 +66,8 @@ class WorkspaceIndexer:
     def __init__(self, workspace_root: Path, db_path: Path):
         self.workspace_root = workspace_root
         self.db_path = db_path
-        
+        self.passage_prefix = os.getenv("LLMC_RAG_PASSAGE_PREFIX", "passage: ")
+
         # Initialize ChromaDB
         self.client = chromadb.PersistentClient(
             path=str(db_path),
@@ -87,7 +87,8 @@ class WorkspaceIndexer:
         
         # Initialize embedding model (runs locally!)
         print("🔄 Loading embedding model (sentence-transformers)...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')  # Fast, good quality
+        model_name = os.getenv("LLMC_RAG_WORKSPACE_MODEL", "intfloat/e5-base-v2")
+        self.model = SentenceTransformer(model_name)
         print("✅ Embedding model loaded")
     
     def should_index_file(self, file_path: Path) -> bool:
@@ -227,13 +228,18 @@ class WorkspaceIndexer:
             
             # Generate embeddings and add to collection
             if texts:
-                embeddings = self.model.encode(texts, show_progress_bar=False)
-                self.collection.add(
-                    ids=ids,
-                    embeddings=embeddings.tolist(),
-                    documents=texts,
-                    metadatas=metadatas
+                prefixed = [f"{self.passage_prefix}{text}" for text in texts]
+                embeddings = self.model.encode(
+                    prefixed,
+                    show_progress_bar=False,
+                    normalize_embeddings=True,
                 )
+            self.collection.add(
+                ids=ids,
+                embeddings=embeddings.tolist(),
+                documents=texts,
+                metadatas=metadatas
+            )
             
             return len(chunks)
             

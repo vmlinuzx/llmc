@@ -7,6 +7,12 @@ from typing import Iterable, List, Optional
 
 import click
 
+from .config import (
+    index_path_for_read,
+    index_path_for_write,
+    rag_dir,
+    spans_export_path as resolve_spans_export_path,
+)
 from .database import Database
 from .planner import generate_plan, plan_as_dict
 from .workers import (
@@ -19,21 +25,18 @@ from .workers import (
 
 EST_TOKENS_PER_SPAN = 350  # heuristic for remote LLM tokens we avoid per indexed span
 
-_RAG_DIR = ".rag"
-_INDEX_DB = "index.db"
-_SPANS_JSON = "spans.jsonl"
-
-
-def _db_path(repo_root: Path) -> Path:
-    return repo_root / _RAG_DIR / _INDEX_DB
+def _db_path(repo_root: Path, *, for_write: bool) -> Path:
+    if for_write:
+        return index_path_for_write(repo_root)
+    return index_path_for_read(repo_root)
 
 
 def _repo_paths(repo_root: Path) -> Path:
-    return repo_root / _RAG_DIR
+    return rag_dir(repo_root)
 
 
 def _spans_export_path(repo_root: Path) -> Path:
-    return repo_root / _RAG_DIR / _SPANS_JSON
+    return resolve_spans_export_path(repo_root)
 
 
 def _find_repo_root(start: Optional[Path] = None) -> Path:
@@ -107,7 +110,7 @@ def sync(paths: Iterable[str], since: Optional[str], use_stdin: bool) -> None:
 def stats(as_json: bool) -> None:
     """Print summary stats for the current index."""
     repo_root = _find_repo_root()
-    db_file = _db_path(repo_root)
+    db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
         return
@@ -138,7 +141,7 @@ def paths() -> None:
     """Show index storage paths."""
     repo_root = _find_repo_root()
     click.echo(f"RAG dir: {_repo_paths(repo_root)}")
-    click.echo(f"Database: {_db_path(repo_root)}")
+    click.echo(f"Database: {_db_path(repo_root, for_write=False)}")
     click.echo(f"Spans JSONL: {_spans_export_path(repo_root)}")
 
 
@@ -150,7 +153,7 @@ def paths() -> None:
 def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
     """Preview or execute enrichment tasks (summary/tags) for spans."""
     repo_root = _find_repo_root()
-    db_file = _db_path(repo_root)
+    db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
         return
@@ -183,32 +186,35 @@ def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
 @cli.command()
 @click.option("--limit", default=10, show_default=True, help="Maximum spans to include in the plan.")
 @click.option("--dry-run/--execute", default=True, show_default=True, help="Preview work items instead of generating embeddings.")
-@click.option("--model", default="hash-emb-v1", show_default=True, help="Embedding model identifier to record.")
-@click.option("--dim", default=64, show_default=True, type=int, help="Embedding vector dimension.")
+@click.option("--model", default="auto", show_default=True, help="Embedding model identifier (`auto` uses configured default).")
+@click.option("--dim", default=0, show_default=True, type=int, help="Embedding dimension (0 uses the model default).")
 def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
     """Preview or execute embedding jobs for spans."""
     repo_root = _find_repo_root()
-    db_file = _db_path(repo_root)
+    db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
         return
     db = Database(db_file)
     try:
+        model_arg = None if model == "auto" else model
+        dim_arg = None if dim <= 0 else dim
+
         if dry_run:
-            plan = embedding_plan(db, repo_root, limit=limit, model=model, dim=dim)
+            plan = embedding_plan(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
             if not plan:
                 click.echo("No spans pending embedding.")
                 return
             click.echo(json.dumps(plan, indent=2, ensure_ascii=False))
             click.echo("\n(Dry run only. Pass --execute to persist embeddings.)")
             return
-        results = execute_embeddings(db, repo_root, limit=limit, model=model, dim=dim)
+        results, used_model, used_dim = execute_embeddings(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
     finally:
         db.close()
     if not results:
         click.echo("No spans pending embedding.")
     else:
-        click.echo(f"Stored embeddings for {len(results)} spans using {model} (dim={dim}).")
+        click.echo(f"Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim}).")
 
 
 @cli.command()
@@ -235,7 +241,7 @@ def plan(query: List[str], limit: int, min_score: float, min_confidence: float, 
         raise SystemExit(1)
 
     repo_root = _find_repo_root()
-    db_file = _db_path(repo_root)
+    db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
         return
