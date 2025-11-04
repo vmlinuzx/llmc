@@ -19,6 +19,8 @@ if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
   mkdir -p "$CACHE_DIR"
 fi
 
+CACHE_LOOKUP_RESULT=""
+
 # Extract markdown headings and their bodies for targeted context loading.
 extract_md_sections() {
   local file="$1"
@@ -140,6 +142,76 @@ load_doc_context() {
   cat "$cache_file"
 }
 
+semantic_cache_enabled() {
+  if [ "${SEMANTIC_CACHE_DISABLE:-0}" = "1" ]; then
+    return 1
+  fi
+  if [ "${SEMANTIC_CACHE_ENABLE:-1}" = "0" ]; then
+    return 1
+  fi
+  return 0
+}
+
+semantic_cache_provider() {
+  echo "${ANTHROPIC_MODEL:-claude-sonnet-4-20250514}"
+}
+
+semantic_cache_lookup() {
+  if ! semantic_cache_enabled; then
+    return 1
+  fi
+  local route="$1"
+  local prompt="$2"
+  local provider="$3"
+  local prompt_file
+  prompt_file=$(mktemp)
+  printf '%s' "$prompt" >"$prompt_file"
+  local min_score_arg=()
+  if [ -n "${SEMANTIC_CACHE_MIN_SCORE:-}" ]; then
+    min_score_arg=(--min-score "${SEMANTIC_CACHE_MIN_SCORE}")
+  fi
+  local provider_arg=()
+  if [ -n "$provider" ]; then
+    provider_arg=(--provider "$provider")
+  fi
+  local result
+  if ! result=$("$PYTHON_BIN" -m tools.cache.cli lookup --route "$route" "${provider_arg[@]}" "${min_score_arg[@]}" --prompt-file "$prompt_file" 2>/dev/null); then
+    rm -f "$prompt_file"
+    return 1
+  fi
+  rm -f "$prompt_file"
+  local hit
+  hit=$(echo "$result" | jq -r '.hit // false' 2>/dev/null)
+  if [ "$hit" = "true" ]; then
+    CACHE_LOOKUP_RESULT="$result"
+    return 0
+  fi
+  return 1
+}
+
+semantic_cache_store() {
+  if ! semantic_cache_enabled; then
+    return
+  fi
+  local route="$1"
+  local provider="$2"
+  local prompt="$3"
+  local response="$4"
+  local prompt_file response_file
+  prompt_file=$(mktemp)
+  response_file=$(mktemp)
+  printf '%s' "$prompt" >"$prompt_file"
+  printf '%s' "$response" >"$response_file"
+  "$PYTHON_BIN" -m tools.cache.cli store \
+    --route "$route" \
+    --provider "$provider" \
+    --user-prompt "$USER_PROMPT" \
+    --prompt-file "$prompt_file" \
+    --response-file "$response_file" \
+    >/dev/null 2>&1 || true
+  rm -f "$prompt_file" "$response_file"
+}
+
 rag_plan_snippet() {
   local user_query="$1"
   if [ "${CODEX_WRAP_DISABLE_RAG:-0}" = "1" ]; then
@@ -222,9 +294,33 @@ build_prompt() {
 execute_route() {
   local user_prompt="$1"
   local full_prompt=$(build_prompt "$user_prompt")
-  
+  local route="claude"
+  local provider
+  provider=$(semantic_cache_provider)
+
+  if semantic_cache_lookup "$route" "$full_prompt" "$provider"; then
+    local score
+    score=$(echo "$CACHE_LOOKUP_RESULT" | jq -r '.score // 1' 2>/dev/null)
+    echo "⚡ Semantic cache hit (score ${score})" >&2
+    echo "$CACHE_LOOKUP_RESULT" | jq -r '.response // ""'
+    CACHE_LOOKUP_RESULT=""
+    return 0
+  fi
+
   echo "🧠 Routing to Claude API..." >&2
-  echo "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --claude
+  local response
+  response=$(printf '%s\n' "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --claude)
+  local status=$?
+  printf '%s' "$response"
+  case "$response" in
+    *$'\n') ;;
+    *) echo ;;
+  esac
+  if [ $status -eq 0 ]; then
+    semantic_cache_store "$route" "$provider" "$full_prompt" "$response"
+  fi
+  CACHE_LOOKUP_RESULT=""
+  return $status
 }
 
 # Main execution

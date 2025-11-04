@@ -84,6 +84,8 @@ if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
   mkdir -p "$CACHE_DIR"
 fi
 
+CACHE_LOOKUP_RESULT=""
+
 # Load ToolCaps state if present (written by scripts/tool_health.sh)
 TOOLS_STATE_ENV="$ROOT/.codex/state/tools.env"
 if [ -f "$TOOLS_STATE_ENV" ]; then
@@ -328,6 +330,87 @@ build_prompt() {
   echo "$prompt"
 }
 
+semantic_cache_enabled() {
+  if [ "${SEMANTIC_CACHE_DISABLE:-0}" = "1" ]; then
+    return 1
+  fi
+  if [ "${SEMANTIC_CACHE_ENABLE:-1}" = "0" ]; then
+    return 1
+  fi
+  return 0
+}
+
+semantic_cache_provider_for_route() {
+  local route="$1"
+  case "$route" in
+    local)
+      echo "${OLLAMA_MODEL:-qwen2.5:14b-instruct-q4_K_M}"
+      ;;
+    api)
+      echo "${GEMINI_MODEL:-gemini-2.5-flash}"
+      ;;
+    codex|*)
+      echo "codex"
+      ;;
+  esac
+}
+
+semantic_cache_lookup() {
+  if ! semantic_cache_enabled; then
+    return 1
+  fi
+  local route="$1"
+  local prompt="$2"
+  local provider="$3"
+  local prompt_file
+  prompt_file=$(mktemp)
+  printf '%s' "$prompt" >"$prompt_file"
+  local min_score_arg=()
+  if [ -n "${SEMANTIC_CACHE_MIN_SCORE:-}" ]; then
+    min_score_arg=(--min-score "${SEMANTIC_CACHE_MIN_SCORE}")
+  fi
+  local provider_arg=()
+  if [ -n "$provider" ]; then
+    provider_arg=(--provider "$provider")
+  fi
+  local result
+  if ! result=$("$PYTHON_BIN" -m tools.cache.cli lookup --route "$route" "${provider_arg[@]}" "${min_score_arg[@]}" --prompt-file "$prompt_file" 2>/dev/null); then
+    rm -f "$prompt_file"
+    return 1
+  fi
+  rm -f "$prompt_file"
+  local hit
+  hit=$(echo "$result" | jq -r '.hit // false' 2>/dev/null)
+  if [ "$hit" = "true" ]; then
+    CACHE_LOOKUP_RESULT="$result"
+    return 0
+  fi
+  return 1
+}
+
+semantic_cache_store() {
+  if ! semantic_cache_enabled; then
+    return
+  fi
+  local route="$1"
+  local provider="$2"
+  local prompt="$3"
+  local response="$4"
+  local prompt_file response_file
+  prompt_file=$(mktemp)
+  response_file=$(mktemp)
+  printf '%s' "$prompt" >"$prompt_file"
+  printf '%s' "$response" >"$response_file"
+  "$PYTHON_BIN" -m tools.cache.cli store \
+    --route "$route" \
+    --provider "$provider" \
+    --user-prompt "$USER_PROMPT" \
+    --prompt-file "$prompt_file" \
+    --response-file "$response_file" \
+    >/dev/null 2>&1 || true
+  rm -f "$prompt_file" "$response_file"
+}
+
 # Update changelog entry
 update_changelog() {
   local commit_msg="$1"
@@ -462,24 +545,51 @@ EOF
 execute_route() {
   local route="$1"
   local user_prompt="$2"
-  local full_prompt=$(build_prompt "$user_prompt")
-  
+  local full_prompt
+  full_prompt=$(build_prompt "$user_prompt")
+  local provider
+  provider=$(semantic_cache_provider_for_route "$route")
+
+  if semantic_cache_lookup "$route" "$full_prompt" "$provider"; then
+    local score
+    score=$(echo "$CACHE_LOOKUP_RESULT" | jq -r '.score // 1' 2>/dev/null)
+    echo "⚡ Semantic cache hit (score ${score})" >&2
+    echo "$CACHE_LOOKUP_RESULT" | jq -r '.response // ""'
+    CACHE_LOOKUP_RESULT=""
+    return 0
+  fi
+
+  local response=""
+  local status=0
   case "$route" in
     local)
       echo "🔄 Routing to local Ollama (free)..." >&2
-      echo "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --local
+      response=$(printf '%s\n' "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --local)
+      status=$?
       ;;
       
     api)
       echo "🌐 Routing to Gemini API (cheap)..." >&2
-      echo "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --api
+      response=$(printf '%s\n' "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --api)
+      status=$?
       ;;
       
     codex|*)
       echo "🧠 Routing to Codex (premium)..." >&2
-      echo "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$ROOT" ${CODEX_FLAGS:-} -
+      response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$ROOT" ${CODEX_FLAGS:-} -)
+      status=$?
       ;;
   esac
+  printf '%s' "$response"
+  case "$response" in
+    *$'\n') ;;
+    *) echo ;;
+  esac
+  if [ $status -eq 0 ]; then
+    semantic_cache_store "$route" "$provider" "$full_prompt" "$response"
+  fi
+  CACHE_LOOKUP_RESULT=""
+  return $status
 }
 
 # ============================================================================
