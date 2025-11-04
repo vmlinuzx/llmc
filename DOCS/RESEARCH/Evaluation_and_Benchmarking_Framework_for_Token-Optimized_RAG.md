@@ -287,7 +287,7 @@ spans and verify Precision@K is calculated correctly), and for the golden datase
 compliance). These tests will reside in tests/eval/ and can be run as part of CI to ensure the evaluation
 framework itself is reliable.
 Finally, the harness will integrate with the existing workflow by adding a GitHub Actions job (see below)
-and by including documentation (in README or a docs/ page) so developers know how to run it. The overall
+and by including documentation (in README or a DOCS/ page) so developers know how to run it. The overall
 implementation plan is greenfield (built from scratch) but informed by existing tools and patterns. For
 instance, frameworks like LangSmith and RAGAS emphasize the importance of having both retrieval
 metrics and answer quality metrics 15 5 ; while we are not using those frameworks directly (to avoid
@@ -547,7 +547,7 @@ an HTML artifact for the CI. If using Markdown, we can include the charts as emb
 GitHub Action can upload the chart images and embed links). Since the instructions mention
 embedding images only if we have them, we will generate charts as PNGs and reference them
 appropriately in the Markdown report. The report could be committed to a
-docs/eval_report.md or posted as a PR comment.
+DOCS/eval_report.md or posted as a PR comment.
 • Automation: The nightly GitHub Action ( nightly_eval.yml ) will run llmc eval , collect the
 output report and metrics, and perhaps push the report to a branch or store as an artifact. It can
 also use the GitHub API to comment on any recent commits if regressions are found. Over time, we

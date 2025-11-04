@@ -7,7 +7,7 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - `scripts/llm_gateway.js`: Node gateway that streams prompts to Ollama or Gemini with environment flag controls.
 - `tools/create_context_zip.py`: context packager that emits `llmccontext*.zip` archives honoring `.gitignore`.
 - `template/`: ready-to-copy base tree (contracts, agent docs, codex assets) for spinning up new projects.
-- `docs/ROUTING.md`: routing policy + thresholds for tiering between Qwen 7B, 14B, and GPT-5 nano.
+- `DOCS/ROUTING.md`: routing policy + thresholds for tiering between Qwen 7B, 14B, and GPT-5 nano.
 
 ## Mission Statement
 
@@ -53,4 +53,4 @@ LLM Commander exists to **keep token spend down for budget-conscious developers,
 You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
 
 
-See `docs/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner); the same content lives in `DOCS/preprocessor_flow.md` for the internal handbook.
+See `DOCS/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner); the prior draft now lives in `DOCS/archive/preprocessor_flow_legacy.md` if you need the older phrasing.

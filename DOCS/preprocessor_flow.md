@@ -1,48 +1,49 @@
 # Preprocessor Pipeline Overview
 
-Summarizes the local preprocessing pipeline before heavy LLM calls.
+This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style orchestrator. Keep it handy when iterating on the RAG stack.
 
-## Index
-- `python -m tools.rag.cli index`
-- Refresh specific paths: `python -m tools.rag.cli sync --since <commit>` or provide path list.
+## Stage 1 – Index
+- `python -m tools.rag.cli index` to rebuild from scratch.
+- Incremental: `python -m tools.rag.cli sync --since <commit>` or pass explicit paths.
+- Output: `.rag/index.db` (files, spans, hashes).
 
-## Enrich
-- Batch runner: `python scripts/qwen_enrich_batch.py --cooldown 600`
-  - `--cooldown` waits N seconds after last file touch before re-enriching.
+## Stage 2 – Enrich
+- Batch: `python scripts/qwen_enrich_batch.py --cooldown 600`.
+  - Retries escalate from Qwen 7B → `--fallback-model` (default `qwen2.5:14b-instruct-q4_K_M`) → gateway (GPT-5 nano) on parse/validation failures.
   - Other knobs: `--sleep`, `--retries`, `--retry-wait`, `--log`.
-  - Automatic fallback escalates from Qwen 7B → `--fallback-model` (default `qwen2.5:14b-instruct-q4_K_M`) → gateway (GPT-5 nano) when parsing fails.
-- CLI alternative: `python -m tools.rag.cli enrich --execute --cooldown 600`
-- Metrics: `logs/enrichment_metrics.jsonl` (watch via `./scripts/enrichmentmetricslog.sh` or tail with `./scripts/enrichmenttail.sh`).
+  - Router heuristics disabled as of November 4, 2025; every span starts on Qwen 7B and only promotes to 14B or nano when validation fails.
+- Manual: `python -m tools.rag.cli enrich --execute --cooldown 600`.
+- Metrics land in `logs/enrichment_metrics.jsonl`; tail with `./scripts/enrichmentmetricslog.sh` or `./scripts/enrichmenttail.sh`.
 
-## Embeddings
-- `python -m tools.rag.cli embed --execute`
+## Stage 3 – Embed
+- `python -m tools.rag.cli embed --execute --limit 50`.
 - Smoke test: `./scripts/embed_smoke_test.sh`.
+- Confirm status: `python -m tools.rag.cli stats` (check Embeddings column).
+- Deterministic hash embeddings keep this stage offline-friendly.
 
-## Planner
-- `python -m tools.rag.cli plan "Where do we validate JWTs?"`
-- Logs: `logs/planner_metrics.jsonl` (`./scripts/plannermetricslog.sh`).
+## Stage 4 – Planner
+- `python -m tools.rag.cli plan "Where do we validate JWTs?"`.
+- Logs append to `logs/planner_metrics.jsonl`; watch with `./scripts/plannermetricslog.sh`.
+- Planner ranks enrichment summaries before any heavy LLM call.
 
-## Gateway Routing
-- Local default (`./scripts/codex_wrap.sh --local`).
-- Azure: set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`, run with `--api` or set `LLM_GATEWAY_DISABLE_LOCAL=1`.
-- Logs: `logs/codexlog.txt` (`./scripts/codexlogtail.sh`).
+## Stage 5 – Gateway Routing
+- Default local run: `./scripts/codex_wrap.sh --local "task"`.
+- Azure fallback: set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, `AZURE_OPENAI_DEPLOYMENT`, optionally `AZURE_OPENAI_API_VERSION`, then run with `--api` or `LLM_GATEWAY_DISABLE_LOCAL=1`.
+- Gemini fallback stays active when Azure variables are absent and `GEMINI_API_KEY` is set.
+- Logs: `logs/codexlog.txt` (tail with `./scripts/codexlogtail.sh`).
 
-## Helper Scripts
-- `scripts/enrichmentmetricslog.sh` – watch enrichment summary.
-- `scripts/plannermetricslog.sh` – watch planner summary.
-- `scripts/enrichmenttail.sh` – tail enrichment JSONL.
-- `scripts/codexlogtail.sh` – tail gateway log.
+## Helper Scripts & Flags
+- `./scripts/enrichmentmetricslog.sh` – summarize enrichment runs.
+- `./scripts/enrichmenttail.sh` – tail raw enrichment JSONL.
+- `./scripts/plannermetricslog.sh` – follow planner stats.
+- `LLM_DISABLED`, `NEXT_PUBLIC_LLM_DISABLED`, `WEATHER_DISABLED` hard-stop LLM usage.
+- `LLM_GATEWAY_DISABLE_LOCAL` forces API usage; `LLM_GATEWAY_DISABLE_API` forbids API fallback.
 
-## Environment Flags
-- `LLM_DISABLED`, `NEXT_PUBLIC_LLM_DISABLED`, `WEATHER_DISABLED` – hard-disable LLM usage.
-- `LLM_GATEWAY_DISABLE_LOCAL` – force API usage.
-- `LLM_GATEWAY_DISABLE_API` – forbid API fallback.
-
-Update this doc as the pipeline evolves (doc generation, testing hooks, etc.).
+Keep this doc updated as the pipeline evolves (doc generation, evaluation harnesses, new backends, etc.).
 
 ## Automation
-- `./scripts/rag_refresh.sh` — sync/enrich/embed tracked changes in one go.
-- `./scripts/start_rag_refresh_loop.sh` — hourly loop (use with `./scripts/run_in_tmux.sh -s dc-rag-refresh -- ./scripts/start_rag_refresh_loop.sh`; adjust cadence via `RAG_REFRESH_INTERVAL`).
+- `./scripts/rag_refresh.sh` — one-shot sync/enrich/embed for tracked changes.
+- `./scripts/start_rag_refresh_loop.sh` — run in tmux (`./scripts/run_in_tmux.sh -s dc-rag-refresh -- ./scripts/start_rag_refresh_loop.sh`) to refresh hourly (override via `RAG_REFRESH_INTERVAL`).
 
 ## Sample Run: Qwen 2.5 Local vs. GPT-5 Nano (Azure)
 
@@ -60,13 +61,13 @@ Stored enrichment 9: app/sites/[id]/page.tsx:13-17 (354.31s)
 
 GPT-5 Nano (Azure)
 [indexenrich-azure] Updating enrichment metadata via Azure
-Stored enrichment 1: docs/preprocessor_flow.md:1-4 (12.39s)
-Stored enrichment 2: docs/preprocessor_flow.md:5-9 (24.03s)
-Stored enrichment 3: docs/preprocessor_flow.md:10-14 (24.88s)
-Stored enrichment 4: docs/preprocessor_flow.md:15-19 (26.12s)
-Stored enrichment 5: docs/preprocessor_flow.md:20-24 (33.96s)
-Stored enrichment 6: docs/preprocessor_flow.md:25-29 (34.39s)
-Stored enrichment 7: docs/preprocessor_flow.md:30-35 (16.00s)
+Stored enrichment 1: DOCS/preprocessor_flow.md:1-4 (12.39s)
+Stored enrichment 2: DOCS/preprocessor_flow.md:5-9 (24.03s)
+Stored enrichment 3: DOCS/preprocessor_flow.md:10-14 (24.88s)
+Stored enrichment 4: DOCS/preprocessor_flow.md:15-19 (26.12s)
+Stored enrichment 5: DOCS/preprocessor_flow.md:20-24 (33.96s)
+Stored enrichment 6: DOCS/preprocessor_flow.md:25-29 (34.39s)
+Stored enrichment 7: DOCS/preprocessor_flow.md:30-35 (16.00s)
 Stored enrichment 8: DOCS/preprocessor_flow.md:1-4 (19.06s)
 Stored enrichment 9: DOCS/preprocessor_flow.md:5-8 (19.94s)
 Stored enrichment 10: DOCS/preprocessor_flow.md:9-15 (22.07s)
