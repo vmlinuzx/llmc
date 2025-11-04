@@ -7,6 +7,15 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 - `scripts/llm_gateway.js`: Node gateway that streams prompts to Ollama or Gemini with environment flag controls.
 - `tools/create_context_zip.py`: context packager that emits `llmccontext*.zip` archives honoring `.gitignore`.
 - `template/`: ready-to-copy base tree (contracts, agent docs, codex assets) for spinning up new projects.
+- `docs/ROUTING.md`: routing policy + thresholds for tiering between Qwen 7B, 14B, and GPT-5 nano.
+
+## Mission Statement
+
+LLM Commander exists to **reduce token spend** and **increase answer quality** by:
+
+1. Running the heavy lifting on local LLMs (Qwen) and deterministic helpers first, falling back to remote GPT only when the span size forces it.
+2. Maintaining a repeatable, structured RAG knowledge base (code + docs) that feeds every prompt automatically.
+3. Shipping a template-builder web UI that emits ready-to-run repositories, so we can apply the same orchestration playbook to any new project with minimal setup.
 
 ## Getting Started
 1. Run `chmod +x scripts/*.sh` to ensure the orchestration scripts stay executable.
