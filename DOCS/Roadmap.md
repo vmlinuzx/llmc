@@ -7,17 +7,14 @@
 - P3 – Nice-to-have: experiments, stretch goals
 
 ## Current Priorities
-- [ ] Define MVP scope (1–2 weeks of work)
-  - Deliver a generic web interface where users select orchestration + tooling preferences.
-  - Generate a zipped starter template that mirrors the Codex commander repo layout.
-  - Ensure selections drive config files so an LLM can immediately assist after download.
-- [ ] Lock technical choices (framework, DB, auth, hosting)
-  - Stay 100% open source with a cost-free "poor folks" stack.
-  - Base project on Next.js App Router with `app/` + API routes.
-  - Use Postgres via Prisma (docker-compose for local dev, pg in prod).
-  - Wire up NextAuth for auth and basic upload endpoints.
-  - Ship container-friendly Dockerfile + compose for local + server deploys.
-- [ ] Ship first vertical slice end-to-end
+- [ ] Pipe RAG planner output into `codex_wrap.sh` / `llm_gateway.js` so Codex, Claude, and Gemini consume indexed spans automatically before answering.
+- [ ] Automate RAG freshness (hourly or on-change) via `scripts/rag_sync.sh` + tmux/cron so `.rag/index.db` stays current without manual kicks.
+- [ ] Ship the template builder MVP (Next.js App Router UI) that builds Codex-ready zips based on orchestration choices.
+- [ ] Deliver the first vertical slice end-to-end using the new template + RAG-aware workflow.
+
+## Recently Completed
+- [x] Define MVP scope (generic web UI, templated configs, Codex-ready zip).
+- [x] Lock technical choices (Next.js App Router, Prisma/Postgres, NextAuth, Docker/Compose, fully OSS stack).
 
 ## Backlog
 - [ ] Performance profiling baseline

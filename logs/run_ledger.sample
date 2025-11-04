@@ -1,0 +1,2 @@
+{"timestamp":"2025-11-03T22:45:12Z","task_id":"sha256:example1","tier_used":"7b","promo":"none","line_count":24,"nesting_depth":2,"node_count":12,"schema_depth":3,"tokens_in":840,"tokens_out":1200,"k":null,"avg_score":null,"result":"pass","reason":"success","wall_ms":18432}
+{"timestamp":"2025-11-03T22:46:50Z","task_id":"sha256:example2","tier_used":"nano","promo":"7b->nano","line_count":142,"nesting_depth":5,"node_count":268,"schema_depth":7,"tokens_in":18420,"tokens_out":1600,"k":0,"avg_score":0.18,"result":"fail","reason":"truncation","wall_ms":30120}

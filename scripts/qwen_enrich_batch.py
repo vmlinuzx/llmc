@@ -10,11 +10,28 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Sequence
+from typing import Dict, List, Sequence, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
+
+SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_DIR))
+
+from router import (
+    RouterSettings,
+    clamp_usage_snippet,
+    classify_failure,
+    choose_next_tier_on_failure,
+    choose_start_tier,
+    detect_truncation,
+    estimate_json_nodes_and_depth,
+    estimate_nesting_depth,
+    estimate_tokens_from_text,
+    expected_output_tokens,
+)
 
 from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
@@ -67,7 +84,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--model",
-        default="qwen2.5:14b",
+        default="qwen2.5:7b",
         help="Model identifier to record with enrichments.",
     )
     parser.add_argument(
@@ -138,6 +155,34 @@ def parse_args() -> argparse.Namespace:
         default=300.0,
         help="Timeout (seconds) for gateway-backed completions (default: 300).",
     )
+    parser.add_argument(
+        "--fallback-model",
+        default=os.environ.get("RAG_FALLBACK_MODEL", "qwen2.5:14b-instruct-q4_K_M"),
+        help="Alternate Ollama model to retry on failure (blank to skip).",
+    )
+    parser.add_argument(
+        "--no-gateway-fallback",
+        action="store_true",
+        help="Do not retry via gateway after local fallbacks.",
+    )
+    parser.add_argument(
+        "--router",
+        choices=["on", "off"],
+        default=os.environ.get("ROUTER_ENABLED", "on"),
+        help="Enable or disable automatic tier routing (default: on).",
+    )
+    parser.add_argument(
+        "--start-tier",
+        choices=["auto", "7b", "14b", "nano"],
+        default=os.environ.get("ROUTER_DEFAULT_TIER", "auto"),
+        help="Override starting tier (auto respects routing policy).",
+    )
+    parser.add_argument(
+        "--max-tokens-headroom",
+        type=int,
+        default=int(os.environ.get("ROUTER_MAX_TOKENS_HEADROOM", "4000")),
+        help="Reserved headroom below context limit when routing (default: 4000).",
+    )
     return parser.parse_args()
 
 
@@ -150,46 +195,18 @@ def ensure_repo(repo_root: Path) -> Path:
 
 def build_prompt(item: Dict, repo_root: Path) -> str:
     path = item["path"]
-    lang = item.get("lang", "").lower()
     line_start, line_end = item["lines"]
     snippet = item.get("code_snippet", "")
 
-    language_hint = ""
-    if lang in {"python"}:
-        language_hint = "Include function signature details such as arguments and return behavior."
-    elif lang in {"typescript", "javascript", "tsx", "jsx"}:
-        language_hint = "Describe props, return values, and side effects relevant to the component or function."
-    elif lang in {"html"}:
-        language_hint = "Reference tag attributes and semantic roles directly."
-    elif lang in {"sql"}:
-        language_hint = "Explain selected columns, filters, and mutations described by the SQL."
+    prompt = f"""Return ONLY minified JSON:
+{{"summary_120w":"<what it does>","inputs":["params"],"outputs":["returns"],"side_effects":["mutations"],"pitfalls":["gotchas"],"usage_snippet":"brief example","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
 
-    prompt = f"""You are Qwen2.5 performing code enrichment for repository documentation. Produce ONLY compact JSON with keys:
-{{
-  "summary_120w": string (<=120 words),
-  "inputs": array of strings,
-  "outputs": array of strings,
-  "side_effects": array of strings,
-  "pitfalls": array of strings,
-  "usage_snippet": string or null (<=12 words),
-  "evidence": array of {{"field": string, "lines": [start,end]}}
-}}
-Rules:
-- Summarize precisely what the code does, including important options/defaults from the snippet.
-- In "inputs", list real parameters or data dependencies; use [] if none. Outputs should describe return values or major results.
-- Provide at least one evidence entry for "summary_120w". Every other populated field must also have at least one evidence entry, with line ranges between {line_start} and {line_end} (inclusive) and matching field names.
-- Do not include evidence entries for fields left [] or null.
-- Use [] or null when a claim cannot be supported.
-- Output strict minified JSON with double quotes only. {language_hint}
+Rules: summary<=120w, evidence for each populated field with lines [{line_start}-{line_end}], [] or null if unsupported.
 
-Context:
-File: {path}
-Lines {line_start}-{line_end}:
-<<<
+{path} L{line_start}-{line_end}:
 {snippet}
->>>
 
-Deliverable: ONLY the JSON object."""
+JSON only:"""
     return prompt
 
 
@@ -200,9 +217,10 @@ def call_via_ollama(
     retries: int = 3,
     retry_wait: float = 2.0,
     poll_wait: float = 1.5,
-) -> str:
+    model_override: str | None = None,
+) -> Tuple[str, Dict[str, object]]:
     base_url = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
-    model_name = os.environ.get("OLLAMA_MODEL", "qwen2.5:14b-instruct-q4_K_M")
+    model_name = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
     payload = json.dumps({"model": model_name, "prompt": prompt, "stream": False}).encode("utf-8")
     headers = {"Content-Type": "application/json"}
 
@@ -247,12 +265,24 @@ def call_via_ollama(
                 if isinstance(obj.get("response"), str):
                     combined += obj["response"]
             if last_data and combined:
-                return combined
+                meta = {
+                    "backend": "ollama",
+                    "model": model_name,
+                    "finish_reason": last_data.get("done_reason"),
+                    "eval_count": last_data.get("eval_count"),
+                }
+                return combined, meta
             last_error = ValueError("Failed to parse Ollama response")
         else:
             response_text = data.get("response", "")
             if isinstance(response_text, str) and response_text.strip():
-                return response_text
+                meta = {
+                    "backend": "ollama",
+                    "model": model_name,
+                    "finish_reason": data.get("done_reason"),
+                    "eval_count": data.get("eval_count"),
+                }
+                return response_text, meta
             last_error = ValueError("No response from Ollama")
 
         if attempt < max(1, retries):
@@ -267,7 +297,7 @@ def call_via_gateway(
     gateway_path: Path,
     timeout: float = GATEWAY_DEFAULT_TIMEOUT,
     verbose: bool = False,
-) -> str:
+) -> Tuple[str, Dict[str, object]]:
     if not gateway_path.exists():
         raise FileNotFoundError(f"llm gateway not found at {gateway_path}")
 
@@ -275,6 +305,7 @@ def call_via_gateway(
     # Ensure LLM is not disabled when delegating to the gateway.
     env.setdefault("LLM_DISABLED", "false")
     env.setdefault("NEXT_PUBLIC_LLM_DISABLED", "false")
+    env.setdefault("LLM_GATEWAY_DISABLE_RAG", "1")
 
     args = ["node", str(gateway_path), "--api"]
     if verbose:
@@ -298,7 +329,10 @@ def call_via_gateway(
     output = proc.stdout.strip()
     if not output:
         raise RuntimeError("llm gateway returned empty output")
-    return output
+    meta: Dict[str, object] = {
+        "backend": "gateway",
+    }
+    return output, meta
 
 
 def call_qwen(
@@ -312,7 +346,8 @@ def call_qwen(
     poll_wait: float = 1.5,
     gateway_path: Path | None = None,
     gateway_timeout: float = GATEWAY_DEFAULT_TIMEOUT,
-) -> str:
+    model_override: str | None = None,
+) -> Tuple[str, Dict[str, str]]:
     backend = backend or "auto"
     backend = backend.lower()
     env = os.environ
@@ -333,13 +368,20 @@ def call_qwen(
         if gateway_path is None:
             gateway_path = REPO_ROOT / "scripts" / "llm_gateway.js"
         try:
-            return call_via_gateway(
+            output, meta = call_via_gateway(
                 prompt,
                 repo_root,
                 gateway_path=gateway_path,
                 timeout=gateway_timeout,
                 verbose=verbose,
             )
+            backend_label = meta.get("backend", "gateway")
+            model_label = meta.get("model") or (
+                env.get("AZURE_OPENAI_DEPLOYMENT") if azure_env_available(env) else env.get("GEMINI_MODEL", "gemini")
+            )
+            meta.setdefault("backend", backend_label)
+            meta.setdefault("model", model_label)
+            return output, meta
         except Exception as exc:
             errors.append(exc)
             if backend == "gateway":
@@ -347,14 +389,19 @@ def call_qwen(
             # Fall through to ollama attempt.
 
     try:
-        return call_via_ollama(
+        model_label = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
+        output, meta = call_via_ollama(
             prompt,
             repo_root,
             verbose=verbose,
             retries=retries,
             retry_wait=retry_wait,
             poll_wait=poll_wait,
+            model_override=model_override,
         )
+        meta.setdefault("backend", "ollama")
+        meta.setdefault("model", model_label)
+        return output, meta
     except Exception as exc:
         errors.append(exc)
         if errors:
@@ -422,10 +469,72 @@ def normalize_evidence(
     result["evidence"] = evidence
 
 
+def parse_and_validate(
+    raw: str,
+    item: Dict,
+    meta: Dict[str, object],
+) -> Tuple[Dict | None, Tuple[str, object, object] | None]:
+    try:
+        result = extract_json(raw)
+    except ValueError as exc:
+        finish_reason = str(meta.get("finish_reason") or "")
+        eval_count = meta.get("eval_count")
+        tokens_used = None
+        if isinstance(eval_count, int):
+            tokens_used = eval_count
+        if detect_truncation(raw, tokens_used, finish_reason):
+            return None, ("truncation", exc, raw)
+        return None, ("parse", exc, raw)
+
+    clamp_usage_snippet(result, max_lines=12)
+    normalize_evidence(result, item["lines"][0], item["lines"][1])
+    ok, errors = validate_enrichment(result, item["lines"][0], item["lines"][1])
+    if not ok:
+        return None, ("validation", errors, result)
+
+    return result, None
+
+
+def handle_failure(repo_root: Path, item: Dict, failure: Tuple[str, object, object]) -> None:
+    kind, detail, payload = failure
+    if kind in {"parse", "truncation"}:
+        raw = payload if isinstance(payload, str) else ""
+        log_dir = repo_root / "logs" / "failed_enrichments"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        log_path = log_dir / f"{item['span_hash']}_{timestamp}.json"
+        try:
+            log_path.write_text(raw, encoding="utf-8")
+        except OSError:
+            pass
+        message = "JSON parsing failed" if kind == "parse" else "Model output truncated"
+        print(
+            f"{message} for {item['span_hash']} ({item['path']}:{item['lines']}): {detail}. Raw output saved to {log_path}",
+            file=sys.stderr,
+        )
+    elif kind == "validation":
+        print(
+            f"Validation failed for {item['span_hash']} ({item['path']}:{item['lines']}): {detail}",
+            file=sys.stderr,
+        )
+    else:
+        print(
+            f"Enrichment failed for {item['span_hash']} ({item['path']}:{item['lines']}): {detail}",
+            file=sys.stderr,
+        )
+
+
 def append_metrics(log_path: Path, metrics: dict) -> None:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
         json.dump(metrics, handle, ensure_ascii=False)
+        handle.write("\n")
+
+
+def append_ledger_record(log_path: Path, record: dict) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("a", encoding="utf-8") as handle:
+        json.dump(record, handle, ensure_ascii=False)
         handle.write("\n")
 
 
@@ -445,6 +554,13 @@ def main() -> int:
         print(f"Cooldown: skipping spans modified within last {args.cooldown}s", file=sys.stderr)
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
 
+    router_enabled = (args.router or "on").lower() != "off"
+    settings = RouterSettings(headroom=args.max_tokens_headroom)
+    promote_once_env = os.environ.get("ROUTER_PROMOTE_ONCE", "1").strip().lower()
+    promote_once_flag = promote_once_env not in {"0", "false", "no", "off"}
+    ledger_path = repo_root / "logs" / "run_ledger.log"
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+
     db_file = repo_root / ".rag" / "index.db"
     db = Database(db_file)
     processed = 0
@@ -460,90 +576,164 @@ def main() -> int:
                 break
 
             for item in plan:
-                start_time = time.monotonic()
+                wall_start = time.monotonic()
                 prompt = build_prompt(item, repo_root)
                 if args.dry_run:
                     print(f"DRY RUN span {item['span_hash']} -> prompt preview:\n{prompt}\n")
                     continue
 
-                try:
-                    stdout = call_qwen(
-                        prompt,
-                        repo_root,
-                        backend=backend,
-                        verbose=args.verbose,
-                        retries=args.retries,
-                        retry_wait=args.retry_wait,
-                        poll_wait=1.5,
-                        gateway_path=args.gateway_path,
-                        gateway_timeout=args.gateway_timeout,
-                    )
-                except RuntimeError as exc:
-                    print(
-                        f"codex_wrap error for {item['span_hash']} ({item['path']}:{item['lines']}): {exc}",
-                        file=sys.stderr,
-                    )
-                    continue
-                try:
-                    result = extract_json(stdout)
-                except ValueError as exc:
-                    log_dir = repo_root / "logs" / "failed_enrichments"
-                    log_dir.mkdir(parents=True, exist_ok=True)
-                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-                    log_path = log_dir / f"{item['span_hash']}_{timestamp}.json"
-                    try:
-                        log_path.write_text(stdout, encoding="utf-8")
-                    except OSError:
-                        pass
-                    print(
-                        f"JSON parsing failed for {item['span_hash']} ({item['path']}:{item['lines']}): {exc}. Raw output saved to {log_path}",
-                        file=sys.stderr,
-                    )
-                    continue
-                normalize_evidence(result, item["lines"][0], item["lines"][1])
-                ok, errors = validate_enrichment(
-                    result, item["lines"][0], item["lines"][1]
-                )
-                if not ok:
-                    print(
-                        f"Validation failed for {item['span_hash']} ({item['path']}:{item['lines']}): {errors}",
-                        file=sys.stderr,
-                    )
-                    continue
+                line_start, line_end = item["lines"]
+                snippet = item.get("code_snippet", "") or ""
+                line_count = int(line_end - line_start + 1)
+                nesting_depth = estimate_nesting_depth(snippet)
+                node_count, schema_depth = estimate_json_nodes_and_depth(snippet)
+                tokens_in = estimate_tokens_from_text(prompt)
+                tokens_out = expected_output_tokens(item)
 
-                latency = time.monotonic() - start_time
-                result.setdefault("model", args.model)
-                result.setdefault("schema_version", args.schema_version)
-                db.store_enrichment(item["span_hash"], result)
-                db.conn.commit()
-
-                metrics = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "repo_root": str(repo_root),
-                    "span_hash": item["span_hash"],
-                    "path": item["path"],
-                    "latency_sec": round(latency, 3),
-                    "model": result.get("model"),
-                    "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
+                router_metrics: Dict[str, float] = {
+                    "line_count": line_count,
+                    "nesting_depth": nesting_depth,
+                    "node_count": node_count,
+                    "schema_depth": schema_depth,
+                    "tokens_in": tokens_in,
+                    "tokens_out": tokens_out,
+                    "rag_k": item.get("retrieved_count"),
+                    "rag_avg_score": item.get("retrieved_avg_score"),
                 }
-                stats = db.stats()
-                metrics["spans_total"] = stats["spans"]
-                metrics["enrichments_total"] = stats["enrichments"]
-                metrics["estimated_remote_tokens_saved"] = (
-                    stats["enrichments"] * EST_TOKENS_PER_SPAN
-                )
-                metrics["estimated_remote_tokens_repo_cap"] = (
-                    stats["spans"] * EST_TOKENS_PER_SPAN
-                )
-                append_metrics(log_path, metrics)
 
-                processed += 1
-                print(
-                    f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                    f"({latency:.2f}s)"
-                )
-                if args.sleep:
-                    time.sleep(args.sleep)
+                if router_enabled:
+                    start_tier = choose_start_tier(router_metrics, settings, override=args.start_tier)
+                else:
+                    manual_tier = (args.start_tier or "auto").lower()
+                    start_tier = manual_tier if manual_tier != "auto" else "7b"
+
+                tiers_history: List[str] = []
+                current_tier = start_tier
+                success = False
+                final_result: Dict[str, object] | None = None
+                final_meta: Dict[str, object] = {}
+                failure_info: Tuple[str, object, object] | None = None
+
+                while current_tier:
+                    tiers_history.append(current_tier)
+                    backend_choice = "gateway" if current_tier == "nano" else "ollama"
+                    selected_backend = backend_choice if backend == "auto" else backend
+                    tier_model_override: str | None = None
+                    if selected_backend == "ollama":
+                        if current_tier == "14b":
+                            tier_model_override = (args.fallback_model or "qwen2.5:14b-instruct-q4_K_M")
+                        elif current_tier == "7b":
+                            tier_model_override = None
+
+                    try:
+                        stdout, meta = call_qwen(
+                            prompt,
+                            repo_root,
+                            backend=selected_backend,
+                            verbose=args.verbose,
+                            retries=args.retries,
+                            retry_wait=args.retry_wait,
+                            poll_wait=1.5,
+                            gateway_path=args.gateway_path,
+                            gateway_timeout=args.gateway_timeout,
+                            model_override=tier_model_override,
+                        )
+                    except RuntimeError as exc:
+                        failure_info = ("runtime", exc, None)
+                        if router_enabled:
+                            next_tier = choose_next_tier_on_failure("runtime", current_tier, router_metrics, settings, promote_once=promote_once_flag)
+                        else:
+                            next_tier = None
+                        if router_enabled and next_tier and next_tier not in tiers_history:
+                            current_tier = next_tier
+                            continue
+                        break
+
+                    result, failure = parse_and_validate(stdout, item, meta)
+                    if result is not None:
+                        success = True
+                        final_result = result
+                        final_meta = meta
+                        break
+
+                    failure_info = failure
+                    failure_type = classify_failure(failure)
+                    if router_enabled:
+                        next_tier = choose_next_tier_on_failure(failure_type, current_tier, router_metrics, settings, promote_once=promote_once_flag)
+                    else:
+                        next_tier = None
+                    if router_enabled and next_tier and next_tier not in tiers_history:
+                        current_tier = next_tier
+                        continue
+                    break
+
+                final_tier = tiers_history[-1] if tiers_history else start_tier
+                promo_label = "none"
+                if len(tiers_history) > 1:
+                    promo_label = f"{tiers_history[0]}->{tiers_history[-1]}"
+
+                ledger_record = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "task_id": item["span_hash"],
+                    "path": item["path"],
+                    "tier_used": final_tier,
+                    "line_count": line_count,
+                    "nesting_depth": nesting_depth,
+                    "node_count": node_count,
+                    "schema_depth": schema_depth,
+                    "tokens_in": tokens_in,
+                    "tokens_out": tokens_out,
+                    "k": router_metrics.get("rag_k"),
+                    "avg_score": router_metrics.get("rag_avg_score"),
+                    "promo": promo_label,
+                }
+
+                if success and final_result is not None:
+                    latency = time.monotonic() - wall_start
+                    ledger_record["result"] = "pass"
+                    ledger_record["reason"] = "success"
+                    ledger_record["wall_ms"] = int(round(latency * 1000))
+
+                    result_model = final_meta.get("model") or final_result.get("model") or args.model
+                    final_result.setdefault("model", result_model)
+                    final_result.setdefault("schema_version", args.schema_version)
+                    db.store_enrichment(item["span_hash"], final_result)
+                    db.conn.commit()
+
+                    metrics_summary = {
+                        "timestamp": ledger_record["timestamp"],
+                        "repo_root": str(repo_root),
+                        "span_hash": item["span_hash"],
+                        "path": item["path"],
+                        "latency_sec": round(latency, 3),
+                        "model": result_model,
+                        "tier": final_tier,
+                        "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
+                    }
+                    stats = db.stats()
+                    metrics_summary["spans_total"] = stats["spans"]
+                    metrics_summary["enrichments_total"] = stats["enrichments"]
+                    metrics_summary["estimated_remote_tokens_saved"] = stats["enrichments"] * EST_TOKENS_PER_SPAN
+                    metrics_summary["estimated_remote_tokens_repo_cap"] = stats["spans"] * EST_TOKENS_PER_SPAN
+                    append_metrics(log_path, metrics_summary)
+
+                    processed += 1
+                    print(
+                        f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
+                        f"({latency:.2f}s) via tier {final_tier}"
+                    )
+                    if args.sleep:
+                        time.sleep(args.sleep)
+                else:
+                    ledger_record["result"] = "fail"
+                    failure_reason = failure_info[0] if failure_info else "unknown"
+                    ledger_record["reason"] = failure_reason
+                    ledger_record["wall_ms"] = int(round((time.monotonic() - wall_start) * 1000))
+                    if failure_info is None:
+                        failure_info = ("unknown", "Unknown failure", None)
+                    handle_failure(repo_root, item, failure_info)
+
+                append_ledger_record(ledger_path, ledger_record)
     finally:
         db.close()
 

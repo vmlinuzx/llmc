@@ -10,6 +10,7 @@ Summarizes the local preprocessing pipeline before heavy LLM calls.
 - Batch runner: `python scripts/qwen_enrich_batch.py --cooldown 600`
   - `--cooldown` waits N seconds after last file touch before re-enriching.
   - Other knobs: `--sleep`, `--retries`, `--retry-wait`, `--log`.
+  - Automatic fallback escalates from Qwen 7B → `--fallback-model` (default `qwen2.5:14b-instruct-q4_K_M`) → gateway (GPT-5 nano) when parsing fails.
 - CLI alternative: `python -m tools.rag.cli enrich --execute --cooldown 600`
 - Metrics: `logs/enrichment_metrics.jsonl` (watch via `./scripts/enrichmentmetricslog.sh` or tail with `./scripts/enrichmenttail.sh`).
 
@@ -38,6 +39,10 @@ Summarizes the local preprocessing pipeline before heavy LLM calls.
 - `LLM_GATEWAY_DISABLE_API` – forbid API fallback.
 
 Update this doc as the pipeline evolves (doc generation, testing hooks, etc.).
+
+## Automation
+- `./scripts/rag_refresh.sh` — sync/enrich/embed tracked changes in one go.
+- `./scripts/start_rag_refresh_loop.sh` — hourly loop (use with `./scripts/run_in_tmux.sh -s dc-rag-refresh -- ./scripts/start_rag_refresh_loop.sh`; adjust cadence via `RAG_REFRESH_INTERVAL`).
 
 ## Sample Run: Qwen 2.5 Local vs. GPT-5 Nano (Azure)
 

@@ -23,3 +23,6 @@ node_modules/
 .DS_Store
 *.png
 *.jpg
+logs/*
+!logs/
+!logs/run_ledger.sample
