@@ -6,6 +6,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
+from .config import index_path_for_read
 from .database import Database
 
 TOKEN_PATTERN = re.compile(r"[A-Za-z0-9_]+")
@@ -227,7 +228,7 @@ def generate_plan(
     log: bool = True,
 ) -> PlanResult:
     repo_root = repo_root or _resolve_repo_root()
-    db = Database(repo_root / ".rag" / "index.db")
+    db = Database(index_path_for_read(repo_root))
     try:
         tokens = _tokenize(query)
         intent = _derive_intent(tokens)

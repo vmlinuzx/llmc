@@ -153,6 +153,20 @@ resolve_sections() {
   echo "$resolved"
 }
 
+resolve_rag_index_path() {
+  local candidate="${LLMC_RAG_INDEX_PATH:-$ROOT/.rag/index_v2.db}"
+  if [ -f "$candidate" ]; then
+    echo "$candidate"
+    return 0
+  fi
+  candidate="$ROOT/.rag/index.db"
+  if [ -f "$candidate" ]; then
+    echo "$candidate"
+    return 0
+  fi
+  return 1
+}
+
 # Load the desired slice of a context doc, caching results until the source changes.
 load_doc_context() {
   local label="$1"
@@ -207,7 +221,8 @@ rag_plan_snippet() {
   if [ "${CODEX_WRAP_DISABLE_RAG:-0}" = "1" ]; then
     return 0
   fi
-  if [ ! -f "$ROOT/.rag/index.db" ]; then
+  local index_path
+  if ! index_path="$(resolve_rag_index_path)"; then
     return 0
   fi
   local script="$ROOT/scripts/rag_plan_snippet.py"
@@ -215,7 +230,7 @@ rag_plan_snippet() {
     return 0
   fi
   local output
-  if ! output=$("$PYTHON_BIN" "$script" --repo "$ROOT" --limit "${RAG_PLAN_LIMIT:-5}" --min-score "${RAG_PLAN_MIN_SCORE:-0.4}" --min-confidence "${RAG_PLAN_MIN_CONFIDENCE:-0.6}" --no-log <<<"$user_query" 2>/dev/null); then
+  if ! output=$(LLMC_RAG_INDEX_PATH="$index_path" "$PYTHON_BIN" "$script" --repo "$ROOT" --limit "${RAG_PLAN_LIMIT:-5}" --min-score "${RAG_PLAN_MIN_SCORE:-0.4}" --min-confidence "${RAG_PLAN_MIN_CONFIDENCE:-0.6}" --no-log <<<"$user_query" 2>/dev/null); then
     [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: rag plan failed" >&2
     return 0
   fi

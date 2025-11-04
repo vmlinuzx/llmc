@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-import hashlib
-import struct
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 
 from jsonschema import Draft7Validator, ValidationError
 
+from .config import (
+    embedding_model_dim,
+    embedding_model_name,
+    embedding_normalize,
+)
 from .database import Database
+from .embeddings import HASH_MODELS, build_embedding_backend
 
 MAX_SNIPPET_CHARS = 800
 
@@ -99,7 +103,20 @@ def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_sec
     return plan
 
 
-def embedding_plan(db: Database, repo_root: Path, limit: int = 10, model: str = "hash-emb-v1", dim: int = 64) -> List[dict]:
+def embedding_plan(
+    db: Database,
+    repo_root: Path,
+    limit: int = 10,
+    model: str | None = None,
+    dim: int | None = None,
+) -> List[dict]:
+    resolved_model = model or embedding_model_name()
+    if resolved_model in HASH_MODELS:
+        resolved_dim = dim or 64
+    else:
+        resolved_dim = dim or embedding_model_dim()
+    normalize = False if resolved_model in HASH_MODELS else embedding_normalize()
+
     items = db.pending_embeddings(limit=limit)
     plan: List[dict] = []
     for item in items:
@@ -112,9 +129,9 @@ def embedding_plan(db: Database, repo_root: Path, limit: int = 10, model: str = 
                 "lines": [item.start_line, item.end_line],
                 "code_length": len(code),
                 "embedding_hint": {
-                    "model": model,
-                    "dim": dim,
-                    "normalize": True,
+                    "model": resolved_model,
+                    "dim": resolved_dim,
+                    "normalize": normalize,
                     "truncate_after": 1024,
                 },
             }
@@ -122,38 +139,60 @@ def embedding_plan(db: Database, repo_root: Path, limit: int = 10, model: str = 
     return plan
 
 
-def _deterministic_embedding(payload: bytes, dim: int) -> List[float]:
-    """Hash-based embedding placeholder to keep the worker deterministic/offline."""
-    values: List[float] = []
-    seed = payload
-    while len(values) < dim:
-        digest = hashlib.sha256(seed).digest()
-        seed = digest  # next round
-        for i in range(0, len(digest), 4):
-            chunk = digest[i : i + 4]
-            if len(chunk) < 4:
-                continue
-            val = struct.unpack("<I", chunk)[0]
-            # map integer to [-1, 1]
-            values.append((val / 0xFFFFFFFF) * 2 - 1)
-            if len(values) == dim:
-                break
-    return values
+def _format_embedding_text(item, code: str) -> str:
+    header = f"{item.file_path} • {item.lang} • lines {item.start_line}-{item.end_line}"
+    body = code.strip()
+    if not body:
+        return header
+    return f"{header}\n\n{body}"
 
 
-def execute_embeddings(db: Database, repo_root: Path, limit: int = 10, model: str = "hash-emb-v1", dim: int = 64) -> List[Tuple[str, int]]:
+def execute_embeddings(
+    db: Database,
+    repo_root: Path,
+    limit: int = 10,
+    model: str | None = None,
+    dim: int | None = None,
+) -> Tuple[List[Tuple[str, int]], str, int]:
     items = db.pending_embeddings(limit=limit)
     if not items:
-        return []
+        fallback_model = model or embedding_model_name()
+        if model and model in HASH_MODELS:
+            fallback_dim = dim or 64
+        else:
+            fallback_dim = dim or embedding_model_dim()
+        return [], fallback_model, fallback_dim
+
+    backend = build_embedding_backend(model, dim=dim)
+
+    prepared_hashes: List[str] = []
+    texts: List[str] = []
+    for item in items:
+        try:
+            code = item.read_source(repo_root)
+        except FileNotFoundError:
+            continue
+        formatted = _format_embedding_text(item, code)
+        if not formatted.strip():
+            continue
+        texts.append(formatted)
+        prepared_hashes.append(item.span_hash)
+
+    if not texts:
+        return [], backend.model_name, backend.dim
+
+    vectors = backend.embed_passages(texts)
+    if len(vectors) != len(prepared_hashes):  # pragma: no cover - defensive guard
+        raise RuntimeError(
+            f"Embedding backend returned {len(vectors)} vectors for {len(prepared_hashes)} spans"
+        )
     created: List[Tuple[str, int]] = []
     with db.transaction():
-        db.ensure_embedding_meta(model, dim)
-        for item in items:
-            payload = item.read_bytes(repo_root)
-            vector = _deterministic_embedding(payload, dim=dim)
-            db.store_embedding(item.span_hash, vector)
-            created.append((item.span_hash, dim))
-    return created
+        db.ensure_embedding_meta(backend.model_name, backend.dim)
+        for span_hash, vector in zip(prepared_hashes, vectors):
+            db.store_embedding(span_hash, vector)
+            created.append((span_hash, backend.dim))
+    return created, backend.model_name, backend.dim
 
 
 def default_enrichment_callable(model: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:

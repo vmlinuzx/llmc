@@ -44,7 +44,7 @@ python3 -m venv /tmp/rag-venv
 source /tmp/rag-venv/bin/activate
 pip install -r tools/rag/requirements.txt
 
-# full index (writes .rag/index.db and spans.jsonl)
+# full index (writes .rag/index_v2.db and versioned spans.jsonl)
 python -m tools.rag.cli index
 
 # incremental sync for changed files

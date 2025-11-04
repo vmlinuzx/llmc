@@ -5,7 +5,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 ## Stage 1 – Index
 - `python -m tools.rag.cli index` to rebuild from scratch.
 - Incremental: `python -m tools.rag.cli sync --since <commit>` or pass explicit paths.
-- Output: `.rag/index.db` (files, spans, hashes).
+- Output: `.rag/index_v2.db` (files, spans, hashes) — fallback to `.rag/index.db` when the v2 index is absent.
 
 ## Stage 2 – Enrich
 - Batch: `python scripts/qwen_enrich_batch.py --cooldown 600`.
@@ -17,6 +17,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 
 ## Stage 3 – Embed
 - `python -m tools.rag.cli embed --execute --limit 50`.
+- Default embedding model: `intfloat/e5-base-v2` with `passage:` / `query:` prefixing and L2-normalized vectors (tune via `EMBEDDINGS_MODEL_NAME`, `EMBEDDINGS_PASSAGE_PREFIX`, `EMBEDDINGS_QUERY_PREFIX`).
 - Smoke test: `./scripts/embed_smoke_test.sh`.
 - Confirm status: `python -m tools.rag.cli stats` (check Embeddings column).
 - Deterministic hash embeddings keep this stage offline-friendly.

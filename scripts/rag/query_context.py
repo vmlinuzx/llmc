@@ -8,6 +8,7 @@ Usage:
     python query_context.py "api routes" --limit 5
 """
 
+import os
 import sys
 import argparse
 from pathlib import Path
@@ -25,7 +26,8 @@ COLLECTION_NAME = "workspace_code"
 class ContextQuerier:
     def __init__(self, db_path: Path):
         self.db_path = db_path
-        
+        self.query_prefix = os.getenv("LLMC_RAG_QUERY_PREFIX", "query: ")
+
         # Initialize ChromaDB
         try:
             self.client = chromadb.PersistentClient(
@@ -37,9 +39,10 @@ class ContextQuerier:
             print(f"❌ Error: RAG database not found at {db_path}")
             print(f"   Run 'python index_workspace.py' first to create the index")
             sys.exit(1)
-        
+
         # Initialize embedding model
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        model_name = os.getenv("LLMC_RAG_WORKSPACE_MODEL", "intfloat/e5-base-v2")
+        self.model = SentenceTransformer(model_name)
     
     def query(
         self,
@@ -59,7 +62,8 @@ class ContextQuerier:
             where["file_ext"] = file_type
         
         # Generate query embedding
-        query_embedding = self.model.encode([query_text])[0]
+        prefixed_query = f"{self.query_prefix}{query_text.strip()}"
+        query_embedding = self.model.encode([prefixed_query], normalize_embeddings=True)[0]
         
         # Query collection
         results = self.collection.query(
