@@ -54,6 +54,44 @@ def azure_env_available(env: dict[str, str] | None = None) -> bool:
     return all(env.get(key) for key in required)
 
 
+def infer_effective_tier(meta: Dict[str, object], fallback: str) -> str:
+    """Derive the tier label from backend/meta instead of router guesswork."""
+
+    backend = str(meta.get("backend") or "").lower()
+    model = str(meta.get("model") or "").lower()
+
+    if backend == "gateway":
+        return "nano"
+
+    if "nano" in model:
+        return "nano"
+
+    tier_map = (
+        ("14b", "14b"),
+        ("13b", "14b"),
+        ("12b", "14b"),
+        ("11b", "14b"),
+        ("10b", "14b"),
+        ("9b", "14b"),
+        ("8b", "14b"),
+        ("7b", "7b"),
+        ("6.7b", "7b"),
+        ("6b", "7b"),
+        ("5b", "7b"),
+        ("4b", "7b"),
+        ("3b", "7b"),
+    )
+
+    for keyword, tier in tier_map:
+        if keyword in model:
+            return tier
+
+    if backend:
+        return backend
+
+    return fallback
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Batch enrichment runner using local Qwen via codex_wrap.sh."
@@ -667,7 +705,8 @@ def main() -> int:
                         continue
                     break
 
-                final_tier = tiers_history[-1] if tiers_history else start_tier
+                router_tier = tiers_history[-1] if tiers_history else start_tier
+                final_tier = infer_effective_tier(final_meta, router_tier) if success else router_tier
                 promo_label = "none"
                 if len(tiers_history) > 1:
                     promo_label = f"{tiers_history[0]}->{tiers_history[-1]}"
@@ -677,6 +716,7 @@ def main() -> int:
                     "task_id": item["span_hash"],
                     "path": item["path"],
                     "tier_used": final_tier,
+                    "router_tier": router_tier,
                     "line_count": line_count,
                     "nesting_depth": nesting_depth,
                     "node_count": node_count,
@@ -708,6 +748,7 @@ def main() -> int:
                         "latency_sec": round(latency, 3),
                         "model": result_model,
                         "tier": final_tier,
+                        "router_tier": router_tier,
                         "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
                     }
                     stats = db.stats()
@@ -718,14 +759,19 @@ def main() -> int:
                     append_metrics(log_path, metrics_summary)
 
                     processed += 1
+                    model_note = f" ({result_model})" if result_model else ""
+                    router_note = ""
+                    if final_tier != router_tier:
+                        router_note = f" [router {router_tier}]"
                     print(
                         f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                        f"({latency:.2f}s) via tier {final_tier}"
+                        f"({latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
                     )
                     if args.sleep:
                         time.sleep(args.sleep)
                 else:
                     ledger_record["result"] = "fail"
+                    ledger_record["router_tier"] = router_tier
                     failure_reason = failure_info[0] if failure_info else "unknown"
                     ledger_record["reason"] = failure_reason
                     ledger_record["wall_ms"] = int(round((time.monotonic() - wall_start) * 1000))

@@ -2,7 +2,7 @@
 
 **Commodore Grace** is the official LLMC brand icon, named in honor of Rear Admiral Grace Hopper—computer pioneer, US Navy legend, and patron saint of fearless engineers.
 
-- Artwork: `docs/waifu/grace.png`
+- Artwork: `DOCS/waifu/grace.png`
 - Description: Anime-styled naval commander with long blue hair, cheek scar, and full-dress tunic standing at the bow of the U.S. LLMC flagship. She leads the fleet through stormy seas while directing an attack with her sabre.
 - Intent: Emphasize technical excellence, discipline, and audacity without the usual pin-up tropes.
 

@@ -46,7 +46,7 @@ if ((${#missing_env[@]})); then
 fi
 
 sync_args=()
-for relative in "docs/preprocessor_flow.md" "DOCS/preprocessor_flow.md"; do
+for relative in "DOCS/preprocessor_flow.md" "DOCS/archive/preprocessor_flow_legacy.md"; do
   if [[ -f "$REPO_ROOT/$relative" ]]; then
     sync_args+=("--path" "$relative")
   fi
@@ -66,6 +66,8 @@ LLM_DISABLED=false NEXT_PUBLIC_LLM_DISABLED=false LLM_GATEWAY_DISABLE_LOCAL=1 \
     --backend gateway \
     --api \
     --batch-size 5 \
+    --router off \
+    --start-tier 7b \
     --max-spans 0
 
 echo "[indexenrich-azure] Regenerating embeddings for any new spans"

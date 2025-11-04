@@ -22,7 +22,7 @@ then
 fi
 
 sync_args=()
-for relative in "docs/preprocessor_flow.md" "DOCS/preprocessor_flow.md"; do
+for relative in "DOCS/preprocessor_flow.md" "DOCS/archive/preprocessor_flow_legacy.md"; do
   if [[ -f "$REPO_ROOT/$relative" ]]; then
     sync_args+=("--path" "$relative")
   fi
@@ -41,6 +41,8 @@ LLM_DISABLED=false NEXT_PUBLIC_LLM_DISABLED=false \
   --repo "$REPO_ROOT" \
   --backend ollama \
   --batch-size 5 \
+  --router off \
+  --start-tier 7b \
   --max-spans 0
 
 echo "[indexenrich] Regenerating embeddings for any new spans"

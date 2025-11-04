@@ -1406,7 +1406,7 @@ await kg.addEntity({ id:"skewt", labels:["Visualization"], properties:
 22
 
 // 2. Import from documentation
-for (const doc of ["docs/NOAA_API.txt", "docs/FreeFlight_design.md"]) {
+for (const doc of ["DOCS/NOAA_API.txt", "DOCS/FreeFlight_design.md"]) {
 await populateGraphFromDoc(doc);
 }
 // 3. Import from databases

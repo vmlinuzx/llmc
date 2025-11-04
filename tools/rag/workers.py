@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
+import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -69,7 +70,17 @@ def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_sec
     items = db.pending_enrichments(limit=limit, cooldown_seconds=cooldown_seconds)
     plan: List[dict] = []
     for item in items:
-        code = item.read_source(repo_root)
+        try:
+            code = item.read_source(repo_root)
+        except FileNotFoundError:
+            # Source file vanished (e.g., moved or deleted) – drop related spans so the plan stays healthy.
+            with db.transaction():
+                db.delete_file(item.file_path)
+            print(
+                f"[enrichment_plan] skipped missing file {item.file_path}",
+                file=sys.stderr,
+            )
+            continue
         plan.append(
             {
                 "span_hash": item.span_hash,

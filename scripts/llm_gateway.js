@@ -3,7 +3,9 @@
  * llm_gateway.js - Simple LLM tool: Local first, API fallback
  * Usage: echo "prompt" | node llm_gateway.js
  *        node llm_gateway.js "prompt text"
- *        node llm_gateway.js --api "prompt text"  (skip local)
+ *        node llm_gateway.js --api "prompt text"     (skip local, use Azure/Claude/Gemini)
+ *        node llm_gateway.js --claude "prompt text"  (force Claude API)
+ *        node llm_gateway.js --local "prompt text"   (force local Ollama)
  */
 
 const http = require('http');
@@ -65,6 +67,12 @@ const OLLAMA_MODEL = hasModelOverride ? requestedModelOverride : MODELS[resolved
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
+const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
+const ANTHROPIC_VERSION = process.env.ANTHROPIC_VERSION || '2023-06-01';
+const ANTHROPIC_MAX_TOKENS = Number.parseInt(process.env.ANTHROPIC_MAX_TOKENS || '4096', 10);
+const ANTHROPIC_AVAILABLE = Boolean(ANTHROPIC_API_KEY);
 const AZURE_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
 const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
 const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || '';
@@ -87,6 +95,7 @@ const args = process.argv.slice(2);
 const debugEnabled = args.includes('--debug') || args.includes('-d');
 const forceAPI = args.includes('--api') || args.includes('-a');
 const forceLocal = args.includes('--local') || args.includes('-l');
+const forceClaude = args.includes('--claude') || args.includes('-c');
 let prompt = args.filter(a => !a.startsWith('-')).join(' ');
 const debugLog = (...messages) => {
   if (debugEnabled) {
@@ -111,6 +120,8 @@ async function main() {
     console.error('Usage: echo "prompt" | node llm_gateway.js');
     console.error('       node llm_gateway.js "prompt text"');
     console.error('       node llm_gateway.js --api "prompt text"');
+    console.error('       node llm_gateway.js --claude "prompt text"');
+    console.error('       node llm_gateway.js --local "prompt text"');
     process.exit(1);
   }
 
@@ -178,14 +189,26 @@ async function main() {
     } else {
       const reasons = [];
       if (forceAPI) reasons.push('--api flag');
+      if (forceClaude) reasons.push('--claude flag');
       if (localDisabledByEnv) reasons.push('local disabled via env');
       if (!reasons.length) reasons.push('local unavailable');
       if (apiDisabledByEnv) reasons.push('API disabled via env');
-      const apiTarget = AZURE_AVAILABLE ? 'Azure' : 'Gemini';
+      const apiTarget = forceClaude ? 'Claude' : (AZURE_AVAILABLE ? 'Azure' : (ANTHROPIC_AVAILABLE ? 'Claude' : 'Gemini'));
       console.error(`routing=${apiTarget} (${reasons.join('; ')})`);
       if (apiDisabledByEnv) {
-        throw new Error('Gemini usage disabled via LLM_GATEWAY_DISABLE_API=1');
+        throw new Error('API usage disabled via LLM_GATEWAY_DISABLE_API=1');
       }
+    }
+
+    // Priority: Azure → Claude → Gemini (unless --claude forces Claude first)
+    if (forceClaude) {
+      if (!ANTHROPIC_AVAILABLE) {
+        throw new Error('Claude forced but ANTHROPIC_API_KEY not configured');
+      }
+      response = await anthropicComplete(prompt);
+      console.error('✅ Claude API succeeded');
+      console.log(response);
+      return;
     }
 
     if (AZURE_AVAILABLE) {
@@ -195,12 +218,19 @@ async function main() {
       return;
     }
 
+    if (ANTHROPIC_AVAILABLE) {
+      response = await anthropicComplete(prompt);
+      console.error('✅ Claude API succeeded');
+      console.log(response);
+      return;
+    }
+
     if (!GEMINI_API_KEY) {
-      throw new Error('No API backend configured. Provide Azure or Gemini credentials.');
+      throw new Error('No API backend configured. Provide Azure, Claude, or Gemini credentials.');
     }
 
     response = await geminiComplete(prompt);
-    console.error('✅ API succeeded');
+    console.error('✅ Gemini API succeeded');
     console.log(response);
     
   } catch (error) {
@@ -451,6 +481,57 @@ function geminiComplete(prompt) {
     req.end();
   });
 }
+
+function anthropicComplete(prompt) {
+  return new Promise((resolve, reject) => {
+    const url = `${ANTHROPIC_BASE_URL}/v1/messages`;
+    const data = JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: ANTHROPIC_MAX_TOKENS,
+      messages: [
+        { role: 'user', content: prompt }
+      ]
+    });
+
+    const req = https.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': ANTHROPIC_VERSION,
+        'Content-Length': Buffer.byteLength(data, 'utf8')
+      }
+    }, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => {
+        debugLog('Claude status:', res.statusCode);
+        debugLog('Claude raw body:', body);
+        try {
+          const json = JSON.parse(body);
+          if (json.content && json.content[0] && json.content[0].text) {
+            resolve(json.content[0].text);
+            return;
+          }
+          if (json.error) {
+            const errMsg = json.error.message || 'Claude returned error';
+            reject(new Error(errMsg));
+            return;
+          } else {
+            reject(new Error('No response from Claude'));
+          }
+        } catch (e) {
+          reject(new Error('Failed to parse Claude response'));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
 const REPO_ROOT = path.resolve(__dirname, '..');
 const RAG_SCRIPT = path.join(REPO_ROOT, 'scripts', 'rag_plan_snippet.py');
 const RAG_DB_PATH = path.join(REPO_ROOT, '.rag', 'index.db');
