@@ -11,7 +11,7 @@ LLM Commander centralizes our local-first orchestration assets so new LLM-driven
 
 ## Mission Statement
 
-LLM Commander exists to **reduce token spend** and **increase answer quality** by:
+LLM Commander exists to **keep token spend down for budget-conscious developers, artists, and writers** while boosting answer quality by:
 
 1. Running the heavy lifting on local LLMs (Qwen) and deterministic helpers first, falling back to remote GPT only when the span size forces it.
 2. Maintaining a repeatable, structured RAG knowledge base (code + docs) that feeds every prompt automatically.
