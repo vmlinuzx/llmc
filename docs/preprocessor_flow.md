@@ -9,6 +9,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 
 ## Stage 2 – Enrich
 - Batch: `python scripts/qwen_enrich_batch.py --cooldown 600`.
+  - Retries escalate from Qwen 7B → `--fallback-model` (default `qwen2.5:14b-instruct-q4_K_M`) → gateway (GPT-5 nano) on parse/validation failures.
 - Manual: `python -m tools.rag.cli enrich --execute --cooldown 600`.
 - Metrics land in `logs/enrichment_metrics.jsonl`; tail with `./scripts/enrichmentmetricslog.sh`.
 
@@ -33,6 +34,10 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
 - `LLM_DISABLED`, `NEXT_PUBLIC_LLM_DISABLED`, `WEATHER_DISABLED` hard-stop all LLM calls until flipped.
 
 Keep this doc updated as we add doc generation, eval harnesses, or new backends.
+
+## Automation
+- `./scripts/rag_refresh.sh` — one-shot sync/enrich/embed for tracked changes.
+- `./scripts/start_rag_refresh_loop.sh` — run in tmux (`./scripts/run_in_tmux.sh -s dc-rag-refresh -- ./scripts/start_rag_refresh_loop.sh`) to refresh every hour (override via `RAG_REFRESH_INTERVAL`).
 
 ## Sample Run: Qwen 2.5 Local vs. GPT-5 Nano (Azure)
 

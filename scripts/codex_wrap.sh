@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACT="$ROOT/CONTRACTS.md"
 AGENTS="$ROOT/AGENTS.md"
 CHANGELOG="$ROOT/CHANGELOG.md"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 CODEX_LOG_FILE="${CODEX_LOG_FILE:-$ROOT/logs/codexlog.txt}"
 mkdir -p "$(dirname "$CODEX_LOG_FILE")"
@@ -201,6 +202,29 @@ load_doc_context() {
   cat "$cache_file"
 }
 
+rag_plan_snippet() {
+  local user_query="$1"
+  if [ "${CODEX_WRAP_DISABLE_RAG:-0}" = "1" ]; then
+    return 0
+  fi
+  if [ ! -f "$ROOT/.rag/index.db" ]; then
+    return 0
+  fi
+  local script="$ROOT/scripts/rag_plan_snippet.py"
+  if [ ! -x "$script" ]; then
+    return 0
+  fi
+  local output
+  if ! output=$("$PYTHON_BIN" "$script" --repo "$ROOT" --limit "${RAG_PLAN_LIMIT:-5}" --min-score "${RAG_PLAN_MIN_SCORE:-0.4}" --min-confidence "${RAG_PLAN_MIN_CONFIDENCE:-0.6}" --no-log <<<"$user_query" 2>/dev/null); then
+    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: rag plan failed" >&2
+    return 0
+  fi
+  output="$(printf '%s' "$output" | sed '/^[[:space:]]*$/d')"
+  if [ -n "$output" ]; then
+    printf '%s\n' "$output"
+  fi
+}
+
 # Build the full prompt
 build_prompt() {
   local prompt=""
@@ -246,6 +270,16 @@ build_prompt() {
       fi
     fi
   fi
+
+  local rag_context
+  rag_context=$(rag_plan_snippet "$1") || rag_context=""
+  if [ -n "$rag_context" ]; then
+    prompt="$prompt$rag_context
+
+---
+
+"
+  fi
   
   # Add execution directive
   # Optional ToolCaps injection (compact, single line)
@@ -269,6 +303,12 @@ build_prompt() {
   
   # Append user's actual prompt
   prompt="$prompt$1"
+  
+  # Token estimation (4 chars ≈ 1 token)
+  local estimated_tokens=$((${#prompt} / 4))
+  if [ "${CODEX_WRAP_ENABLE_LOGGING:-1}" = "1" ] && [ "${CODEX_LOGGING_ACTIVE:-0}" = "1" ]; then
+    printf 'Token estimate: %d (~%d KB prompt)\n' "$estimated_tokens" "$((${#prompt} / 1024))" >&$CODEX_LOG_FD
+  fi
   
   echo "$prompt"
 }

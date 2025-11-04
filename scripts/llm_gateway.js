@@ -10,6 +10,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 
 function loadEnvFrom(file) {
   try {
@@ -114,6 +115,7 @@ async function main() {
   }
 
   try {
+    prompt = attachRagPlan(prompt);
     let response;
 
     // Hard disable for Phase 2: respect LLM_DISABLED / NEXT_PUBLIC_LLM_DISABLED / WEATHER_DISABLED
@@ -448,4 +450,45 @@ function geminiComplete(prompt) {
     req.write(data);
     req.end();
   });
+}
+const REPO_ROOT = path.resolve(__dirname, '..');
+const RAG_SCRIPT = path.join(REPO_ROOT, 'scripts', 'rag_plan_snippet.py');
+const RAG_DB_PATH = path.join(REPO_ROOT, '.rag', 'index.db');
+const PYTHON_BIN = process.env.LLM_GATEWAY_PYTHON || process.env.PYTHON || 'python3';
+function ragPlanSnippet(question) {
+  if (process.env.LLM_GATEWAY_DISABLE_RAG === '1' || process.env.CODEX_WRAP_DISABLE_RAG === '1') {
+    return '';
+  }
+  if (!fs.existsSync(RAG_DB_PATH) || !fs.existsSync(RAG_SCRIPT)) {
+    return '';
+  }
+  const args = [
+    RAG_SCRIPT,
+    '--repo',
+    REPO_ROOT,
+    '--limit',
+    process.env.RAG_PLAN_LIMIT || '5',
+    '--min-score',
+    process.env.RAG_PLAN_MIN_SCORE || '0.4',
+    '--min-confidence',
+    process.env.RAG_PLAN_MIN_CONFIDENCE || '0.6',
+    '--no-log'
+  ];
+  const result = spawnSync(PYTHON_BIN, args, {
+    input: question,
+    encoding: 'utf8',
+  });
+  if (result.error || result.status !== 0) {
+    debugLog('ragPlanSnippet error:', result.error || result.stderr);
+    return '';
+  }
+  return (result.stdout || '').trim();
+}
+
+function attachRagPlan(prompt) {
+  const snippet = ragPlanSnippet(prompt);
+  if (!snippet) {
+    return prompt;
+  }
+  return `${snippet}\n\n---\n\n${prompt}`;
 }
