@@ -85,6 +85,10 @@ if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
 fi
 
 CACHE_LOOKUP_RESULT=""
+CACHE_LOOKUP_STATUS="disabled"
+CACHE_LOOKUP_SCORE=""
+
+CACHE_LOOKUP_RESULT=""
 
 # Load ToolCaps state if present (written by scripts/tool_health.sh)
 TOOLS_STATE_ENV="$ROOT/.codex/state/tools.env"
@@ -357,8 +361,12 @@ semantic_cache_provider_for_route() {
 
 semantic_cache_lookup() {
   if ! semantic_cache_enabled; then
+    CACHE_LOOKUP_STATUS="disabled"
+    CACHE_LOOKUP_SCORE=""
     return 1
   fi
+  CACHE_LOOKUP_STATUS="miss"
+  CACHE_LOOKUP_SCORE=""
   local route="$1"
   local prompt="$2"
   local provider="$3"
@@ -395,8 +403,13 @@ semantic_cache_lookup() {
   hit=$(echo "$result" | jq -r '.hit // false' 2>/dev/null)
   if [ "$hit" = "true" ]; then
     CACHE_LOOKUP_RESULT="$result"
+    CACHE_LOOKUP_STATUS="hit"
+    CACHE_LOOKUP_SCORE=$(echo "$result" | jq -r '.score // ""' 2>/dev/null)
     return 0
   fi
+  CACHE_LOOKUP_RESULT=""
+  CACHE_LOOKUP_STATUS="miss"
+  CACHE_LOOKUP_SCORE=""
   return 1
 }
 
@@ -563,12 +576,20 @@ execute_route() {
   provider=$(semantic_cache_provider_for_route "$route")
 
   if semantic_cache_lookup "$route" "$full_prompt" "$provider"; then
-    local score
-    score=$(echo "$CACHE_LOOKUP_RESULT" | jq -r '.score // 1' 2>/dev/null)
-    echo "⚡ Semantic cache hit (score ${score})" >&2
-    echo "$CACHE_LOOKUP_RESULT" | jq -r '.response // ""'
-    CACHE_LOOKUP_RESULT=""
-    return 0
+    local score="${CACHE_LOOKUP_SCORE:-1}"
+    if [ "${SEMANTIC_CACHE_PROBE:-0}" = "1" ]; then
+      echo "🔍 Semantic cache hit (score ${score}) [probe]" >&2
+      CACHE_LOOKUP_RESULT=""
+    else
+      echo "⚡ Semantic cache hit (score ${score})" >&2
+      echo "$CACHE_LOOKUP_RESULT" | jq -r '.response // ""'
+      CACHE_LOOKUP_RESULT=""
+      return 0
+    fi
+  else
+    if [ "${SEMANTIC_CACHE_PROBE:-0}" = "1" ]; then
+      echo "🔍 Semantic cache miss (probe mode)" >&2
+    fi
   fi
 
   local response=""

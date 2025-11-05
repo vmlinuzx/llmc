@@ -32,6 +32,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
   - `SEMANTIC_CACHE_MIN_OVERLAP=0.7` (default 0.6) sets the minimum lexical overlap of user prompts before a semantic hit is trusted.
   - `SEMANTIC_CACHE_DB=/path/to/cache.db` chooses the SQLite store (default `.cache/semantic_cache.db`).
   - `SEMANTIC_CACHE_ENABLE=0` (alternate disable flag).
+  - `SEMANTIC_CACHE_PROBE=1` forces cache lookups to log hit/miss decisions but still execute the LLM (useful for testing).
 - Entries are keyed by the fully constructed prompt (including RAG context) with embeddings generated via the same E5 backend for similarity checks.
 - Smoke test: `./scripts/embed_smoke_test.sh`.
 - Confirm status: `python -m tools.rag.cli stats` (check Embeddings column).
