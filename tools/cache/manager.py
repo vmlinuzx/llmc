@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
@@ -65,6 +66,21 @@ def _resolve_db(repo_root: Optional[Path] = None) -> CacheDatabase:
     return CacheDatabase(path)
 
 
+_TOKEN_PATTERN = re.compile(r"[A-Za-z0-9']+")
+_STOPWORDS = {
+    "", "a", "an", "the", "and", "or", "to", "for", "of", "with", "on",
+    "write", "please", "kindly", "create", "code", "program", "function",
+    "this", "that", "in", "python", "c", "c++", "java", "js", "number",
+    "numbers", "value", "values", "using", "make", "build", "return", "returns",
+    "should", "be", "implement",
+}
+
+
+def _tokenize(text: str) -> set[str]:
+    tokens = {match.group(0).lower() for match in _TOKEN_PATTERN.finditer(text)}
+    return {token for token in tokens if token not in _STOPWORDS}
+
+
 def lookup(
     prompt: str,
     route: str,
@@ -72,6 +88,7 @@ def lookup(
     provider: Optional[str] = None,
     min_score: Optional[float] = None,
     repo_root: Optional[Path] = None,
+    user_prompt: Optional[str] = None,
 ) -> tuple[bool, Optional[CacheEntry]]:
     if not config.cache_enabled():
         return False, None
@@ -83,10 +100,43 @@ def lookup(
     backend = build_embedding_backend()
     vector = backend.embed_queries([prompt])[0]
     norm = _compute_norm(vector)
+    query_tokens: Optional[set[str]] = None
+    if user_prompt:
+        tokens = _tokenize(user_prompt)
+        query_tokens = tokens if tokens else None
 
     try:
         if norm == 0.0:
             return False, None
+
+        # Exact match shortcut by prompt hash
+        exact = db.conn.execute(
+            """
+            SELECT
+                e.id, e.prompt_hash, e.route, e.provider, e.prompt, e.user_prompt,
+                e.response, e.tokens_in, e.tokens_out, e.total_cost, e.created_at
+            FROM entries e
+            WHERE e.prompt_hash = ? AND e.route = ?
+            LIMIT 1
+            """,
+            (prompt_hash, route),
+        ).fetchone()
+        if exact:
+            entry = CacheEntry(
+                id=int(exact[0]),
+                prompt_hash=exact[1],
+                route=exact[2],
+                provider=exact[3],
+                prompt=exact[4],
+                user_prompt=exact[5],
+                response=exact[6],
+                tokens_in=exact[7],
+                tokens_out=exact[8],
+                total_cost=exact[9],
+                created_at=exact[10],
+                score=1.0,
+            )
+            return True, entry
 
         rows = db.conn.execute(
             """
@@ -110,6 +160,18 @@ def lookup(
             dim = row["dim"]
             vec = _unpack_vector(row["vec"], dim)
             similarity = _cosine_similarity(vector, norm, vec, row["stored_norm"])
+            if similarity < minimum:
+                continue
+            if query_tokens is not None and row["user_prompt"]:
+                candidate_tokens = _tokenize(row["user_prompt"])
+                if candidate_tokens:
+                    overlap = len(query_tokens & candidate_tokens) / max(1, len(query_tokens | candidate_tokens))
+                    if overlap < config.cache_min_overlap():
+                        continue
+                    new_only = query_tokens - candidate_tokens
+                    old_only = candidate_tokens - query_tokens
+                    if new_only and old_only:
+                        continue
             if similarity >= minimum and similarity > best_score:
                 best_score = similarity
                 best = CacheEntry(

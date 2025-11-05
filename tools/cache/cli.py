@@ -34,15 +34,34 @@ def cli() -> None:
     help="Path to the prompt (default: stdin).",
 )
 @click.option(
+    "--user-prompt-file",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to the original user prompt (optional).",
+)
+@click.option(
     "--min-score",
     type=float,
     default=None,
-    help="Minimum cosine similarity required to accept a hit (default: env or 0.92).",
+    help="Minimum cosine similarity required to accept a hit (default: env).",
 )
-def lookup(route: str, provider: Optional[str], prompt_file: Path, min_score: Optional[float]) -> None:
+def lookup(
+    route: str,
+    provider: Optional[str],
+    prompt_file: Path,
+    user_prompt_file: Optional[Path],
+    min_score: Optional[float],
+) -> None:
     """Lookup a cached response."""
     prompt = _read_text(prompt_file, stdin_fallback=True)
-    hit, entry = manager.lookup(prompt, route, provider=provider, min_score=min_score)
+    user_prompt = _read_text(user_prompt_file, stdin_fallback=False) if user_prompt_file else None
+    hit, entry = manager.lookup(
+        prompt,
+        route,
+        provider=provider,
+        min_score=min_score,
+        user_prompt=user_prompt,
+    )
     if not hit or entry is None:
         click.echo(json.dumps({"hit": False}))
         return
