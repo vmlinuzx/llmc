@@ -90,6 +90,7 @@ const AZURE_TEMPERATURE = (() => {
 })();
 const BASH_EXECUTABLE = resolveBashExecutable();
 
+
 // Parse args
 const args = process.argv.slice(2);
 const debugEnabled = args.includes('--debug') || args.includes('-d');
@@ -102,6 +103,11 @@ const debugLog = (...messages) => {
     console.error('[debug]', ...messages);
   }
 };
+
+const REPO_ROOT = path.resolve(__dirname, '..');
+const RAG_SCRIPT = path.join(REPO_ROOT, 'scripts', 'rag_plan_snippet.py');
+const RAG_DB_PATH = path.join(REPO_ROOT, '.rag', 'index.db');
+const PYTHON_BIN = process.env.LLM_GATEWAY_PYTHON || process.env.PYTHON || 'python3';
 
 // Read from stdin if no prompt provided
 if (!prompt && !process.stdin.isTTY) {
@@ -151,8 +157,10 @@ async function main() {
     const apiDisabledByEnv = envFlag('LLM_GATEWAY_DISABLE_API');
     const skipLocalReason = forceAPI
       ? '--api flag'
+      : forceClaude
+      ? '--claude flag'
       : (localDisabledByEnv ? 'local disabled via env' : null);
-    const canUseLocal = !skipLocalReason;
+    const canUseLocal = !skipLocalReason && !forceClaude;
     const allowFallback = canUseLocal && !forceLocal && !apiDisabledByEnv;
     const fallbackLabel = AZURE_AVAILABLE ? 'Azure' : 'Gemini';
 
@@ -347,7 +355,7 @@ function ollamaCompleteInternal(prompt) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': data.length
+        'Content-Length': Buffer.byteLength(data)
       },
       timeout: 60000
     }, (res) => {
@@ -371,9 +379,11 @@ function ollamaCompleteInternal(prompt) {
           if (done && combined.trim().length > 0) {
             resolve(combined);
           } else {
+            debugLog('ollama raw response:', body);
             reject(new Error('No response from Ollama'));
           }
         } catch (e) {
+          debugLog('ollama parse failure raw:', body);
           reject(new Error('Failed to parse Ollama response'));
         }
       });
@@ -532,10 +542,6 @@ function anthropicComplete(prompt) {
   });
 }
 
-const REPO_ROOT = path.resolve(__dirname, '..');
-const RAG_SCRIPT = path.join(REPO_ROOT, 'scripts', 'rag_plan_snippet.py');
-const RAG_DB_PATH = path.join(REPO_ROOT, '.rag', 'index.db');
-const PYTHON_BIN = process.env.LLM_GATEWAY_PYTHON || process.env.PYTHON || 'python3';
 function ragPlanSnippet(question) {
   if (process.env.LLM_GATEWAY_DISABLE_RAG === '1' || process.env.CODEX_WRAP_DISABLE_RAG === '1') {
     return '';
