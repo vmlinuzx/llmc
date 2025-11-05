@@ -30,6 +30,7 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
   - `SEMANTIC_CACHE_DISABLED=1` to turn it off.
   - `SEMANTIC_CACHE_MIN_SCORE=0.99` (default 0.985) adjusts the cosine hit threshold.
   - `SEMANTIC_CACHE_MIN_OVERLAP=0.7` (default 0.6) sets the minimum lexical overlap of user prompts before a semantic hit is trusted.
+  - `SEMANTIC_CACHE_REQUIRE_OVERLAP=0` disables keyword gating (default enforces overlap).
   - `SEMANTIC_CACHE_DB=/path/to/cache.db` chooses the SQLite store (default `.cache/semantic_cache.db`).
   - `SEMANTIC_CACHE_ENABLE=0` (alternate disable flag).
   - `SEMANTIC_CACHE_PROBE=1` forces cache lookups to log hit/miss decisions but still execute the LLM (useful for testing).

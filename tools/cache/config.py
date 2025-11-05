@@ -8,6 +8,7 @@ DEFAULT_MIN_SCORE = 0.985
 DEFAULT_MAX_RESULTS = 20
 DEFAULT_MAX_AGE_SECONDS = 7 * 24 * 60 * 60  # one week
 DEFAULT_MIN_OVERLAP = 0.6
+DEFAULT_REQUIRE_OVERLAP = True
 
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -94,3 +95,10 @@ def cache_min_overlap() -> float:
     except ValueError:
         pass
     return DEFAULT_MIN_OVERLAP
+
+
+def cache_require_overlap() -> bool:
+    raw = os.getenv("SEMANTIC_CACHE_REQUIRE_OVERLAP")
+    if raw is None:
+        return DEFAULT_REQUIRE_OVERLAP
+    return raw.strip().lower() in _TRUTHY
