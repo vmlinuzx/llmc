@@ -4,6 +4,31 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON:-python3}"
 
+FORCE_NANO=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --force-nano)
+      FORCE_NANO=1
+      shift
+      ;;
+    *)
+      echo "Usage: $0 [--force-nano]" >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [ "$FORCE_NANO" -eq 1 ]; then
+  echo "[indexenrich] Forcing nano tier via gateway backend"
+  ENRICH_BACKEND="gateway"
+  ENRICH_ROUTER="on"
+  ENRICH_START_TIER="nano"
+else
+  ENRICH_BACKEND="ollama"
+  ENRICH_ROUTER="off"
+  ENRICH_START_TIER="7b"
+fi
+
 echo "[indexenrich] Repo root: $REPO_ROOT"
 
 if ! "$PYTHON_BIN" - <<'PY' >/dev/null 2>&1
@@ -39,10 +64,10 @@ echo "[indexenrich] Updating enrichment metadata"
 LLM_DISABLED=false NEXT_PUBLIC_LLM_DISABLED=false \
 "$PYTHON_BIN" "$REPO_ROOT/scripts/qwen_enrich_batch.py" \
   --repo "$REPO_ROOT" \
-  --backend ollama \
+  --backend "$ENRICH_BACKEND" \
   --batch-size 5 \
-  --router off \
-  --start-tier 7b \
+  --router "$ENRICH_ROUTER" \
+  --start-tier "$ENRICH_START_TIER" \
   --max-spans 0
 
 echo "[indexenrich] Regenerating embeddings for any new spans"
