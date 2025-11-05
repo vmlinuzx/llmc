@@ -28,7 +28,8 @@ This cheat sheet mirrors the preprocessing pipeline that feeds the Codex-style o
   - `python -m tools.cache.cli lookup --route codex --prompt-file prompt.txt`
 - Configuration knobs:
   - `SEMANTIC_CACHE_DISABLED=1` to turn it off.
-  - `SEMANTIC_CACHE_MIN_SCORE=0.94` (default 0.92) adjusts the cosine hit threshold.
+  - `SEMANTIC_CACHE_MIN_SCORE=0.99` (default 0.985) adjusts the cosine hit threshold.
+  - `SEMANTIC_CACHE_MIN_OVERLAP=0.7` (default 0.6) sets the minimum lexical overlap of user prompts before a semantic hit is trusted.
   - `SEMANTIC_CACHE_DB=/path/to/cache.db` chooses the SQLite store (default `.cache/semantic_cache.db`).
   - `SEMANTIC_CACHE_ENABLE=0` (alternate disable flag).
 - Entries are keyed by the fully constructed prompt (including RAG context) with embeddings generated via the same E5 backend for similarity checks.

@@ -163,9 +163,15 @@ semantic_cache_lookup() {
   local route="$1"
   local prompt="$2"
   local provider="$3"
+  local user_prompt="${USER_PROMPT:-}"
   local prompt_file
   prompt_file=$(mktemp)
   printf '%s' "$prompt" >"$prompt_file"
+  local user_prompt_file=""
+  if [ -n "$user_prompt" ]; then
+    user_prompt_file=$(mktemp)
+    printf '%s' "$user_prompt" >"$user_prompt_file"
+  fi
   local min_score_arg=()
   if [ -n "${SEMANTIC_CACHE_MIN_SCORE:-}" ]; then
     min_score_arg=(--min-score "${SEMANTIC_CACHE_MIN_SCORE}")
@@ -175,11 +181,17 @@ semantic_cache_lookup() {
     provider_arg=(--provider "$provider")
   fi
   local result
-  if ! result=$("$PYTHON_BIN" -m tools.cache.cli lookup --route "$route" "${provider_arg[@]}" "${min_score_arg[@]}" --prompt-file "$prompt_file" 2>/dev/null); then
+  local user_prompt_arg=()
+  if [ -n "$user_prompt_file" ]; then
+    user_prompt_arg=(--user-prompt-file "$user_prompt_file")
+  fi
+  if ! result=$("$PYTHON_BIN" -m tools.cache.cli lookup --route "$route" "${provider_arg[@]}" "${user_prompt_arg[@]}" "${min_score_arg[@]}" --prompt-file "$prompt_file" 2>/dev/null); then
     rm -f "$prompt_file"
+    [ -n "$user_prompt_file" ] && rm -f "$user_prompt_file"
     return 1
   fi
   rm -f "$prompt_file"
+  [ -n "$user_prompt_file" ] && rm -f "$user_prompt_file"
   local hit
   hit=$(echo "$result" | jq -r '.hit // false' 2>/dev/null)
   if [ "$hit" = "true" ]; then

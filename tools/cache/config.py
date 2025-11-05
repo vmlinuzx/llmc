@@ -4,9 +4,10 @@ import os
 from pathlib import Path
 
 DEFAULT_CACHE_FILE = "semantic_cache.db"
-DEFAULT_MIN_SCORE = 0.92
+DEFAULT_MIN_SCORE = 0.985
 DEFAULT_MAX_RESULTS = 20
 DEFAULT_MAX_AGE_SECONDS = 7 * 24 * 60 * 60  # one week
+DEFAULT_MIN_OVERLAP = 0.6
 
 _TRUTHY = {"1", "true", "yes", "on"}
 
@@ -80,3 +81,16 @@ def cache_max_results() -> int:
     except ValueError:
         pass
     return DEFAULT_MAX_RESULTS
+
+
+def cache_min_overlap() -> float:
+    raw = os.getenv("SEMANTIC_CACHE_MIN_OVERLAP")
+    if raw is None:
+        return DEFAULT_MIN_OVERLAP
+    try:
+        value = float(raw)
+        if 0.0 <= value <= 1.0:
+            return value
+    except ValueError:
+        pass
+    return DEFAULT_MIN_OVERLAP
