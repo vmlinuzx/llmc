@@ -153,8 +153,8 @@ def lookup(
             (route, config.cache_max_results()),
         ).fetchall()
 
-        best: Optional[CacheEntry] = None
-        best_score = -1.0
+        candidates: list[tuple[float, CacheEntry]] = []
+        overlap_required = query_tokens is not None and config.cache_require_overlap()
 
         for row in rows:
             dim = row["dim"]
@@ -162,35 +162,32 @@ def lookup(
             similarity = _cosine_similarity(vector, norm, vec, row["stored_norm"])
             if similarity < minimum:
                 continue
-            if query_tokens is not None and row["user_prompt"]:
-                candidate_tokens = _tokenize(row["user_prompt"])
-                if candidate_tokens:
-                    overlap = len(query_tokens & candidate_tokens) / max(1, len(query_tokens | candidate_tokens))
-                    if overlap < config.cache_min_overlap():
-                        continue
-                    new_only = query_tokens - candidate_tokens
-                    old_only = candidate_tokens - query_tokens
-                    if new_only and old_only:
-                        continue
-            if similarity >= minimum and similarity > best_score:
-                best_score = similarity
-                best = CacheEntry(
-                    id=int(row["id"]),
-                    prompt_hash=row["prompt_hash"],
-                    route=row["route"],
-                    provider=row["provider"],
-                    prompt=row["prompt"],
-                    user_prompt=row["user_prompt"],
-                    response=row["response"],
-                    tokens_in=row["tokens_in"],
-                    tokens_out=row["tokens_out"],
-                    total_cost=row["total_cost"],
-                    created_at=row["created_at"],
-                    score=similarity,
-                )
+            if overlap_required:
+                candidate_tokens = _tokenize(row["user_prompt"] or "")
+                if not candidate_tokens:
+                    continue
+                overlap = len(query_tokens & candidate_tokens) / max(1, len(query_tokens | candidate_tokens))
+                if overlap < config.cache_min_overlap():
+                    continue
+            entry = CacheEntry(
+                id=int(row["id"]),
+                prompt_hash=row["prompt_hash"],
+                route=row["route"],
+                provider=row["provider"],
+                prompt=row["prompt"],
+                user_prompt=row["user_prompt"],
+                response=row["response"],
+                tokens_in=row["tokens_in"],
+                tokens_out=row["tokens_out"],
+                total_cost=row["total_cost"],
+                created_at=row["created_at"],
+                score=similarity,
+            )
+            candidates.append((similarity, entry))
 
-        if best and best_score >= minimum:
-            return True, best
+        if candidates:
+            best_similarity, best_entry = max(candidates, key=lambda item: item[0])
+            return True, best_entry
         return False, None
     finally:
         db.close()
