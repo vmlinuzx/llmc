@@ -1,56 +1,40 @@
 # LLM Commander
 
-LLM Commander centralizes our local-first orchestration assets so new LLM-driven TUI projects can be scaffolded in minutes. It packages the codex wrapper, context packaging utilities, and the reusable project template that we have been iterating on across repos.
+LLM Commander is the home for our local-first orchestration stack. It combines the Template Builder MVP, automation scripts, and retrieval tooling that power Codex, Claude, and Gemini workflows with reproducible guardrails.
 
-## What's Included
-- `scripts/codex_wrap.sh`: smart routing shell wrapper that delegates to local Qwen, Gemini API, or premium Codex based on task complexity.
-- `scripts/llm_gateway.js`: Node gateway that streams prompts to Ollama or Gemini with environment flag controls.
-- `tools/create_context_zip.py`: context packager that emits `llmccontext*.zip` archives honoring `.gitignore`.
-- `template/`: ready-to-copy base tree (contracts, agent docs, codex assets) for spinning up new projects.
-- `DOCS/ROUTING.md`: routing policy + thresholds for tiering between Qwen 7B, 14B, and GPT-5 nano.
-
-## Mission Statement
-
-LLM Commander exists to **keep token spend down for budget-conscious developers, artists, and writers** while boosting answer quality by:
-
-1. Running the heavy lifting on local LLMs (Qwen) and deterministic helpers first, falling back to remote GPT only when the span size forces it.
-2. Maintaining a repeatable, structured RAG knowledge base (code + docs) that feeds every prompt automatically.
-3. Shipping a template-builder web UI that emits ready-to-run repositories, so we can apply the same orchestration playbook to any new project with minimal setup.
+## Core Components
+- `apps/template-builder/` — Next.js 14 App Router UI for composing Codex-ready bundles. Includes API routes (`app/api`), bundle logic (`lib/`), and Jest/Playwright tests.
+- `apps/web/` — Legacy Express ZIP service that reads from `template/` to produce archives; kept for compatibility.
+- `scripts/` — Shell and Node entrypoints such as `codex_wrap.sh`, `llm_gateway.js`, and `rag_refresh_cron.sh` that route tasks to local Ollama or remote APIs.
+- `tools/` — Shared Python utilities (`tools/rag/`, `tools/deep_research/`, `tools/create_context_zip.py`) for indexing, enrichment, and research automation.
+- `config/` & `llmc_exec/` — Configuration and shared CLI helpers consumed by orchestrators and MCP connectors.
+- `DOCS/` — Operating manuals, roadmap, and contract files (see `DOCS/Roadmap.md`, `AGENTS.md`, `CONTRACTS.md`, and `DOCS/Template_Builder.md`).
 
 ## Getting Started
-1. Run `chmod +x scripts/*.sh` to ensure the orchestration scripts stay executable.
-2. Prepare `.env.local` with any needed overrides (e.g., `GEMINI_API_KEY`, `OLLAMA_PROFILE`).
-3. Dry-run the local model pipeline: `./scripts/codex_wrap.sh --local "write hello world in python"`.
-4. Package a context snapshot when needed: `python tools/create_context_zip.py` (drops the zip in `~/src`).
+- Ensure shell scripts stay executable: `chmod +x scripts/*.sh`.
+- Create `.env.local` at the repo root with any overrides (`GEMINI_API_KEY`, `OLLAMA_PROFILE`, etc.). Defaults fall back to Qwen 2.5 local models.
+- Dry-run the orchestrator: `./scripts/codex_wrap.sh --local "generate hello world in python"`.
+- Build context archives when needed: `python tools/create_context_zip.py` (writes to `template/` by default).
 
-## Batch Enrichment Tips
-- Use `python scripts/qwen_enrich_batch.py --cooldown 600` (or the `rag enrich --cooldown 600` CLI) to skip spans touched in the last 10 minutes before re-enriching.
-- Cooldowns prevent thrashing while you iterate on a file; once the window expires, the span re-enters the queue automatically.
+## Template Builder MVP
+- Development: `cd apps/template-builder && npm run dev` (Next.js dev server on port 3000).
+- Build: `npm run build && npm run start`.
+- Tests: `npm run test` (Jest unit/integration) and `npm run test:e2e` (Playwright, requires dev server).
+- API routes (`/api/options`, `/api/generate`) pull live registry data from repo docs and emit Codex-ready bundles including contracts, agent manifests, and environment scaffolds.
 
-- To hit Azure OpenAI instead of Qwen, set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` in `.env.local` and run with `--api` (or set `LLM_GATEWAY_DISABLE_LOCAL=1`); the gateway will prefer Azure when those vars are present.
+## CLI Orchestration Workflow
+- `scripts/codex_wrap.sh` routes prompts to a local Qwen 14B profile by default, with flags for remote APIs (`--api`) when environment variables are present.
+- `scripts/llm_gateway.js` resolves model profiles (`code`, `fast`, `uncensored`) defined in-place and respects `OLLAMA_PROFILE` / `OLLAMA_MODEL`.
+- Logs land in `logs/` (git-ignored contents) and `.llmc/` maintains locks/worktrees for concurrent sessions.
 
-## Roadmap Notes
-- Phase 1 focuses on solidifying the local orchestration shell and smoke-test workflows.
-- Phase 2 will experiment with agent orchestration layers and TUI-first project templates.
-- Phase 3 targets RAG/MCP integrations plus a web-based command surface once the foundations are stable.
-- Ongoing: expand testing to additional real-world repos (e.g., Supabase-style web apps, data-heavy services) to benchmark enrichment, embeddings, and the planner pipeline end-to-end.
-- Upcoming: build a zip-ready "LLMC Toolkit" template (enrichment + planner + embedding wiring, safety rails, verification) for drop-in use across Claude/Gemini/Codex projects.
-- Local query planner: use lightweight model to turn asks into {symbols, files, functions, intents} before retrieval (cuts shotgun pulls by 50–90%).
-- Symbol map over raw code via ctags/tree-sitter to answer many "where/how" questions from signatures without loading bodies.
-- Evidence packs only: fetch enrichment-cited line ranges (+/- 5 lines) instead of whole files.
-- Local re-ranker (cosine/BM25 hybrid) to prune to top 3–5 spans before any paid LLM call.
-- Delta-aware updates so only changed spans re-enrich; answer "what changed" from diffs.
-- Memoize QA by span hash so repeat queries short-circuit with freshness checks.
-- Prefer docstrings/enrichment cards over raw code; fall back to source only when cards flag pitfalls/side-effects.
-- Local doc compressor: pre-bullet README/ADR/issues with IDs and retrieve bullets first.
-- Tool-first answers: use deterministic helpers (AST/query eval) for config/JSON/SQL/regex before LLM.
-- Strict prompt hygiene: single short system prompt and minimal JIT few-shot; trim boilerplate in every call.
+## Retrieval & Research Utilities
+- `scripts/rag_refresh.sh`, `scripts/rag_refresh_cron.sh`, and `tools/rag/` keep the semantic index fresh (default embeddings: MiniLM with migration in progress per `DOCS/Roadmap.md`).
+- `tools/deep_research/` and `scripts/deep_research_ingest.sh` coordinate long-form investigations captured under `research/`.
 
-- Orchestrator self-improvement tools: manual enrichment editor, span-hash-driven unit test generator, and AST-based safe refactor helpers.
-- Observability & evaluation: interactive RAG dashboard plus an evaluation harness running golden queries versus expected spans.
-- Onboarding upgrades: interactive `llmc init` wizard and `llmc doctor` dependency checker to streamline adoption.
+## Documentation Hub
+- `DOCS/Project_Map.md` — Current repo topology.
+- `DOCS/Roadmap.md` — Active priorities (Template Builder MVP, RAG planner integration).
+- `AGENTS.md` / `CLAUDE_AGENTS.md` — Execution contracts for the orchestration agents.
+- `DOCS/Template_Builder.md` — UX notes and future enhancements for the Next.js interface.
 
-You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
-
-
-See `DOCS/preprocessor_flow.md` for the preprocessing pipeline (index → enrich → embed → planner); the prior draft now lives in `DOCS/archive/preprocessor_flow_legacy.md` if you need the older phrasing.
+You, like Tron, fight for the user—LLM Commander keeps the orchestration toolkit synchronized so every new build starts from the same battle-ready foundation.
