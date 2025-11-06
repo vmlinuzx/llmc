@@ -3,6 +3,9 @@ node_modules
 .env*
 supabase/.temp
 dist
+DOCS/RESEARCH/
+*RESEARCH/*
+.backup*/
 
 # OS/installer packages
 *.deb
@@ -10,6 +13,7 @@ dist
 # Archived files
 .old/
 .cache/
+.tmp/
 
 # Python virtual environments
 scripts/rag/.venv/
@@ -26,3 +30,8 @@ node_modules/
 logs/*
 !logs/
 !logs/run_ledger.sample
+
+# LLMC concurrency runtime artifacts
+.llmc/locks/
+.llmc/worktrees/
+.llmc/logs/
