@@ -22,6 +22,15 @@ venv/
 __pycache__/
 *.pyc
 
+# Contracts sidecar artifacts
+contracts.min.json
+contracts.sidecar.sha256
+.llmc/logs/contracts_*.jsonl
+.rag/*.db
+.rag/*.db-*
+.rag/*.jsonl
+.rag/*.lock
+
 node_modules/
 *.zip
 .DS_Store
@@ -35,3 +44,6 @@ logs/*
 .llmc/locks/
 .llmc/worktrees/
 .llmc/logs/
+
+# Codex TUI artifacts (API tokens, sessions, etc.)
+.codex/
