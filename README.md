@@ -28,7 +28,7 @@ LLM Commander is the home for our local-first orchestration stack. It combines t
 - Logs land in `logs/` (git-ignored contents) and `.llmc/` maintains locks/worktrees for concurrent sessions.
 
 ## Retrieval & Research Utilities
-- `scripts/rag_refresh.sh`, `scripts/rag_refresh_cron.sh`, and `tools/rag/` keep the semantic index fresh (default embeddings: MiniLM with migration in progress per `DOCS/Roadmap.md`).
+- `scripts/rag_refresh.sh`, `scripts/rag_refresh_watch.sh`, `scripts/rag_refresh_cron.sh`, and `tools/rag/` keep the semantic index fresh (default embeddings: MiniLM with migration in progress per `DOCS/Roadmap.md`).
 - `tools/deep_research/` and `scripts/deep_research_ingest.sh` coordinate long-form investigations captured under `research/`.
 
 ## Documentation Hub

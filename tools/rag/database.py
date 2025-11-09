@@ -279,6 +279,28 @@ class Database:
             (span_hash, sqlite3.Binary(blob)),
         )
 
+    def iter_embeddings(self) -> Iterator[sqlite3.Row]:
+        """Yield embedding rows joined with span/file metadata."""
+        cursor = self.conn.execute(
+            """
+            SELECT
+                spans.span_hash,
+                spans.symbol,
+                spans.kind,
+                spans.start_line,
+                spans.end_line,
+                files.path AS file_path,
+                COALESCE(enrichments.summary, spans.doc_hint, '') AS summary,
+                embeddings.vec
+            FROM embeddings
+            JOIN spans ON spans.span_hash = embeddings.span_hash
+            JOIN files ON files.id = spans.file_id
+            LEFT JOIN enrichments ON enrichments.span_hash = spans.span_hash
+            """
+        )
+        for row in cursor:
+            yield row
+
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:
         try:

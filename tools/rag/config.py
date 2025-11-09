@@ -8,10 +8,41 @@ RAG_DIR_NAME = ".rag"
 DEFAULT_INDEX_NEW = "index_v2.db"
 DEFAULT_INDEX_OLD = "index.db"
 DEFAULT_SPANS_NAME = "spans.jsonl"
-DEFAULT_MODEL = "intfloat/e5-base-v2"
-DEFAULT_MODEL_DIM = 768
-DEFAULT_PASSAGE_PREFIX = "passage: "
-DEFAULT_QUERY_PREFIX = "query: "
+
+MODEL_PRESETS = {
+    # Preferred embedding profile: intfloat/e5-base-v2 with instruct-style prefixes.
+    "intfloat/e5-base-v2": {
+        "model": "intfloat/e5-base-v2",
+        "dim": 768,
+        "passage_prefix": "passage: ",
+        "query_prefix": "query: ",
+        "normalize": True,
+    },
+    # Legacy MiniLM encoder retained for feature-flag toggles and regression checks.
+    "sentence-transformers/all-minilm-l6-v2": {
+        "model": "sentence-transformers/all-MiniLM-L6-v2",
+        "dim": 384,
+        "passage_prefix": "",
+        "query_prefix": "",
+        "normalize": True,
+    },
+}
+
+PRESET_ALIASES = {
+    "e5": "intfloat/e5-base-v2",
+    "e5-base": "intfloat/e5-base-v2",
+    "e5-base-v2": "intfloat/e5-base-v2",
+    "default": "intfloat/e5-base-v2",
+    "minilm": "sentence-transformers/all-minilm-l6-v2",
+    "all-minilm-l6-v2": "sentence-transformers/all-minilm-l6-v2",
+}
+
+DEFAULT_MODEL_PRESET = "intfloat/e5-base-v2"
+
+DEFAULT_MODEL = MODEL_PRESETS[DEFAULT_MODEL_PRESET]["model"]
+DEFAULT_MODEL_DIM = MODEL_PRESETS[DEFAULT_MODEL_PRESET]["dim"]
+DEFAULT_PASSAGE_PREFIX = MODEL_PRESETS[DEFAULT_MODEL_PRESET]["passage_prefix"]
+DEFAULT_QUERY_PREFIX = MODEL_PRESETS[DEFAULT_MODEL_PRESET]["query_prefix"]
 DEFAULT_DEVICE_PREF = "auto"
 DEFAULT_GPU_WAIT = True
 DEFAULT_GPU_MIN_FREE_MB = 1536  # ~1.5 GiB
@@ -91,8 +122,30 @@ def _env_flag(name: str, default: bool) -> bool:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _preset_defaults() -> dict:
+    preset_env = os.getenv("EMBEDDINGS_MODEL_PRESET")
+    if preset_env:
+        key = preset_env.strip().lower()
+        key = PRESET_ALIASES.get(key, key)
+        preset = MODEL_PRESETS.get(key)
+        if preset:
+            return preset
+    return MODEL_PRESETS[DEFAULT_MODEL_PRESET]
+
+
+def embedding_model_preset() -> str:
+    preset_env = os.getenv("EMBEDDINGS_MODEL_PRESET")
+    if not preset_env:
+        return DEFAULT_MODEL_PRESET
+    key = preset_env.strip().lower()
+    key = PRESET_ALIASES.get(key, key)
+    if key in MODEL_PRESETS:
+        return key
+    return DEFAULT_MODEL_PRESET
+
+
 def embedding_model_name() -> str:
-    return os.getenv("EMBEDDINGS_MODEL_NAME", DEFAULT_MODEL)
+    return os.getenv("EMBEDDINGS_MODEL_NAME", _preset_defaults()["model"])
 
 
 def embedding_model_dim() -> int:
@@ -104,19 +157,20 @@ def embedding_model_dim() -> int:
                 return value
         except ValueError:
             pass
-    return DEFAULT_MODEL_DIM
+    return _preset_defaults()["dim"]
 
 
 def embedding_passage_prefix() -> str:
-    return os.getenv("EMBEDDINGS_PASSAGE_PREFIX", DEFAULT_PASSAGE_PREFIX)
+    return os.getenv("EMBEDDINGS_PASSAGE_PREFIX", _preset_defaults()["passage_prefix"])
 
 
 def embedding_query_prefix() -> str:
-    return os.getenv("EMBEDDINGS_QUERY_PREFIX", DEFAULT_QUERY_PREFIX)
+    return os.getenv("EMBEDDINGS_QUERY_PREFIX", _preset_defaults()["query_prefix"])
 
 
 def embedding_normalize() -> bool:
-    return _env_flag("EMBEDDINGS_NORMALIZE", True)
+    defaults = _preset_defaults()
+    return _env_flag("EMBEDDINGS_NORMALIZE", defaults["normalize"])
 
 
 def embedding_device_preference() -> str:

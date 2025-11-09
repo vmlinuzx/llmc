@@ -13,6 +13,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
+const { renderSlice } = require(path.join(__dirname, '..', 'node', 'contracts_loader'));
 
 function loadEnvFrom(file) {
   try {
@@ -44,7 +45,13 @@ function loadEnvFrom(file) {
   }
 }
 
-loadEnvFrom(path.join(__dirname, '..', '.env.local'));
+const EXEC_ROOT = path.resolve(__dirname, '..');
+if (!process.env.LLMC_EXEC_ROOT) {
+  process.env.LLMC_EXEC_ROOT = EXEC_ROOT;
+}
+let repoOverride = null;
+
+loadEnvFrom(path.join(EXEC_ROOT, '.env.local'));
 loadEnvFrom(path.join(process.cwd(), '.env.local'));
 
 // Config
@@ -76,8 +83,16 @@ const ANTHROPIC_AVAILABLE = Boolean(ANTHROPIC_API_KEY);
 const AZURE_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
 const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
 const AZURE_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT || '';
+const AZURE_DEPLOYMENT_CODEX = process.env.AZURE_OPENAI_DEPLOYMENT_CODEX || '';
+const AZURE_DEPLOYMENT_CODEX_LIST =
+  process.env.AZURE_OPENAI_DEPLOYMENT_CODEX_LIST || '';
 const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview';
 const AZURE_AVAILABLE = Boolean(AZURE_ENDPOINT && AZURE_KEY && AZURE_DEPLOYMENT);
+const AZURE_CODEX_AVAILABLE = Boolean(
+  AZURE_ENDPOINT &&
+    AZURE_KEY &&
+    (AZURE_DEPLOYMENT_CODEX || AZURE_DEPLOYMENT_CODEX_LIST || AZURE_DEPLOYMENT)
+);
 const AZURE_FORCE_COMPLETION = envFlag('AZURE_OPENAI_FORCE_COMPLETION') || /gpt-5/i.test(AZURE_DEPLOYMENT);
 const AZURE_MAX_TOKENS = Number.parseInt(process.env.AZURE_OPENAI_MAX_TOKENS || '1024', 10);
 const AZURE_TEMPERATURE_RAW = process.env.AZURE_OPENAI_TEMPERATURE;
@@ -97,16 +112,72 @@ const debugEnabled = args.includes('--debug') || args.includes('-d');
 const forceAPI = args.includes('--api') || args.includes('-a');
 const forceLocal = args.includes('--local') || args.includes('-l');
 const forceClaude = args.includes('--claude') || args.includes('-c');
-let prompt = args.filter(a => !a.startsWith('-')).join(' ');
+const forceAzureCodex = args.includes('--azure-codex');
+let azureModelOverride = '';
+const promptParts = [];
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === '--azure-model') {
+    if (i + 1 < args.length) {
+      azureModelOverride = args[i + 1];
+      i += 1;
+    }
+    continue;
+  }
+  if (arg.startsWith('--azure-model=')) {
+    azureModelOverride = arg.slice('--azure-model='.length);
+    continue;
+  }
+  if (arg === '--repo') {
+    if (i + 1 < args.length) {
+      repoOverride = args[i + 1];
+      i += 1;
+    }
+    continue;
+  }
+  if (arg.startsWith('--repo=')) {
+    repoOverride = arg.slice('--repo='.length);
+    continue;
+  }
+  if (
+    arg === '--azure-codex' ||
+    arg === '--api' ||
+    arg === '--local' ||
+    arg === '--claude' ||
+    arg === '--debug' ||
+    arg === '-a' ||
+    arg === '-l' ||
+    arg === '-c' ||
+    arg === '-d'
+  ) {
+    continue;
+  }
+  if (arg.startsWith('-')) {
+    continue;
+  }
+  promptParts.push(arg);
+}
+
+let prompt = promptParts.join(' ');
 const debugLog = (...messages) => {
   if (debugEnabled) {
     console.error('[debug]', ...messages);
   }
 };
 
-const REPO_ROOT = path.resolve(__dirname, '..');
-const RAG_SCRIPT = path.join(REPO_ROOT, 'scripts', 'rag_plan_snippet.py');
-const RAG_DB_PATH = path.join(REPO_ROOT, '.rag', 'index.db');
+const resolvedRepoRoot = path.resolve(
+  repoOverride ||
+    process.env.LLMC_TARGET_REPO ||
+    process.env.LLMC_REPO_ROOT ||
+    process.cwd()
+);
+loadEnvFrom(path.join(resolvedRepoRoot, '.env.local'));
+
+const REPO_ROOT = resolvedRepoRoot;
+process.env.LLMC_TARGET_REPO = REPO_ROOT;
+
+const RAG_HELPER = path.join(EXEC_ROOT, 'scripts', 'rag_plan_helper.sh');
 const PYTHON_BIN = process.env.LLM_GATEWAY_PYTHON || process.env.PYTHON || 'python3';
 
 // Read from stdin if no prompt provided
@@ -132,7 +203,35 @@ async function main() {
   }
 
   try {
-    prompt = attachRagPlan(prompt);
+    // BUILD PROMPT START
+    const CONTRACTS_SIDECAR = process.env.CONTRACTS_SIDECAR || 'contracts.min.json';
+    const CONTRACTS_VENDOR = process.env.CONTRACTS_VENDOR || 'codex';
+    const CONTRACTS_SLICES = process.env.CONTRACTS_SLICES || 'roles,tools';
+    const CONTRACTS_USE_FULL = process.env.CONTRACTS_USE_FULL === '1';
+    let contractsBlock = '';
+    if (!CONTRACTS_USE_FULL) {
+      try {
+        contractsBlock = renderSlice({
+          vendor: CONTRACTS_VENDOR,
+          slice: CONTRACTS_SLICES,
+          fmt: 'text',
+          sidecar: CONTRACTS_SIDECAR
+        });
+        if (contractsBlock) {
+          contractsBlock = contractsBlock.trim();
+        }
+      } catch (e) {
+        console.warn('[contracts] sidecar render failed, falling back:', e.message);
+        contractsBlock = '';
+      }
+    }
+
+    const ragQueryEnv = typeof process.env.RAG_USER_PROMPT === 'string' ? process.env.RAG_USER_PROMPT.trim() : '';
+    const ragQuery = ragQueryEnv.length > 0 ? ragQueryEnv : prompt;
+    prompt = attachRagPlan(prompt, ragQuery);
+    if (contractsBlock) {
+      prompt = `${contractsBlock}\n\n${prompt}`;
+    }
     let response;
 
     // Hard disable for Phase 2: respect LLM_DISABLED / NEXT_PUBLIC_LLM_DISABLED / WEATHER_DISABLED
@@ -155,11 +254,16 @@ async function main() {
 
     const localDisabledByEnv = envFlag('LLM_GATEWAY_DISABLE_LOCAL');
     const apiDisabledByEnv = envFlag('LLM_GATEWAY_DISABLE_API');
-    const skipLocalReason = forceAPI
-      ? '--api flag'
-      : forceClaude
-      ? '--claude flag'
-      : (localDisabledByEnv ? 'local disabled via env' : null);
+    let skipLocalReason = null;
+    if (forceAPI) {
+      skipLocalReason = '--api flag';
+    } else if (forceClaude) {
+      skipLocalReason = '--claude flag';
+    } else if (forceAzureCodex) {
+      skipLocalReason = '--azure-codex flag';
+    } else if (localDisabledByEnv) {
+      skipLocalReason = 'local disabled via env';
+    }
     const canUseLocal = !skipLocalReason && !forceClaude;
     const allowFallback = canUseLocal && !forceLocal && !apiDisabledByEnv;
     const fallbackLabel = AZURE_AVAILABLE ? 'Azure' : 'Gemini';
@@ -198,6 +302,7 @@ async function main() {
       const reasons = [];
       if (forceAPI) reasons.push('--api flag');
       if (forceClaude) reasons.push('--claude flag');
+      if (forceAzureCodex) reasons.push('--azure-codex flag');
       if (localDisabledByEnv) reasons.push('local disabled via env');
       if (!reasons.length) reasons.push('local unavailable');
       if (apiDisabledByEnv) reasons.push('API disabled via env');
@@ -208,7 +313,17 @@ async function main() {
       }
     }
 
-    // Priority: Azure → Claude → Gemini (unless --claude forces Claude first)
+    // Priority: Azure Responses (codex) → Claude → Azure Chat Completions → Gemini
+    if (forceAzureCodex) {
+      if (!AZURE_CODEX_AVAILABLE && !azureModelOverride) {
+        throw new Error('Azure Responses not configured. Set AZURE_OPENAI_DEPLOYMENT_CODEX or AZURE_OPENAI_DEPLOYMENT_CODEX_LIST.');
+      }
+      response = await azureResponsesComplete(prompt, azureModelOverride);
+      console.error('✅ Azure Responses API succeeded');
+      console.log(response);
+      return;
+    }
+
     if (forceClaude) {
       if (!ANTHROPIC_AVAILABLE) {
         throw new Error('Claude forced but ANTHROPIC_API_KEY not configured');
@@ -336,6 +451,116 @@ async function azureComplete(prompt) {
     req.write(body);
     req.end();
   });
+}
+
+async function azureResponsesComplete(prompt, modelOverride = '') {
+  if (!AZURE_ENDPOINT || !AZURE_KEY) {
+    throw new Error('Azure credentials not configured');
+  }
+  const candidates = [];
+
+  const pushCandidate = (value) => {
+    const trimmed = (value || '').trim();
+    if (!trimmed) return;
+    if (!candidates.includes(trimmed)) {
+      candidates.push(trimmed);
+    }
+  };
+
+  pushCandidate(modelOverride);
+
+  if (AZURE_DEPLOYMENT_CODEX_LIST) {
+    AZURE_DEPLOYMENT_CODEX_LIST.split(',')
+      .map((s) => s.trim())
+      .forEach(pushCandidate);
+  }
+
+  pushCandidate(AZURE_DEPLOYMENT_CODEX);
+  pushCandidate(AZURE_DEPLOYMENT);
+
+  if (!candidates.length) {
+    throw new Error('No Azure Responses deployments configured (set AZURE_OPENAI_DEPLOYMENT_CODEX or AZURE_OPENAI_DEPLOYMENT_CODEX_LIST).');
+  }
+
+  const apiVersion =
+    process.env.AZURE_OPENAI_RESPONSES_API_VERSION || '2024-10-21-preview';
+  let lastError = null;
+
+  for (const deployment of candidates) {
+    const url = new URL(
+      `${AZURE_ENDPOINT}/openai/deployments/${deployment}/responses`
+    );
+    url.searchParams.set('api-version', apiVersion);
+
+    const body = {
+      input: [
+        {
+          role: 'user',
+          content: [{ type: 'text', text: prompt }],
+        },
+      ],
+    };
+
+    console.error(`🔌 Azure Responses: attempting deployment "${deployment}"`);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': AZURE_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      debugLog(`Azure deployment "${deployment}" returned ${res.status}: ${text}`);
+      if (res.status === 404) {
+        lastError = new Error(
+          `Deployment "${deployment}" not found (404). Tried ${candidates.length} candidate(s).`
+        );
+        continue;
+      }
+      throw new Error(`Azure Responses API error ${res.status}: ${text}`);
+    }
+
+    const json = await res.json();
+    debugLog('Azure responses payload:', JSON.stringify(json, null, 2));
+
+    if (json.error) {
+      throw new Error(
+        `Azure Responses API returned error: ${JSON.stringify(json.error)}`
+      );
+    }
+
+    const chunks = [];
+    const output = Array.isArray(json.output) ? json.output : [];
+    for (const message of output) {
+      const content = message?.content;
+      if (!Array.isArray(content)) continue;
+      for (const segment of content) {
+        if (segment?.type === 'text' && segment.text) {
+          chunks.push(segment.text);
+        }
+      }
+    }
+
+    if (!chunks.length && typeof json.output_text === 'string') {
+      chunks.push(json.output_text);
+    }
+
+    if (!chunks.length) {
+      throw new Error('Azure Responses output contained no text segments');
+    }
+
+    console.error(`🔁 Azure Responses: using deployment "${deployment}"`);
+    return chunks.join('\n').trim();
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+  throw new Error('Azure Responses API could not find a usable deployment.');
 }
 
 async function ollamaComplete(prompt) {
@@ -543,27 +768,18 @@ function anthropicComplete(prompt) {
 }
 
 function ragPlanSnippet(question) {
-  if (process.env.LLM_GATEWAY_DISABLE_RAG === '1' || process.env.CODEX_WRAP_DISABLE_RAG === '1') {
+  if (!fs.existsSync(RAG_HELPER)) {
     return '';
   }
-  if (!fs.existsSync(RAG_DB_PATH) || !fs.existsSync(RAG_SCRIPT)) {
-    return '';
+  const env = { ...process.env };
+  if (!env.PYTHON_BIN) {
+    env.PYTHON_BIN = PYTHON_BIN;
   }
-  const args = [
-    RAG_SCRIPT,
-    '--repo',
-    REPO_ROOT,
-    '--limit',
-    process.env.RAG_PLAN_LIMIT || '5',
-    '--min-score',
-    process.env.RAG_PLAN_MIN_SCORE || '0.4',
-    '--min-confidence',
-    process.env.RAG_PLAN_MIN_CONFIDENCE || '0.6',
-    '--no-log'
-  ];
-  const result = spawnSync(PYTHON_BIN, args, {
+  const args = ['--repo', REPO_ROOT];
+  const result = spawnSync(RAG_HELPER, args, {
     input: question,
     encoding: 'utf8',
+    env
   });
   if (result.error || result.status !== 0) {
     debugLog('ragPlanSnippet error:', result.error || result.stderr);
@@ -572,8 +788,15 @@ function ragPlanSnippet(question) {
   return (result.stdout || '').trim();
 }
 
-function attachRagPlan(prompt) {
-  const snippet = ragPlanSnippet(prompt);
+function attachRagPlan(prompt, query) {
+  if (/\bRAG Retrieval Plan\b/.test(prompt)) {
+    return prompt;
+  }
+  const trimmed = prompt.replace(/^\s+/, '');
+  if (trimmed.startsWith('RAG Retrieval Plan')) {
+    return prompt;
+  }
+  const snippet = ragPlanSnippet(query ?? prompt);
   if (!snippet) {
     return prompt;
   }

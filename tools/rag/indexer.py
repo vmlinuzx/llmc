@@ -15,7 +15,7 @@ from .config import (
 )
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
-from .utils import find_repo_root, git_changed_paths, git_commit_sha, iter_source_files
+from .utils import find_repo_root, git_changed_paths, git_commit_sha, iter_source_files, _gitignore_matcher
 
 EMBED_META = "embed_meta.json"
 
@@ -138,6 +138,7 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
     repo_id = repo_root.name
     commit_sha = git_commit_sha(repo_root) or "unknown"
     spans_export_handle = spans_export_path(repo_root).open("a", encoding="utf-8")
+    matcher = _gitignore_matcher(repo_root)
 
     counts = {"files": 0, "spans": 0, "deleted": 0, "duration_sec": 0.0}
     start_time = time.time()
@@ -145,6 +146,12 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
         for rel in paths:
             absolute = repo_root / rel
             if not absolute.exists():
+                with db.transaction():
+                    db.delete_file(rel)
+                counts["deleted"] += 1
+                continue
+            # Respect ignore rules (gitignore + .ragignore + LLMC_RAG_EXCLUDE)
+            if matcher(rel):
                 with db.transaction():
                     db.delete_file(rel)
                 counts["deleted"] += 1

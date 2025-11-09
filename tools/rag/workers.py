@@ -12,6 +12,7 @@ from .config import (
     embedding_normalize,
 )
 from .database import Database
+from .utils import _gitignore_matcher
 from .embeddings import HASH_MODELS, build_embedding_backend
 
 MAX_SNIPPET_CHARS = 800
@@ -72,8 +73,18 @@ ENRICHMENT_VALIDATOR = Draft7Validator(ENRICHMENT_SCHEMA)
 def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_seconds: int = 0) -> List[dict]:
     """Build an enrichment plan, skipping spans touched within the cooldown window."""
     items = db.pending_enrichments(limit=limit, cooldown_seconds=cooldown_seconds)
+    matcher = _gitignore_matcher(repo_root)
     plan: List[dict] = []
     for item in items:
+        # Respect ignores (gitignore + .ragignore + LLMC_RAG_EXCLUDE)
+        try:
+            rel_path = item.file_path
+            if matcher(rel_path):
+                # silently skip ignored paths
+                continue
+        except Exception:
+            # defensive: never block enrichment on ignore checks
+            pass
         try:
             code = item.read_source(repo_root)
         except FileNotFoundError:

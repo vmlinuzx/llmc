@@ -2,14 +2,41 @@
 # codex_wrap.sh - Smart LLM routing with self-classification
 set -euo pipefail
 
-# Resolve repo root
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONTRACT="$ROOT/CONTRACTS.md"
-AGENTS="$ROOT/AGENTS.md"
-CHANGELOG="$ROOT/CHANGELOG.md"
+if [ "${LLMC_CONCURRENCY:-off}" = "on" ] && [ -n "${CHANGESET_PATH:-}" ] && [ -f "${CHANGESET_PATH}" ]; then
+  echo "[llmc] integrating ${CHANGESET_PATH}" >&2
+  if [ "${LLMC_SHADOW_MODE:-off}" = "on" ]; then
+    scripts/llmc_edit.sh --changeset "${CHANGESET_PATH}" || exit $?
+  else
+    scripts/llmc_edit.sh --changeset "${CHANGESET_PATH}" || exit $?
+  fi
+fi
+
+# Resolve execution and target roots
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EXEC_ROOT="${LLMC_EXEC_ROOT:-$SCRIPT_ROOT}"
+REPO_ROOT="${LLMC_TARGET_REPO:-$EXEC_ROOT}"
+
+# Pre-scan args for --repo to allow overriding before path-dependent setup
+ORIGINAL_ARGS=("$@")
+for ((i=0; i<${#ORIGINAL_ARGS[@]}; i++)); do
+  case "${ORIGINAL_ARGS[i]}" in
+    --repo)
+      if (( i + 1 < ${#ORIGINAL_ARGS[@]} )); then
+        REPO_ROOT="$(realpath "${ORIGINAL_ARGS[i+1]}")"
+      fi
+      ;;
+    --repo=*)
+      REPO_ROOT="$(realpath "${ORIGINAL_ARGS[i]#*=}")"
+      ;;
+  esac
+done
+
+CONTRACT="$REPO_ROOT/CONTRACTS.md"
+AGENTS="$REPO_ROOT/AGENTS.md"
+CHANGELOG="$REPO_ROOT/CHANGELOG.md"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
-CODEX_LOG_FILE="${CODEX_LOG_FILE:-$ROOT/logs/codexlog.txt}"
+CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
 mkdir -p "$(dirname "$CODEX_LOG_FILE")"
 touch "$CODEX_LOG_FILE"
 if [ "${CODEX_WRAP_ENABLE_LOGGING:-1}" = "1" ]; then
@@ -47,8 +74,27 @@ codex_wrap_on_exit() {
 }
 trap codex_wrap_on_exit EXIT
 
+# Short usage/flag reference for standard -h/--help behavior
+print_codex_wrap_help() {
+  cat <<'EOF'
+Usage: scripts/codex_wrap.sh [options] [prompt|prompt_file]
+
+Options:
+  -l, --local          Force routing to the local Ollama profile
+  -a, --api            Force routing to the remote API profile
+  -c, --codex          Force routing directly to Codex
+  -ca,--codex-azure    Force routing directly to Azure Codex (if configured)
+      --repo PATH      Run against a different repository root
+  -h, --help           Show this help message and exit
+
+Examples:
+  scripts/codex_wrap.sh --local "Fix the failing unit test"
+  scripts/codex_wrap.sh --repo ../other/repo task.txt
+EOF
+}
+
 # Resolve Codex approval policy from env or repo-local config
-REPO_CODEX_TOML="$ROOT/.codex/config.toml"
+REPO_CODEX_TOML="$REPO_ROOT/.codex/config.toml"
 
 resolve_approval_policy() {
   # Env overrides take precedence
@@ -80,7 +126,7 @@ fi
 # Cache directory for reused context slices
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/codex_wrap"
 if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
-  CACHE_DIR="$ROOT/.cache/codex_wrap"
+  CACHE_DIR="$REPO_ROOT/.cache/codex_wrap"
   mkdir -p "$CACHE_DIR"
 fi
 
@@ -90,8 +136,13 @@ CACHE_LOOKUP_SCORE=""
 
 CACHE_LOOKUP_RESULT=""
 
+DEEP_RESEARCH_RECOMMENDED=0
+DEEP_RESEARCH_RESULT_JSON=""
+DEEP_RESEARCH_REMINDER=""
+DEEP_RESEARCH_ROUTE_OVERRIDE=0
+
 # Load ToolCaps state if present (written by scripts/tool_health.sh)
-TOOLS_STATE_ENV="$ROOT/.codex/state/tools.env"
+TOOLS_STATE_ENV="$REPO_ROOT/.codex/state/tools.env"
 if [ -f "$TOOLS_STATE_ENV" ]; then
   # shellcheck disable=SC1090
   . "$TOOLS_STATE_ENV"
@@ -159,20 +210,6 @@ resolve_sections() {
   echo "$resolved"
 }
 
-resolve_rag_index_path() {
-  local candidate="${LLMC_RAG_INDEX_PATH:-$ROOT/.rag/index_v2.db}"
-  if [ -f "$candidate" ]; then
-    echo "$candidate"
-    return 0
-  fi
-  candidate="$ROOT/.rag/index.db"
-  if [ -f "$candidate" ]; then
-    echo "$candidate"
-    return 0
-  fi
-  return 1
-}
-
 # Load the desired slice of a context doc, caching results until the source changes.
 load_doc_context() {
   local label="$1"
@@ -222,22 +259,96 @@ load_doc_context() {
   cat "$cache_file"
 }
 
+deep_research_check() {
+  local prompt="$1"
+  if [ "${CODEX_WRAP_DISABLE_DEEP_RESEARCH:-0}" = "1" ]; then
+    DEEP_RESEARCH_RECOMMENDED=0
+    DEEP_RESEARCH_RESULT_JSON=""
+    DEEP_RESEARCH_REMINDER=""
+    return 0
+  fi
+  if [ -z "$prompt" ]; then
+    DEEP_RESEARCH_RECOMMENDED=0
+    DEEP_RESEARCH_RESULT_JSON=""
+    DEEP_RESEARCH_REMINDER=""
+    return 0
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+  printf '%s' "$prompt" >"$tmp"
+  local detection
+  if ! detection=$("$PYTHON_BIN" -m tools.deep_research.detector --prompt-file "$tmp" 2>/dev/null); then
+    rm -f "$tmp"
+    return 0
+  fi
+  rm -f "$tmp"
+
+  DEEP_RESEARCH_RESULT_JSON="$detection"
+  local needs
+  needs="$(echo "$detection" | jq -r '.needs_deep_research // false' 2>/dev/null || echo "false")"
+  if [ "$needs" != "true" ]; then
+    DEEP_RESEARCH_RECOMMENDED=0
+    DEEP_RESEARCH_REMINDER=""
+    return 0
+  fi
+
+  DEEP_RESEARCH_RECOMMENDED=1
+  local score confidence
+  score="$(echo "$detection" | jq -r '.score // 0' 2>/dev/null || echo "0")"
+  confidence="$(echo "$detection" | jq -r '.confidence // 0' 2>/dev/null || echo "0")"
+
+  echo "" >&2
+  echo "🚩 Deep research suggested (score ${score}, confidence ${confidence})" >&2
+
+  local reasons
+  reasons="$(echo "$detection" | jq -r '.reasons[]?' 2>/dev/null)"
+  if [ -n "$reasons" ]; then
+    echo "Reasons:" >&2
+    echo "$reasons" | sed 's/^/- /' >&2
+  fi
+
+  local service_lines
+  service_lines="$(echo "$detection" | jq -r '.services[]? | [.name, (.remaining_today // "∞"), (.daily_quota // "∞"), (.used_today // 0), (.url // ""), (.notes // "")] | @tsv' 2>/dev/null)"
+  if [ -n "$service_lines" ]; then
+    echo "" >&2
+    echo "Manual deep research services:" >&2
+    while IFS=$'\t' read -r name remaining quota used url notes; do
+      [ -z "$name" ] && continue
+      local remaining_display="$remaining"
+      if [ "$remaining_display" = "∞" ] || [ "$remaining_display" = "null" ]; then
+        remaining_display="∞"
+      elif [ -z "$remaining_display" ]; then
+        remaining_display="n/a"
+      fi
+      local quota_display="$quota"
+      if [ "$quota_display" = "∞" ] || [ "$quota_display" = "null" ] || [ -z "$quota_display" ]; then
+        quota_display="unlimited"
+      else
+        quota_display="${quota_display}/day"
+      fi
+      local note_display=""
+      [ -n "$notes" ] && [ "$notes" != "null" ] && note_display=" (${notes})"
+      local url_display=""
+      [ -n "$url" ] && [ "$url" != "null" ] && url_display=" — ${url}"
+      printf '  • %s — remaining: %s, quota: %s%s%s\n' "$name" "$remaining_display" "$quota_display" "$url_display" "$note_display" >&2
+    done <<<"$service_lines"
+  fi
+
+  echo "" >&2
+  DEEP_RESEARCH_REMINDER=$'Manual deep research recommended.\n- Use the services listed above before high-impact work.\n- Drop notes into research/incoming/ using research/deep_research_notes.template.md, then run ./scripts/deep_research_ingest.sh.'
+  return 0
+}
+
 rag_plan_snippet() {
   local user_query="$1"
-  if [ "${CODEX_WRAP_DISABLE_RAG:-0}" = "1" ]; then
-    return 0
-  fi
-  local index_path
-  if ! index_path="$(resolve_rag_index_path)"; then
-    return 0
-  fi
-  local script="$ROOT/scripts/rag_plan_snippet.py"
-  if [ ! -x "$script" ]; then
+  local helper="$EXEC_ROOT/scripts/rag_plan_helper.sh"
+  if [ ! -x "$helper" ]; then
     return 0
   fi
   local output
-  if ! output=$(LLMC_RAG_INDEX_PATH="$index_path" "$PYTHON_BIN" "$script" --repo "$ROOT" --limit "${RAG_PLAN_LIMIT:-5}" --min-score "${RAG_PLAN_MIN_SCORE:-0.4}" --min-confidence "${RAG_PLAN_MIN_CONFIDENCE:-0.6}" --no-log <<<"$user_query" 2>/dev/null); then
-    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: rag plan failed" >&2
+  if ! output=$(CODEX_WRAP_DISABLE_RAG="${CODEX_WRAP_DISABLE_RAG:-0}" PYTHON_BIN="$PYTHON_BIN" "$helper" --repo "$REPO_ROOT" <<<"$user_query" 2>/dev/null); then
+    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: rag plan helper failed" >&2
     return 0
   fi
   output="$(printf '%s' "$output" | sed '/^[[:space:]]*$/d')"
@@ -353,10 +464,25 @@ semantic_cache_provider_for_route() {
     api)
       echo "${GEMINI_MODEL:-gemini-2.5-flash}"
       ;;
+    codex-azure)
+      echo "azure-codex"
+      ;;
     codex|*)
       echo "codex"
       ;;
   esac
+}
+
+azure_responses_available() {
+  if [ -z "${AZURE_OPENAI_ENDPOINT:-}" ] || [ -z "${AZURE_OPENAI_KEY:-}" ]; then
+    return 1
+  fi
+  if [ -z "${AZURE_OPENAI_DEPLOYMENT_CODEX:-}" ] && \
+     [ -z "${AZURE_OPENAI_DEPLOYMENT_CODEX_LIST:-}" ] && \
+     [ -z "${AZURE_OPENAI_DEPLOYMENT:-}" ]; then
+    return 1
+  fi
+  return 0
 }
 
 semantic_cache_lookup() {
@@ -508,6 +634,11 @@ route_task() {
     return
   fi
   
+  if [ "${FORCE_CODEX_AZURE:-0}" = "1" ]; then
+    echo "codex-azure"
+    return
+  fi
+  
   if [ "${FORCE_CODEX:-0}" = "1" ]; then
     echo "codex"
     return
@@ -549,7 +680,7 @@ EOF
 )
   
   # Use API for routing decision (fast, cheap, accurate)
-  local decision=$(echo "$routing_prompt" | "$ROOT/scripts/llm_gateway.sh" --api 2>/dev/null || echo '{"route":"codex","reason":"routing failed","confidence":0.0}')
+  local decision=$(echo "$routing_prompt" | "$EXEC_ROOT/scripts/llm_gateway.sh" --api 2>/dev/null || echo '{"route":"codex","reason":"routing failed","confidence":0.0}')
   
   # Parse JSON (handle cases where it might be wrapped in markdown)
   decision=$(echo "$decision" | sed 's/```json//g' | sed 's/```//g' | tr -d '\n' | xargs)
@@ -562,6 +693,14 @@ EOF
   echo "📊 Decision: $route (confidence: $confidence)" >&2
   echo "💡 Reason: $reason" >&2
   echo ""
+
+  if [ "${DEEP_RESEARCH_RECOMMENDED:-0}" = "1" ] && [ "${DEEP_RESEARCH_ALLOW_AUTO:-0}" != "1" ]; then
+    if [ "$route" != "local" ]; then
+      echo "🔒 Deep research gating: overriding route to 'local' until research notes are ingested. Set DEEP_RESEARCH_ALLOW_AUTO=1 to bypass." >&2
+      route="local"
+      DEEP_RESEARCH_ROUTE_OVERRIDE=1
+    fi
+  fi
   
   echo "$route"
 }
@@ -597,29 +736,61 @@ execute_route() {
   case "$route" in
     local)
       echo "🔄 Routing to local Ollama (free)..." >&2
-      response=$(printf '%s\n' "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --local)
+      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --local <<<"$full_prompt")
       status=$?
       ;;
       
     api)
       echo "🌐 Routing to Gemini API (cheap)..." >&2
-      response=$(printf '%s\n' "$full_prompt" | "$ROOT/scripts/llm_gateway.sh" --api)
+      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --api <<<"$full_prompt")
       status=$?
       ;;
       
-    codex|*)
-      echo "🧠 Routing to Codex (premium)..." >&2
-      response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$ROOT" ${CODEX_FLAGS:-} -)
+    codex-azure)
+      if ! azure_responses_available; then
+        echo "❌ Azure environment variables missing; cannot honor --codex-azure/-ca." >&2
+        return 1
+      fi
+      echo "🧠 Routing to Azure Responses (forced)..." >&2
+      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --azure-codex <<<"$full_prompt")
       status=$?
+      if [ $status -ne 0 ]; then
+        echo "⚠️  Azure request failed; falling back to Codex CLI." >&2
+        response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
+        status=$?
+      fi
+      ;;
+      
+    codex|*)
+      if azure_responses_available; then
+        echo "🧠 Routing to Azure Responses (premium)..." >&2
+        response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --azure-codex <<<"$full_prompt")
+        status=$?
+        if [ $status -ne 0 ]; then
+          echo "⚠️  Azure request failed; falling back to Codex CLI." >&2
+          response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
+          status=$?
+        fi
+      else
+        echo "🧠 Routing to Codex (premium CLI)..." >&2
+        response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
+        status=$?
+      fi
       ;;
   esac
-  printf '%s' "$response"
-  case "$response" in
+  # Post-process for LLM-declared tool calls (search_tools/describe_tool)
+  local processed_response="$response"
+  if [ -x "$EXEC_ROOT/scripts/tool_dispatch.sh" ]; then
+    processed_response="$(printf '%s' "$response" | "$EXEC_ROOT/scripts/tool_dispatch.sh" 2>/dev/null || printf '%s' "$response")"
+  fi
+
+  printf '%s' "$processed_response"
+  case "$processed_response" in
     *$'\n') ;;
     *) echo ;;
   esac
   if [ $status -eq 0 ]; then
-    semantic_cache_store "$route" "$provider" "$full_prompt" "$response"
+    semantic_cache_store "$route" "$provider" "$full_prompt" "$processed_response"
   fi
   CACHE_LOOKUP_RESULT=""
   return $status
@@ -635,7 +806,7 @@ USER_PROMPT=""
 # Phase 2: disable LLM usage when flagged (aligned with weather gating)
 # If LLM_DISABLED / NEXT_PUBLIC_LLM_DISABLED / WEATHER_DISABLED are set truthy,
 # short‑circuit without making any LLM calls.
-if [ -f "$ROOT/.env.local" ]; then
+if [ -f "$REPO_ROOT/.env.local" ]; then
   # Load only the three flags we care about to avoid side effects
   while IFS='=' read -r k v; do
     case "$k" in
@@ -644,7 +815,7 @@ if [ -f "$ROOT/.env.local" ]; then
         v="${v%\' }"; v="${v#\' }"; v="${v%\" }"; v="${v#\" }";
         export "$k"="$v";;
     esac
-  done < <(rg '^(LLM_DISABLED|NEXT_PUBLIC_LLM_DISABLED|WEATHER_DISABLED|AUTO_COMMIT|AUTO_PUSH|AUTO_SYNC_ALL|SYNC_ALL)=' "$ROOT/.env.local" || true)
+  done < <(rg '^(LLM_DISABLED|NEXT_PUBLIC_LLM_DISABLED|WEATHER_DISABLED|AUTO_COMMIT|AUTO_PUSH|AUTO_SYNC_ALL|SYNC_ALL)=' "$REPO_ROOT/.env.local" || true)
 fi
 
 to_bool() {
@@ -678,6 +849,35 @@ while [[ $# -gt 0 ]]; do
       FORCE_CODEX=1
       shift
       ;;
+    --repo)
+      shift
+      if [ $# -gt 0 ]; then
+        REPO_ROOT="$(realpath "$1")"
+        export LLMC_TARGET_REPO="$REPO_ROOT"
+        CONTRACT="$REPO_ROOT/CONTRACTS.md"
+        AGENTS="$REPO_ROOT/AGENTS.md"
+        CHANGELOG="$REPO_ROOT/CHANGELOG.md"
+        CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
+      fi
+      shift || true
+      ;;
+    --repo=*)
+      REPO_ROOT="$(realpath "${1#*=}")"
+      export LLMC_TARGET_REPO="$REPO_ROOT"
+      CONTRACT="$REPO_ROOT/CONTRACTS.md"
+      AGENTS="$REPO_ROOT/AGENTS.md"
+      CHANGELOG="$REPO_ROOT/CHANGELOG.md"
+      CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
+      shift
+      ;;
+    --codex-azure|-ca)
+      FORCE_CODEX_AZURE=1
+      shift
+      ;;
+    --help|-h)
+      print_codex_wrap_help
+      exit 0
+      ;;
     *)
       if [ -f "$1" ]; then
         USER_PROMPT="$(cat -- "$1")"
@@ -699,9 +899,11 @@ fi
 # Set how codex is called by default.  
 # Interactive mode if no prompt
 if [ -z "$USER_PROMPT" ]; then
-  build_prompt "" | codex ${CODEX_CONFIG_FLAG:-} -C "$ROOT" ${CODEX_FLAGS:-}
+  build_prompt "" | codex ${CODEX_CONFIG_FLAG:-} -C "$REPO_ROOT" ${CODEX_FLAGS:-}
   exit $?
 fi
+
+deep_research_check "$USER_PROMPT"
 
 # Route the task
 ROUTE=$(route_task "$USER_PROMPT")
@@ -721,9 +923,9 @@ if [ "$status" -eq 0 ]; then
   fi
   
   # Background sync to Google Drive (silent)
-  if [ -f "$ROOT/scripts/sync_to_drive.sh" ]; then
+  if [ -f "$EXEC_ROOT/scripts/sync_to_drive.sh" ]; then
     # Allow SYNC_ALL=1 to override whitelist and sync full repo
-    SYNC_ALL="${SYNC_ALL:-${AUTO_SYNC_ALL:-0}}" "$ROOT/scripts/sync_to_drive.sh" >/dev/null 2>&1 &
+    SYNC_ALL="${SYNC_ALL:-${AUTO_SYNC_ALL:-0}}" "$EXEC_ROOT/scripts/sync_to_drive.sh" >/dev/null 2>&1 &
   fi
 
   # Optional auto-commit/push + tagging via autosave script
@@ -734,7 +936,7 @@ if [ "$status" -eq 0 ]; then
     args=( )
     if [[ "${AUTO_PUSH,,}" == "true" ]]; then args+=( --push ); fi
     if [[ "$AUTO_SYNC_ALL" == "1" ]]; then args+=( --all ); fi
-    COMMIT_MSG="${COMMIT_MSG:-auto: ${first_line:-Autosave}}" "$ROOT/scripts/autosave.sh" -m "${COMMIT_MSG:-auto: ${first_line:-Autosave}}" "${args[@]}" >/dev/null 2>&1 &
+    COMMIT_MSG="${COMMIT_MSG:-auto: ${first_line:-Autosave}}" "$EXEC_ROOT/scripts/autosave.sh" -m "${COMMIT_MSG:-auto: ${first_line:-Autosave}}" "${args[@]}" >/dev/null 2>&1 &
   fi
   
   cat <<'REMINDER'
@@ -760,6 +962,15 @@ Quick test commands:
 Route used: Check output above for routing decision
 
 REMINDER
+
+  if [ "${DEEP_RESEARCH_RECOMMENDED:-0}" = "1" ]; then
+    echo ""
+    echo "🧠 Deep research reminder:"
+    printf '%s\n' "$DEEP_RESEARCH_REMINDER"
+    if [ "${DEEP_RESEARCH_ROUTE_OVERRIDE:-0}" = "1" ]; then
+      echo "- Auto-routing stayed on the local tier until manual research notes are captured. Re-run with DEEP_RESEARCH_ALLOW_AUTO=1 after ingestion if you still need premium routing."
+    fi
+  fi
 fi
 
 exit "$status"

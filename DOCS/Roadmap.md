@@ -7,32 +7,25 @@
 - P3 – Nice-to-have: experiments, stretch goals
 
 ## Current Priorities
-- [ ] Pipe RAG planner output into `codex_wrap.sh` / `llm_gateway.js` so Codex, Claude, and Gemini consume indexed spans automatically before answering.
-- [ ] Automate RAG freshness (hourly or on-change) via `scripts/rag_sync.sh` + tmux/cron so `.rag/index.db` stays current without manual kicks.
 - [ ] Ship the template builder MVP (Next.js App Router UI) that builds Codex-ready zips based on orchestration choices.
 - [ ] Deliver the first vertical slice end-to-end using the new template + RAG-aware workflow.
 
 ## Recently Completed
+- [x] Pipe RAG planner output into `codex_wrap.sh` / `llm_gateway.js` so Codex, Claude, and Gemini consume indexed spans automatically before answering.
 - [x] Define MVP scope (generic web UI, templated configs, Codex-ready zip).
 - [x] Lock technical choices (Next.js App Router, Prisma/Postgres, NextAuth, Docker/Compose, fully OSS stack).
+- [x] Automate RAG freshness via cron-friendly wrapper (`scripts/rag_refresh_cron.sh`) + docs/locks/logs.
+- [x] Replace MiniLM embeddings with `intfloat/e5-base-v2` across the indexing/query stack (`rag embed`, `rag search`, `rag benchmark`), keeping legacy presets as feature-flag fallbacks.
 
 ## Backlog
 - [ ] Performance profiling baseline
 - [ ] Error tracking and alerts
 - [ ] Accessibility pass (keyboard, color contrast)
-- [ ] Add lightweight spec compressor step before Beatrice (local 7B rewrite)
-  - System prompt “SPEC COMPRESSOR” enforces bullet-only, ≤12 words per bullet, ≤700 tokens.
-  - Preserve section labels (GOAL, FILES, FUNCS, POLICY, TESTS, RUNBOOK) and all symbols/paths/limits.
-  - Drop redundancy, hedges, justifications; convert sentences to terse action bullets.
-  - Example:
-    - Before: “We should probably consider starting with 7B…” / “In those events we may want to escalate…”
-    - After:
-      - POLICY:
-        - ≤60 lines & depth≤3 → 7B
-        - 61–150 lines OR depth>3 → 14B
-        - >150 lines OR est_tokens>28k → API
-        - parse/validate fail → next tier once
-        - truncation → skip 14B → API
+- [ ] Add lightweight spec compressor as post-filter (Option B: architect → compressor → Beatrice)
+  - Rationale: preserve user's natural language context for architect; compress verbose output before Beatrice
+  - Pipeline: User → Architect (full context) → Compressor (7B bullet-only rewrite) → Beatrice (compressed spec)
+  - Bypass flag: SPEC_COMPRESS=off for debugging
+  - Target: ≤700 tokens, ≤12 words/bullet, preserve symbols/paths/limits
 - [ ] Ship drop-in compressor script (`scripts/spec_compress.sh`) and wire before Beatrice
   - Shell helper calls local Ollama (model env `OLLAMA_COMPRESS_MODEL`, default `qwen2.5:7b-instruct`) with fixed SPEC COMPRESSOR prompt.
   - Pipeline change: run verbose spec through compressor, use fallback when empty, then forward to Beatrice.
@@ -50,13 +43,17 @@
 - [ ] Swap in concise architect system prompt enforcing the new spec schema
   - System: SYSTEM ARCHITECT (CONCISE MODE) with fixed sections (GOAL, FILES, FUNCS, POLICY, TESTS, RUNBOOK, RULES).
   - Enforce bullet-only output, ≤900 tokens, no prose; prefer symbols/paths/constants; use "TBD" when unsure.
-- [ ] Replace MiniLM embeddings with `intfloat/e5-base-v2` (768‑dim) end to end: wire the new encoder into indexing/query, add prefix-aware encoders, re-index `.rag/index.db`, and keep a feature flag for Voyage/OpenAI fallbacks.
 - [ ] Implement AST-driven chunking (Python, TS/JS, Bash, Markdown) using tree-sitter spans, recursive splitting for oversize nodes, and parent/child metadata so retrieval stays semantically aligned.
 - [ ] Ship the local model optimization plan: curate Q4_K_M/AWQ builds for Qwen 7B/14B, script GPU offload knobs for WSL2, add routing telemetry for OOMs/latency, and document the three-tier escalation policy.
 - [ ] Introduce the semantic cache manager (GPTCache-style) with L3 raw chunk, L2 compressed chunk, and L1 answer tiers; expose hit-rate metrics, eviction hooks, and config toggles before gating production traffic.
 
 ## Post-MVP
 - [ ] Consolidate enrichment/runtime flags (e.g., `--router off`, `--start-tier 7b`, `--max-spans 0`) into a shared configuration file, document the schema, and add coverage tests that prove the config-driven flow reproduces the scripted defaults.
+- [ ] Build GUI configuration tool for compressor settings (Post-MVP)
+  - Expose: compressor toggle, token limits, aggressiveness slider
+  - Per-repo/per-user profiles: "research-heavy" (50MB docs), "code-only" (minimal compression)
+  - Preview mode: show before/after with token savings estimate
+  - Preset templates: "aggressive", "balanced", "minimal"
 
 Notes
 - Keep items small (1–3 days each)

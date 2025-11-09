@@ -4,13 +4,17 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import resource
+import statistics
 import subprocess
+import threading
 import urllib.request
 import sys
 import time
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -24,7 +28,6 @@ from router import (
     RouterSettings,
     clamp_usage_snippet,
     classify_failure,
-    choose_next_tier_on_failure,
     choose_start_tier,
     detect_truncation,
     estimate_json_nodes_and_depth,
@@ -41,6 +44,357 @@ EST_TOKENS_PER_SPAN = 350  # keep in sync with tools.rag.cli
 GATEWAY_DEFAULT_TIMEOUT = 300.0
 
 _TRUTHY = {"1", "true", "yes", "on"}
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    yaml = None  # type: ignore
+
+PRESET_PATH = REPO_ROOT / "presets" / "enrich_7b_ollama.yaml"
+ROUTER_POLICY_PATH = REPO_ROOT / "router" / "policy.json"
+DEFAULT_7B_MODEL = "qwen2.5:7b-instruct-q4_K_M"
+DEFAULT_14B_MODEL = "qwen2.5:14b-instruct-q4_K_M"
+LOW_UTIL_WARN_SECONDS = 300.0
+VRAM_WARN_THRESHOLD_MIB = 6800
+_LOW_UTIL_STREAK_SECONDS = 0.0
+
+
+def _normalize_ollama_url(value: str) -> str:
+    trimmed = (value or "").strip()
+    if not trimmed:
+        return ""
+    if not trimmed.startswith(("http://", "https://")):
+        trimmed = f"http://{trimmed}"
+    return trimmed.rstrip("/")
+
+
+def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> List[Dict[str, str]]:
+    env = env or os.environ
+    hosts: List[Dict[str, str]] = []
+
+    def add_host(label: str, url: str) -> None:
+        normalized = _normalize_ollama_url(url)
+        if not normalized:
+            return
+        label = (label or "").strip() or f"host{len(hosts) + 1}"
+        hosts.append({"label": label, "url": normalized})
+
+    raw = env.get("ENRICH_OLLAMA_HOSTS", "")
+    if raw:
+        for chunk in raw.split(","):
+            part = chunk.strip()
+            if not part:
+                continue
+            if "=" in part:
+                label, url = part.split("=", 1)
+            else:
+                label, url = "", part
+            add_host(label, url)
+
+    if hosts:
+        return hosts
+
+    athena_url = env.get("ATHENA_OLLAMA_URL", "").strip()
+    if athena_url:
+        add_host("athena", athena_url)
+    default_local = env.get("OLLAMA_URL", "http://localhost:11434")
+    add_host(env.get("OLLAMA_HOST_LABEL", "localhost"), default_local)
+    return hosts
+
+
+def _read_yaml(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    if yaml is None:
+        raise RuntimeError(f"PyYAML is required to load {path}; install PyYAML.")
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"Preset at {path} must be a mapping.")
+    return data
+
+
+def _detect_physical_cores() -> int:
+    try:
+        import psutil  # type: ignore
+
+        cores = psutil.cpu_count(logical=False)
+        if cores:
+            return cores
+    except Exception:
+        pass
+
+    physical_map: set[tuple[str, str]] = set()
+    try:
+        with open("/proc/cpuinfo", "r", encoding="utf-8") as handle:
+            physical_id = ""
+            core_id = ""
+            for line in handle:
+                if not line.strip():
+                    if physical_id or core_id:
+                        physical_map.add((physical_id, core_id))
+                        physical_id = ""
+                        core_id = ""
+                    continue
+                if line.startswith("physical id"):
+                    physical_id = line.split(":", 1)[1].strip()
+                elif line.startswith("core id"):
+                    core_id = line.split(":", 1)[1].strip()
+            if physical_id or core_id:
+                physical_map.add((physical_id, core_id))
+    except OSError:
+        pass
+    cores = len(physical_map) or os.cpu_count() or 1
+    return max(1, cores)
+
+
+def _resolve_int(value: Any, *, default: int | None = None) -> int | None:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip().lower()
+        if stripped in {"", "none"}:
+            return default
+        if stripped in {"auto", "auto_physical_cores"}:
+            return _detect_physical_cores()
+    return default
+
+
+def _resolve_num_gpu(value: Any) -> int | None:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip().lower()
+        if stripped in {"auto", "auto_full"}:
+            return 999
+        if stripped.startswith("auto_vram"):
+            env_value = os.environ.get("ENRICH_NUM_GPU")
+            if env_value and env_value.isdigit():
+                return int(env_value)
+            return 999
+    return None
+
+
+def _read_rss_mib() -> float | None:
+    try:
+        with open("/proc/self/status", "r", encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("VmRSS:"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        kib = float(parts[1])
+                        return round(kib / 1024.0, 2)
+    except OSError:
+        return None
+    return None
+
+
+def _query_gpu() -> tuple[float | None, float | None]:
+    cmd = [
+        "nvidia-smi",
+        "--id=0",
+        "--query-gpu=utilization.gpu,memory.used",
+        "--format=csv,noheader,nounits",
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None, None
+    output = proc.stdout.strip()
+    if not output:
+        return None, None
+    parts = [p.strip() for p in output.split(",")]
+    if len(parts) < 2:
+        return None, None
+    try:
+        util = float(parts[0])
+        memory = float(parts[1])
+    except ValueError:
+        return None, None
+    return util, memory
+
+
+class _GpuSampler:
+    def __init__(self, interval: float = 1.0) -> None:
+        self.interval = max(0.2, interval)
+        self.samples: list[tuple[float | None, float | None]] = []
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def start(self) -> None:
+        if self._thread is not None:
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> dict[str, float | None]:
+        if self._thread is None:
+            return {"avg_util": None, "max_util": None, "avg_mem": None, "max_mem": None}
+        self._stop.set()
+        self._thread.join(timeout=2.0)
+        self._thread = None
+
+        utilizations = [s[0] for s in self.samples if s[0] is not None]
+        memories = [s[1] for s in self.samples if s[1] is not None]
+        avg_util = statistics.fmean(utilizations) if utilizations else None
+        max_util = max(utilizations) if utilizations else None
+        avg_mem = statistics.fmean(memories) if memories else None
+        max_mem = max(memories) if memories else None
+        return {
+            "avg_util": avg_util,
+            "max_util": max_util,
+            "avg_mem": avg_mem,
+            "max_mem": max_mem,
+        }
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            snapshot = _query_gpu()
+            self.samples.append(snapshot)
+            if self._stop.wait(self.interval):
+                break
+
+
+_LOCAL_HOSTNAMES = {"", "localhost", "127.0.0.1", "::1"}
+
+
+def _should_sample_local_gpu(selected_backend: str, host_url: str | None) -> bool:
+    if selected_backend != "ollama":
+        return False
+    resolved_url = host_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    try:
+        hostname = (urlparse(resolved_url).hostname or "").lower()
+    except ValueError:
+        return True
+    if hostname in _LOCAL_HOSTNAMES:
+        return True
+    if hostname.endswith(".local") or hostname.endswith(".localdomain"):
+        return True
+    return False
+
+
+def _blank_gpu_stats() -> dict[str, float | None]:
+    return {"avg_util": None, "max_util": None, "avg_mem": None, "max_mem": None}
+
+
+def _update_gpu_warnings(gpu_util: float | None, duration_sec: float) -> None:
+    global _LOW_UTIL_STREAK_SECONDS
+    if gpu_util is None or duration_sec <= 0:
+        return
+    if gpu_util < 50.0:
+        _LOW_UTIL_STREAK_SECONDS += duration_sec
+    else:
+        _LOW_UTIL_STREAK_SECONDS = 0.0
+    if _LOW_UTIL_STREAK_SECONDS >= LOW_UTIL_WARN_SECONDS:
+        print(
+            f"[enrich][warn] GPU utilization below 50% for {_LOW_UTIL_STREAK_SECONDS:.0f}s (target ≥60%).",
+            file=sys.stderr,
+        )
+        _LOW_UTIL_STREAK_SECONDS = 0.0
+
+
+def _check_vram_target(vram_mib: float | None) -> None:
+    if vram_mib is None:
+        return
+    if vram_mib < VRAM_WARN_THRESHOLD_MIB:
+        print(
+            f"[enrich][warn] Peak VRAM {vram_mib:.0f} MiB under target ({VRAM_WARN_THRESHOLD_MIB}+ MiB).",
+            file=sys.stderr,
+        )
+
+
+def _load_enrich_presets() -> dict[str, dict[str, Any]]:
+    data = _read_yaml(PRESET_PATH) if PRESET_PATH.exists() else {}
+    model = str(data.get("model") or DEFAULT_7B_MODEL)
+    options_raw = data.get("options") or {}
+    if not options_raw:
+        options_raw = {
+            "num_ctx": data.get("num_ctx", 3072),
+            "num_batch": data.get("num_batch", 48),
+            "num_thread": data.get("num_thread"),
+            "num_gpu": data.get("num_gpu"),
+        }
+    else:
+        if not isinstance(options_raw, dict):
+            raise ValueError("Preset options must be a mapping.")
+    num_ctx = _resolve_int(options_raw.get("num_ctx"), default=3072)
+    num_batch = _resolve_int(options_raw.get("num_batch"), default=48)
+    num_thread = _resolve_int(options_raw.get("num_thread"), default=_detect_physical_cores())
+    num_gpu = _resolve_num_gpu(options_raw.get("num_gpu")) or _resolve_int(options_raw.get("num_gpu"), default=64)
+
+    options = {
+        "num_ctx": num_ctx,
+        "num_batch": num_batch,
+        "num_thread": num_thread,
+        "num_gpu": num_gpu,
+    }
+    if data.get("kv_type"):
+        options["kv_type"] = data["kv_type"]
+    keep_alive = data.get("keep_alive", "15m")
+    concurrency = int(data.get("concurrency", 1))
+
+    preset_7b = {
+        "model": model,
+        "options": {k: v for k, v in options.items() if v is not None},
+        "keep_alive": keep_alive,
+        "concurrency": concurrency,
+    }
+
+    fallback_options = dict(preset_7b["options"])
+    fallback_options["num_batch"] = max(16, int(fallback_options.get("num_batch", 32) // 2 or 16))
+    if "num_gpu" in fallback_options:
+        fallback_options["num_gpu"] = max(32, int(fallback_options["num_gpu"]))
+    preset_14b = {
+        "model": data.get("fallback_model", DEFAULT_14B_MODEL),
+        "options": fallback_options,
+        "keep_alive": keep_alive,
+        "concurrency": concurrency,
+    }
+    return {"7b": preset_7b, "14b": preset_14b}
+
+
+def _load_router_policy() -> dict[str, Any]:
+    if not ROUTER_POLICY_PATH.exists():
+        return {
+            "default_tier": "7b",
+            "fallback_tier": "14b",
+            "promote_if": {"span_line_count_gte": 100, "schema_failures_gte": 2},
+            "max_retries_per_span": 3,
+            "log_fields": [
+                "tier",
+                "duration_sec",
+                "schema_ok",
+                "ctx",
+                "batch",
+                "gpu_util",
+                "vram_mib",
+                "rss_mib",
+                "tok_s",
+            ],
+        }
+    try:
+        with ROUTER_POLICY_PATH.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"Failed to load router policy {ROUTER_POLICY_PATH}: {exc}") from exc
+
+
+PRESET_CACHE = _load_enrich_presets()
+POLICY_CACHE = _load_router_policy()
+
+if PRESET_CACHE["7b"].get("keep_alive") and "OLLAMA_KEEP_ALIVE" not in os.environ:
+    os.environ["OLLAMA_KEEP_ALIVE"] = str(PRESET_CACHE["7b"]["keep_alive"])
+if PRESET_CACHE["7b"].get("concurrency") and "OLLAMA_NUM_PARALLEL" not in os.environ:
+    os.environ["OLLAMA_NUM_PARALLEL"] = str(PRESET_CACHE["7b"]["concurrency"])
+if "OLLAMA_MODEL" not in os.environ:
+    os.environ["OLLAMA_MODEL"] = PRESET_CACHE["7b"]["model"]
 
 
 def env_flag(name: str, env: dict[str, str] | None = None) -> bool:
@@ -257,10 +611,19 @@ def call_via_ollama(
     retry_wait: float = 2.0,
     poll_wait: float = 1.5,
     model_override: str | None = None,
+    options: Dict[str, Any] | None = None,
+    keep_alive: str | float | int | None = None,
+    base_url: str | None = None,
+    host_label: str | None = None,
 ) -> Tuple[str, Dict[str, object]]:
-    base_url = os.environ.get("OLLAMA_URL", "http://localhost:11434").rstrip("/")
+    base_url = (base_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")).rstrip("/")
     model_name = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
-    payload = json.dumps({"model": model_name, "prompt": prompt, "stream": False}).encode("utf-8")
+    payload_dict: Dict[str, Any] = {"model": model_name, "prompt": prompt, "stream": False}
+    if options:
+        payload_dict["options"] = options
+    if keep_alive is not None:
+        payload_dict["keep_alive"] = keep_alive
+    payload = json.dumps(payload_dict).encode("utf-8")
     headers = {"Content-Type": "application/json"}
 
     def runner_active() -> bool:
@@ -309,7 +672,12 @@ def call_via_ollama(
                     "model": model_name,
                     "finish_reason": last_data.get("done_reason"),
                     "eval_count": last_data.get("eval_count"),
+                    "options": payload_dict.get("options"),
+                    "base_url": base_url,
+                    "host": host_label or base_url,
                 }
+                if keep_alive is not None:
+                    meta["keep_alive"] = keep_alive
                 return combined, meta
             last_error = ValueError("Failed to parse Ollama response")
         else:
@@ -320,7 +688,12 @@ def call_via_ollama(
                     "model": model_name,
                     "finish_reason": data.get("done_reason"),
                     "eval_count": data.get("eval_count"),
+                    "options": payload_dict.get("options"),
+                    "base_url": base_url,
+                    "host": host_label or base_url,
                 }
+                if keep_alive is not None:
+                    meta["keep_alive"] = keep_alive
                 return response_text, meta
             last_error = ValueError("No response from Ollama")
 
@@ -386,7 +759,11 @@ def call_qwen(
     gateway_path: Path | None = None,
     gateway_timeout: float = GATEWAY_DEFAULT_TIMEOUT,
     model_override: str | None = None,
-) -> Tuple[str, Dict[str, str]]:
+    ollama_options: Dict[str, Any] | None = None,
+    keep_alive: str | float | int | None = None,
+    ollama_base_url: str | None = None,
+    ollama_host_label: str | None = None,
+) -> Tuple[str, Dict[str, object]]:
     backend = backend or "auto"
     backend = backend.lower()
     env = os.environ
@@ -437,9 +814,15 @@ def call_qwen(
             retry_wait=retry_wait,
             poll_wait=poll_wait,
             model_override=model_override,
+            options=ollama_options,
+            keep_alive=keep_alive,
+            base_url=ollama_base_url,
+            host_label=ollama_host_label,
         )
         meta.setdefault("backend", "ollama")
         meta.setdefault("model", model_label)
+        if ollama_host_label or ollama_base_url:
+            meta.setdefault("host", ollama_host_label or ollama_base_url)
         return output, meta
     except Exception as exc:
         errors.append(exc)
@@ -508,6 +891,50 @@ def normalize_evidence(
     result["evidence"] = evidence
 
 
+def _as_list_of_strings(value: object) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        items: List[str] = []
+        for entry in value:
+            if isinstance(entry, str):
+                trimmed = entry.strip()
+                if trimmed:
+                    items.append(trimmed)
+        return items
+    if isinstance(value, str):
+        trimmed = value.strip()
+        return [trimmed] if trimmed else []
+    return []
+
+
+def normalize_schema_fields(result: dict) -> None:
+    array_fields = ["inputs", "outputs", "side_effects", "pitfalls", "tags"]
+    for field in array_fields:
+        result[field] = _as_list_of_strings(result.get(field))
+
+    text_fields = ["summary_120w"]
+    for field in text_fields:
+        value = result.get(field)
+        if value is None:
+            result[field] = ""
+        elif not isinstance(value, str):
+            result[field] = str(value)
+        else:
+            result[field] = value.strip()
+
+    snippet = result.get("usage_snippet")
+    if snippet is None:
+        result["usage_snippet"] = None
+    elif not isinstance(snippet, str):
+        result["usage_snippet"] = str(snippet)
+    else:
+        result["usage_snippet"] = snippet.strip() or None
+
+    if not isinstance(result.get("evidence"), list):
+        result["evidence"] = []
+
+
 def parse_and_validate(
     raw: str,
     item: Dict,
@@ -525,6 +952,7 @@ def parse_and_validate(
             return None, ("truncation", exc, raw)
         return None, ("parse", exc, raw)
 
+    normalize_schema_fields(result)
     clamp_usage_snippet(result, max_lines=12)
     normalize_evidence(result, item["lines"][0], item["lines"][1])
     ok, errors = validate_enrichment(result, item["lines"][0], item["lines"][1])
@@ -594,11 +1022,19 @@ def main() -> int:
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
 
     router_enabled = (args.router or "on").lower() != "off"
+    policy_settings = POLICY_CACHE.copy()
+    policy_default_tier = str(policy_settings.get("default_tier", "7b")).lower()
+    policy_fallback_tier = str(policy_settings.get("fallback_tier", "14b")).lower()
+    promote_cfg = policy_settings.get("promote_if", {}) or {}
+    policy_line_threshold = int(promote_cfg.get("span_line_count_gte", 100) or 100)
+    policy_schema_threshold = int(promote_cfg.get("schema_failures_gte", 2) or 2)
+    policy_max_retries = int(policy_settings.get("max_retries_per_span", args.retries) or args.retries)
+    policy_log_fields = list(policy_settings.get("log_fields", []))
     settings = RouterSettings(headroom=args.max_tokens_headroom)
-    promote_once_env = os.environ.get("ROUTER_PROMOTE_ONCE", "1").strip().lower()
-    promote_once_flag = promote_once_env not in {"0", "false", "no", "off"}
     ledger_path = repo_root / "logs" / "run_ledger.log"
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ollama_host_chain = resolve_ollama_host_chain()
+    host_chain_count = max(1, len(ollama_host_chain))
 
     db_file = index_path_for_write(repo_root)
     db = Database(db_file)
@@ -640,30 +1076,59 @@ def main() -> int:
                     "rag_avg_score": item.get("retrieved_avg_score"),
                 }
 
+                manual_override = (args.start_tier or "auto").lower()
                 if router_enabled:
-                    start_tier = choose_start_tier(router_metrics, settings, override=args.start_tier)
+                    start_tier = choose_start_tier(router_metrics, settings, override=args.start_tier).lower()
+                    if manual_override != "auto":
+                        start_tier = manual_override
+                    if line_count >= policy_line_threshold and start_tier != policy_fallback_tier:
+                        start_tier = policy_fallback_tier
                 else:
-                    manual_tier = (args.start_tier or "auto").lower()
-                    start_tier = manual_tier if manual_tier != "auto" else "7b"
+                    start_tier = manual_override if manual_override != "auto" else policy_default_tier
+                if start_tier not in {"7b", "14b", "nano"}:
+                    start_tier = policy_default_tier
 
+                base_attempts = max(1, min(args.retries, policy_max_retries))
+                if backend in {"auto", "ollama"}:
+                    per_host_attempts = 2 if router_enabled else 1
+                    required_attempts = host_chain_count * per_host_attempts
+                    max_attempts = max(base_attempts, required_attempts)
+                else:
+                    max_attempts = base_attempts
+                schema_failures = 0
                 tiers_history: List[str] = []
+                attempt_records: List[Dict[str, Any]] = []
                 current_tier = start_tier
                 success = False
                 final_result: Dict[str, object] | None = None
                 final_meta: Dict[str, object] = {}
                 failure_info: Tuple[str, object, object] | None = None
+                attempt_idx = 0
+                current_host_idx = 0
 
-                while current_tier:
-                    tiers_history.append(current_tier)
-                    backend_choice = "gateway" if current_tier == "nano" else "ollama"
+                while attempt_idx < max_attempts:
+                    attempt_idx += 1
+                    tier_for_attempt = current_tier or start_tier
+                    tiers_history.append(tier_for_attempt)
+                    backend_choice = "gateway" if tier_for_attempt == "nano" else "ollama"
                     selected_backend = backend_choice if backend == "auto" else backend
-                    tier_model_override: str | None = None
-                    if selected_backend == "ollama":
-                        if current_tier == "14b":
-                            tier_model_override = (args.fallback_model or "qwen2.5:14b-instruct-q4_K_M")
-                        elif current_tier == "7b":
-                            tier_model_override = None
+                    preset_key = "14b" if tier_for_attempt == "14b" else "7b"
+                    tier_preset = PRESET_CACHE.get(preset_key, PRESET_CACHE["7b"])
+                    options = tier_preset.get("options") if selected_backend == "ollama" else None
+                    keep_alive = tier_preset.get("keep_alive") if selected_backend == "ollama" else None
+                    tier_model_override = tier_preset.get("model") if selected_backend == "ollama" else None
+                    host_label = None
+                    host_url = None
+                    if selected_backend == "ollama" and ollama_host_chain:
+                        host_entry = ollama_host_chain[min(current_host_idx, host_chain_count - 1)]
+                        host_label = host_entry.get("label")
+                        host_url = host_entry.get("url")
 
+                    sampler: _GpuSampler | None = None
+                    if _should_sample_local_gpu(selected_backend, host_url):
+                        sampler = _GpuSampler()
+                        sampler.start()
+                    attempt_start = time.monotonic()
                     try:
                         stdout, meta = call_qwen(
                             prompt,
@@ -676,33 +1141,110 @@ def main() -> int:
                             gateway_path=args.gateway_path,
                             gateway_timeout=args.gateway_timeout,
                             model_override=tier_model_override,
+                            ollama_options=options,
+                            keep_alive=keep_alive,
+                            ollama_base_url=host_url,
+                            ollama_host_label=host_label,
                         )
                     except RuntimeError as exc:
                         failure_info = ("runtime", exc, None)
-                        if router_enabled:
-                            next_tier = choose_next_tier_on_failure("runtime", current_tier, router_metrics, settings, promote_once=promote_once_flag)
-                        else:
-                            next_tier = None
-                        if router_enabled and next_tier and next_tier not in tiers_history:
-                            current_tier = next_tier
+                        gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
+                        attempt_duration = time.monotonic() - attempt_start
+                        attempt_records.append(
+                            {
+                                "tier": tier_for_attempt,
+                                "duration": attempt_duration,
+                                "gpu": gpu_stats,
+                                "success": False,
+                                "failure": "runtime",
+                                "options": options,
+                                "model": tier_model_override,
+                                "host": host_label or host_url,
+                            }
+                        )
+                        if router_enabled and tier_for_attempt != policy_fallback_tier:
+                            current_tier = policy_fallback_tier
+                            continue
+                        if (
+                            selected_backend == "ollama"
+                            and (not router_enabled or tier_for_attempt == policy_fallback_tier)
+                            and current_host_idx + 1 < host_chain_count
+                        ):
+                            current_host_idx += 1
+                            current_tier = start_tier
+                            time.sleep(args.retry_wait)
+                            continue
+                        if attempt_idx < max_attempts:
+                            time.sleep(args.retry_wait)
                             continue
                         break
 
+                    gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
+                    attempt_duration = time.monotonic() - attempt_start
                     result, failure = parse_and_validate(stdout, item, meta)
                     if result is not None:
                         success = True
                         final_result = result
-                        final_meta = meta
+                        final_meta = {**meta, "gpu_stats": gpu_stats, "options": options, "tier_key": preset_key}
+                        attempt_records.append(
+                            {
+                                "tier": tier_for_attempt,
+                                "duration": attempt_duration,
+                                "gpu": gpu_stats,
+                                "success": True,
+                                "failure": None,
+                                "options": options,
+                                "model": meta.get("model"),
+                                "host": meta.get("host", host_label or host_url),
+                            }
+                        )
                         break
 
                     failure_info = failure
                     failure_type = classify_failure(failure)
-                    if router_enabled:
-                        next_tier = choose_next_tier_on_failure(failure_type, current_tier, router_metrics, settings, promote_once=promote_once_flag)
-                    else:
-                        next_tier = None
-                    if router_enabled and next_tier and next_tier not in tiers_history:
-                        current_tier = next_tier
+                    attempt_records.append(
+                        {
+                            "tier": tier_for_attempt,
+                            "duration": attempt_duration,
+                            "gpu": gpu_stats,
+                            "success": False,
+                            "failure": failure_type,
+                            "options": options,
+                            "model": meta.get("model"),
+                            "host": meta.get("host", host_label or host_url),
+                        }
+                    )
+                    if failure_type == "validation":
+                        schema_failures += 1
+
+                    # Always allow promotion to fallback tier on repeated validation failures,
+                    # even when router heuristics are disabled. This preserves the "7B first,
+                    # promote on validation failure" policy documented in preprocessor_flow.md.
+                    promote_due_to_schema = (
+                        schema_failures >= policy_schema_threshold and tier_for_attempt != policy_fallback_tier
+                    )
+                    promote_due_to_size = (
+                        router_enabled and line_count >= policy_line_threshold and tier_for_attempt != policy_fallback_tier
+                    )
+                    promote_due_to_failure = (
+                        router_enabled
+                        and failure_type in {"runtime", "parse", "truncation"}
+                        and tier_for_attempt != policy_fallback_tier
+                    )
+                    if promote_due_to_schema or promote_due_to_size or promote_due_to_failure:
+                        current_tier = policy_fallback_tier
+                        continue
+                    if (
+                        selected_backend == "ollama"
+                        and (not router_enabled or tier_for_attempt == policy_fallback_tier)
+                        and current_host_idx + 1 < host_chain_count
+                    ):
+                        current_host_idx += 1
+                        current_tier = start_tier
+                        time.sleep(args.retry_wait)
+                        continue
+                    if attempt_idx < max_attempts:
+                        time.sleep(args.retry_wait)
                         continue
                     break
 
@@ -712,8 +1254,81 @@ def main() -> int:
                 if len(tiers_history) > 1:
                     promo_label = f"{tiers_history[0]}->{tiers_history[-1]}"
 
-                ledger_record = {
+                total_latency = time.monotonic() - wall_start
+
+                last_attempt = attempt_records[-1] if attempt_records else {}
+                gpu_stats_last: Dict[str, float | None] = {}
+                if isinstance(final_meta.get("gpu_stats"), dict):
+                    gpu_stats_last = final_meta["gpu_stats"]  # type: ignore[assignment]
+                elif isinstance(last_attempt.get("gpu"), dict):
+                    gpu_stats_last = last_attempt["gpu"]  # type: ignore[assignment]
+
+                tier_options = final_meta.get("options") if isinstance(final_meta, dict) else None
+                if not isinstance(tier_options, dict):
+                    tier_options = last_attempt.get("options")
+                if not isinstance(tier_options, dict):
+                    tier_options = {}
+
+                result_model = None
+                if success:
+                    if isinstance(final_meta.get("model"), str):
+                        result_model = final_meta["model"]  # type: ignore[index]
+                    elif isinstance(last_attempt.get("model"), str):
+                        result_model = last_attempt["model"]  # type: ignore[assignment]
+                    elif final_result and isinstance(final_result.get("model"), str):
+                        result_model = final_result.get("model")
+                    if not result_model:
+                        result_model = args.model
+                else:
+                    if isinstance(last_attempt.get("model"), str):
+                        result_model = last_attempt["model"]  # type: ignore[assignment]
+                    else:
+                        result_model = args.fallback_model or os.environ.get("OLLAMA_MODEL", policy_default_tier)
+
+                gpu_avg = gpu_stats_last.get("avg_util") if isinstance(gpu_stats_last, dict) else None
+                gpu_max = gpu_stats_last.get("max_util") if isinstance(gpu_stats_last, dict) else None
+                vram_peak = gpu_stats_last.get("max_mem") if isinstance(gpu_stats_last, dict) else None
+                vram_avg = gpu_stats_last.get("avg_mem") if isinstance(gpu_stats_last, dict) else None
+                ctx_value = tier_options.get("num_ctx") if isinstance(tier_options, dict) else None
+                batch_value = tier_options.get("num_batch") if isinstance(tier_options, dict) else None
+                num_thread_value = tier_options.get("num_thread") if isinstance(tier_options, dict) else None
+                num_gpu_value = tier_options.get("num_gpu") if isinstance(tier_options, dict) else None
+                rss_mib = _read_rss_mib()
+                tok_s = None
+                eval_count = final_meta.get("eval_count") if isinstance(final_meta, dict) else None
+                if isinstance(eval_count, int) and total_latency > 0:
+                    tok_s = round(eval_count / total_latency, 2)
+                elif success and total_latency > 0:
+                    tok_s = round(tokens_out / total_latency, 2)
+
+                metrics_summary = {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "repo_root": str(repo_root),
+                    "span_hash": item["span_hash"],
+                    "path": item["path"],
+                    "duration_sec": round(total_latency, 3),
+                    "model": result_model,
+                    "tier": final_tier,
+                    "router_tier": router_tier,
+                    "schema_ok": success,
+                    "tok_s": tok_s,
+                    "gpu_util": gpu_avg,
+                    "gpu_util_max": gpu_max,
+                    "vram_mib": vram_peak,
+                    "vram_avg_mib": vram_avg,
+                    "rss_mib": rss_mib,
+                    "ctx": ctx_value,
+                    "batch": batch_value,
+                    "num_thread": num_thread_value,
+                    "num_gpu": num_gpu_value,
+                    "attempts": len(attempt_records) or attempt_idx,
+                    "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
+                }
+                for field in policy_log_fields:
+                    metrics_summary.setdefault(field, metrics_summary.get(field))
+
+                ledger_record = {
+                    "timestamp": metrics_summary["timestamp"],
                     "task_id": item["span_hash"],
                     "path": item["path"],
                     "tier_used": final_tier,
@@ -727,37 +1342,37 @@ def main() -> int:
                     "k": router_metrics.get("rag_k"),
                     "avg_score": router_metrics.get("rag_avg_score"),
                     "promo": promo_label,
+                    "schema_ok": success,
+                    "tok_s": tok_s,
+                    "gpu_util": gpu_avg,
+                    "gpu_util_max": gpu_max,
+                    "vram_mib": vram_peak,
+                    "ctx": ctx_value,
+                    "batch": batch_value,
+                    "num_thread": num_thread_value,
+                    "num_gpu": num_gpu_value,
+                    "rss_mib": rss_mib,
+                    "attempts": len(attempt_records) or attempt_idx,
+                    "wall_ms": int(round(total_latency * 1000)),
+                    "result_model": result_model,
                 }
 
+                _update_gpu_warnings(gpu_avg if isinstance(gpu_avg, (int, float)) else None, total_latency)
+                _check_vram_target(vram_peak if isinstance(vram_peak, (int, float)) else None)
+
                 if success and final_result is not None:
-                    latency = time.monotonic() - wall_start
                     ledger_record["result"] = "pass"
                     ledger_record["reason"] = "success"
-                    ledger_record["wall_ms"] = int(round(latency * 1000))
-
-                    result_model = final_meta.get("model") or final_result.get("model") or args.model
                     final_result.setdefault("model", result_model)
                     final_result.setdefault("schema_version", args.schema_version)
                     db.store_enrichment(item["span_hash"], final_result)
                     db.conn.commit()
 
-                    metrics_summary = {
-                        "timestamp": ledger_record["timestamp"],
-                        "repo_root": str(repo_root),
-                        "span_hash": item["span_hash"],
-                        "path": item["path"],
-                        "latency_sec": round(latency, 3),
-                        "model": result_model,
-                        "tier": final_tier,
-                        "router_tier": router_tier,
-                        "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
-                    }
                     stats = db.stats()
                     metrics_summary["spans_total"] = stats["spans"]
                     metrics_summary["enrichments_total"] = stats["enrichments"]
                     metrics_summary["estimated_remote_tokens_saved"] = stats["enrichments"] * EST_TOKENS_PER_SPAN
                     metrics_summary["estimated_remote_tokens_repo_cap"] = stats["spans"] * EST_TOKENS_PER_SPAN
-                    append_metrics(log_path, metrics_summary)
 
                     processed += 1
                     model_note = f" ({result_model})" if result_model else ""
@@ -766,20 +1381,19 @@ def main() -> int:
                         router_note = f" [router {router_tier}]"
                     print(
                         f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                        f"({latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
+                        f"({total_latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
                     )
                     if args.sleep:
                         time.sleep(args.sleep)
                 else:
                     ledger_record["result"] = "fail"
-                    ledger_record["router_tier"] = router_tier
                     failure_reason = failure_info[0] if failure_info else "unknown"
                     ledger_record["reason"] = failure_reason
-                    ledger_record["wall_ms"] = int(round((time.monotonic() - wall_start) * 1000))
                     if failure_info is None:
                         failure_info = ("unknown", "Unknown failure", None)
                     handle_failure(repo_root, item, failure_info)
 
+                append_metrics(log_path, metrics_summary)
                 append_ledger_record(ledger_path, ledger_record)
     finally:
         db.close()
