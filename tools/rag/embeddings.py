@@ -15,6 +15,7 @@ from .config import (
     embedding_gpu_retry_seconds,
     embedding_model_dim,
     embedding_model_name,
+    embedding_model_preset,
     embedding_normalize,
     embedding_passage_prefix,
     embedding_query_prefix,
@@ -248,6 +249,9 @@ def build_embedding_backend(
     normalize: bool | None = None,
 ) -> EmbeddingBackend:
     resolved_model = model_name or embedding_model_name()
+    if model_name is None:
+        preset = embedding_model_preset()
+        logger.debug("embedding backend using preset %s (%s)", preset, resolved_model)
     resolved_normalize = normalize if normalize is not None else embedding_normalize()
 
     if resolved_model in HASH_MODELS:
@@ -265,8 +269,8 @@ def build_embedding_backend(
     spec = EmbeddingSpec(
         model_name=resolved_model,
         dim=resolved_dim,
-        passage_prefix=passage_prefix or embedding_passage_prefix(),
-        query_prefix=query_prefix or embedding_query_prefix(),
+        passage_prefix=passage_prefix if passage_prefix is not None else embedding_passage_prefix(),
+        query_prefix=query_prefix if query_prefix is not None else embedding_query_prefix(),
         normalize=resolved_normalize,
     )
     return SentenceTransformerBackend(spec)

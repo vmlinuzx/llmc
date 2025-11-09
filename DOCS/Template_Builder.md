@@ -1,50 +1,48 @@
 # LLMC Template Builder (MVP)
 
-This MVP provides a tiny web interface for packaging the starter workspace into a downloadable zip. It mirrors the Codex routing choices available in `scripts/codex_wrap.sh`.
+This MVP ships a Next.js App Router UI for packaging the starter workspace into a downloadable zip. It mirrors the Codex routing choices surfaced through `scripts/codex_wrap.sh`.
 
 ## Run locally
 
 ```bash
-cd apps/web
+cd apps/template-builder
 npm install
-npm start
+npm run dev
 ```
 
-The server listens on `http://localhost:4000`. Open that URL in a browser to pick the Codex route and download a zip.
+The dev server listens on `http://localhost:3000`. Open that URL, select a model profile, tools, and artifacts, then click **Generate LLMC Bundle** to download the zip.
 
 ## How it works
 
-- **Frontend:** Static HTML form under `apps/web/public/index.html` lists the three routing modes (`local`, `api`, `codex`).
-- **Backend:** `apps/web/server.js` streams a zip of the `template/` directory using `archiver`. It also injects a small `selection.json` that records the chosen route and timestamp for traceability.
-- **Health check:** `GET /health` returns JSON with the resolved template path and port.
+- **Frontend:** `app/page.tsx` renders the form, fetches dynamic options, and streams the generated bundle to the browser.
+- **Registry API:** `app/api/options/route.ts` loads tool, profile, and artifact metadata from the repo via `lib/registry.ts`.
+- **Bundle API:** `app/api/generate/route.ts` calls `lib/generateBundle.ts`, which copies the `template/` tree, rewrites `.codex/tools.json` & `.codex/config.toml`, and attaches contracts, agent manifests, and env presets.
 
-## Template layout (proposed)
+## Bundle layout today
+
+The base blueprint under `template/` currently provides shared orchestration config:
 
 ```
 template/
-├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts
-│   │   └── upload/route.ts
-│   └── page.tsx
-├── lib/
-│   ├── db.ts              # Postgres client
-│   ├── auth.ts            # NextAuth config
-│   └── files.ts           # File upload helpers
-├── prisma/
-│   └── schema.prisma      # Or SQL migrations
-├── public/
-│   └── uploads/           # User files
-├── docker-compose.yml     # Postgres + app
-├── Dockerfile
-├── .env.example
-└── README.md
+├── .codex/         # Codex defaults (config + tool registry)
+├── .llm/           # Prompt presets + router policy
+├── .vscode/        # Recommended editor settings
+├── .codexignore    # Files ignored by Codex CLI
+└── .gitignore
 ```
 
-Everything stays OSS-friendly: Next.js App Router, Postgres + Prisma, and NextAuth as the baseline stack so the downloaded template is deployable without closed services.
+When you generate a bundle the runtime adds:
 
-## Next ideas
+- `README.md` with next steps and resolved env defaults.
+- `manifest.json` capturing the selection metadata.
+- `contracts/` if selected (Markdown guardrails tailor-made per tool).
+- `agents/` manifests enumerating MCP entry points.
+- `envs/.env.llmc` pre-populated with profile + tool settings.
 
-- Expand the options form with additional `codex_wrap.sh` toggles (auto-commit, sync, etc.).
-- Add auth or rate limiting before exposing beyond localhost.
-- Generate tailored files inside the archive (e.g., pre-populated `.env.local`).
+This keeps the MVP focused on orchestration while we land the application scaffold and RAG wiring.
+
+## Next steps
+
+- Seed `template/` with the Next.js + Prisma vertical slice skeleton.
+- Include ready-to-run agent entry points alongside the manifests.
+- Package RAG automation helpers so bundles can refresh context immediately.

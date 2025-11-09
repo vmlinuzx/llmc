@@ -1,3 +1,6 @@
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
+
 import JSZip from 'jszip';
 
 import {
@@ -43,6 +46,61 @@ type TemplateContext = {
   profileMap: Map<string, ModelProfileOption>;
   artifacts: ArtifactOption[];
   envDefaults: string[];
+};
+
+const repoRoot =
+  process.env.LLMC_PROJECT_ROOT || path.resolve(process.cwd(), '..', '..');
+
+const defaultTemplateRoot = path.join(repoRoot, 'template');
+
+let templateRootCache: string | null = null;
+
+const getTemplateRoot = async (): Promise<string> => {
+  if (templateRootCache) {
+    return templateRootCache;
+  }
+  const resolved = process.env.LLMC_TEMPLATE_ROOT || defaultTemplateRoot;
+  const stats = await fs.stat(resolved).catch(() => null);
+  if (!stats?.isDirectory()) {
+    throw new Error(`Template directory not found: ${resolved}`);
+  }
+  templateRootCache = resolved;
+  return templateRootCache;
+};
+
+const toPosixPath = (value: string) => value.split(path.sep).join(path.posix.sep);
+
+const addDirectoryToZip = async (
+  zip: JSZip,
+  sourceDir: string,
+  relativeDir = ''
+): Promise<void> => {
+  const entries = await fs.readdir(sourceDir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.name === '.DS_Store') continue;
+    const absolute = path.join(sourceDir, entry.name);
+    const zipPath = relativeDir
+      ? path.join(relativeDir, entry.name)
+      : entry.name;
+    if (entry.isDirectory()) {
+      await addDirectoryToZip(zip, absolute, zipPath);
+    } else if (entry.isFile()) {
+      const contents = await fs.readFile(absolute);
+      zip.file(toPosixPath(zipPath), contents);
+    }
+  }
+};
+
+const readTemplateFile = async (
+  templateRoot: string,
+  relativePath: string
+): Promise<string | null> => {
+  const target = path.join(templateRoot, relativePath);
+  try {
+    return await fs.readFile(target, 'utf8');
+  } catch {
+    return null;
+  }
 };
 
 const buildTemplateContext = async (): Promise<TemplateContext> => {
@@ -209,10 +267,123 @@ const renderReadme = (config: BundleConfig, context: RenderContext) => {
   ].join('\n');
 };
 
+const renderToolsManifest = async (
+  templateRoot: string,
+  context: RenderContext
+): Promise<string | null> => {
+  const raw = await readTemplateFile(templateRoot, path.join('.codex', 'tools.json'));
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    type ToolManifest = {
+      mcp_servers?: Array<Record<string, unknown>>;
+      models?: Array<Record<string, unknown>>;
+    };
+
+    const parsed = JSON.parse(raw) as ToolManifest;
+    const selectedToolIds = new Set(context.selectedTools.map((tool) => tool.id));
+
+    const currentServers = Array.isArray(parsed.mcp_servers)
+      ? parsed.mcp_servers.filter(
+          (server) =>
+            server &&
+            typeof server === 'object' &&
+            'id' in server &&
+            typeof server.id === 'string' &&
+            selectedToolIds.has(server.id)
+        )
+      : [];
+
+    const existingIds = new Set(
+      currentServers
+        .map((server) =>
+          server && typeof server === 'object' && 'id' in server
+            ? (server.id as string)
+            : null
+        )
+        .filter((id): id is string => Boolean(id))
+    );
+
+    context.selectedTools.forEach((tool) => {
+      if (!existingIds.has(tool.id)) {
+        currentServers.push({ id: tool.id });
+      }
+    });
+
+    parsed.mcp_servers = currentServers;
+
+    if (Array.isArray(parsed.models)) {
+      const ollamaEntry = parsed.models.find(
+        (model) => model && typeof model === 'object' && (model as { id?: string }).id === 'ollama'
+      );
+      if (ollamaEntry && typeof ollamaEntry === 'object') {
+        if (context.selectedProfile) {
+          (ollamaEntry as Record<string, unknown>).default_profile =
+            context.selectedProfile.id;
+        }
+        const profiles =
+          (ollamaEntry as Record<string, unknown>).profiles &&
+          typeof (ollamaEntry as Record<string, unknown>).profiles === 'object'
+            ? ((ollamaEntry as Record<string, unknown>).profiles as Record<string, string>)
+            : {};
+
+        for (const profile of context.profileMap.values()) {
+          if (profile.model) {
+            profiles[profile.id] = profile.model;
+          }
+        }
+
+        (ollamaEntry as Record<string, unknown>).profiles = profiles;
+      }
+    }
+
+    return `${JSON.stringify(parsed, null, 2)}\n`;
+  } catch (error) {
+    console.warn('Failed to generate customized tools manifest', error);
+    return raw;
+  }
+};
+
+const renderCodexConfig = async (
+  templateRoot: string,
+  context: RenderContext
+): Promise<string | null> => {
+  const raw = await readTemplateFile(templateRoot, path.join('.codex', 'config.toml'));
+  const selectedModel = context.selectedProfile?.model;
+
+  if (!raw || !selectedModel) {
+    return raw;
+  }
+
+  const replacement = `model = "${selectedModel}"`;
+  const lines = raw.split('\n');
+  let replaced = false;
+
+  const updated = lines.map((line) => {
+    if (!replaced && line.trim().startsWith('model')) {
+      replaced = true;
+      return replacement;
+    }
+    return line;
+  });
+
+  if (!replaced) {
+    if (updated.length === 0 || updated[updated.length - 1].trim() !== '') {
+      updated.push('');
+    }
+    updated.push(replacement);
+  }
+
+  return `${updated.join('\n')}\n`;
+};
+
 export async function createBundle(config: BundleConfig): Promise<BundleResult> {
   await validateConfig(config);
   const projectName = config.projectName.trim();
   const context = await buildTemplateContext();
+  const templateRoot = await getTemplateRoot();
 
   const uniqueTools = Array.from(new Set(config.tools));
   const uniqueArtifacts = Array.from(new Set(config.artifacts));
@@ -263,6 +434,18 @@ export async function createBundle(config: BundleConfig): Promise<BundleResult> 
   const zip = new JSZip();
   const slug = sanitizeName(normalizedConfig.projectName) || 'template-builder';
   const generatedAt = new Date().toISOString();
+
+  await addDirectoryToZip(zip, templateRoot);
+
+  const customizedTools = await renderToolsManifest(templateRoot, renderContext);
+  if (customizedTools) {
+    zip.file('.codex/tools.json', customizedTools);
+  }
+
+  const customizedConfig = await renderCodexConfig(templateRoot, renderContext);
+  if (customizedConfig) {
+    zip.file('.codex/config.toml', customizedConfig);
+  }
 
   zip.file('README.md', renderReadme(normalizedConfig, renderContext));
   zip.file(

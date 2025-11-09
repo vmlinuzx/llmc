@@ -26,6 +26,7 @@
 - `DOCS/Roadmap.md` — live priorities (e.g. Template Builder MVP, RAG planner integration).
 - `AGENTS.md`, `CLAUDE_AGENTS.md`, `GEMINI_AGENTS.md` — operating contracts per assistant.
 - `CONTRACTS.md` — umbrella guardrails referenced by bundle generation.
+- Scripts & Apps Docs — consolidated references for automation and applications: `DOCS/SCRIPTS/README.md`, `DOCS/APPS/README.md`.
 - `DOCS/RESEARCH/` (ignored in git) — large design studies and supporting PDFs kept local.
 
 ## Supporting Assets

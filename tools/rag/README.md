@@ -19,6 +19,8 @@ Key commands:
 - `python -m tools.rag.cli stats` – quick counts plus estimated remote tokens avoided (`--json` available).
 - `python -m tools.rag.cli enrich --dry-run` – preview enrichment work items keyed by `span_hash`. Use `--execute` for the built-in deterministic stub (records summary metadata without calling a remote LLM).
 - `python -m tools.rag.cli embed --dry-run` – preview embedding jobs (also keyed by `span_hash`). Use `--execute` to persist normalized `intfloat/e5-base-v2` vectors with the canonical `"passage: "` prefix (override via `--model` or env vars).
+- `python -m tools.rag.cli search "jwt validation flow"` – cosine search over the local `.rag` embeddings (outputs JSON with `--json`).
+- `python -m tools.rag.cli benchmark` – run the lightweight embedding benchmark harness to ensure the active encoder clears the default quality thresholds (top-1 ≥ 0.75, avg margin ≥ 0.1).
 
 Helper: `scripts/rag_sync.sh <paths...>` feeds files to `rag sync --stdin` and is used by the editor integrations.
 

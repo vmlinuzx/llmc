@@ -4,7 +4,6 @@ node_modules
 supabase/.temp
 dist
 DOCS/RESEARCH/
-*RESEARCH/*
 .backup*/
 
 # OS/installer packages
@@ -25,6 +24,8 @@ __pycache__/
 # Contracts sidecar artifacts
 contracts.min.json
 contracts.sidecar.sha256
+# Any stray checksum files should never be tracked
+*.sha256
 .llmc/logs/contracts_*.jsonl
 .rag/*.db
 .rag/*.db-*
@@ -47,3 +48,6 @@ logs/*
 
 # Codex TUI artifacts (API tokens, sessions, etc.)
 .codex/
+
+.gemini/
+gha-creds-*.json

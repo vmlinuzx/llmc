@@ -15,6 +15,8 @@ from .config import (
 )
 from .database import Database
 from .planner import generate_plan, plan_as_dict
+from .search import search_spans
+from .benchmark import run_embedding_benchmark
 from .workers import (
     default_enrichment_callable,
     embedding_plan,
@@ -24,6 +26,7 @@ from .workers import (
 )
 
 EST_TOKENS_PER_SPAN = 350  # heuristic for remote LLM tokens we avoid per indexed span
+
 
 def _db_path(repo_root: Path, *, for_write: bool) -> Path:
     if for_write:
@@ -215,6 +218,90 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
         click.echo("No spans pending embedding.")
     else:
         click.echo(f"Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim}).")
+
+
+@cli.command()
+@click.argument("query", nargs=-1)
+@click.option("--limit", default=5, show_default=True, help="Maximum spans to return.")
+@click.option("--json", "as_json", is_flag=True, help="Emit results as JSON.")
+def search(query: List[str], limit: int, as_json: bool) -> None:
+    """Run a cosine-similarity search over the local embedding index."""
+    phrase = " ".join(query).strip()
+    if not phrase:
+        click.echo("Provide a query, e.g. `rag search \"How do we verify JWTs?\"`")
+        return
+    try:
+        results = search_spans(phrase, limit=limit)
+    except FileNotFoundError as err:
+        click.echo(str(err))
+        raise SystemExit(1)
+    if as_json:
+        payload = [
+            {
+                "rank": idx + 1,
+                "span_hash": result.span_hash,
+                "path": str(result.path),
+                "symbol": result.symbol,
+                "kind": result.kind,
+                "lines": [result.start_line, result.end_line],
+                "score": result.score,
+                "summary": result.summary,
+            }
+            for idx, result in enumerate(results)
+        ]
+        click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+    if not results:
+        click.echo("No spans found.")
+        return
+    for idx, result in enumerate(results, 1):
+        click.echo(
+            f"{idx}. {result.score:.3f} • {result.path}:{result.start_line}-{result.end_line} • {result.symbol} ({result.kind})"
+        )
+        if result.summary:
+            click.echo(f"    summary: {result.summary}")
+
+
+@cli.command()
+@click.option("--json", "as_json", is_flag=True, help="Emit metrics as JSON.")
+@click.option(
+    "--top1-threshold",
+    default=0.75,
+    show_default=True,
+    type=float,
+    help="Minimum top-1 accuracy required for success.",
+)
+@click.option(
+    "--margin-threshold",
+    default=0.1,
+    show_default=True,
+    type=float,
+    help="Minimum average positive-minus-negative score margin required.",
+)
+def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> None:
+    """Run a lightweight embedding quality benchmark."""
+    metrics = run_embedding_benchmark()
+    success = metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+    report = {
+        **metrics,
+        "top1_threshold": top1_threshold,
+        "margin_threshold": margin_threshold,
+        "passed": success,
+    }
+    if as_json:
+        click.echo(json.dumps(report, indent=2, ensure_ascii=False))
+    else:
+        click.echo(
+            "Embedding benchmark results:\n"
+            f"  cases           : {int(report['cases'])}\n"
+            f"  top1_accuracy   : {report['top1_accuracy']:.3f} (threshold {top1_threshold:.2f})\n"
+            f"  avg_margin      : {report['avg_margin']:.3f} (threshold {margin_threshold:.2f})\n"
+            f"  avg_positive    : {report['avg_positive_score']:.3f}\n"
+            f"  avg_negative    : {report['avg_negative_score']:.3f}\n"
+            f"  status          : {'PASS' if success else 'FAIL'}"
+        )
+    if not success:
+        raise SystemExit(1)
 
 
 @cli.command()

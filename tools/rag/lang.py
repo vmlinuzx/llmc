@@ -51,7 +51,11 @@ def _language(name: str):
 @lru_cache(maxsize=None)
 def _parser(name: str) -> Parser:
     parser = Parser()
-    parser.set_language(_language(name))
+    language = _language(name)
+    if hasattr(parser, "set_language"):
+        parser.set_language(language)
+    else:  # tree-sitter >=0.21 renamed setter to property assignment
+        parser.language = language  # type: ignore[attr-defined]
     return parser
 
 
