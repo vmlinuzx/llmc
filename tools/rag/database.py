@@ -5,7 +5,7 @@ import struct
 from contextlib import contextmanager
 import time
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, Optional
 
 import json
 
@@ -147,6 +147,18 @@ class Database:
                 for span in spans
             ],
         )
+
+    def get_file_hash(self, path: Path) -> Optional[str]:
+        """Get the stored file hash for a given path.
+        
+        Returns:
+            The file hash if the file exists in the database, None otherwise.
+        """
+        row = self.conn.execute(
+            "SELECT file_hash FROM files WHERE path = ?",
+            (str(path),),
+        ).fetchone()
+        return row[0] if row else None
 
     def delete_file(self, path: Path) -> None:
         self.conn.execute("DELETE FROM files WHERE path = ?", (str(path),))

@@ -10,19 +10,6 @@ CONTEXT CONTRACT:
 
 # COMPACT OPERATING CONTRACT - No Yak Mode
 
-## Roles
-### beatrice
-- sc: Primary codex coding agent executing tasks within the llmc repo.
-- cap: interpret user requests, produce concise plans, implement scoped changes, validate locally.
-- cap: manage retrieval/indexing utilities and sidecar generation scripts.
-- lim: no refactors or installs without explicit ENGAGE/approval; halt on missing markers or blockers.
-## Roles
-### otto
-- sc: Secondary Claude coding agent executing tasks within the llmc repo.
-- cap: interpret user requests, produce concise plans, implement scoped changes, validate locally.
-- cap: manage retrieval/indexing utilities and sidecar generation scripts.
-- lim: no refactors or installs without explicit ENGAGE/approval; halt on missing markers or blockers.
-
 ### dave
 - sc: Product owner providing directives and approvals.
 - cap: approve plans, supply environment context, authorize escalations.
@@ -31,11 +18,6 @@ CONTEXT CONTRACT:
 ## Tools
 All operational tools (CLI inventory, MCP servers, and callable LLM helpers) are defined in `.codex/tools.json`. Reference that manifest for canonical schemas and availability; this contract only records the pointer.
 
-## Workflows
-### no_yak_mode
-- steps: confirm deliverable, present 5-bullet plan, execute scoped change, validate locally.
-- ok: deliverable shipped, validation noted.
-- ent: Dave
 ### contracts_sidecar_refresh
 - steps: run contracts_build.py, run contracts_validate.py, capture sha256, commit or stash artifacts.
 - ok: sidecar checksum matches contracts.sidecar.sha256.
@@ -50,6 +32,19 @@ All operational tools (CLI inventory, MCP servers, and callable LLM helpers) are
 ### tmux
 - rule: Long-running tasks (>2 minutes) must run inside tmux per dc-<task> convention.
 - sev: 1
+
+## Core Protocol
+- **Execution scope:** One targeted change-set per request unless Dave approves broader work.
+- **Validation:** Prefer repo-native tests or lightweight scripts; document what was run.
+- **Escalation:** Ask before installs, refactors, or long tmux/daemonized jobs.
+
+## Runtime Shortcuts
+- Retrieval tooling, MCP servers, and CLI requirements are enumerated in `.codex/tools.json`.
+
+## Reference Index
+- **Tool usage & smoke playbooks:** `DOCS/Local_Development_Tooling.md`
+- **Full orchestration/hand-off notes:** `DOCS/Claude_Orchestration_Playbook.md`
+- **Retrieval/indexing internals:** `DOCS/SDD_Contracts_Sidecar_v1.md`, `tools/rag/README.md`
 
 ## Glossary
 ### contracts_sidecar

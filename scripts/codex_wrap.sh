@@ -16,6 +16,23 @@ SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXEC_ROOT="${LLMC_EXEC_ROOT:-$SCRIPT_ROOT}"
 REPO_ROOT="${LLMC_TARGET_REPO:-$EXEC_ROOT}"
 
+# Configuration loading
+load_config() {
+    local config_dir="${LLMC_CONFIG_DIR:-$SCRIPT_ROOT/config}"
+    local config_script="$config_dir/config.py"
+    
+    if [ -f "$config_script" ]; then
+        # Try to load configuration using Python
+        if command -v python3 >/dev/null 2>&1; then
+            # Export key configuration as environment variables
+            eval "$("$PYTHON_BIN" "$config_script" --export-shell 2>/dev/null || true)"
+        fi
+    fi
+}
+
+# Load configuration early
+load_config
+
 # Pre-scan args for --repo to allow overriding before path-dependent setup
 ORIGINAL_ARGS=("$@")
 for ((i=0; i<${#ORIGINAL_ARGS[@]}; i++)); do
@@ -84,6 +101,7 @@ Options:
   -a, --api            Force routing to the remote API profile
   -c, --codex          Force routing directly to Codex
   -ca,--codex-azure    Force routing directly to Azure Codex (if configured)
+  -m, --minimax        Force routing to MiniMax M2 API
       --repo PATH      Run against a different repository root
   -h, --help           Show this help message and exit
 
@@ -467,6 +485,9 @@ semantic_cache_provider_for_route() {
     codex-azure)
       echo "azure-codex"
       ;;
+    minimax)
+      echo "minimax"
+      ;;
     codex|*)
       echo "codex"
       ;;
@@ -643,6 +664,11 @@ route_task() {
     echo "codex"
     return
   fi
+
+  if [ "${FORCE_MINIMAX:-0}" = "1" ]; then
+    echo "minimax"
+    return
+  fi
   
   echo "🤔 Analyzing task complexity..." >&2
   
@@ -661,9 +687,13 @@ Available routes:
    - Use for: Medium complexity, 1-2 files, clear scope, routine tasks
    - Criteria: ≤2 files, ≤50 lines, well-defined, no major refactors
 
-3. "codex" - Premium Codex (subscription, best quality)
+3. "minimax" - MiniMax M2 API (cost-effective, good for code)
+   - Use for: Code generation, refactoring, complex logic, up to 5 files
+   - Criteria: ≤5 files, ≤100 lines, moderate risk, some architectural impact
+
+4. "codex" - Premium Codex (subscription, best quality)
    - Use for: Complex tasks, architecture, multi-file refactors, new features
-   - Criteria: >2 files OR >50 lines OR high risk OR unclear scope
+   - Criteria: >5 files OR >100 lines OR high risk OR unclear scope
 
 Rules:
 - When uncertain, choose "codex" (better safe than sorry)
@@ -672,7 +702,7 @@ Rules:
 
 Return ONLY valid JSON (no markdown, no backticks):
 {
-  "route": "local|api|codex",
+  "route": "local|api|minimax|codex",
   "reason": "one sentence explaining why",
   "confidence": 0.9
 }
@@ -743,6 +773,12 @@ execute_route() {
     api)
       echo "🌐 Routing to Gemini API (cheap)..." >&2
       response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --api <<<"$full_prompt")
+      status=$?
+      ;;
+      
+    minimax)
+      echo "🌐 Routing to MiniMax API..." >&2
+      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --minimax <<<"$full_prompt")
       status=$?
       ;;
       
@@ -872,6 +908,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --codex-azure|-ca)
       FORCE_CODEX_AZURE=1
+      shift
+      ;;
+    --minimax|-m)
+      FORCE_MINIMAX=1
       shift
       ;;
     --help|-h)
