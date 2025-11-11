@@ -201,6 +201,23 @@ const RAG_FAIL_OPEN = envFlag('RAG_FAIL_OPEN') !== false; // default true
 const RAG_LOG_SAMPLE_RATE = Number.parseFloat(process.env.RAG_LOG_SAMPLE_RATE || '1.0');
 const RAG_PROVENANCE = envFlag('RAG_PROVENANCE') || false;
 
+// Debug: Log RAG configuration
+if (RAG_LOG_SAMPLE_RATE >= 1.0) {
+  console.error(JSON.stringify({
+    event: 'rag.config',
+    ragEnabled: RAG_ENABLED,
+    ragEnabledRaw: process.env.RAG_ENABLED,
+    timeoutMs: RAG_TIMEOUT_MS,
+    topK: RAG_TOP_K,
+    minScore: RAG_MIN_SCORE,
+    maxChars: RAG_MAX_CHARS,
+    failOpen: RAG_FAIL_OPEN,
+    logSampleRate: RAG_LOG_SAMPLE_RATE,
+    provenance: RAG_PROVENANCE,
+    service: 'llm_gateway'
+  }));
+}
+
 // Generate correlation ID for telemetry
 function generateCorrelationId() {
   return Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
@@ -885,7 +902,9 @@ function ragPlanSnippet(question, correlationId) {
       console.error(JSON.stringify({
         event: 'rag.disabled',
         correlationId,
-        reason: 'RAG_ENABLED not set',
+        ragEnabled: RAG_ENABLED,
+        ragEnabledRaw: process.env.RAG_ENABLED,
+        reason: 'RAG_ENABLED not enabled',
         service: 'llm_gateway'
       }));
     }
