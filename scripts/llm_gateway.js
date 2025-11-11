@@ -191,6 +191,21 @@ process.env.LLMC_TARGET_REPO = REPO_ROOT;
 const RAG_HELPER = path.join(EXEC_ROOT, 'scripts', 'rag_plan_helper.sh');
 const PYTHON_BIN = process.env.LLM_GATEWAY_PYTHON || process.env.PYTHON || 'python3';
 
+// RAG Configuration
+const RAG_ENABLED = envFlag('RAG_ENABLED') || false;
+const RAG_TIMEOUT_MS = Number.parseInt(process.env.RAG_TIMEOUT_MS || '800', 10);
+const RAG_TOP_K = Number.parseInt(process.env.RAG_TOP_K || '8', 10);
+const RAG_MIN_SCORE = Number.parseFloat(process.env.RAG_MIN_SCORE || '0.35');
+const RAG_MAX_CHARS = Number.parseInt(process.env.RAG_MAX_CHARS || '12000', 10);
+const RAG_FAIL_OPEN = envFlag('RAG_FAIL_OPEN') !== false; // default true
+const RAG_LOG_SAMPLE_RATE = Number.parseFloat(process.env.RAG_LOG_SAMPLE_RATE || '1.0');
+const RAG_PROVENANCE = envFlag('RAG_PROVENANCE') || false;
+
+// Generate correlation ID for telemetry
+function generateCorrelationId() {
+  return Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+}
+
 // Read from stdin if no prompt provided
 if (!prompt && !process.stdin.isTTY) {
   let stdinData = '';
@@ -216,6 +231,9 @@ async function main() {
     process.exit(1);
   }
 
+  // Generate correlation ID for this request
+  const correlationId = generateCorrelationId();
+
   try {
     // BUILD PROMPT START
     const CONTRACTS_SIDECAR = process.env.CONTRACTS_SIDECAR || 'contracts.min.json';
@@ -240,10 +258,35 @@ async function main() {
       }
     }
 
+    // RAG Gateway Ownership: Single point of injection with idempotence guard
     const ragQueryEnv = typeof process.env.RAG_USER_PROMPT === 'string' ? process.env.RAG_USER_PROMPT.trim() : '';
     const ragQuery = ragQueryEnv.length > 0 ? ragQueryEnv : prompt;
-    // RAG plan is now handled by the wrapper script, so we just use the prompt as-is.
-    // prompt = attachRagPlan(prompt, ragQuery); 
+
+    // Check for existing RAG injection (idempotence guard)
+    if (!/\bRAG Retrieval Plan\b/.test(prompt) && !prompt.replace(/^\s+/, '').startsWith('RAG Retrieval Plan')) {
+      // Gateway owns RAG injection with proper guards and telemetry
+      prompt = attachRagPlan(prompt, ragQuery, correlationId);
+
+      if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+        console.error(JSON.stringify({
+          event: 'rag.injected',
+          correlationId,
+          promptLength: prompt.length,
+          originalPromptLength: ragQuery.length,
+          service: 'llm_gateway'
+        }));
+      }
+    } else {
+      if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+        console.error(JSON.stringify({
+          event: 'rag.idempotent_skip',
+          correlationId,
+          reason: 'already_contains_rag_plan',
+          service: 'llm_gateway'
+        }));
+      }
+    }
+
     if (contractsBlock) {
       prompt = `${contractsBlock}\n\n${prompt}`;
     }
@@ -834,38 +877,171 @@ function anthropicComplete(prompt) {
   });
 }
 
-function ragPlanSnippet(question) {
-  if (!fs.existsSync(RAG_HELPER)) {
+function ragPlanSnippet(question, correlationId) {
+  const startTime = Date.now();
+
+  if (!RAG_ENABLED) {
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.disabled',
+        correlationId,
+        reason: 'RAG_ENABLED not set',
+        service: 'llm_gateway'
+      }));
+    }
     return '';
   }
+
+  if (!fs.existsSync(RAG_HELPER)) {
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.helper_missing',
+        correlationId,
+        path: RAG_HELPER,
+        service: 'llm_gateway'
+      }));
+    }
+    return '';
+  }
+
   const env = { ...process.env };
   if (!env.PYTHON_BIN) {
     env.PYTHON_BIN = PYTHON_BIN;
   }
+
+  // Set RAG-specific environment variables
+  env.RAG_PLAN_LIMIT = String(RAG_TOP_K);
+  env.RAG_PLAN_MIN_SCORE = String(RAG_MIN_SCORE);
+
   const args = ['--repo', REPO_ROOT];
-  const result = spawnSync(RAG_HELPER, args, {
-    input: question,
-    encoding: 'utf8',
-    env
-  });
-  if (result.error || result.status !== 0) {
-    debugLog('ragPlanSnippet error:', result.error || result.stderr);
-    return '';
+
+  try {
+    const result = spawnSync(RAG_HELPER, args, {
+      input: question,
+      encoding: 'utf8',
+      env,
+      timeout: RAG_TIMEOUT_MS
+    });
+
+    const duration = Date.now() - startTime;
+
+    if (result.error) {
+      const errorMsg = result.error.message || 'Unknown error';
+      if (RAG_FAIL_OPEN) {
+        if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+          console.error(JSON.stringify({
+            event: 'rag.error',
+            correlationId,
+            error: errorMsg,
+            duration,
+            service: 'llm_gateway'
+          }));
+        }
+        return '';
+      }
+      throw new Error(`RAG helper failed: ${errorMsg}`);
+    }
+
+    if (result.status !== 0) {
+      const stderr = result.stderr || '';
+      if (RAG_FAIL_OPEN) {
+        if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+          console.error(JSON.stringify({
+            event: 'rag.error',
+            correlationId,
+            exitCode: result.status,
+            stderr,
+            duration,
+            service: 'llm_gateway'
+          }));
+        }
+        return '';
+      }
+      throw new Error(`RAG helper exited with code ${result.status}: ${stderr}`);
+    }
+
+    const snippet = (result.stdout || '').trim();
+    const snippetLength = snippet.length;
+
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.success',
+        correlationId,
+        snippetLength,
+        duration,
+        service: 'llm_gateway'
+      }));
+    }
+
+    return snippet;
+
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    if (RAG_FAIL_OPEN) {
+      if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+        console.error(JSON.stringify({
+          event: 'rag.error',
+          correlationId,
+          error: error.message,
+          duration,
+          service: 'llm_gateway'
+        }));
+      }
+      return '';
+    }
+    throw error;
   }
-  return (result.stdout || '').trim();
 }
 
-function attachRagPlan(prompt, query) {
+function attachRagPlan(prompt, query, correlationId) {
+  // Idempotence guard: Check if RAG has already been injected
   if (/\bRAG Retrieval Plan\b/.test(prompt)) {
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.idempotent_skip',
+        correlationId,
+        reason: 'already_injected',
+        service: 'llm_gateway'
+      }));
+    }
     return prompt;
   }
   const trimmed = prompt.replace(/^\s+/, '');
   if (trimmed.startsWith('RAG Retrieval Plan')) {
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.idempotent_skip',
+        correlationId,
+        reason: 'starts_with_rag_plan',
+        service: 'llm_gateway'
+      }));
+    }
     return prompt;
   }
-  const snippet = ragPlanSnippet(query ?? prompt);
+
+  // Call RAG helper to get the snippet
+  const snippet = ragPlanSnippet(query ?? prompt, correlationId);
   if (!snippet) {
     return prompt;
   }
-  return `${snippet}\n\n---\n\n${prompt}`;
+
+  // Enforce max chars limit
+  if (snippet.length > RAG_MAX_CHARS) {
+    const truncatedSnippet = snippet.substring(0, RAG_MAX_CHARS - 100) + '\n...[truncated]';
+    if (RAG_LOG_SAMPLE_RATE >= 1.0 || Math.random() < RAG_LOG_SAMPLE_RATE) {
+      console.error(JSON.stringify({
+        event: 'rag.truncated',
+        correlationId,
+        originalLength: snippet.length,
+        truncatedLength: truncatedSnippet.length,
+        service: 'llm_gateway'
+      }));
+    }
+    return `${truncatedSnippet}\n\n---\n\n${prompt}`;
+  }
+
+  // Add provenance marker if enabled
+  const provenanceSuffix = RAG_PROVENANCE ? `\n\n<!-- RAG provenance: ${correlationId} -->` : '';
+
+  return `${snippet}${provenanceSuffix}\n\n---\n\n${prompt}`;
 }
