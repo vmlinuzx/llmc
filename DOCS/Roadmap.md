@@ -18,6 +18,14 @@
 - [x] Replace MiniLM embeddings with `intfloat/e5-base-v2` across the indexing/query stack (`rag embed`, `rag search`, `rag benchmark`), keeping legacy presets as feature-flag fallbacks.
 
 ## Backlog
+- [ ] **Enrichment Failure Cache** - Prevent retrying failed enrichments with intelligent caching
+  - **Problem**: Tools that timeout/bad-config/missing-deps get retried every time, causing latency spikes
+  - **Solution**: Deterministic enrichment keys + failure cache with TTL
+  - **Key Format**: `repo_or_tenant + file_path + content_hash + tool_name_version_config_hash`
+  - **Cache Schema**: `{key, status: "failed", reason, first_failed_at, retry_after}`
+  - **Behavior**: Skip enrichment if key in "failed_dont_retry" state
+  - **Retry Triggers**: content changes, tool/config changes, TTL expired, manual clear
+  - **Benefits**: No hammering flaky linters, deterministic behavior, useful failure logs
 - [ ] **Automate RAG/sidecar asset regeneration** - move `scripts/contracts_build.py` + `scripts/contracts_validate.py` execution from LLM-initiated to background script execution as part of enrichment runs
   - Rationale: reduce LLM involvement in routine asset regeneration; ensure sidecars stay fresh automatically
   - Pipeline: enrichment tick → sync docs → rebuild sidecars → validate → update RAG context
