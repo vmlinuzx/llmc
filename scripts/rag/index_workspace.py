@@ -11,7 +11,6 @@ Usage:
 import os
 import sys
 import hashlib
-import mimetypes
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
@@ -22,6 +21,8 @@ from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import git
+
+from ast_chunker import ASTChunker
 
 # Configuration
 WORKSPACE_ROOT = Path.home() / "src"
@@ -67,7 +68,9 @@ class WorkspaceIndexer:
     def __init__(self, workspace_root: Path, db_path: Path):
         self.workspace_root = workspace_root
         self.db_path = db_path
-        
+        self.passage_prefix = os.getenv("LLMC_RAG_PASSAGE_PREFIX", "passage: ")
+        self.chunker = ASTChunker(max_chars=CHUNK_SIZE, overlap_chars=CHUNK_OVERLAP)
+
         # Initialize ChromaDB
         self.client = chromadb.PersistentClient(
             path=str(db_path),
@@ -87,7 +90,8 @@ class WorkspaceIndexer:
         
         # Initialize embedding model (runs locally!)
         print("🔄 Loading embedding model (sentence-transformers)...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')  # Fast, good quality
+        model_name = os.getenv("LLMC_RAG_WORKSPACE_MODEL", "intfloat/e5-base-v2")
+        self.model = SentenceTransformer(model_name)
         print("✅ Embedding model loaded")
     
     def should_index_file(self, file_path: Path) -> bool:
@@ -132,35 +136,15 @@ class WorkspaceIndexer:
             return None
     
     def chunk_text(self, text: str, file_path: str) -> List[Tuple[str, Dict]]:
-        """Split text into overlapping chunks with metadata"""
-        chunks = []
-        start = 0
-        chunk_id = 0
-        
-        while start < len(text):
-            end = start + CHUNK_SIZE
-            chunk = text[start:end]
-            
-            # Try to break at newline for cleaner chunks
-            if end < len(text):
-                last_newline = chunk.rfind('\n')
-                if last_newline > CHUNK_SIZE * 0.7:  # At least 70% through
-                    end = start + last_newline + 1
-                    chunk = text[start:end]
-            
-            metadata = {
-                "file_path": file_path,
-                "chunk_id": chunk_id,
-                "start": start,
-                "end": end,
-                "total_length": len(text)
-            }
-            
-            chunks.append((chunk.strip(), metadata))
-            chunk_id += 1
-            start = end - CHUNK_OVERLAP  # Overlap for context
-        
-        return chunks
+        """Delegate to AST-aware chunker with fallback."""
+        try:
+            chunks = self.chunker.chunk_text(text, file_path)
+            if chunks:
+                return chunks
+        except Exception as exc:
+            print(f"⚠️  AST chunker failed for {file_path}: {exc}")
+        # Fallback to legacy windowing if AST strategy unavailable
+        return self.chunker.fallback_chunks(text)
     
     def file_hash(self, file_path: Path) -> str:
         """Generate hash of file content"""
@@ -216,18 +200,26 @@ class WorkspaceIndexer:
                     "file_name": file_path.name,
                     "file_ext": file_path.suffix,
                     "file_hash": file_hash,
-                    "chunk_id": chunk_meta["chunk_id"],
                     "indexed_at": datetime.now().isoformat()
                 }
                 
                 if git_info:
                     metadata.update(git_info)
                 
+                if isinstance(chunk_meta, dict):
+                    metadata.update(chunk_meta)
+                metadata["chunk_id"] = i
+                
                 metadatas.append(metadata)
             
             # Generate embeddings and add to collection
             if texts:
-                embeddings = self.model.encode(texts, show_progress_bar=False)
+                prefixed = [f"{self.passage_prefix}{text}" for text in texts]
+                embeddings = self.model.encode(
+                    prefixed,
+                    show_progress_bar=False,
+                    normalize_embeddings=True,
+                )
                 self.collection.add(
                     ids=ids,
                     embeddings=embeddings.tolist(),
