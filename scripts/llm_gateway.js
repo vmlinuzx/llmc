@@ -71,14 +71,15 @@ const profileLabel = hasModelOverride
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = hasModelOverride ? requestedModelOverride : MODELS[resolvedProfile];
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 const ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com';
 const ANTHROPIC_VERSION = process.env.ANTHROPIC_VERSION || '2023-06-01';
 const ANTHROPIC_MAX_TOKENS = Number.parseInt(process.env.ANTHROPIC_MAX_TOKENS || '4096', 10);
+const MINIMAX_API_KEY = process.env.MINIMAXKEY2 || '';
+const MINIMAX_BASE_URL = process.env.MINIMAX_BASE_URL || 'https://api.minimax.chat/v1';
+const MINIMAX_MODEL = process.env.MINIMAX_MODEL || 'abab6-chat'; // Default MiniMax model
+const MINIMAX_AVAILABLE = Boolean(MINIMAX_API_KEY);
 const ANTHROPIC_AVAILABLE = Boolean(ANTHROPIC_API_KEY);
 const AZURE_ENDPOINT = (process.env.AZURE_OPENAI_ENDPOINT || '').replace(/\/$/, '');
 const AZURE_KEY = process.env.AZURE_OPENAI_KEY || '';
@@ -112,7 +113,11 @@ const debugEnabled = args.includes('--debug') || args.includes('-d');
 const forceAPI = args.includes('--api') || args.includes('-a');
 const forceLocal = args.includes('--local') || args.includes('-l');
 const forceClaude = args.includes('--claude') || args.includes('-c');
+const forceGemini = args.includes('--gemini') || args.includes('-g');
+const forceGeminiAPI = args.includes('--gemini-api');
+const forceYolo = args.includes('--yolo') || args.includes('-y');
 const forceAzureCodex = args.includes('--azure-codex');
+const forceMiniMax = args.includes('--minimax');
 let azureModelOverride = '';
 const promptParts = [];
 
@@ -145,11 +150,17 @@ for (let i = 0; i < args.length; i++) {
     arg === '--api' ||
     arg === '--local' ||
     arg === '--claude' ||
+    arg === '--gemini' ||
+    arg === '--gemini-api' ||
+    arg === '--yolo' ||
     arg === '--debug' ||
     arg === '-a' ||
     arg === '-l' ||
     arg === '-c' ||
-    arg === '-d'
+    arg === '-g' ||
+    arg === '-y' ||
+    arg === '-d' ||
+    arg === '--minimax'
   ) {
     continue;
   }
@@ -198,6 +209,9 @@ async function main() {
     console.error('       node llm_gateway.js "prompt text"');
     console.error('       node llm_gateway.js --api "prompt text"');
     console.error('       node llm_gateway.js --claude "prompt text"');
+    console.error('       node llm_gateway.js --gemini "prompt text"');
+    console.error('       node llm_gateway.js --gemini-api "prompt text"');
+    console.error('       node llm_gateway.js --yolo "prompt text"');
     console.error('       node llm_gateway.js --local "prompt text"');
     process.exit(1);
   }
@@ -228,7 +242,8 @@ async function main() {
 
     const ragQueryEnv = typeof process.env.RAG_USER_PROMPT === 'string' ? process.env.RAG_USER_PROMPT.trim() : '';
     const ragQuery = ragQueryEnv.length > 0 ? ragQueryEnv : prompt;
-    prompt = attachRagPlan(prompt, ragQuery);
+    // RAG plan is now handled by the wrapper script, so we just use the prompt as-is.
+    // prompt = attachRagPlan(prompt, ragQuery); 
     if (contractsBlock) {
       prompt = `${contractsBlock}\n\n${prompt}`;
     }
@@ -259,6 +274,8 @@ async function main() {
       skipLocalReason = '--api flag';
     } else if (forceClaude) {
       skipLocalReason = '--claude flag';
+    } else if (forceGemini) {
+      skipLocalReason = '--gemini flag';
     } else if (forceAzureCodex) {
       skipLocalReason = '--azure-codex flag';
     } else if (localDisabledByEnv) {
@@ -306,7 +323,7 @@ async function main() {
       if (localDisabledByEnv) reasons.push('local disabled via env');
       if (!reasons.length) reasons.push('local unavailable');
       if (apiDisabledByEnv) reasons.push('API disabled via env');
-      const apiTarget = forceClaude ? 'Claude' : (AZURE_AVAILABLE ? 'Azure' : (ANTHROPIC_AVAILABLE ? 'Claude' : 'Gemini'));
+      const apiTarget = forceGemini ? 'Gemini' : (forceClaude ? 'Claude' : (forceMiniMax ? 'MiniMax' : (AZURE_AVAILABLE ? 'Azure' : (ANTHROPIC_AVAILABLE ? 'Claude' : 'Gemini'))));
       console.error(`routing=${apiTarget} (${reasons.join('; ')})`);
       if (apiDisabledByEnv) {
         throw new Error('API usage disabled via LLM_GATEWAY_DISABLE_API=1');
@@ -334,6 +351,30 @@ async function main() {
       return;
     }
 
+    if (forceGemini) {
+      response = await geminiComplete(prompt);
+      console.error('✅ Gemini API succeeded');
+      console.log(response);
+      return;
+    }
+
+    if (forceGeminiAPI) {
+      response = await geminiComplete(prompt);
+      console.error('✅ Gemini API succeeded');
+      console.log(response);
+      return;
+    }
+
+    if (forceMiniMax) {
+      if (!MINIMAX_AVAILABLE) {
+        throw new Error('MiniMax forced but MINIMAX_API_KEY not configured');
+      }
+      response = await minimaxComplete(prompt);
+      console.error('✅ MiniMax API succeeded');
+      console.log(response);
+      return;
+    }
+
     if (AZURE_AVAILABLE) {
       response = await azureComplete(prompt);
       console.error('✅ Azure API succeeded');
@@ -346,10 +387,6 @@ async function main() {
       console.error('✅ Claude API succeeded');
       console.log(response);
       return;
-    }
-
-    if (!GEMINI_API_KEY) {
-      throw new Error('No API backend configured. Provide Azure, Claude, or Gemini credentials.');
     }
 
     response = await geminiComplete(prompt);
@@ -673,40 +710,70 @@ function shellQuote(args) {
 
 function geminiComplete(prompt) {
   return new Promise((resolve, reject) => {
-    const url = `${GEMINI_URL}?key=${GEMINI_API_KEY}`;
+    const args = [prompt];
+    if (forceYolo) {
+      args.push('--yolo');
+    }
+    args.push('--output-format', 'json');
+
+    try {
+      const result = spawnSync('gemini', args, { encoding: 'utf8' });
+      if (result.error || result.status !== 0) {
+        throw new Error(result.stderr || 'Failed to run gemini command');
+      }
+      const json = JSON.parse(result.stdout);
+      if (json.response) {
+        resolve(json.response);
+      } else {
+        reject(new Error('No response in gemini command output'));
+      }
+    } catch (e) {
+      reject(new Error(`Failed to run gemini command: ${e.message}`));
+    }
+  });
+}
+
+async function minimaxComplete(prompt) {
+  return new Promise((resolve, reject) => {
+    const url = `${MINIMAX_BASE_URL}/text/chatcompletion_v2`;
     const data = JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }]
+      model: MINIMAX_MODEL,
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      stream: false,
+      temperature: 0.7,
+      top_p: 0.95
     });
 
     const req = https.request(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${MINIMAX_API_KEY}`,
         'Content-Length': Buffer.byteLength(data, 'utf8')
       }
     }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
-        debugLog('Gemini status:', res.statusCode);
-        debugLog('Gemini raw body:', body);
+        debugLog('MiniMax status:', res.statusCode);
+        debugLog('MiniMax raw body:', body);
         try {
           const json = JSON.parse(body);
-          if (json.candidates && json.candidates[0]?.content?.parts[0]?.text) {
-            resolve(json.candidates[0].content.parts[0].text);
+          if (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) {
+            resolve(json.choices[0].message.content);
             return;
           }
-          if (json.error) {
-            const errMsg = json.error.message || 'Gemini returned error';
+          if (json.base_resp && json.base_resp.status_msg) {
+            const errMsg = json.base_resp.status_msg || 'MiniMax returned error';
             reject(new Error(errMsg));
             return;
           } else {
-            reject(new Error('No response from Gemini'));
+            reject(new Error('No response from MiniMax'));
           }
         } catch (e) {
-          reject(new Error('Failed to parse Gemini response'));
+          reject(new Error('Failed to parse MiniMax response'));
         }
       });
     });

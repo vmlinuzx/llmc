@@ -23,7 +23,7 @@ LLM Commander is the home for our local-first orchestration stack. It combines t
 - API routes (`/api/options`, `/api/generate`) pull live registry data from repo docs and emit Codex-ready bundles including contracts, agent manifests, and environment scaffolds.
 
 ## CLI Orchestration Workflow
-- `scripts/codex_wrap.sh` routes prompts to a local Qwen 14B profile by default, with flags for remote APIs (`--api`) when environment variables are present.
+- `scripts/codex_wrap.sh` routes prompts to a local Qwen 14B profile by default, with flags for remote APIs (`--api`, `--minimax`) when environment variables are present.
 - `scripts/llm_gateway.js` resolves model profiles (`code`, `fast`, `uncensored`) defined in-place and respects `OLLAMA_PROFILE` / `OLLAMA_MODEL`.
 - Logs land in `logs/` (git-ignored contents) and `.llmc/` maintains locks/worktrees for concurrent sessions.
 

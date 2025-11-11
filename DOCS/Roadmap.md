@@ -18,6 +18,10 @@
 - [x] Replace MiniLM embeddings with `intfloat/e5-base-v2` across the indexing/query stack (`rag embed`, `rag search`, `rag benchmark`), keeping legacy presets as feature-flag fallbacks.
 
 ## Backlog
+- [ ] **Automate RAG/sidecar asset regeneration** - move `scripts/contracts_build.py` + `scripts/contracts_validate.py` execution from LLM-initiated to background script execution as part of enrichment runs
+  - Rationale: reduce LLM involvement in routine asset regeneration; ensure sidecars stay fresh automatically
+  - Pipeline: enrichment tick → sync docs → rebuild sidecars → validate → update RAG context
+  - Trigger: hook into existing `rag_refresh_cron.sh` or enrichment pipeline
 - [ ] Performance profiling baseline
 - [ ] Error tracking and alerts
 - [ ] Accessibility pass (keyboard, color contrast)

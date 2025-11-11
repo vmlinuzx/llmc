@@ -66,7 +66,8 @@ def index(since: Optional[str], no_export: bool) -> None:
 
     stats = index_repo(since=since, export_json=not no_export)
     click.echo(
-        f"Indexed {stats['files']} files, {stats['spans']} spans in {stats['duration_sec']}s (skipped={stats.get('skipped',0)})"
+        f"Indexed {stats['files']} files, {stats['spans']} spans in {stats['duration_sec']}s "
+        f"(skipped={stats.get('skipped',0)}, unchanged={stats.get('unchanged',0)})"
     )
 
 
@@ -104,7 +105,8 @@ def sync(paths: Iterable[str], since: Optional[str], use_stdin: bool) -> None:
 
     stats = sync_paths(path_list)
     click.echo(
-        f"Synced {stats['files']} files, {stats['spans']} spans, deleted={stats.get('deleted',0)} in {stats['duration_sec']}s"
+        f"Synced {stats['files']} files, {stats['spans']} spans, "
+        f"deleted={stats.get('deleted',0)}, unchanged={stats.get('unchanged',0)} in {stats['duration_sec']}s"
     )
 
 
@@ -344,6 +346,38 @@ def plan(query: List[str], limit: int, min_score: float, min_confidence: float, 
     click.echo(json.dumps(plan_as_dict(result), indent=2, ensure_ascii=False))
     if result.fallback_recommended:
         click.echo("\n⚠️  Confidence below threshold; include additional context or full-text search.", err=True)
+
+
+@cli.command()
+@click.option("--verbose", "-v", is_flag=True, help="Show all checks including passed")
+def doctor(verbose: bool) -> None:
+    """Run health checks and system diagnostics."""
+    from ..diagnostics.health_check import run_health_check
+    
+    repo_root = _find_repo_root()
+    exit_code = run_health_check(repo_root=repo_root, verbose=verbose)
+    sys.exit(exit_code)
+
+
+@cli.command()
+@click.option("--output", "-o", type=click.Path(), help="Output archive path")
+def export(output: Optional[str]) -> None:
+    """Export all RAG data to tar.gz archive."""
+    from .export_data import run_export
+    
+    repo_root = _find_repo_root()
+    output_path = Path(output) if output else None
+    run_export(repo_root=repo_root, output_path=output_path)
+
+
+@cli.command()
+@click.option("--days", "-d", type=int, default=7, help="Days to analyze")
+def analytics(days: int) -> None:
+    """View query analytics and search insights."""
+    from .analytics import run_analytics
+    
+    repo_root = _find_repo_root()
+    run_analytics(repo_root, days=days)
 
 
 if __name__ == "__main__":
