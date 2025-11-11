@@ -1,0 +1,66 @@
+name: RAG Index
+
+on:
+  push:
+    branches: ["master", "main"]
+  pull_request:
+    branches: ["master", "main"]
+
+jobs:
+  rag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install RAG dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tools/rag/requirements.txt
+
+      - name: Resolve base commit
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "base_sha=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            echo "base_sha=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_sha=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build RAG index
+        env:
+          BASE_SHA: ${{ steps.base.outputs.base_sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            echo "Incremental sync since $BASE_SHA"
+            python -m tools.rag.cli sync --since "$BASE_SHA" || echo "No paths synced."
+          else
+            echo "No base commit provided; running full index."
+            python -m tools.rag.cli index --no-export
+          fi
+          if [ ! -f .rag/index.db ]; then
+            echo "Index database missing after sync; running full index."
+            python -m tools.rag.cli index --no-export
+          fi
+
+      - name: Collect stats
+        run: |
+          python -m tools.rag.cli stats > rag_stats.txt || echo "Stats unavailable" > rag_stats.txt
+          python -m tools.rag.cli stats --json > rag_stats.json || echo '{}' > rag_stats.json
+
+      - name: Upload RAG stats
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-index-stats
+          path: |
+            rag_stats.txt
+            rag_stats.json

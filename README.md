@@ -1,22 +1,40 @@
 # LLM Commander
 
-LLM Commander centralizes our local-first orchestration assets so new LLM-driven TUI projects can be scaffolded in minutes. It packages the codex wrapper, context packaging utilities, and the reusable project template that we have been iterating on across repos.
+LLM Commander is the home for our local-first orchestration stack. It combines the Template Builder MVP, automation scripts, and retrieval tooling that power Codex, Claude, and Gemini workflows with reproducible guardrails.
 
-## What's Included
-- `scripts/codex_wrap.sh`: smart routing shell wrapper that delegates to local Qwen, Gemini API, or premium Codex based on task complexity.
-- `scripts/llm_gateway.js`: Node gateway that streams prompts to Ollama or Gemini with environment flag controls.
-- `tools/create_context_zip.py`: context packager that emits `llmccontext*.zip` archives honoring `.gitignore`.
-- `template/`: ready-to-copy base tree (contracts, agent docs, codex assets) for spinning up new projects.
+## Core Components
+- `apps/template-builder/` — Next.js 14 App Router UI for composing Codex-ready bundles. Includes API routes (`app/api`), bundle logic (`lib/`), and Jest/Playwright tests.
+- `apps/web/` — Legacy Express ZIP service that reads from `template/` to produce archives; kept for compatibility.
+- `scripts/` — Shell and Node entrypoints such as `codex_wrap.sh`, `llm_gateway.js`, and `rag_refresh_cron.sh` that route tasks to local Ollama or remote APIs.
+- `tools/` — Shared Python utilities (`tools/rag/`, `tools/deep_research/`, `tools/create_context_zip.py`) for indexing, enrichment, and research automation.
+- `config/` & `llmc_exec/` — Configuration and shared CLI helpers consumed by orchestrators and MCP connectors.
+- `DOCS/` — Operating manuals, roadmap, and contract files (see `DOCS/Roadmap.md`, `AGENTS.md`, `CONTRACTS.md`, and `DOCS/Template_Builder.md`).
 
 ## Getting Started
-1. Run `chmod +x scripts/*.sh` to ensure the orchestration scripts stay executable.
-2. Prepare `.env.local` with any needed overrides (e.g., `GEMINI_API_KEY`, `OLLAMA_PROFILE`).
-3. Dry-run the local model pipeline: `./scripts/codex_wrap.sh --local "write hello world in python"`.
-4. Package a context snapshot when needed: `python tools/create_context_zip.py` (drops the zip in `~/src`).
+- Ensure shell scripts stay executable: `chmod +x scripts/*.sh`.
+- Create `.env.local` at the repo root with any overrides (`GEMINI_API_KEY`, `OLLAMA_PROFILE`, etc.). Defaults fall back to Qwen 2.5 local models.
+- Dry-run the orchestrator: `./scripts/codex_wrap.sh --local "generate hello world in python"`.
+- Build context archives when needed: `python tools/create_context_zip.py` (writes to `template/` by default).
 
-## Roadmap Notes
-- Phase 1 focuses on solidifying the local orchestration shell and smoke-test workflows.
-- Phase 2 will experiment with agent orchestration layers and TUI-first project templates.
-- Phase 3 targets RAG/MCP integrations plus a web-based command surface once the foundations are stable.
+## Template Builder MVP
+- Development: `cd apps/template-builder && npm run dev` (Next.js dev server on port 3000).
+- Build: `npm run build && npm run start`.
+- Tests: `npm run test` (Jest unit/integration) and `npm run test:e2e` (Playwright, requires dev server).
+- API routes (`/api/options`, `/api/generate`) pull live registry data from repo docs and emit Codex-ready bundles including contracts, agent manifests, and environment scaffolds.
 
-You, like Tron, fight for the user—LLM Commander keeps the support scripts in one place so each new build starts with the same battle-ready toolkit.
+## CLI Orchestration Workflow
+- `scripts/codex_wrap.sh` routes prompts to a local Qwen 14B profile by default, with flags for remote APIs (`--api`, `--minimax`) when environment variables are present.
+- `scripts/llm_gateway.js` resolves model profiles (`code`, `fast`, `uncensored`) defined in-place and respects `OLLAMA_PROFILE` / `OLLAMA_MODEL`.
+- Logs land in `logs/` (git-ignored contents) and `.llmc/` maintains locks/worktrees for concurrent sessions.
+
+## Retrieval & Research Utilities
+- `scripts/rag_refresh.sh`, `scripts/rag_refresh_watch.sh`, `scripts/rag_refresh_cron.sh`, and `tools/rag/` keep the semantic index fresh (default embeddings: MiniLM with migration in progress per `DOCS/Roadmap.md`).
+- `tools/deep_research/` and `scripts/deep_research_ingest.sh` coordinate long-form investigations captured under `research/`.
+
+## Documentation Hub
+- `DOCS/Project_Map.md` — Current repo topology.
+- `DOCS/Roadmap.md` — Active priorities (Template Builder MVP, RAG planner integration).
+- `AGENTS.md` / `CLAUDE_AGENTS.md` — Execution contracts for the orchestration agents.
+- `DOCS/Template_Builder.md` — UX notes and future enhancements for the Next.js interface.
+
+You, like Tron, fight for the user—LLM Commander keeps the orchestration toolkit synchronized so every new build starts from the same battle-ready foundation.

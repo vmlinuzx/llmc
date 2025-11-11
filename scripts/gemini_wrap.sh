@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# codex_wrap.sh - Smart LLM routing with self-classification
+# gemini_wrap.sh - Smart LLM routing with self-classification
 set -euo pipefail
 
 if [ "${LLMC_CONCURRENCY:-off}" = "on" ] && [ -n "${CHANGESET_PATH:-}" ] && [ -f "${CHANGESET_PATH}" ]; then
@@ -15,23 +15,6 @@ fi
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 EXEC_ROOT="${LLMC_EXEC_ROOT:-$SCRIPT_ROOT}"
 REPO_ROOT="${LLMC_TARGET_REPO:-$EXEC_ROOT}"
-
-# Configuration loading
-load_config() {
-    local config_dir="${LLMC_CONFIG_DIR:-$SCRIPT_ROOT/config}"
-    local config_script="$config_dir/config.py"
-    
-    if [ -f "$config_script" ]; then
-        # Try to load configuration using Python
-        if command -v python3 >/dev/null 2>&1; then
-            # Export key configuration as environment variables
-            eval "$("$PYTHON_BIN" "$config_script" --export-shell 2>/dev/null || true)"
-        fi
-    fi
-}
-
-# Load configuration early
-load_config
 
 # Pre-scan args for --repo to allow overriding before path-dependent setup
 ORIGINAL_ARGS=("$@")
@@ -53,76 +36,74 @@ AGENTS="$REPO_ROOT/AGENTS.md"
 CHANGELOG="$REPO_ROOT/CHANGELOG.md"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 
-CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
-mkdir -p "$(dirname "$CODEX_LOG_FILE")"
-touch "$CODEX_LOG_FILE"
-if [ "${CODEX_WRAP_ENABLE_LOGGING:-1}" = "1" ]; then
-  FORCE_LOG="${CODEX_WRAP_FORCE_LOGGING:-0}"
-  # Preserve real TTY for interactive codex sessions; only tee when stdout/stderr are not TTYs or explicitly forced.
+GEMINI_LOG_FILE="${GEMINI_LOG_FILE:-$REPO_ROOT/logs/geminilog.txt}"
+mkdir -p "$(dirname "$GEMINI_LOG_FILE")"
+touch "$GEMINI_LOG_FILE"
+if [ "${GEMINI_WRAP_ENABLE_LOGGING:-1}" = "1" ]; then
+  FORCE_LOG="${GEMINI_WRAP_FORCE_LOGGING:-0}"
+  # Preserve real TTY for interactive gemini sessions; only tee when stdout/stderr are not TTYs or explicitly forced.
   if { [ -t 1 ] && [ -t 2 ]; } && [ "$FORCE_LOG" != "1" ]; then
-    : # Skip tee logging to avoid breaking codex which requires a TTY.
+    : # Skip tee logging to avoid breaking gemini which requires a TTY.
   else
-    exec > >(tee -a "$CODEX_LOG_FILE")
-    exec 2> >(tee -a "$CODEX_LOG_FILE" >&2)
+    exec > >(tee -a "$GEMINI_LOG_FILE")
+    exec 2> >(tee -a "$GEMINI_LOG_FILE" >&2)
   fi
 fi
 
-CODEX_LOGGING_ACTIVE=0
-if [ "${CODEX_WRAP_ENABLE_LOGGING:-1}" = "1" ]; then
+GEMINI_LOGGING_ACTIVE=0
+if [ "${GEMINI_WRAP_ENABLE_LOGGING:-1}" = "1" ]; then
   # Open a dedicated FD for structured trace logging without disturbing TTY output.
-  exec {CODEX_LOG_FD}>>"$CODEX_LOG_FILE"
+  exec {GEMINI_LOG_FD}>>"$GEMINI_LOG_FILE"
   {
-    printf -- '\n--- codex_wrap start %s pid=%d ---\n' "$(date -Is)" "$$"
-  } >&$CODEX_LOG_FD
-  CODEX_LOGGING_ACTIVE=1
+    printf -- '\n--- gemini_wrap start %s pid=%d ---\n' "$(date -Is)" "$$"
+  } >&$GEMINI_LOG_FD
+  GEMINI_LOGGING_ACTIVE=1
 
-  BASH_XTRACEFD=$CODEX_LOG_FD
-  PS4='+ [codex_wrap] '
+  BASH_XTRACEFD=$GEMINI_LOG_FD
+  PS4='+ [gemini_wrap] '
   set -o xtrace
 fi
 
-codex_wrap_on_exit() {
+gemini_wrap_on_exit() {
   local rc=$?
-  if [ "${CODEX_LOGGING_ACTIVE:-0}" = "1" ]; then
+  if [ "${GEMINI_LOGGING_ACTIVE:-0}" = "1" ]; then
     set +o xtrace
-    printf -- '--- codex_wrap end %s pid=%d exit=%d ---\n' "$(date -Is)" "$$" "$rc" >&$CODEX_LOG_FD
+    printf -- '--- gemini_wrap end %s pid=%d exit=%d ---\n' "$(date -Is)" "$$" "$rc" >&$GEMINI_LOG_FD
   fi
   return "$rc"
 }
-trap codex_wrap_on_exit EXIT
+trap gemini_wrap_on_exit EXIT
 
 # Short usage/flag reference for standard -h/--help behavior
-print_codex_wrap_help() {
+print_gemini_wrap_help() {
   cat <<'EOF'
-Usage: scripts/codex_wrap.sh [options] [prompt|prompt_file]
+Usage: scripts/gemini_wrap.sh [options] [prompt|prompt_file]
 
 Options:
   -l, --local          Force routing to the local Ollama profile
-  -a, --api            Force routing to the remote API profile
-  -c, --codex          Force routing directly to Codex
-  -ca,--codex-azure    Force routing directly to Azure Codex (if configured)
-  -m, --minimax        Force routing to MiniMax M2 API
+  -a, --api            Force routing to the remote API profile (e.g., a cheaper Gemini model)
+  -g, --gemini         Force routing directly to the premium Gemini model
       --repo PATH      Run against a different repository root
   -h, --help           Show this help message and exit
 
 Examples:
-  scripts/codex_wrap.sh --local "Fix the failing unit test"
-  scripts/codex_wrap.sh --repo ../other/repo task.txt
+  scripts/gemini_wrap.sh --local "Fix the failing unit test"
+  scripts/gemini_wrap.sh --repo ../other/repo task.txt
 EOF
 }
 
-# Resolve Codex approval policy from env or repo-local config
-REPO_CODEX_TOML="$REPO_ROOT/.codex/config.toml"
+# Resolve Gemini approval policy from env or repo-local config
+REPO_GEMINI_TOML="$REPO_ROOT/.gemini/config.toml"
 
 resolve_approval_policy() {
   # Env overrides take precedence
-  if [ -n "${CODEX_APPROVAL:-}" ]; then echo "$CODEX_APPROVAL"; return; fi
+  if [ -n "${GEMINI_APPROVAL:-}" ]; then echo "$GEMINI_APPROVAL"; return; fi
   if [ -n "${APPROVAL_POLICY:-}" ]; then echo "$APPROVAL_POLICY"; return; fi
 
-  # Fallback to repo .codex/config.toml if present
-  if [ -f "$REPO_CODEX_TOML" ]; then
+  # Fallback to repo .gemini/config.toml if present
+  if [ -f "$REPO_GEMINI_TOML" ]; then
     local val
-    val=$(sed -nE 's/^[[:space:]]*ask_for_approval[[:space:]]*=[[:space:]]*"?([A-Za-z-]+)"?.*/\1/p' "$REPO_CODEX_TOML" | tail -n 1)
+    val=$(sed -nE 's/^[[:space:]]*ask_for_approval[[:space:]]*=[[:space:]]*"?([A-Za-z-]+)"?.*/\1/p' "$REPO_GEMINI_TOML" | tail -n 1)
     case "$val" in
       untrusted|on-failure|on-request|never) echo "$val"; return ;;
     esac
@@ -131,20 +112,20 @@ resolve_approval_policy() {
 }
 
 # Only set if not already provided by caller
-if [ -z "${CODEX_CONFIG_FLAG:-}" ]; then
+if [ -z "${GEMINI_CONFIG_FLAG:-}" ]; then
   _ap="$(resolve_approval_policy)"
   if [ -n "$_ap" ]; then
-    CODEX_CONFIG_FLAG="-a $_ap"
-    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: approval policy -> $_ap" >&2
+    GEMINI_CONFIG_FLAG="-a $_ap"
+    [ -n "${GEMINI_WRAP_DEBUG:-}" ] && echo "gemini_wrap: approval policy -> $_ap" >&2
   else
-    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: approval policy not set" >&2
+    [ -n "${GEMINI_WRAP_DEBUG:-}" ] && echo "gemini_wrap: approval policy not set" >&2
   fi
 fi
 
 # Cache directory for reused context slices
-CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/codex_wrap"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/gemini_wrap"
 if ! mkdir -p "$CACHE_DIR" 2>/dev/null; then
-  CACHE_DIR="$REPO_ROOT/.cache/codex_wrap"
+  CACHE_DIR="$REPO_ROOT/.cache/gemini_wrap"
   mkdir -p "$CACHE_DIR"
 fi
 
@@ -160,7 +141,7 @@ DEEP_RESEARCH_REMINDER=""
 DEEP_RESEARCH_ROUTE_OVERRIDE=0
 
 # Load ToolCaps state if present (written by scripts/tool_health.sh)
-TOOLS_STATE_ENV="$REPO_ROOT/.codex/state/tools.env"
+TOOLS_STATE_ENV="$REPO_ROOT/.gemini/state/tools.env"
 if [ -f "$TOOLS_STATE_ENV" ]; then
   # shellcheck disable=SC1090
   . "$TOOLS_STATE_ENV"
@@ -279,7 +260,7 @@ load_doc_context() {
 
 deep_research_check() {
   local prompt="$1"
-  if [ "${CODEX_WRAP_DISABLE_DEEP_RESEARCH:-0}" = "1" ]; then
+  if [ "${GEMINI_WRAP_DISABLE_DEEP_RESEARCH:-0}" = "1" ]; then
     DEEP_RESEARCH_RECOMMENDED=0
     DEEP_RESEARCH_RESULT_JSON=""
     DEEP_RESEARCH_REMINDER=""
@@ -365,8 +346,8 @@ rag_plan_snippet() {
     return 0
   fi
   local output
-  if ! output=$(CODEX_WRAP_DISABLE_RAG="${CODEX_WRAP_DISABLE_RAG:-0}" PYTHON_BIN="$PYTHON_BIN" "$helper" --repo "$REPO_ROOT" <<<"$user_query" 2>/dev/null); then
-    [ -n "${CODEX_WRAP_DEBUG:-}" ] && echo "codex_wrap: rag plan helper failed" >&2
+  if ! output=$(GEMINI_WRAP_DISABLE_RAG="${GEMINI_WRAP_DISABLE_RAG:-0}" PYTHON_BIN="$PYTHON_BIN" "$helper" --repo "$REPO_ROOT" <<<"$user_query" 2>/dev/null); then
+    [ -n "${GEMINI_WRAP_DEBUG:-}" ] && echo "gemini_wrap: rag plan helper failed" >&2
     return 0
   fi
   output="$(printf '%s' "$output" | sed '/^[[:space:]]*$/d')"
@@ -456,8 +437,8 @@ build_prompt() {
   
   # Token estimation (4 chars ≈ 1 token)
   local estimated_tokens=$((${#prompt} / 4))
-  if [ "${CODEX_WRAP_ENABLE_LOGGING:-1}" = "1" ] && [ "${CODEX_LOGGING_ACTIVE:-0}" = "1" ]; then
-    printf 'Token estimate: %d (~%d KB prompt)\n' "$estimated_tokens" "$((${#prompt} / 1024))" >&$CODEX_LOG_FD
+  if [ "${GEMINI_WRAP_ENABLE_LOGGING:-1}" = "1" ] && [ "${GEMINI_LOGGING_ACTIVE:-0}" = "1" ]; then
+    printf 'Token estimate: %d (~%d KB prompt)\n' "$estimated_tokens" "$((${#prompt} / 1024))" >&$GEMINI_LOG_FD
   fi
   
   echo "$prompt"
@@ -482,28 +463,13 @@ semantic_cache_provider_for_route() {
     api)
       echo "${GEMINI_MODEL:-gemini-2.5-flash}"
       ;;
-    codex-azure)
-      echo "azure-codex"
+    gemini-pro)
+      echo "gemini-pro"
       ;;
-    minimax)
-      echo "minimax"
-      ;;
-    codex|*)
-      echo "codex"
+    gemini|*)
+      echo "gemini"
       ;;
   esac
-}
-
-azure_responses_available() {
-  if [ -z "${AZURE_OPENAI_ENDPOINT:-}" ] || [ -z "${AZURE_OPENAI_KEY:-}" ]; then
-    return 1
-  fi
-  if [ -z "${AZURE_OPENAI_DEPLOYMENT_CODEX:-}" ] && \
-     [ -z "${AZURE_OPENAI_DEPLOYMENT_CODEX_LIST:-}" ] && \
-     [ -z "${AZURE_OPENAI_DEPLOYMENT:-}" ]; then
-    return 1
-  fi
-  return 0
 }
 
 semantic_cache_lookup() {
@@ -655,18 +621,8 @@ route_task() {
     return
   fi
   
-  if [ "${FORCE_CODEX_AZURE:-0}" = "1" ]; then
-    echo "codex-azure"
-    return
-  fi
-  
-  if [ "${FORCE_CODEX:-0}" = "1" ]; then
-    echo "codex"
-    return
-  fi
-
-  if [ "${FORCE_MINIMAX:-0}" = "1" ]; then
-    echo "minimax"
+  if [ "${FORCE_GEMINI:-0}" = "1" ]; then
+    echo "gemini"
     return
   fi
   
@@ -687,22 +643,18 @@ Available routes:
    - Use for: Medium complexity, 1-2 files, clear scope, routine tasks
    - Criteria: ≤2 files, ≤50 lines, well-defined, no major refactors
 
-3. "minimax" - MiniMax M2 API (cost-effective, good for code)
-   - Use for: Code generation, refactoring, complex logic, up to 5 files
-   - Criteria: ≤5 files, ≤100 lines, moderate risk, some architectural impact
-
-4. "codex" - Premium Codex (subscription, best quality)
+3. "gemini" - Premium Gemini model (e.g., Gemini Pro)
    - Use for: Complex tasks, architecture, multi-file refactors, new features
-   - Criteria: >5 files OR >100 lines OR high risk OR unclear scope
+   - Criteria: >2 files OR >50 lines OR high risk OR unclear scope
 
 Rules:
-- When uncertain, choose "codex" (better safe than sorry)
+- When uncertain, choose "gemini" (better safe than sorry)
 - Consider: files touched, complexity, risk, architectural impact
 - Be conservative: prefer quality over cost savings
 
 Return ONLY valid JSON (no markdown, no backticks):
 {
-  "route": "local|api|minimax|codex",
+  "route": "local|api|gemini",
   "reason": "one sentence explaining why",
   "confidence": 0.9
 }
@@ -710,13 +662,13 @@ EOF
 )
   
   # Use API for routing decision (fast, cheap, accurate)
-  local decision=$(echo "$routing_prompt" | "$EXEC_ROOT/scripts/llm_gateway.sh" --api 2>/dev/null || echo '{"route":"codex","reason":"routing failed","confidence":0.0}')
+  local decision=$(echo "$routing_prompt" | "$EXEC_ROOT/scripts/llm_gateway.sh" --api 2>/dev/null || echo '{"route":"gemini","reason":"routing failed","confidence":0.0}')
   
   # Parse JSON (handle cases where it might be wrapped in markdown)
   decision=$(echo "$decision" | sed 's/```json//g' | sed 's/```//g' | tr -d '\n' | xargs)
   
   # Extract route with fallback
-  local route=$(echo "$decision" | jq -r '.route // "codex"' 2>/dev/null || echo "codex")
+  local route=$(echo "$decision" | jq -r '.route // "gemini"' 2>/dev/null || echo "gemini")
   local reason=$(echo "$decision" | jq -r '.reason // "unknown"' 2>/dev/null || echo "routing decision made")
   local confidence=$(echo "$decision" | jq -r '.confidence // 0.5' 2>/dev/null || echo "0.5")
   
@@ -772,46 +724,14 @@ execute_route() {
       
     api)
       echo "🌐 Routing to Gemini API (cheap)..." >&2
-      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --api <<<"$full_prompt")
+      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --gemini-api <<<"$full_prompt")
       status=$?
       ;;
       
-    minimax)
-      echo "🌐 Routing to MiniMax API..." >&2
-      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --minimax <<<"$full_prompt")
+    gemini|*)
+      echo "🚀 Routing to Gemini (premium)..." >&2
+      response=$(gemini --yolo "$full_prompt")
       status=$?
-      ;;
-      
-    codex-azure)
-      if ! azure_responses_available; then
-        echo "❌ Azure environment variables missing; cannot honor --codex-azure/-ca." >&2
-        return 1
-      fi
-      echo "🧠 Routing to Azure Responses (forced)..." >&2
-      response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --azure-codex <<<"$full_prompt")
-      status=$?
-      if [ $status -ne 0 ]; then
-        echo "⚠️  Azure request failed; falling back to Codex CLI." >&2
-        response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
-        status=$?
-      fi
-      ;;
-      
-    codex|*)
-      if azure_responses_available; then
-        echo "🧠 Routing to Azure Responses (premium)..." >&2
-        response=$(RAG_USER_PROMPT="$user_prompt" "$EXEC_ROOT/scripts/llm_gateway.sh" --azure-codex <<<"$full_prompt")
-        status=$?
-        if [ $status -ne 0 ]; then
-          echo "⚠️  Azure request failed; falling back to Codex CLI." >&2
-          response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
-          status=$?
-        fi
-      else
-        echo "🧠 Routing to Codex (premium CLI)..." >&2
-        response=$(printf '%s\n' "$full_prompt" | codex ${CODEX_CONFIG_FLAG:-} exec -C "$REPO_ROOT" ${CODEX_FLAGS:-} -)
-        status=$?
-      fi
       ;;
   esac
   # Post-process for LLM-declared tool calls (search_tools/describe_tool)
@@ -881,8 +801,8 @@ while [[ $# -gt 0 ]]; do
       FORCE_API=1
       shift
       ;;
-    --codex|-c)
-      FORCE_CODEX=1
+    --gemini|-g)
+      FORCE_GEMINI=1
       shift
       ;;
     --repo)
@@ -893,7 +813,7 @@ while [[ $# -gt 0 ]]; do
         CONTRACT="$REPO_ROOT/CONTRACTS.md"
         AGENTS="$REPO_ROOT/AGENTS.md"
         CHANGELOG="$REPO_ROOT/CHANGELOG.md"
-        CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
+        GEMINI_LOG_FILE="${GEMINI_LOG_FILE:-$REPO_ROOT/logs/geminilog.txt}"
       fi
       shift || true
       ;;
@@ -903,19 +823,11 @@ while [[ $# -gt 0 ]]; do
       CONTRACT="$REPO_ROOT/CONTRACTS.md"
       AGENTS="$REPO_ROOT/AGENTS.md"
       CHANGELOG="$REPO_ROOT/CHANGELOG.md"
-      CODEX_LOG_FILE="${CODEX_LOG_FILE:-$REPO_ROOT/logs/codexlog.txt}"
-      shift
-      ;;
-    --codex-azure|-ca)
-      FORCE_CODEX_AZURE=1
-      shift
-      ;;
-    --minimax|-m)
-      FORCE_MINIMAX=1
+      GEMINI_LOG_FILE="${GEMINI_LOG_FILE:-$REPO_ROOT/logs/geminilog.txt}"
       shift
       ;;
     --help|-h)
-      print_codex_wrap_help
+      print_gemini_wrap_help
       exit 0
       ;;
     *)
@@ -936,10 +848,10 @@ if [ -z "$USER_PROMPT" ] && [ ! -t 0 ]; then
   USER_PROMPT="$(cat)"
 fi
 
-# Set how codex is called by default.  
+# Set how gemini is called by default.  
 # Interactive mode if no prompt
 if [ -z "$USER_PROMPT" ]; then
-  build_prompt "" | codex ${CODEX_CONFIG_FLAG:-} -C "$REPO_ROOT" ${CODEX_FLAGS:-}
+  build_prompt "" | gemini ${GEMINI_CONFIG_FLAG:-}
   exit $?
 fi
 

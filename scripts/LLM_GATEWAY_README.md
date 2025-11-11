@@ -111,6 +111,20 @@ Specialized:
 # 3. Force API flag
 ```
 
+## Automatic RAG Context
+
+If your repo has a `.rag/index_v2.db`, the gateway now prepends a "RAG Retrieval Plan" bundle before the user prompt. The bundle includes:
+
+- Planner summary with the selected spans and rationale.
+- Indexed span context (summaries, metadata, and clipped code snippets) so Codex/Claude/Gemini get real source lines automatically.
+
+Tune the context budget with:
+
+- `RAG_PLAN_CONTEXT_CHAR_LIMIT` – total characters allotted across all spans (default `16000`).
+- `RAG_PLAN_SPAN_CHAR_LIMIT` – per-span character cap before clipping (default `3200`).
+
+Set either to `0` or a negative number to treat it as "unlimited" for that dimension (still bounded by the other limit).
+
 ## Integration with Codex
 
 Update `codex_wrap.sh` to use the gateway:
