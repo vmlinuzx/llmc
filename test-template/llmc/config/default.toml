@@ -1,0 +1,11 @@
+[embeddings]
+preset = "e5"
+model = "intfloat/e5-base-v2"
+
+[storage]
+index_path = ".llmc/index/index_v2.db"
+
+[enrichment]
+enabled = false
+model = "gpt-4o-mini"
+batch_size = 50

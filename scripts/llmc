@@ -1,0 +1,128 @@
+#!/bin/bash
+# llmc - LLMC Command Line Interface
+# Wrapper for llmc tools
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEPLOY_SCRIPT="$SCRIPT_DIR/deploy_template.py"
+
+show_help() {
+    cat << EOF
+LLMC - LLM Commander
+
+Usage: llmc <command> [options]
+
+Commands:
+    deploy <target_dir>     Deploy LLMC template to target repository
+    help                    Show this help message
+
+Deploy Options:
+    --template PATH         Path to template directory (default: template)
+    --llmc-path PATH        Path for llmc directory (default: llmc)
+    --dry-run              Preview changes without applying
+    --no-backup            Skip creating backup
+    --force                Force deployment (overwrite existing)
+    --verbose              Enable verbose output
+    --rollback BACKUP      Rollback to specific backup
+
+Examples:
+    llmc deploy .                    # Deploy to current directory
+    llmc deploy /path/to/repo        # Deploy to specific repo
+    llmc deploy . --dry-run          # Preview changes
+    llmc deploy . --force            # Force overwrite
+
+For more information: llmc help
+EOF
+}
+
+show_deploy_help() {
+    cat << EOF
+llmc deploy - Deploy LLMC template to target repository
+
+Usage: llmc deploy <target_dir> [options]
+
+Arguments:
+    target_dir             Target directory to deploy template to
+
+Options:
+    --template PATH        Path to template directory (default: template)
+    --llmc-path PATH       Path for llmc directory in target (default: llmc)
+    --dry-run             Preview changes without applying them
+    --no-backup           Skip creating backup of existing llmc directory
+    --force               Force deployment even if llmc directory exists
+    --verbose             Enable verbose output
+    --rollback BACKUP     Rollback to a specific backup (use with backup directory name)
+
+Examples:
+    # Deploy template to current directory
+    llmc deploy .
+
+    # Deploy to specific repository
+    llmc deploy /path/to/repo
+
+    # Dry run to preview changes
+    llmc deploy /path/to/repo --dry-run
+
+    # Force deployment (overwrite existing)
+    llmc deploy /path/to/repo --force
+
+    # Deploy without backup
+    llmc deploy /path/to/repo --no-backup
+
+    # Use custom template path
+    llmc deploy /path/to/repo --template /path/to/template
+
+    # Rollback to backup
+    llmc deploy /path/to/repo --rollback llmc_20241111_120819
+
+Features:
+    - Automatic backup of existing llmc/ directory
+    - Path adjustment for hardcoded references
+    - Configuration merging (preserves local.toml)
+    - Update script references to new llmc/ structure
+    - Dry-run mode for previewing changes
+    - Rollback capability
+
+EOF
+}
+
+# Check if deploy script exists
+if [ ! -f "$DEPLOY_SCRIPT" ]; then
+    echo "Error: deploy_template.py not found at $DEPLOY_SCRIPT" >&2
+    exit 1
+fi
+
+# Parse command
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+    help|--help|-h)
+        if [ "$2" = "deploy" ]; then
+            show_deploy_help
+        else
+            show_help
+        fi
+        ;;
+    deploy)
+        if [ $# -lt 2 ]; then
+            echo "Error: deploy command requires target directory" >&2
+            echo ""
+            show_deploy_help
+            exit 1
+        fi
+        python3 "$DEPLOY_SCRIPT" "${@:2}"
+        ;;
+    "")
+        echo "Error: No command specified" >&2
+        echo ""
+        show_help
+        exit 1
+        ;;
+    *)
+        echo "Error: Unknown command: $COMMAND" >&2
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac

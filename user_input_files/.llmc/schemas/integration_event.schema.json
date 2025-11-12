@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLMC IntegrationEvent v1",
+  "type": "object",
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "changeset": {
+      "type": "string"
+    },
+    "merged": {
+      "type": "boolean"
+    },
+    "target_branch": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "timestamp",
+    "changeset",
+    "merged"
+  ]
+}

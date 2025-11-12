@@ -1,0 +1,51 @@
+# LLMC Default Configuration
+# This file contains system defaults and should not be modified
+
+[embeddings]
+# Default embedding preset
+preset = "e5"
+
+[storage]
+# Default storage paths (can be overridden)
+index_path = ".rag/index_v2.db"
+
+[enrichment]
+# Default enrichment settings
+enabled = false
+model = "gpt-4o-mini"
+batch_size = 10
+
+[llm]
+# Default LLM settings
+model = "claude-3-sonnet"
+temperature = 0.7
+max_tokens = 4096
+
+[paths]
+# Default paths
+project_root = "."
+cache_dir = ".cache"
+temp_dir = ".tmp"
+
+[logging]
+# Default logging settings
+level = "INFO"
+format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+[batch]
+# Default batch processing settings
+max_concurrent = 3
+retry_attempts = 3
+timeout = 300
+
+[cache]
+# Default cache settings
+enabled = true
+max_size = "1GB"
+ttl = 3600
+
+[monitoring]
+# Default monitoring settings
+metrics_enabled = true
+health_checks = true
+alerts_enabled = false

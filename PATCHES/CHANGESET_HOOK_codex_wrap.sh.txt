@@ -1,0 +1,6 @@
+# LLMC Concurrency v1 hook for scripts/codex_wrap.sh
+# Insert after `set -e`:
+if [ "${LLMC_CONCURRENCY:-off}" = "on" ] && [ -n "${CHANGESET_PATH:-}" ] && [ -f "${CHANGESET_PATH}" ]; then
+  echo "[llmc] integrating ${CHANGESET_PATH}" >&2
+  scripts/llmc_edit.sh --changeset "${CHANGESET_PATH}" || exit $?
+fi

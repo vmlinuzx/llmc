@@ -5,6 +5,7 @@ supabase/.temp
 dist
 DOCS/RESEARCH/
 .backup*/
+*.trash*
 
 # OS/installer packages
 *.deb

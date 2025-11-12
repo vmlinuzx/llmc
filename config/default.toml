@@ -1,0 +1,129 @@
+# LLMC Default Configuration Template
+# This file contains system defaults that can be overridden by local.toml
+# Environment variables take precedence over all config files
+
+# Embeddings configuration
+[embeddings]
+preset = "e5"  # e5 | e5-large | mini
+model = "intfloat/e5-base-v2"
+# Optional: override for deterministic testing
+# model = "hash-emb-v1"
+
+# Storage configuration
+[storage]
+index_path = ".llmc/index/index_v2.db"
+cache_path = ".llmc/cache"
+
+# Enrichment configuration
+[enrichment]
+enabled = false
+model = "gpt-4o-mini"
+batch_size = 50
+
+# Logging configuration
+[logging]
+level = "INFO"  # DEBUG, INFO, WARNING, ERROR
+file = ".llmc/logs/llmc.log"
+max_size = "10MB"
+backup_count = 5
+console_output = true
+
+# Concurrency settings
+[concurrency]
+enabled = false
+max_concurrent_tasks = 4
+task_timeout = 300  # seconds
+
+# Semantic cache settings
+[semantic_cache]
+enabled = true
+provider = "default"
+min_score = 0.7
+# Optional: override with environment variables
+# SEMANTIC_CACHE_DISABLE = "1"  # Set to 1 to disable
+# SEMANTIC_CACHE_ENABLE = "1"   # Set to 1 to explicitly enable
+# SEMANTIC_CACHE_MIN_SCORE = "0.8"  # Override minimum cache score
+
+# Deep research settings
+[deep_research]
+enabled = false
+auto_route_override = false
+recommendation_threshold = 0.6
+
+# Model provider configurations
+[providers]
+# Default LLM provider
+default = "claude"
+
+[providers.claude]
+enabled = true
+api_key_env = "ANTHROPIC_API_KEY"
+model = "claude-sonnet-4-20250514"
+
+[providers.azure]
+enabled = false
+endpoint_env = "AZURE_OPENAI_ENDPOINT"
+key_env = "AZURE_OPENAI_KEY"
+deployment_env = "AZURE_OPENAI_DEPLOYMENT"
+api_version = "2024-02-15-preview"
+
+[providers.gemini]
+enabled = false
+api_key_env = "GOOGLE_API_KEY"
+model = "gemini-pro"
+
+[providers.ollama]
+enabled = true
+base_url = "http://localhost:11434"
+model = "qwen2.5:14b"
+
+[providers.minimax]
+enabled = false
+base_url_env = "MINIMAX_BASE_URL"
+api_key_env = "MINIMAXKEY2"
+model_env = "MINIMAX_MODEL"
+
+# RAG (Retrieval-Augmented Generation) settings
+[rag]
+enabled = true
+auto_index = true
+reindex_on_change = true
+min_score = 0.4
+min_confidence = 0.6
+max_results = 10
+# Optional: override index path with environment
+# LLMC_RAG_INDEX_PATH = "/custom/path/index.db"
+
+# Security and permissions
+[security]
+dangerously_skip_permissions = false
+yolo_mode = false
+require_confirmation = true
+# Environment override
+# DANGEROUSLY_SKIP_PERMISSIONS = "1"  # Bypass all permission checks
+
+# Template settings
+[templates]
+copy_on_first_use = true
+backup_existing = true
+templates_dir = "templates"
+
+# Performance tuning
+[performance]
+cache_ttl = 3600  # seconds
+max_memory_usage = "1GB"
+gc_frequency = 100  # garbage collection frequency
+
+# Development and debugging
+[development]
+debug = false
+trace_logging = false
+log_sql = false
+profile_queries = false
+
+# UI/UX settings
+[ui]
+color_output = true
+progress_bars = true
+verbose_errors = false
+interactive_mode = true

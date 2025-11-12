@@ -1,0 +1,22 @@
+# Qwen-specific configuration for LLM Commander
+# Place in .qwen/config.toml or use environment variables
+
+# Approval workflow for Qwen interactions
+ask_for_approval = "never"  # or "on-failure", "on-request", "untrusted"
+
+# Qwen model configuration
+qwen_model = "qwen2.5:30b-instruct-q4_K_M"  # Default local model
+qwen_api_model = "qwen-32b-api"  # Remote model name when using API
+
+# Research paper analysis settings
+include_research_context = true
+max_research_context_lines = 100
+
+# Chaos testing defaults
+enable_chaos_mode = true
+default_chaos_depth = "moderate"  # "light", "moderate", "intense"
+
+# Routing preferences
+prefer_local_for = ["code_analysis", "documentation", "simple_reasoning"]
+prefer_api_for = ["latest_knowledge", "web_context", "complex_reasoning"]
+prefer_chaos_for = ["security", "testing", "adversarial"]

@@ -1,0 +1,12 @@
+[embeddings]
+preset = "e5"  # e5 | e5-large | mini
+# model = "intfloat/e5-base-v2"  # or "hash-emb-v1" for deterministic CPU-only testing
+
+[storage]
+# index_path = ".rag/index_v2.db"
+
+[enrichment]
+enabled = false
+model = "gpt-4o-mini"
+batch_size = 50
+

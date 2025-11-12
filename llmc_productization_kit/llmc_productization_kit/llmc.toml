@@ -1,0 +1,14 @@
+# Toggle common behaviors. Env vars still override these.
+# Model presets: e5 (default), e5-large, mini (all-MiniLM-L6-v2)
+[embeddings]
+preset = "e5"
+
+[storage]
+# Override .rag location if needed
+# index_path = ".rag/index_v2.db"
+
+[enrichment]
+# Enable if you want to auto-summarize spans after indexing
+enabled = false
+model = "gpt-4o-mini" # or "claude-3.5-haiku" etc.
+batch_size = 50

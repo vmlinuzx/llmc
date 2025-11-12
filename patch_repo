@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+"""
+Patch repository by extracting zip and making scripts executable.
+"""
+
+import zipfile
+import sys
+from pathlib import Path
+import stat
+
+
+def make_executable(file_path: Path) -> None:
+    """Make a file executable (add execute permission)."""
+    try:
+        current_perms = file_path.stat().st_mode
+        file_path.chmod(current_perms | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+        print(f"Made executable: {file_path}")
+    except Exception as e:
+        print(f"Error making {file_path} executable: {e}", file=sys.stderr)
+
+
+def main() -> int:
+    zip_path = Path("/home/vmlinux/src/llmc.zip")
+    extract_path = Path("/home/vmlinux/src/llmc")
+
+    # Check if zip file exists
+    if not zip_path.exists():
+        print(f"Error: Zip file not found at {zip_path}", file=sys.stderr)
+        return 1
+
+    # Extract zip file
+    print(f"Extracting {zip_path} to {extract_path}...")
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zf:
+            zf.extractall(extract_path)
+    except Exception as e:
+        print(f"Error extracting zip: {e}", file=sys.stderr)
+        return 2
+
+    print("Extraction complete.")
+
+    # Find and make .py and .sh files executable
+    print("\nMaking .py and .sh files executable...")
+    executable_files = []
+
+    for ext in ['*.py', '*.sh']:
+        for file_path in extract_path.rglob(ext):
+            if file_path.is_file():
+                make_executable(file_path)
+                executable_files.append(file_path)
+
+    print(f"\nTotal files made executable: {len(executable_files)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

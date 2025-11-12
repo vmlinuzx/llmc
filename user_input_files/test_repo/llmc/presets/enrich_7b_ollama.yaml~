@@ -1,0 +1,9 @@
+# Enrichment lane (7B, Ollama)
+num_ctx: 16384        # 16k context (not 32k or higher)
+num_gpu: 99           # Full GPU offload is fine
+num_batch: 512        # Default batch size
+num_thread: 8         # CPU fallback threads
+temperature: 0.0      # Deterministic
+top_p: 1.0
+repeat_penalty: 1.0
+

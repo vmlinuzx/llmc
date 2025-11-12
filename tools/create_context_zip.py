@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 import zipfile
@@ -74,8 +75,8 @@ def build_zip_name() -> str:
 
 
 def main() -> int:
-    script_path = Path(__file__).resolve()
-    repo_root = find_repo_root(script_path.parent)
+    # Use current working directory, not script location
+    repo_root = find_repo_root(Path.cwd())
 
     # Destination is parent of repo root (e.g., ~/src)
     dest_dir = repo_root.parent
@@ -99,7 +100,17 @@ def main() -> int:
                 except ValueError:
                     # If for some reason it's outside root, skip it.
                     continue
-                zf.write(abs_path, arcname=str(rel))
+                # Get file stats to preserve timestamp
+                stat = abs_path.stat()
+                # Use zipfile.ZipInfo to set date, ensuring it's after 1980
+                # ZIP format cannot handle dates before 1980
+                zinfo = zipfile.ZipInfo(filename=str(rel))
+                zinfo.date_time = time.gmtime(stat.st_mtime)[:6]
+                # Ensure date is not before 1980
+                if zinfo.date_time[0] < 1980:
+                    zinfo.date_time = (1980, 1, 1, 0, 0, 0)
+                with open(abs_path, 'rb') as src:
+                    zf.writestr(zinfo, src.read())
     except PermissionError as e:
         print(f"Permission denied creating {zip_path}: {e}", file=sys.stderr)
         print(

@@ -1,0 +1,12 @@
+services:
+  rag:
+    build:
+      context: .   # must be the repo root containing tools/rag/
+    image: llmc-rag:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+

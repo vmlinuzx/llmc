@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLMC ChangeSet v1",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "intent": {
+      "type": "string"
+    },
+    "locks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "base_commit": {
+      "type": "string"
+    },
+    "diff": {
+      "type": "string"
+    },
+    "validation_plan": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "build": {
+          "type": "string"
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "static_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "coverage_min": {
+          "type": "number"
+        }
+      }
+    },
+    "impact": {
+      "type": "object",
+      "properties": {
+        "files_changed": {
+          "type": "integer"
+        },
+        "symbols": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "id",
+    "locks",
+    "base_commit",
+    "diff",
+    "validation_plan"
+  ]
+}

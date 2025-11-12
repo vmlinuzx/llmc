@@ -1,0 +1,24 @@
+name: Build RAG Index
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m venv .venv
+      - run: ./.venv/bin/pip install -U pip wheel
+      - run: ./.venv/bin/pip install -e .
+      - name: Build Index
+        run: ./.venv/bin/rag index --since ${{ github.sha }}
+      - name: Upload Index Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-index
+          path: .rag/

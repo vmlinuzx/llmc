@@ -1,0 +1,14 @@
+{
+  "description": "LLMC ChatGPT bridge via MCPO exposing Desktop Commander",
+  "mcpServers": {
+    "desktop-commander": {
+      "command": "desktop-commander",
+      "args": [
+        "--no-onboarding"
+      ],
+      "env": {
+        "LLMC_PROJECT_ROOT": "/home/vmlinux/src/llmc"
+      }
+    }
+  }
+}

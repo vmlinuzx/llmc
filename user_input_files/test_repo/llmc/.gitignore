@@ -1,0 +1,5 @@
+# LLMC Runtime Data (auto-generated)
+.llmc/
+logs/
+.llmc/.rag/
+cache/

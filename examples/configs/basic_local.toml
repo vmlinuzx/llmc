@@ -1,0 +1,69 @@
+# Basic Local Development Setup
+# Minimal configuration for local development with Ollama
+
+[embeddings]
+preset = "mini"
+model = "intfloat/e5-base-v2"
+
+[storage]
+index_path = ".llmc/index/index_v2.db"
+cache_path = ".llmc/cache"
+
+[logging]
+level = "INFO"
+file = ".llmc/logs/llmc.log"
+console_output = true
+
+[concurrency]
+enabled = false
+
+[semantic_cache]
+enabled = false
+
+[deep_research]
+enabled = false
+
+[providers]
+default = "ollama"
+
+[providers.claude]
+enabled = false
+
+[providers.ollama]
+enabled = true
+base_url = "http://localhost:11434"
+model = "qwen2.5:7b"
+
+[rag]
+enabled = true
+auto_index = true
+reindex_on_change = false
+min_score = 0.3
+min_confidence = 0.5
+max_results = 5
+
+[security]
+dangerously_skip_permissions = false
+yolo_mode = false
+require_confirmation = true
+
+[templates]
+copy_on_first_use = true
+backup_existing = true
+
+[performance]
+cache_ttl = 1800
+max_memory_usage = "512MB"
+gc_frequency = 200
+
+[development]
+debug = false
+trace_logging = false
+log_sql = false
+profile_queries = false
+
+[ui]
+color_output = true
+progress_bars = true
+verbose_errors = false
+interactive_mode = true

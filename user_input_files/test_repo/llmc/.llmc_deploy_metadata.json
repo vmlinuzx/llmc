@@ -1,0 +1,439 @@
+{
+  "timestamp": "2025-11-11T12:18:39.925063",
+  "target_dir": "/workspace/user_input_files/test_repo",
+  "template_path": "/workspace/user_input_files/llmc_template_test",
+  "llmc_path": "llmc",
+  "changes": [
+    {
+      "operation": "create",
+      "path": "llmc/.gitignore",
+      "reason": "Deploying template file: .gitignore"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/AGENTS.md",
+      "reason": "Deploying template file: AGENTS.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/CLAUDE_AGENTS.md",
+      "reason": "Deploying template file: CLAUDE_AGENTS.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/CONTRACTS.md",
+      "reason": "Deploying template file: CONTRACTS.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/deploy.py",
+      "reason": "Deploying template file: deploy.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/extraction_summary.json",
+      "reason": "Deploying template file: extraction_summary.json"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/llmc.toml",
+      "reason": "Deploying template file: llmc.toml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/ROUTING.md",
+      "reason": "Deploying template file: DOCS/ROUTING.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/adapters/claude.tools.tmpl",
+      "reason": "Deploying template file: adapters/claude.tools.tmpl"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/adapters/codex.tools.tmpl",
+      "reason": "Deploying template file: adapters/codex.tools.tmpl"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/adapters/gemini.tools.tmpl",
+      "reason": "Deploying template file: adapters/gemini.tools.tmpl"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/config/deep_research_services.json",
+      "reason": "Deploying template file: config/deep_research_services.json"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/config/default.toml",
+      "reason": "Deploying template file: config/default.toml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/config/llmc_concurrency.env.example",
+      "reason": "Deploying template file: config/llmc_concurrency.env.example"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/config/local.example.toml",
+      "reason": "Deploying template file: config/local.example.toml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/presets/enrich_7b_ollama.yaml",
+      "reason": "Deploying template file: presets/enrich_7b_ollama.yaml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/presets/enrich_7b_ollama.yaml~",
+      "reason": "Deploying template file: presets/enrich_7b_ollama.yaml~"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/profiles/claude.yml",
+      "reason": "Deploying template file: profiles/claude.yml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/profiles/codex.yml",
+      "reason": "Deploying template file: profiles/codex.yml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/profiles/gemini.yml",
+      "reason": "Deploying template file: profiles/gemini.yml"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/claude_wrap.sh",
+      "reason": "Deploying template file: scripts/claude_wrap.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/codex_wrap.sh",
+      "reason": "Deploying template file: scripts/codex_wrap.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/gemini_wrap.sh",
+      "reason": "Deploying template file: scripts/gemini_wrap.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/integration_gate.sh",
+      "reason": "Deploying template file: scripts/integration_gate.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/llm_gateway.js",
+      "reason": "Deploying template file: scripts/llm_gateway.js"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/llmc_edit.sh",
+      "reason": "Deploying template file: scripts/llmc_edit.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_plan_helper.sh",
+      "reason": "Deploying template file: scripts/rag_plan_helper.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_plan_snippet.py",
+      "reason": "Deploying template file: scripts/rag_plan_snippet.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_refresh.sh",
+      "reason": "Deploying template file: scripts/rag_refresh.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_refresh_cron.sh",
+      "reason": "Deploying template file: scripts/rag_refresh_cron.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_refresh_watch.sh",
+      "reason": "Deploying template file: scripts/rag_refresh_watch.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/rag_sync.sh",
+      "reason": "Deploying template file: scripts/rag_sync.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/router.py",
+      "reason": "Deploying template file: scripts/router.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/tool_dispatch.sh",
+      "reason": "Deploying template file: scripts/tool_dispatch.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/scripts/tool_health.sh",
+      "reason": "Deploying template file: scripts/tool_health.sh"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SCRIPTS/README.md",
+      "reason": "Deploying template file: DOCS/SCRIPTS/README.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SCRIPTS/tool_dispatch.sh.md",
+      "reason": "Deploying template file: DOCS/SCRIPTS/tool_dispatch.sh.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SCRIPTS/tool_health.sh.md",
+      "reason": "Deploying template file: DOCS/SCRIPTS/tool_health.sh.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SETUP/CHATGPT_KICKOFF.md",
+      "reason": "Deploying template file: DOCS/SETUP/CHATGPT_KICKOFF.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SETUP/Editor_Hooks.md",
+      "reason": "Deploying template file: DOCS/SETUP/Editor_Hooks.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/DOCS/SETUP/TreeSitter_Backbone.md",
+      "reason": "Deploying template file: DOCS/SETUP/TreeSitter_Backbone.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/cache/__init__.py",
+      "reason": "Deploying template file: tools/cache/__init__.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/cache/cli.py",
+      "reason": "Deploying template file: tools/cache/cli.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/cache/config.py",
+      "reason": "Deploying template file: tools/cache/config.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/cache/database.py",
+      "reason": "Deploying template file: tools/cache/database.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/cache/manager.py",
+      "reason": "Deploying template file: tools/cache/manager.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/diagnostics/health_check.py",
+      "reason": "Deploying template file: tools/diagnostics/health_check.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/README.md",
+      "reason": "Deploying template file: tools/rag/README.md"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/__init__.py",
+      "reason": "Deploying template file: tools/rag/__init__.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/analytics.py",
+      "reason": "Deploying template file: tools/rag/analytics.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/benchmark.py",
+      "reason": "Deploying template file: tools/rag/benchmark.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/cli.py",
+      "reason": "Deploying template file: tools/rag/cli.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/config.py",
+      "reason": "Deploying template file: tools/rag/config.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/context_trimmer.py",
+      "reason": "Deploying template file: tools/rag/context_trimmer.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/database.py",
+      "reason": "Deploying template file: tools/rag/database.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/embeddings.py",
+      "reason": "Deploying template file: tools/rag/embeddings.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/export_data.py",
+      "reason": "Deploying template file: tools/rag/export_data.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/indexer.py",
+      "reason": "Deploying template file: tools/rag/indexer.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/lang.py",
+      "reason": "Deploying template file: tools/rag/lang.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/planner.py",
+      "reason": "Deploying template file: tools/rag/planner.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/requirements.txt",
+      "reason": "Deploying template file: tools/rag/requirements.txt"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/runner.py",
+      "reason": "Deploying template file: tools/rag/runner.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/search.py",
+      "reason": "Deploying template file: tools/rag/search.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/types.py",
+      "reason": "Deploying template file: tools/rag/types.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/utils.py",
+      "reason": "Deploying template file: tools/rag/utils.py"
+    },
+    {
+      "operation": "create",
+      "path": "llmc/tools/rag/workers.py",
+      "reason": "Deploying template file: tools/rag/workers.py"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/AGENTS.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/CLAUDE_AGENTS.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/CONTRACTS.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/extraction_summary.json",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/claude_wrap.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/codex_wrap.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/gemini_wrap.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/llmc_edit.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/rag_plan_helper.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/rag_refresh_cron.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/rag_refresh_watch.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/scripts/tool_health.sh",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/DOCS/SCRIPTS/README.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/DOCS/SCRIPTS/tool_dispatch.sh.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/DOCS/SCRIPTS/tool_health.sh.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/DOCS/SETUP/Editor_Hooks.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/DOCS/SETUP/TreeSitter_Backbone.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/tools/diagnostics/health_check.py",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/tools/rag/README.md",
+      "reason": "Adjusting paths for new structure"
+    },
+    {
+      "operation": "update",
+      "path": "llmc/tools/rag/utils.py",
+      "reason": "Adjusting paths for new structure"
+    }
+  ],
+  "rollback_available": false
+}
