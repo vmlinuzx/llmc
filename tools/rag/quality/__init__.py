@@ -130,18 +130,24 @@ def classify_quality(summary: str, normalized_text: Optional[str] = None) -> Qua
     """
     Canonical classifier for enrichment quality.
 
-    Implements language-aware rules:
-    - CJK text: OK if ≥10 chars after normalization
+    Implements language-aware rules (v1-cjk-aware):
+    - PLACEHOLDER: Match against known patterns (—, ..., ***, auto-summary, etc.)
+    - EMPTY: Only whitespace/punctuation after normalization
+    - CJK text: OK if ≥10 chars (Chinese, Japanese, Korean)
     - English text: OK if ≥2 tokens, SHORT if <5 tokens AND <10 chars
-    - Placeholders: Match against known patterns
-    - Empty: Only whitespace/punctuation after normalization
+
+    Classification priority (first match wins):
+    1. Check for placeholders (before normalization)
+    2. Check if empty after normalization
+    3. Check CJK length threshold
+    4. Check English token count
 
     Args:
         summary: Original summary text
         normalized_text: Optional pre-normalized text (for efficiency)
 
     Returns:
-        QualityResult with classification and reason
+        QualityResult with classification, reason, and rule_version
     """
     if not summary or not summary.strip():
         return QualityResult(
@@ -149,6 +155,12 @@ def classify_quality(summary: str, normalized_text: Optional[str] = None) -> Qua
             reason='no-content',
             rule_version=RULE_VERSION
         )
+
+    # Check for placeholders FIRST (before normalization)
+    # This catches cases like "—" and "..." that normalize to empty
+    placeholder_result = check_placeholder(summary)
+    if placeholder_result:
+        return placeholder_result
 
     # Normalize text
     if normalized_text is None:
@@ -161,11 +173,6 @@ def classify_quality(summary: str, normalized_text: Optional[str] = None) -> Qua
             reason='punctuation-only',
             rule_version=RULE_VERSION
         )
-
-    # Check for placeholders first
-    placeholder_result = check_placeholder(summary)
-    if placeholder_result:
-        return placeholder_result
 
     # Detect CJK presence
     has_cjk_chars = has_cjk(normalized_text)
