@@ -2,7 +2,36 @@
 
 **Last Updated:** 2025-11-11 23:00
 
-## Current Session: RAG MCP Integration - COMPLETE ✅
+## Current Session: Schema-Enriched RAG v1 Implementation - IN PROGRESS
+
+**Goal:** Build GraphRAG-style relationship traversal for LLMC
+**Status:** Week 1 - Schema Extraction Module
+
+**Git Safety:** Triple backup created at commit 9b80bd1
+- Main: origin/main
+- Branch: pre-schema-rag-backup  
+- Tag: v0.pre-schema-rag
+
+**Progress:**
+- ✅ Created `tools/rag/schema.py` - Entity/relation extraction
+- ✅ Python AST parser (functions, classes, call graphs)
+- ✅ Tree-sitter extractor stub (TypeScript/JavaScript)
+- 🚧 Next: Graph storage & adjacency list
+- 🚧 Next: Query-time hybrid retrieval
+
+**Architecture:**
+- Extends existing tree-sitter infrastructure in `tools/rag/lang.py`
+- Entity types: functions (sym:), classes (type:), tables (db:)
+- Relation types: calls, extends, reads, writes, uses
+- Storage: `.rag/entities_relations.json`
+
+**Target Metrics:**
+- Recall@10: 0.62 → 0.85 (+37%)
+- Citation accuracy: 72% → 90%
+- Premium tier usage: 30% → 20% (-33%)
+- Cost savings: $7,300/year @ 1K queries/day
+
+**Previous Session:** RAG MCP Integration - COMPLETE ✅
 
 **Goal:** Add RAG query tools to Desktop Commander (MCP) following Anthropic's code execution pattern
 
@@ -103,7 +132,23 @@ LLMC is THE priority - dog food testing, self-hosting RAG, cost optimization.
 - **Work style:** Remote, sometimes from mountains while paragliding
 - **Environment:** Ubuntu 24 native (NOT WSL2) - "Year of the Linux Desktop"
 
-## WARNING: Enrichment System
+## WARNINGS
+
+### Log Files (CRITICAL)
+**NEVER open large log files directly** - they will fill entire context window and crash:
+- `logs/claudelog.txt` - Massive JSON dumps
+- `logs/enrichment_metrics.jsonl` - Continuous append log
+- `logs/planner_metrics.jsonl` - Continuous append log
+- Any `.jsonl` files in logs/
+
+**Safe approach:** Use `tail -n 50` or `head -n 50` to preview, NEVER open full file.
+**If you need to analyze:** Use grep/awk/jq to extract specific lines, don't load entire file.
+
+### Enrichment System
 DO NOT WATCH ENRICHMENT LOG FILES - system will exhaust itself.
 The enrichment system is functional and tight. Trust it, don't monitor it obsessively.
 If you run enrichment, have an auto-kill system behind the execution.
+
+### MiniMax Incident (2025-11-12)
+MiniMax filled context window and went rogue, made destructive changes.
+**Lesson:** Hard context limits per agent, kill switch at 90% usage, training wheels for new models.
