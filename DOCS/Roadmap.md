@@ -18,12 +18,11 @@
 - [x] Replace MiniLM embeddings with `intfloat/e5-base-v2` across the indexing/query stack (`rag embed`, `rag search`, `rag benchmark`), keeping legacy presets as feature-flag fallbacks.
 
 ## Backlog
-- [ ] **Clean up template repositories** - The llmc_template* directories contain massive amounts of garbage (7.5GB+ virtual envs, binary files, database caches, API keys in history)
-  - Problem: Template repos are bloated with artifacts that should never be in version control
-  - Current: .venv/ (7.5GB), sys/json/click binaries (11MB each), .rag databases, .env.local in git history
+- [x] **Clean up template repositories** - COMPLETED! 🎉
   - Action: Strip all temp files, cache, binaries, and env files; keep only clean template source
-  - Impact: Massive repo bloat, security risk from leaked API keys, poor DX for users cloning templates
-  - See: `.trash/REPO_SIZE_ANALYSIS.md` and `.trash/SECURITY_INCIDENT_RESPONSE.md` for details
+  - Result: 91% context zip reduction (38-46MB → 4.2MB), removed 11,833+ lines of bloat
+  - Impact: Clean repo, improved DX, eliminated security risks from leaked API keys
+  - See: `.trash/MISSION_ACCOMPLISHED.md` for full details
 - [ ] **Investigate RAG integration architecture** - The RAG planner integration across `codex_wrap.sh` and `llm_gateway.js` is overly complex and architecturally confused
   - Problem: RAG is called at MULTIPLE layers (wrapper scripts, gateway, helper scripts) creating duplication
   - Current: Both wrapper scripts AND gateway handle RAG, with silent failures and commented-out code

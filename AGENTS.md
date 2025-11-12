@@ -20,6 +20,37 @@ This file is the primary operational document for all agents. If you only read o
 - **Route here for:** complex code review, refactor plans, architecture decisions, multi-file debugging.
 - **Avoid routing for:** net-new feature builds (Beatrice), lightweight scripts, purely mechanical edits.
 
+### Context Retrieval Protocol (RAG/MCP)
+
+**CRITICAL: Use RAG tools, not direct file reads**
+
+This repo has a fully enriched RAG system (293 files, 608 spans, 573+ Qwen-enriched summaries). The background indexer keeps it within 3-4 minutes of perfect sync.
+
+**When you need repo context:**
+1. **ALWAYS use RAG search first:** `python -m tools.rag.cli search "your query"`
+2. **NEVER** read files directly to "understand the system" or "get context"
+3. **NEVER** ingest logs, traces, build artifacts, or `.rag/` database files
+4. Each RAG result is semantically chunked and enriched - trust it
+5. Only read files when user explicitly references a specific file
+
+**Forbidden patterns that waste tokens:**
+- ❌ Reading multiple files in sequence to explore
+- ❌ List directory → read file loops
+- ❌ "Let me check X" followed by file reads
+- ❌ Ingesting large files "just to understand"
+- ❌ Reading enrichment logs or RAG metadata
+
+**Correct patterns:**
+- ✅ Search RAG for semantic understanding
+- ✅ Ask user if RAG results are insufficient
+- ✅ Read specific files only when user references them
+- ✅ Use Desktop Commander tools for binary/data file analysis
+
+**Token budget rationale:**
+- Direct file read: 1000-5000+ tokens
+- RAG search result: 50-300 tokens (enriched summary)
+- **Savings: 95%+ per context retrieval**
+
 ### (Desktop Commander / MCP-aware runs)
 When running via Desktop Commander (MCP-lite), emit on-demand discovery calls in a fenced JSON block so the orchestrator executes them:
 

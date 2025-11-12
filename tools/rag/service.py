@@ -1,0 +1,461 @@
+#!/usr/bin/env python3
+"""
+LLMC RAG Service - Unified daemon for RAG indexing, enrichment, and embedding.
+
+Replaces:
+- indexenrich.sh
+- qwen_enrich_batch.py
+- rag_refresh.sh
+- start_rag_refresh_loop.sh
+- All the other script babies
+
+Usage:
+    llmc-rag-service start [--interval 180]
+    llmc-rag-service stop
+    llmc-rag-service status
+    llmc-rag-service register <repo_path>
+    llmc-rag-service unregister <repo_path>
+    llmc-rag-service clear-failures [--repo <path>]
+"""
+
+import argparse
+import json
+import os
+import signal
+import sqlite3
+import subprocess
+import sys
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+# State file location
+STATE_FILE = Path.home() / ".llmc" / "rag-service.json"
+FAILURE_DB = Path.home() / ".llmc" / "rag-failures.db"
+
+# Failure policy
+MAX_FAILURES = 3  # 3 strikes and you're out
+
+
+class ServiceState:
+    """Manage service state persistence."""
+    
+    def __init__(self):
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self.state = self._load()
+    
+    def _load(self) -> dict:
+        if STATE_FILE.exists():
+            return json.loads(STATE_FILE.read_text())
+        return {
+            "repos": [],
+            "pid": None,
+            "status": "stopped",
+            "last_cycle": None,
+            "interval": 180
+        }
+    
+    def save(self):
+        STATE_FILE.write_text(json.dumps(self.state, indent=2))
+    
+    def add_repo(self, repo_path: str):
+        repo_path = str(Path(repo_path).resolve())
+        if repo_path not in self.state["repos"]:
+            self.state["repos"].append(repo_path)
+            self.save()
+            return True
+        return False
+    
+    def remove_repo(self, repo_path: str):
+        repo_path = str(Path(repo_path).resolve())
+        if repo_path in self.state["repos"]:
+            self.state["repos"].remove(repo_path)
+            self.save()
+            return True
+        return False
+    
+    def set_running(self, pid: int):
+        self.state["pid"] = pid
+        self.state["status"] = "running"
+        self.save()
+    
+    def set_stopped(self):
+        self.state["pid"] = None
+        self.state["status"] = "stopped"
+        self.save()
+    
+    def update_cycle(self):
+        self.state["last_cycle"] = datetime.now(timezone.utc).isoformat()
+        self.save()
+    
+    def is_running(self) -> bool:
+        if self.state["pid"] is None:
+            return False
+        # Check if PID exists
+        try:
+            os.kill(self.state["pid"], 0)
+            return True
+        except OSError:
+            return False
+
+
+class FailureTracker:
+    """Track and manage enrichment failures."""
+    
+    def __init__(self):
+        FAILURE_DB.parent.mkdir(parents=True, exist_ok=True)
+        self.conn = sqlite3.connect(str(FAILURE_DB))
+        self._init_db()
+    
+    def _init_db(self):
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS failures (
+                span_hash TEXT,
+                repo TEXT,
+                failure_count INTEGER DEFAULT 1,
+                last_attempted TEXT,
+                reason TEXT,
+                PRIMARY KEY (span_hash, repo)
+            )
+        """)
+        self.conn.commit()
+    
+    def record_failure(self, span_hash: str, repo: str, reason: str):
+        """Record a failure, increment count."""
+        now = datetime.now(timezone.utc).isoformat()
+        self.conn.execute("""
+            INSERT INTO failures (span_hash, repo, failure_count, last_attempted, reason)
+            VALUES (?, ?, 1, ?, ?)
+            ON CONFLICT(span_hash, repo) DO UPDATE SET
+                failure_count = failure_count + 1,
+                last_attempted = ?,
+                reason = ?
+        """, (span_hash, repo, now, reason, now, reason))
+        self.conn.commit()
+    
+    def is_failed(self, span_hash: str, repo: str) -> bool:
+        """Check if span has hit failure threshold."""
+        cursor = self.conn.execute(
+            "SELECT failure_count FROM failures WHERE span_hash = ? AND repo = ?",
+            (span_hash, repo)
+        )
+        row = cursor.fetchone()
+        if row and row[0] >= MAX_FAILURES:
+            return True
+        return False
+    
+    def get_failures(self, repo: Optional[str] = None) -> list:
+        """Get all failures, optionally filtered by repo."""
+        if repo:
+            cursor = self.conn.execute(
+                "SELECT span_hash, repo, failure_count, last_attempted, reason FROM failures WHERE repo = ?",
+                (repo,)
+            )
+        else:
+            cursor = self.conn.execute(
+                "SELECT span_hash, repo, failure_count, last_attempted, reason FROM failures"
+            )
+        return cursor.fetchall()
+    
+    def clear_failures(self, repo: Optional[str] = None):
+        """Clear all failures, optionally for specific repo."""
+        if repo:
+            self.conn.execute("DELETE FROM failures WHERE repo = ?", (repo,))
+        else:
+            self.conn.execute("DELETE FROM failures")
+        self.conn.commit()
+    
+    def get_stats(self, repo: str) -> dict:
+        """Get failure stats for a repo."""
+        cursor = self.conn.execute(
+            "SELECT COUNT(*), SUM(failure_count) FROM failures WHERE repo = ?",
+            (repo,)
+        )
+        row = cursor.fetchone()
+        return {
+            "failed_spans": row[0] or 0,
+            "total_failures": row[1] or 0
+        }
+
+
+class RAGService:
+    """Main RAG service orchestrator."""
+    
+    def __init__(self, state: ServiceState, tracker: FailureTracker):
+        self.state = state
+        self.tracker = tracker
+        self.running = True
+    
+    def handle_signal(self, signum, frame):
+        """Handle shutdown signals gracefully."""
+        print(f"\nReceived signal {signum}, shutting down gracefully...")
+        self.running = False
+    
+    def run_rag_cli(self, repo: Path, command: list) -> tuple[bool, str]:
+        """Run a RAG CLI command for a repo."""
+        try:
+            result = subprocess.run(
+                ["python", "-m", "tools.rag.cli"] + command,
+                cwd=repo,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 min timeout per operation
+            )
+            return result.returncode == 0, result.stdout + result.stderr
+        except subprocess.TimeoutExpired:
+            return False, "Operation timed out"
+        except Exception as e:
+            return False, str(e)
+    
+    def process_repo(self, repo_path: str):
+        """Process one repo: sync, enrich, embed."""
+        repo = Path(repo_path)
+        if not repo.exists():
+            print(f"⚠️  Repo not found: {repo_path}")
+            return
+        
+        print(f"🔄 Processing {repo.name}...")
+        
+        # Step 1: Sync changed files (git diff based)
+        success, output = self.run_rag_cli(repo, ["sync", "--since", "HEAD~1"])
+        if not success:
+            print(f"  ⚠️  Sync failed: {output[:100]}")
+        
+        # Step 2: Enrich pending spans
+        success, output = self.run_rag_cli(repo, ["enrich", "--execute"])
+        if not success:
+            print(f"  ⚠️  Enrichment had failures")
+        
+        # Step 3: Embed pending spans
+        success, output = self.run_rag_cli(repo, ["embed", "--execute"])
+        if not success:
+            print(f"  ⚠️  Embedding failed: {output[:100]}")
+        
+        print(f"  ✅ {repo.name} processed")
+    
+    def get_repo_stats(self, repo_path: str) -> dict:
+        """Get stats for a repo."""
+        repo = Path(repo_path)
+        success, output = self.run_rag_cli(repo, ["stats", "--json"])
+        if success:
+            try:
+                stats = json.loads(output)
+                failure_stats = self.tracker.get_stats(repo_path)
+                stats.update(failure_stats)
+                return stats
+            except json.JSONDecodeError:
+                pass
+        return {}
+    
+    def run_loop(self, interval: int):
+        """Main service loop."""
+        signal.signal(signal.SIGTERM, self.handle_signal)
+        signal.signal(signal.SIGINT, self.handle_signal)
+        
+        self.state.set_running(os.getpid())
+        print(f"🚀 RAG service started (PID {os.getpid()})")
+        print(f"   Tracking {len(self.state.state['repos'])} repos")
+        print(f"   Interval: {interval}s")
+        print()
+        
+        while self.running:
+            cycle_start = time.time()
+            
+            for repo in self.state.state["repos"]:
+                if not self.running:
+                    break
+                self.process_repo(repo)
+            
+            self.state.update_cycle()
+            
+            # Sleep for remaining interval
+            elapsed = time.time() - cycle_start
+            sleep_time = max(0, interval - elapsed)
+            
+            if sleep_time > 0 and self.running:
+                print(f"💤 Sleeping {int(sleep_time)}s until next cycle...\n")
+                time.sleep(sleep_time)
+        
+        self.state.set_stopped()
+        print("👋 RAG service stopped")
+
+
+def cmd_start(args, state: ServiceState, tracker: FailureTracker):
+    """Start the service."""
+    if state.is_running():
+        print(f"Service already running (PID {state.state['pid']})")
+        return 1
+    
+    if not state.state["repos"]:
+        print("No repos registered. Use 'register' command first.")
+        return 1
+    
+    # Fork to background if --daemon
+    if args.daemon:
+        pid = os.fork()
+        if pid > 0:
+            # Parent process
+            print(f"Started RAG service in background (PID {pid})")
+            return 0
+        # Child process continues
+        os.setsid()
+        sys.stdin.close()
+        sys.stdout = open(os.devnull, 'w')
+        sys.stderr = open(os.devnull, 'w')
+    
+    service = RAGService(state, tracker)
+    service.run_loop(args.interval)
+    return 0
+
+
+def cmd_stop(args, state: ServiceState, tracker: FailureTracker):
+    """Stop the service."""
+    if not state.is_running():
+        print("Service is not running")
+        return 1
+    
+    pid = state.state["pid"]
+    print(f"Stopping service (PID {pid})...")
+    
+    try:
+        os.kill(pid, signal.SIGTERM)
+        # Wait for graceful shutdown
+        for _ in range(10):
+            time.sleep(0.5)
+            if not state.is_running():
+                print("Service stopped")
+                return 0
+        # Force kill if still running
+        os.kill(pid, signal.SIGKILL)
+        state.set_stopped()
+        print("Service force-stopped")
+        return 0
+    except ProcessLookupError:
+        state.set_stopped()
+        print("Service was not running (cleaned up stale PID)")
+        return 0
+
+
+def cmd_status(args, state: ServiceState, tracker: FailureTracker):
+    """Show service status."""
+    print("LLMC RAG Service Status")
+    print("=" * 50)
+    
+    if state.is_running():
+        print(f"Status: 🟢 running (PID {state.state['pid']})")
+    else:
+        print("Status: 🔴 stopped")
+    
+    print(f"Repos tracked: {len(state.state['repos'])}")
+    
+    if state.state["repos"]:
+        service = RAGService(state, tracker)
+        for repo in state.state["repos"]:
+            stats = service.get_repo_stats(repo)
+            repo_name = Path(repo).name
+            print(f"\n  📁 {repo_name}")
+            print(f"     Path: {repo}")
+            if stats:
+                print(f"     Spans: {stats.get('spans', 0)}")
+                print(f"     Enriched: {stats.get('enrichments', 0)}")
+                print(f"     Embedded: {stats.get('embeddings', 0)}")
+                failed = stats.get('failed_spans', 0)
+                if failed > 0:
+                    print(f"     Failed: {failed} (permanent)")
+    
+    if state.state["last_cycle"]:
+        last = datetime.fromisoformat(state.state["last_cycle"])
+        ago = (datetime.now(timezone.utc) - last).total_seconds()
+        print(f"\nLast cycle: {int(ago)}s ago")
+    
+    return 0
+
+
+def cmd_register(args, state: ServiceState, tracker: FailureTracker):
+    """Register a repo."""
+    repo_path = Path(args.repo_path).resolve()
+    if not repo_path.exists():
+        print(f"Error: Repo not found: {repo_path}")
+        return 1
+    
+    if state.add_repo(str(repo_path)):
+        print(f"Registered: {repo_path}")
+        return 0
+    else:
+        print(f"Already registered: {repo_path}")
+        return 1
+
+
+
+def cmd_unregister(args, state: ServiceState, tracker: FailureTracker):
+    """Unregister a repo."""
+    repo_path = Path(args.repo_path).resolve()
+    
+    if state.remove_repo(str(repo_path)):
+        print(f"Unregistered: {repo_path}")
+        return 0
+    else:
+        print(f"Not registered: {repo_path}")
+        return 1
+
+
+def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
+    """Clear failure cache."""
+    repo = args.repo
+    if repo:
+        repo = str(Path(repo).resolve())
+        tracker.clear_failures(repo)
+        print(f"Cleared failures for: {repo}")
+    else:
+        tracker.clear_failures()
+        print("Cleared all failures")
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description="LLMC RAG Service")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    
+    # start command
+    start_p = subparsers.add_parser("start", help="Start the service")
+    start_p.add_argument("--interval", type=int, default=180, help="Loop interval in seconds")
+    start_p.add_argument("--daemon", action="store_true", help="Run in background")
+    
+    # stop command
+    subparsers.add_parser("stop", help="Stop the service")
+    
+    # status command
+    subparsers.add_parser("status", help="Show service status")
+    
+    # register command
+    reg_p = subparsers.add_parser("register", help="Register a repo")
+    reg_p.add_argument("repo_path", help="Path to repository")
+    
+    # unregister command
+    unreg_p = subparsers.add_parser("unregister", help="Unregister a repo")
+    unreg_p.add_argument("repo_path", help="Path to repository")
+    
+    # clear-failures command
+    clear_p = subparsers.add_parser("clear-failures", help="Clear failure cache")
+    clear_p.add_argument("--repo", help="Clear failures for specific repo only")
+    
+    args = parser.parse_args()
+    
+    state = ServiceState()
+    tracker = FailureTracker()
+    
+    commands = {
+        "start": cmd_start,
+        "stop": cmd_stop,
+        "status": cmd_status,
+        "register": cmd_register,
+        "unregister": cmd_unregister,
+        "clear-failures": cmd_clear_failures,
+    }
+    
+    return commands[args.command](args, state, tracker)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
