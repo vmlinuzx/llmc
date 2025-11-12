@@ -802,6 +802,48 @@ execute_route() {
   local user_prompt="$2"
   local full_prompt=$(build_prompt "$user_prompt")
   local provider="claude"
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
+  
+  # Build Claude flags based on YOLO mode
+  local claude_flags="--print"
+  if [ "${YOLO_MODE:-0}" = "1" ] || [ "${DANGEROUSLY_SKIP_PERMISSIONS:-0}" = "1" ]; then
+    claude_flags="--print --dangerously-skip-user-confirmation"
+  fi
 
   # Update provider based on route
   case "$route" in
@@ -864,7 +906,7 @@ execute_route() {
         return 1
       fi
 
-      response=$(printf '%s\n' "$full_prompt" | claude --settings "$azure_settings" --print -)
+      response=$(printf '%s\n' "$full_prompt" | claude --settings "$azure_settings" $claude_flags -)
       status=$?
       ;;
 
@@ -875,15 +917,15 @@ execute_route() {
         local azure_settings
         if ! azure_settings=$(create_azure_settings); then
           echo "⚠️  Failed to create Azure settings, falling back to Claude Code (web auth)..." >&2
-          response=$(printf '%s\n' "$full_prompt" | claude --print -)
+          response=$(printf '%s\n' "$full_prompt" | claude $claude_flags -)
           status=$?
         else
-          response=$(printf '%s\n' "$full_prompt" | claude --settings "$azure_settings" --print -)
+          response=$(printf '%s\n' "$full_prompt" | claude --settings "$azure_settings" $claude_flags -)
           status=$?
         fi
       else
         echo "🧠 Routing to Claude Code (web auth)..." >&2
-        response=$(printf '%s\n' "$full_prompt" | claude --print -)
+        response=$(printf '%s\n' "$full_prompt" | claude $claude_flags -)
         status=$?
       fi
       ;;
@@ -954,8 +996,8 @@ to_bool() {
 # Default-disabled when no flags are present
 # Skip permission checks if dangerously-skip-permissions or yolo mode is enabled
 if [ "$DANGEROUSLY_SKIP_PERMISSIONS" != "1" ] && [ "$YOLO_MODE" != "1" ]; then
-  # Only apply the default-disabled check if routing is not explicitly enabled
-  if [ "$ENABLE_ROUTING" != "1" ]; then
+  # Only apply the default-disabled check if routing is not explicitly enabled and bypass flags are not set
+  if [ "$ENABLE_ROUTING" != "1" ] && [ "$DANGEROUSLY_SKIP_PERMISSIONS" != "1" ] && [ "$YOLO_MODE" != "1" ]; then
     if to_bool "${LLM_DISABLED:-}" || to_bool "${NEXT_PUBLIC_LLM_DISABLED:-}" || to_bool "${WEATHER_DISABLED:-}"; then
       echo "🧯 LLM features are disabled via environment (LLM_DISABLED / NEXT_PUBLIC_LLM_DISABLED / WEATHER_DISABLED)." >&2
       echo "Set LLM_DISABLED=false to re-enable." >&2

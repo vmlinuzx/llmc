@@ -193,10 +193,10 @@ class RAGService:
         self.running = False
     
     def run_rag_cli(self, repo: Path, command: list) -> tuple[bool, str]:
-        """Run a RAG CLI command for a repo."""
+        """Run a RAG CLI command for a repo. DEPRECATED - use runner module instead."""
         try:
             result = subprocess.run(
-                ["python", "-m", "tools.rag.cli"] + command,
+                ["python3", "-m", "tools.rag.cli"] + command,  # Fixed: python -> python3
                 cwd=repo,
                 capture_output=True,
                 text=True,
@@ -209,7 +209,7 @@ class RAGService:
             return False, str(e)
     
     def process_repo(self, repo_path: str):
-        """Process one repo: sync, enrich, embed."""
+        """Process one repo: sync, enrich, embed with REAL LLMs."""
         repo = Path(repo_path)
         if not repo.exists():
             print(f"⚠️  Repo not found: {repo_path}")
@@ -217,22 +217,83 @@ class RAGService:
         
         print(f"🔄 Processing {repo.name}...")
         
-        # Step 1: Sync changed files (git diff based)
-        success, output = self.run_rag_cli(repo, ["sync", "--since", "HEAD~1"])
-        if not success:
-            print(f"  ⚠️  Sync failed: {output[:100]}")
+        # Import proper runner functions
+        import sys
+        if str(repo) not in sys.path:
+            sys.path.insert(0, str(repo))
         
-        # Step 2: Enrich pending spans
-        success, output = self.run_rag_cli(repo, ["enrich", "--execute"])
-        if not success:
-            print(f"  ⚠️  Enrichment had failures")
+        try:
+            from tools.rag.runner import run_enrich, run_sync, run_embed, detect_changes
+            from tools.rag.config import index_path_for_write
+        except ImportError as e:
+            print(f"  ⚠️  Failed to import RAG runner: {e}")
+            return
         
-        # Step 3: Embed pending spans
-        success, output = self.run_rag_cli(repo, ["embed", "--execute"])
-        if not success:
-            print(f"  ⚠️  Embedding failed: {output[:100]}")
+        # Step 1: Detect and sync changed files
+        try:
+            index_path = index_path_for_write(repo)
+            changes = detect_changes(repo, index_path=index_path)
+            if changes:
+                run_sync(repo, changes)
+                print(f"  ✅ Synced {len(changes)} changed files")
+            else:
+                print(f"  ℹ️  No file changes detected")
+        except Exception as e:
+            print(f"  ⚠️  Sync failed: {e}")
+            # Continue anyway - enrichment might still work
         
-        print(f"  ✅ {repo.name} processed")
+        # Step 2: Enrich pending spans with REAL LLMs
+        try:
+            backend = os.getenv("ENRICH_BACKEND", "ollama")
+            router = os.getenv("ENRICH_ROUTER", "on")
+            start_tier = os.getenv("ENRICH_START_TIER", "7b")
+            batch_size = int(os.getenv("ENRICH_BATCH_SIZE", "5"))
+            max_spans = int(os.getenv("ENRICH_MAX_SPANS", "50"))
+            cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
+            
+            print(f"  🤖 Enriching with: backend={backend}, router={router}, tier={start_tier}")
+            run_enrich(
+                repo,
+                backend=backend,
+                router=router,
+                start_tier=start_tier,
+                batch_size=batch_size,
+                max_spans=max_spans,
+                cooldown=cooldown
+            )
+            print(f"  ✅ Enriched pending spans with real LLM summaries")
+        except Exception as e:
+            print(f"  ⚠️  Enrichment failed: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        # Step 3: Generate embeddings for enriched spans
+        try:
+            embed_limit = int(os.getenv("ENRICH_EMBED_LIMIT", "100"))
+            run_embed(repo, limit=embed_limit)
+            print(f"  ✅ Generated embeddings (limit={embed_limit})")
+        except Exception as e:
+            print(f"  ⚠️  Embedding failed: {e}")
+        
+        # Step 4: Quality check (if enabled)
+        if os.getenv("ENRICH_QUALITY_CHECK", "on").lower() == "on":
+            try:
+                from tools.rag.quality import run_quality_check, format_quality_summary
+                result = run_quality_check(repo)
+                print(format_quality_summary(result, repo.name))
+                
+                # Log quality issues
+                if result['status'] == 'FAIL':
+                    self.tracker.record_failure(
+                        str(repo),
+                        f"Quality check failed: score {result['quality_score']:.1f}%, "
+                        f"{result['fake_count']} fake, {result['empty_count']} empty, "
+                        f"{result['low_quality_count']} low-quality"
+                    )
+            except Exception as e:
+                print(f"  ⚠️  Quality check failed: {e}")
+        
+        print(f"  ✅ {repo.name} processing complete")
     
     def get_repo_stats(self, repo_path: str) -> dict:
         """Get stats for a repo."""
@@ -459,3 +520,5 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+
+# INCREMENTAL TEST - will add 0-1 spans

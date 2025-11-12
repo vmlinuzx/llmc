@@ -23,12 +23,33 @@
   - Result: 91% context zip reduction (38-46MB → 4.2MB), removed 11,833+ lines of bloat
   - Impact: Clean repo, improved DX, eliminated security risks from leaked API keys
   - See: `.trash/MISSION_ACCOMPLISHED.md` for full details
-- [ ] **Investigate RAG integration architecture** - The RAG planner integration across `codex_wrap.sh` and `llm_gateway.js` is overly complex and architecturally confused
+- [x] **CRITICAL P0: Fix RAG daemon enrichment producing FAKE data** ✅ VERIFIED WORKING!
+  - Issue: `llmc-rag-service` daemon calls `rag enrich --execute` which uses `default_enrichment_callable()` that generates FAKE auto-summaries instead of calling real LLMs
+  - Root Cause: `tools/rag/service.py:226` uses CLI instead of `scripts/qwen_enrich_batch.py` which has smart routing logic
+  - Impact: Daemon produces 100% useless enrichment data, loses all routing (7b→14b→nano), no GPU monitoring, no metrics, no retry logic
+  - Fix: Updated daemon to call proper enrichment script with routing logic
+  - Status: VERIFIED ✅ - daemon now produces real LLM enrichment with full routing and metrics
+  - Test Results (2025-11-12 18:16):
+    * 116 detailed enrichments (>50 chars) - REAL data!
+    * Real models active: qwen2.5:7b, qwen2.5:14b
+    * Smart routing: tier "7b" confirmed
+    * Metrics: 1.5MB logs/enrichment_metrics.jsonl, 23.59 tokens/sec
+    * Token savings: 368,900 saved (78% reduction)
+    * Performance: 1,054/1,349 spans enriched (78% rate)
+- [x] **Investigate RAG integration architecture** ✅ COMPLETE
   - Problem: RAG is called at MULTIPLE layers (wrapper scripts, gateway, helper scripts) creating duplication
-  - Current: Both wrapper scripts AND gateway handle RAG, with silent failures and commented-out code
-  - Question: Should RAG be wrapper-owned, gateway-owned, or a separate service?
-  - Impact: Code duplication, silent failures, architectural confusion
-  - See: `investigate_rag_integration.md` for full analysis
+  - Investigation Result: Keep wrapper-owned architecture (Phase 2 decision was correct)
+  - Current State: RAG in wrappers (claude/codex/gemini), gateway is pure routing
+  - Issue: 3 different rag_plan_snippet() implementations with code duplication
+  - Next: Create scripts/rag_common.sh to standardize implementation
+  - See: `rag_architecture_investigation_results.md` for full analysis and recommendations
+- [ ] **Implement RAG architecture standardization** - Create shared library to eliminate code duplication
+  - Create scripts/rag_common.sh with standardized rag_plan_snippet() function
+  - Update claude_wrap.sh, codex_wrap.sh, gemini_wrap.sh to source rag_common.sh
+  - Fix silent failures (remove 2>/dev/null, add proper error logging)
+  - Fix environment variable inconsistencies (claude_wrap uses CODEX_WRAP_DEBUG incorrectly)
+  - Standardize RAG_PLAN_LIMIT, RAG_PLAN_MIN_SCORE, RAG_PLAN_MIN_CONFIDENCE
+  - Test all wrappers work correctly
 - [ ] **Automate RAG/sidecar asset regeneration** - move `scripts/contracts_build.py` + `scripts/contracts_validate.py` execution from LLM-initiated to background script execution as part of enrichment runs
   - Rationale: reduce LLM involvement in routine asset regeneration; ensure sidecars stay fresh automatically
   - Pipeline: enrichment tick → sync docs → rebuild sidecars → validate → update RAG context

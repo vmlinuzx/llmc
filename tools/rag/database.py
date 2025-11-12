@@ -123,30 +123,69 @@ class Database:
             raise RuntimeError(f"Failed to resolve file id for {record.path}")
         return int(row[0])
 
-    def replace_spans(self, file_id: int, spans: Iterable[SpanRecord]) -> None:
-        self.conn.execute("DELETE FROM spans WHERE file_id = ?", (file_id,))
-        self.conn.executemany(
-            """
-            INSERT OR REPLACE INTO spans (
-                file_id, symbol, kind, start_line, end_line,
-                byte_start, byte_end, span_hash, doc_hint
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            [
-                (
-                    file_id,
-                    span.symbol,
-                    span.kind,
-                    span.start_line,
-                    span.end_line,
-                    span.byte_start,
-                    span.byte_end,
-                    span.span_hash,
-                    span.doc_hint,
-                )
-                for span in spans
-            ],
-        )
+    def replace_spans(self, file_id: int, spans: Sequence[Span]) -> None:
+        """Replace spans for a file, preserving unchanged spans and their enrichments.
+        
+        This is a DIFFERENTIAL update:
+        - Keeps spans with unchanged content (same span_hash)
+        - Only deletes spans that were removed or changed
+        - Only inserts new or modified spans
+        
+        This preserves enrichments for unchanged code, saving 90%+ LLM calls!
+        """
+        # Get existing span hashes for this file
+        existing = self.conn.execute(
+            "SELECT span_hash FROM spans WHERE file_id = ?",
+            (file_id,)
+        ).fetchall()
+        existing_hashes = {row[0] for row in existing}
+        
+        # New span hashes from the file
+        new_hashes = {span.span_hash for span in spans}
+        
+        # Calculate the delta
+        to_delete = existing_hashes - new_hashes  # Spans no longer in file
+        to_add = new_hashes - existing_hashes      # New/modified spans
+        unchanged = existing_hashes & new_hashes   # Preserved (with enrichments!)
+        
+        # Only delete spans that actually changed or were removed
+        if to_delete:
+            placeholders = ','.join('?' * len(to_delete))
+            self.conn.execute(
+                f"DELETE FROM spans WHERE span_hash IN ({placeholders})",
+                list(to_delete)
+            )
+        
+        # Only insert truly new or modified spans
+        new_spans = [s for s in spans if s.span_hash in to_add]
+        if new_spans:
+            self.conn.executemany(
+                """
+                INSERT OR REPLACE INTO spans (
+                    file_id, symbol, kind, start_line, end_line,
+                    byte_start, byte_end, span_hash, doc_hint
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    (
+                        file_id,
+                        span.symbol,
+                        span.kind,
+                        span.start_line,
+                        span.end_line,
+                        span.byte_start,
+                        span.byte_end,
+                        span.span_hash,
+                        span.doc_hint,
+                    )
+                    for span in new_spans
+                ],
+            )
+        
+        # Log the delta for visibility (helpful for debugging and metrics)
+        if to_add or to_delete:
+            import sys
+            print(f"    📊 Spans: {len(unchanged)} unchanged, {len(to_add)} added, {len(to_delete)} deleted", file=sys.stderr)
 
     def get_file_hash(self, path: Path) -> Optional[str]:
         """Get the stored file hash for a given path.

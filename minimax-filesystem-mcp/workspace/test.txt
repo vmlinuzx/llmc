@@ -1,0 +1,1 @@
+Hello, MiniMax Filesystem MCP! Working perfectly!
