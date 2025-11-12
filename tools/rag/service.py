@@ -122,7 +122,7 @@ class FailureTracker:
         self.conn.commit()
     
     def record_failure(self, span_hash: str, repo: str, reason: str):
-        """Record a failure, increment count."""
+        """Record a span-level failure, increment count."""
         now = datetime.now(timezone.utc).isoformat()
         self.conn.execute("""
             INSERT INTO failures (span_hash, repo, failure_count, last_attempted, reason)
@@ -132,6 +132,12 @@ class FailureTracker:
                 last_attempted = ?,
                 reason = ?
         """, (span_hash, repo, now, reason, now, reason))
+
+    def record_repo_failure(self, repo: str, reason: str):
+        """Record a repository-level failure."""
+        # Use a special span_hash for repo-level failures
+        span_hash = f"repo:{repo}"
+        self.record_failure(span_hash, repo, reason)
         self.conn.commit()
     
     def is_failed(self, span_hash: str, repo: str) -> bool:
@@ -284,11 +290,12 @@ class RAGService:
                 
                 # Log quality issues
                 if result['status'] == 'FAIL':
-                    self.tracker.record_failure(
+                    self.tracker.record_repo_failure(
                         str(repo),
                         f"Quality check failed: score {result['quality_score']:.1f}%, "
-                        f"{result['fake_count']} fake, {result['empty_count']} empty, "
-                        f"{result['low_quality_count']} low-quality"
+                        f"{result.get('placeholder_count', 0)} placeholder, "
+                        f"{result.get('empty_count', 0)} empty, "
+                        f"{result.get('short_count', 0)} short"
                     )
             except Exception as e:
                 print(f"  ⚠️  Quality check failed: {e}")
