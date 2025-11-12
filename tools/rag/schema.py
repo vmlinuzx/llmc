@@ -17,10 +17,21 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from tree_sitter import Node
+# tree_sitter import deferred to v2 - not needed for Python AST parsing
+# from tree_sitter import Node
 
-from .lang import parse_source, language_for_path
-from .types import SpanRecord
+# Minimal language detection without tree-sitter dependency
+def language_for_path(path: Path) -> Optional[str]:
+    """Simple file extension-based language detection"""
+    ext = path.suffix.lower()
+    lang_map = {
+        '.py': 'python',
+        '.ts': 'typescript',
+        '.js': 'javascript',
+        '.java': 'java',
+        '.go': 'go',
+    }
+    return lang_map.get(ext)
 
 
 @dataclass
@@ -347,46 +358,11 @@ def build_schema_graph(repo_root: Path, file_paths: List[Path]) -> SchemaGraph:
     seen_relations = set()
     for relation in all_relations:
         key = (relation.src, relation.edge, relation.dst)
+        if key not in seen_relations:
+            graph.relations.append(relation)
+            seen_relations.add(key)
     
-    Returns:
-        SchemaGraph with all entities and relations
-    """
-    from datetime import datetime
-    
-    graph = SchemaGraph(
-        indexed_at=datetime.utcnow().isoformat() + "Z",
-        repo=str(repo_root),
-    )
-    
-    all_entities = []
-    all_relations = []
-    
-    for file_path in file_paths:
-        entities, relations = extract_schema_from_file(file_path)
-        all_entities.extend(entities)
-        all_relations.extend(relations)
-    
-    # Deduplicate entities by ID
-    seen_ids = set()
-    for entity in all_entities:
-        if entity.id not in seen_ids:
-            graph.entities.append(entity)
-            seen_ids.add(entity.id)
-    
-    # Deduplicate relations
-    seen_relations = set()
-    for relation in all_relations:
-        key = (relation.src, relation.edge, relation.dst)
-    
-    Returns:
-        SchemaGraph with all entities and relations
-    """
-    from datetime import datetime
-    
-    graph = SchemaGraph(
-        indexed_at=datetime.utcnow().isoformat() + "Z",
-        repo=str(repo_root),
-    )
+    return graph
     
     all_entities = []
     all_relations = []

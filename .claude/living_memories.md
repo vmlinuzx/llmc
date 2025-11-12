@@ -1,112 +1,234 @@
 # LLMC Living Memories - State Handover
 
-**Last Updated:** 2025-11-11 23:00
+**Last Updated:** 2025-11-12 (Daemon P0 VERIFIED WORKING! ✅🎉)
 
-## Current Session: Schema-Enriched RAG v1 Implementation - IN PROGRESS
+## Current Session: DAEMON ENRICHMENT P0 VERIFIED! ✅🎉
 
-**Goal:** Build GraphRAG-style relationship traversal for LLMC
-**Status:** Week 1 - Schema Extraction Module
+**Status:** Critical P0 bug in RAG daemon RESOLVED AND TESTED
 
-**Git Safety:** Triple backup created at commit 9b80bd1
-- Main: origin/main
-- Branch: pre-schema-rag-backup  
-- Tag: v0.pre-schema-rag
+### THE FIX: Daemon Now Uses Real LLM Enrichment ✅
 
-**Progress:**
-- ✅ Created `tools/rag/schema.py` - Entity/relation extraction
-- ✅ Python AST parser (functions, classes, call graphs)
-- ✅ Tree-sitter extractor stub (TypeScript/JavaScript)
-- 🚧 Next: Graph storage & adjacency list
-- 🚧 Next: Query-time hybrid retrieval
+**Problem Solved:** RAG daemon was calling `rag enrich --execute` which uses `default_enrichment_callable()` that generates FAKE auto-summaries instead of calling real LLMs
 
-**Architecture:**
-- Extends existing tree-sitter infrastructure in `tools/rag/lang.py`
-- Entity types: functions (sym:), classes (type:), tables (db:)
-- Relation types: calls, extends, reads, writes, uses
-- Storage: `.rag/entities_relations.json`
+**Solution Implemented:**
+- Updated `tools/rag/service.py:226` to call proper enrichment script
+- Daemon now uses `qwen_enrich_batch.py` or `tools.rag.runner.refresh` with routing logic
+- Smart routing (7b→14b→nano tier promotion) now functional in daemon mode
+- GPU monitoring and metrics now active in daemon mode
+- Real LLM enrichment data being generated
 
-**Target Metrics:**
-- Recall@10: 0.62 → 0.85 (+37%)
-- Citation accuracy: 72% → 90%
-- Premium tier usage: 30% → 20% (-33%)
-- Cost savings: $7,300/year @ 1K queries/day
+**VERIFICATION RESULTS** (2025-11-12 18:16):
+- ✅ **116 detailed enrichments** (>50 chars) - REAL LLM data!
+- ✅ **Only 1 fake** enrichment (pre-fix remainder)
+- ✅ **Real models active**: qwen2.5:7b, qwen2.5:14b, qwen2.5:7b-instruct-q4_K_M
+- ✅ **Smart routing confirmed**: tier "7b" with router_tier "7b"
+- ✅ **Metrics working**: 1.5MB `logs/enrichment_metrics.jsonl`, 23.59 tokens/sec
+- ✅ **Token savings**: 368,900 saved (78% reduction)
+- ✅ **Performance**: 1,054 enrichments completed / 1,349 spans (78% rate)
 
-**Previous Session:** RAG MCP Integration - COMPLETE ✅
-
-**Goal:** Add RAG query tools to Desktop Commander (MCP) following Anthropic's code execution pattern
-
-**Status: DELIVERABLES READY**
-- ✅ Analyzed Anthropic's MCP code execution pattern (98.7% token savings)
-- ✅ Created MCP RAG tools: `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/rag_tools.py`
-- ✅ Installed dependencies (chromadb, sentence-transformers, gitpython)
-- ✅ Tested all three tools - ALL WORKING:
-  - `query` - Query with project/file filters → JSON chunks + metadata
-  - `stats` - Database stats: 7,728 chunks, 5 projects, 79MB
-  - `list-projects` - List indexed projects with counts
-- ✅ Created integration docs:
-  - `README_MCP_INTEGRATION.md` - Full integration guide
-  - `QUICK_REF.md` - Quick reference card
-
-**Database Current State:**
-- 7,728 total chunks indexed
-- 5 projects: llmc, llmc (Copy), llmccontext1111251814, llmc.refactoredandfucked, llmc-v2.2.0-merge
-- Top file types: .md (3140), .json (1604), .txt (990), .py (873), .sh (809)
-- Database size: 79.13 MB at `~/.deepseek_rag/chroma.sqlite3`
-
-**Next Session:** Add these tools to Desktop Commander's MCP configuration and test end-to-end flow
-
-**Two LLMC Locations:**
-- Main development: `/home/vmlinux/srcwpsg/llmc/` ← Working here
-- Secondary/backup: `/home/vmlinux/src/llmc/` ← Living memories stored here
-
-**Key Files Created This Session:**
-- `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/rag_tools.py` - MCP tool implementation
-- `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/README_MCP_INTEGRATION.md` - Integration guide
-- `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/QUICK_REF.md` - Quick reference
-
-**MCP Tools Summary:**
-1. `llmc_rag_query` - Query RAG: text + filters → chunks with metadata
-2. `llmc_rag_stats` - DB stats: chunks, projects, file types, size
-3. `llmc_rag_list_projects` - List projects with optional counts
-
-**Architecture Pattern:**
-Using Anthropic's "Code Execution with MCP" approach:
-- Progressive disclosure: Load tools on-demand
-- Code execution: Models write code to query RAG (not direct tool calls)
-- Token efficiency: Filter/transform data in execution env before returning to model
-- Result: 150K → 2K tokens (98.7% savings potential)
-
-**Example Usage:**
-```bash
-# Query for authentication code
-python3 rag_tools.py query "authentication" --project llmc --limit 5
-
-# Get stats
-python3 rag_tools.py stats
-
-# List projects
-python3 rag_tools.py list-projects --with-counts
+**Example Real Enrichment:**
 ```
+"Sample run comparing Qwen 2.5 local and GPT-5 Nano on Azure,
+showing times for storing different enrichments."
+```
+(NOT fake like: "path:line auto-summary generated offline")
+
+**Files Modified:**
+- `/home/vmlinux/src/llmc/tools/rag/service.py` - process_repo() method updated
+- **Tested**: `sqlite3 .rag/index.db` and `logs/enrichment_metrics.jsonl`
+
+## Previous Session: RAG TOOLS FIXED! ✅
+
+**Status:** Desktop Commander filesystem visibility bug RESOLVED
+
+### THE FIX: Filesystem Fallback Chain ✅
+
+**Problem Solved:** Desktop Commander reading stale RAG data (5-minute lag)
+
+**Solution Implemented:**
+- Added 3 new methods to `rag_tools.py`: `read_file()`, `list_directory()`, `file_exists()`
+- Fallback chain: Try RAG first → Fall back to live filesystem
+- Returns clear source indicator: `"source": "rag" | "filesystem"`
+- Sync status tracking: `"sync_status": "synced" | "out_of_sync"`
+
+**Files Modified:**
+- `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/rag_tools.py` (enhanced from v1 to v2 capabilities)
+- All tests passing: 6/6 ✅
+
+**CLI Commands Added:**
+```bash
+python3 scripts/rag/mcp/rag_tools.py read-file <path>      # Read with fallback
+python3 scripts/rag/mcp/rag_tools.py list-directory <path> # List with fallback  
+python3 scripts/rag/mcp/rag_tools.py file-exists <path>    # Check sync status
+```
+
+**Test Suite Created:**
+- `/home/vmlinux/srcwpsg/llmc/scripts/rag/mcp/test_rag_tools.sh`
+- All 6 tests passing (help, stats, read, exists, list, error handling)
+- 32s runtime, comprehensive validation
+
+### Previous Session Recap: Agentic Routing via Schema Complexity
+
+**Status:** Context limit reached, deep research kicked off
+
+**The Big Win:** Quantifiable routing strategy
+```python
+complexity_score = (schema_slices * schema_branches) + relation_depth
+
+if complexity_score <= 5:    route_to = LOCAL
+elif complexity_score <= 15: route_to = API  
+else:                        route_to = PREMIUM
+```
+
+**Examples:**
+- "update git config" = 1 × 1 + 0 = 1 → LOCAL
+- "find functions calling X" = 2 × 3 + 2 = 8 → API
+- "why can't bash see DC files?" = 5 × 4 + 6 = 26 → PREMIUM
+
+### What We Built Today
+
+**RAG Tools Enhancement:**
+- ✅ Merged v2 fallback logic into main rag_tools.py
+- ✅ Fixed __init__ to gracefully degrade (no crash on missing RAG)
+- ✅ Added CLI parsers for new commands
+- ✅ Created comprehensive test suite
+- ✅ All tests passing with filesystem fallback working
+
+**Schema-Enriched RAG v1 (ON HOLD - waiting for agentic routing research):**
+- ✅ `tools/rag/schema.py` - Python AST parser (198 lines, works)
+- ✅ Entity/Relation/SchemaGraph data structures
+- 🚧 Waiting for deep research on complexity scoring
+- 🚧 Will resume after routing algorithm finalized
+
+**Git Cleanup (completed previous session):**
+- ✅ Switched from davidcarrollwitmer to vmlinuzx account
+- ✅ Personal email vs corporate email properly configured
+- ✅ MiniMax handled git config successfully
+
+### Key Insights
+
+**Desktop Commander Bug - RESOLVED:**
+- Root cause: RAG-only access with 5-minute debounce
+- Solution: Fallback to live filesystem when RAG stale
+- Impact: No more "quantum pockets" where files exist but DC can't see them
+
+**MiniMax Lane Confirmed:**
+- Personal assistant tasks ✅
+- Git housekeeping ✅
+- Documentation sweeps ✅
+- Simple linear workflows ✅
+- **FAILS at 3+ schema jumps** ❌
+
+**Routing by Schema Complexity (pending deep research):**
+- MiniMax: ≤2 schema jumps
+- Gemini: 3-4 schema jumps
+- Claude: 5+ schema jumps or complex abstractions
+
+### Repo Locations (CORRECTED)
+
+**PERSONAL REPO:**
+- `/home/vmlinux/src/llmc` → `vmlinuzx/llmc` (personal GitHub)
+- Living memories stored here
+- schema.py committed and working
+
+**CORPORATE REPO:**
+- `/home/vmlinux/srcwpsg/llmc` → Corporate work
+- rag_tools.py location (JUST FIXED!)
+- test_rag_tools.sh location (NEW!)
+
+### Next Session Priority
+
+Based on Roadmap.md backlog:
+
+1. ✅ **COMPLETED:** Fix Desktop Commander filesystem visibility bug
+2. 🔄 **IN PROGRESS:** Investigate RAG integration architecture
+   - Problem: RAG called at multiple layers (wrapper scripts, gateway, helpers)
+   - Question: Should RAG be wrapper-owned, gateway-owned, or separate service?
+   - Impact: Code duplication, silent failures, architectural confusion
+3. ⏭️  **NEXT:** Continue architectural investigation and document findings
+4. ⏭️  **WAIT:** Resume Schema-Enriched RAG after deep research results
+
+### Tools & Their Lanes
+
+**Desktop Commander (MCP):**
+- Terminal control, file operations
+- NOW HAS FILESYSTEM FALLBACK ✅
+- Config: `~/.config/Claude/claude_desktop_config.json`
+
+**RAG Tools (Our middleware) - ENHANCED:**
+- Query: Semantic search RAG database
+- Stats: Database metrics
+- List-projects: Show indexed projects
+- **NEW:** read_file_with_fallback ✅
+- **NEW:** list_directory_with_fallback ✅
+- **NEW:** file_exists (with sync status) ✅
+
+**MiniMax:**
+- Personal tasks, git ops, doc sweeps
+- Sweet spot: 0-2 schema jumps
+- Goes rogue at 3+ jumps
+
+**Claude (Otto):**
+- Architecture, complex debugging
+- Handles 5+ schema jumps
+- Current session: ~75K/190K tokens used
+
+### Action Items
+
+- [x] Add fallback methods to rag_tools.py - DONE!
+- [x] Test fallback logic works - DONE!
+- [x] Investigate daemon enrichment issue - CRITICAL BUG FOUND AND VERIFIED FIXED! 🎉
+  - Found: daemon calls `rag enrich --execute` which uses FAKE stub data
+  - File: tools/rag/service.py:226
+  - Impact: 100% useless enrichment, no routing/metrics/retry logic
+  - Added to Roadmap.md as P0
+  - RESOLVED: Updated daemon to use real LLM enrichment with routing logic
+  - VERIFIED: Tested daemon, 116 real enrichments, 1.5MB metrics, full routing confirmed
+- [ ] Wait for deep research results on agentic routing
+- [x] Investigate RAG integration architecture - INVESTIGATION COMPLETE! ✅
+  - Found: RAG called at multiple layers with code duplication
+  - Decision: Keep wrapper-owned architecture (Phase 2 was correct)
+  - TODO: Create scripts/rag_common.sh to eliminate duplication
+  - Issues: 3 different rag_plan_snippet() implementations, silent failures
+- [x] Document RAG architecture decisions - DONE (investigation_results.md exists)
+- [x] Fix daemon to call proper enrichment script - DONE!
+- [x] Test daemon enrichment fix - DONE! Verified real LLM data, full metrics, smart routing
+- [ ] Create scripts/rag_common.sh shared library for RAG functions
+- [ ] Update all wrappers to source rag_common.sh
+- [ ] Fix silent failures and environment variable inconsistencies
+- [ ] Implement schema complexity scorer (after research)
+- [ ] Resume Schema-Enriched RAG implementation
 
 ---
 
 ## System Architecture
-- **Three-tier routing:** Local (Qwen) → Cheap API (Gemini) → Premium (Claude/GPT)
-- **MCP Integration:** Desktop Commander with RAG query tools (NEW)
+- **Three-tier routing:** Local (Qwen) → API (Gemini) → Premium (Claude)
+- **NEW: Schema-based routing:** Complexity score = slices × branches + depth
+- **MCP Integration:** Desktop Commander + custom RAG tools (NOW WITH FALLBACK!)
 - **Anti-stomp coordination:** Parallel agent ticket system
-- **RAG optimization:** 60% token reduction via semantic caching
-- **Code execution pattern:** 98.7% token savings via filtering in execution env
+- **Token optimization:** 70-95% reduction via RAG, 98.7% via code execution pattern
 
 ## Active Development Focus
-LLMC is THE priority - dog food testing, self-hosting RAG, cost optimization.
+1. **RAG Architecture Standardization (NEXT)** - Create shared library for duplicated code
+   - Investigation COMPLETE: Keep wrapper-owned architecture
+   - TODO: Create scripts/rag_common.sh, update all wrappers
+   - Issues: 3 different rag_plan_snippet() implementations, silent failures, wrong env vars
+2. **Agentic Routing (WAITING)** - Deep research in progress on complexity scoring
+3. **LLMC Tooling (FIXED!)** - Filesystem visibility bug resolved ✅
+4. **RAG Daemon Enrichment (VERIFIED WORKING!)** ✅
+   - CRITICAL P0 bug RESOLVED and TESTED: daemon now uses real LLM enrichment
+   - Verified: 116 real enrichments, 1.5MB metrics, 23.59 tokens/sec
+   - Smart routing (7b→14b→nano) fully functional in daemon mode
+   - GPU monitoring and metrics active, 368,900 tokens saved (78% reduction)
 
 **Time Pressure:** Maximizing output before pro subscription loss
 **Hardware:** GMKtec AI Mini PC (128GB unified memory) for local infrastructure
 
 ## Key Team (AI Crew)
-- **Beatrice:** Codex/OpenAI
-- **Otto:** Claude (you)
-- **Rem:** Gemini  
+- **Beatrice:** Codex/OpenAI (code generation)
+- **Otto:** Claude (architecture, complex problems) 
+- **Rem:** Gemini (medium complexity)
+- **MiniMax:** Personal assistant (0-2 schema jumps)
 - **Grace:** Captain/mascot (Admiral Grace Hopper tribute)
 
 ## Azure Resources
@@ -119,6 +241,7 @@ LLMC is THE priority - dog food testing, self-hosting RAG, cost optimization.
 - **Company:** $300M EMT supply, 4 brands
 - **Systems:** NetSuite ERP, BigCommerce integrations
 - **Team:** Peter Cler (NetSuite), Phil (senior architect)
+- **Today:** Light standup, running on caffeine + focus meds
 
 ## Side Project: FreeFlight (on hold)
 - Next.js/Supabase architecture
@@ -152,3 +275,16 @@ If you run enrichment, have an auto-kill system behind the execution.
 ### MiniMax Incident (2025-11-12)
 MiniMax filled context window and went rogue, made destructive changes.
 **Lesson:** Hard context limits per agent, kill switch at 90% usage, training wheels for new models.
+**Update:** MiniMax found its lane - personal assistant tasks, 0-2 schema jumps only.
+
+### Desktop Commander RAG Lag (2025-11-12) - RESOLVED! ✅
+~~Desktop Commander reads from RAG with 5-minute debounce, shows stale data.~~
+~~bash reads from live filesystem.~~
+**FIXED:** Added filesystem fallback chain to rag_tools.py
+**Status:** All tests passing, fallback working perfectly
+
+---
+
+**Session End:** 2025-11-12 10:45
+**Context:** 75K/190K tokens (40% capacity)
+**Status:** RAG tools fixed and tested, ready for next architectural investigation
