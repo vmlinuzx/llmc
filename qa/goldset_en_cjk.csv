@@ -1,0 +1,17 @@
+row_id,summary,has_cjk,expected_class,notes
+row001,LLMC配置系统提供一种灵活的三级管理应用设置的方法，并自动处理优先级。,yes,OK,CJK ≥ 10 chars
+row002,迁移旧配置格式以创建新的默认配置，涵盖嵌入、存储和增强等功能。,yes,OK,CJK ≥ 10 chars
+row003,初始化方法，接受数据字典并缓存环境变量。,yes,OK,CJK adequate length
+row004,配置系统,yes,SHORT,CJK too short (edge)
+row005,Initialize configuration,no,OK,"2 tokens, fine for label"
+row006,Validate configuration,no,OK,2 tokens
+row007,Enable enrichment,no,OK,2 tokens
+row008,Cost-Sensitive Usage,no,OK,3 tokens
+row009,Init,no,SHORT,1 token + short
+row010,-,no,PLACEHOLDER,punctuation placeholder
+row011,—,no,PLACEHOLDER,em dash
+row012,...,no,PLACEHOLDER,ellipsis
+row013,***,no,PLACEHOLDER,asterisks
+row014,auto-summary generated offline.,no,PLACEHOLDER,known fake text
+row015,"  	
+",no,EMPTY,whitespace only
