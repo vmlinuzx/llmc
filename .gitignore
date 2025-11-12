@@ -64,3 +64,9 @@ gha-creds-*.json
 
 # User input/test data (never commit test files)
 user_input_files/
+
+
+# Binary garbage that keeps appearing
+sys
+json
+click
