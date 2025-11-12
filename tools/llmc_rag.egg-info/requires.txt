@@ -1,0 +1,16 @@
+click>=8.1.7
+jsonschema>=4.23.0
+tree_sitter==0.20.1
+tree_sitter_languages==1.9.1
+pydantic>=2.7.0
+requests>=2.31.0
+
+[api]
+fastapi>=0.111
+uvicorn[standard]>=0.30
+
+[embed]
+sentence-transformers>=3.0.0
+
+[embed:platform_machine != "armv7l"]
+torch>=2.1.0

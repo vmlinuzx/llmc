@@ -1,0 +1,13 @@
+# List of paths (globs) to include when syncing context (whitelist mode)
+# Rename to `.codexactive` to enable. When present, only these paths are synced.
+
+# Examples:
+AGENTS.md
+CONTRACTS.md
+.clinerules
+.codexignore
+DOCS/**/*.md
+scripts/codex_wrap.sh
+scripts/llm_gateway.js
+scripts/llm_gateway.sh
+scripts/sync_to_drive.sh

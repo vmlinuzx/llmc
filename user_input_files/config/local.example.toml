@@ -1,0 +1,44 @@
+# LLMC Local Configuration Example
+# Copy this file to local.toml and modify for your project
+
+# Provider API Keys
+[providers.claude]
+api_key = "your-claude-api-key"
+
+[providers.gemini]
+api_key = "your-gemini-api-key"
+
+[providers.openai]
+api_key = "your-openai-api-key"
+
+[providers.azure]
+api_key = "your-azure-api-key"
+
+# LLM Settings
+[llm]
+model = "claude-3-sonnet"
+temperature = 0.7
+
+# Storage Paths (override defaults)
+[storage]
+index_path = ".rag/index_v2.db"
+
+# Enrichment Settings
+[enrichment]
+enabled = true
+model = "gpt-4o-mini"
+
+# Custom Paths
+[paths]
+project_root = "."
+cache_dir = ".cache"
+temp_dir = ".tmp"
+
+# Enable caching
+[cache]
+enabled = true
+
+# Enable monitoring
+[monitoring]
+metrics_enabled = true
+health_checks = true

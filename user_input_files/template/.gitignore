@@ -1,0 +1,19 @@
+node_modules
+.next
+.env*
+supabase/.temp
+dist
+
+# OS/installer packages
+*.deb
+
+# Archived files
+.old/
+.cache/
+
+# Python virtual environments
+scripts/rag/.venv/
+.venv/
+venv/
+__pycache__/
+*.pyc

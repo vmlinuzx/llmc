@@ -1,0 +1,10 @@
+# .codex/presets/enrich_7b_ollama.yaml
+options:
+  num_ctx: 16384
+  num_gpu: 99
+  num_batch: 512
+  num_thread: 8
+  temperature: 0.0
+  top_p: 1.0
+  repeat_penalty: 1.0
+keep_alive: "15m"

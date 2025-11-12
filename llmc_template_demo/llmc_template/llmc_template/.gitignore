@@ -1,0 +1,32 @@
+# Local configuration
+config/local.toml
+
+# Runtime data
+.llmc/
+.llmc/index/
+.llmc/cache/
+.llmc/logs/
+
+# Template build artifacts
+llmc_template/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg

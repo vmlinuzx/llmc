@@ -1,0 +1,3 @@
+# LLMC Textual TUI Dependencies
+textual>=6.6.0
+rich>=14.0.0

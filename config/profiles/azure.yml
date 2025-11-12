@@ -1,0 +1,93 @@
+# Azure OpenAI Provider Configuration
+# Microsoft's Azure OpenAI Service integration
+
+name: azure
+display_name: "Azure OpenAI"
+description: "Microsoft Azure OpenAI Service with enterprise features"
+
+# Provider settings
+provider:
+  type: "openai_compatible"
+  enabled: false  # Requires environment configuration
+  base_url_env: "AZURE_OPENAI_ENDPOINT"
+  api_key_env: "AZURE_OPENAI_KEY"
+  
+# Required environment variables
+environment:
+  required:
+    - "AZURE_OPENAI_ENDPOINT"
+    - "AZURE_OPENAI_KEY" 
+    - "AZURE_OPENAI_DEPLOYMENT"
+  optional:
+    - "AZURE_OPENAI_API_VERSION"
+
+# Model configuration
+model:
+  deployment_env: "AZURE_OPENAI_DEPLOYMENT"
+  parameters:
+    temperature: 0.1
+    top_p: 0.9
+    max_tokens: 4096
+    api_version: "2024-02-15-preview"  # Can be overridden
+
+# Authentication
+auth:
+  method: "api_key"
+  header_format: "api-key"  # Azure-specific header
+  token_prefix: ""
+
+# Context and memory
+context:
+  max_context_length: 128000
+  summary_threshold: 0.8
+  compression_ratio: 0.1
+
+# Features
+features:
+  tools: true
+  function_calling: true
+  streaming: true
+  vision: true  # For GPT-4V models
+  fine_tuning: false
+
+# Performance settings
+performance:
+  timeout: 300
+  retry_attempts: 3
+  rate_limit:
+    requests_per_minute: 3000  # Azure rate limits
+    tokens_per_minute: 40000
+
+# Cost optimization
+cost:
+  tier: "enterprise"
+  budget_alerts: true
+  usage_tracking: true
+  per_request_tracking: true
+
+# Integration settings
+integration:
+  settings_file_env: "CLAUDE_SETTINGS"  # Optional settings file
+  create_settings: true  # Auto-generate settings file
+  environment_variables:
+    - "AZURE_OPENAI_ENDPOINT"
+    - "AZURE_OPENAI_KEY"
+    - "AZURE_OPENAI_DEPLOYMENT"
+    - "AZURE_OPENAI_API_VERSION"
+
+# Supported models
+supported_models:
+  - "gpt-4"
+  - "gpt-4-turbo"
+  - "gpt-4o"
+  - "gpt-35-turbo"
+  - "gpt-4-vision-preview"
+
+# Use cases
+use_cases:
+  - "enterprise_development"
+  - "compliance_requirements"
+  - "data_residency"
+  - "high_volume_processing"
+  - "cost_optimization"
+  - "regional_deployment"

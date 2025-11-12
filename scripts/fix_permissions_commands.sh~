@@ -1,0 +1,9 @@
+# Make all shell scripts executable
+find llmc_template -name "*.sh" -exec chmod +x {} \;
+
+# Make the deploy script executable  
+chmod +x llmc_template/deploy.py
+
+# Show what we made executable
+echo "📝 Made executable:"
+find llmc_template -type f \( -name "*.sh" -o -name "deploy.py" \) -exec ls -la {} \;
