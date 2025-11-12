@@ -32,6 +32,7 @@ contracts.sidecar.sha256
 .rag/*.db-*
 .rag/*.jsonl
 .rag/*.lock
+.contract/
 
 node_modules/
 *.zip
@@ -50,5 +51,16 @@ logs/*
 # Codex TUI artifacts (API tokens, sessions, etc.)
 .codex/
 
+# Aider (AI pair programming tool) artifacts
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# Build artifacts and logs
+.artifacts/
+
 .gemini/
 gha-creds-*.json
+
+# User input/test data (never commit test files)
+user_input_files/
