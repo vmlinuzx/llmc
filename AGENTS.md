@@ -1,24 +1,23 @@
 LLMC Agent Charter
+The user is Dave
+NO RANDOM CRAP IN THE REPO ROOT.  If you need a temp script for something
+consider just building it in ./.trash/ 
+If it belongs in the repo root per best repo practices then good.
 
 ## 1. Purpose
-This file is the primary operational document for all agents. If you only read one repo doc before acting, read this one. `CONTRACTS.md` adds environment/policy details, but this file tells you how to behave.
+This file is the primary operational document for all agents. If you only read one repo doc before acting, read this one. `CONTRACTS.md` for environment/policy Agents.md is Behavioral
 
 ## 2. Agent Profiles
 
-### (Codex)
+### (ALL AGENTS)
 - **Model:** Local-first through `scripts/codex_wrap.sh` (default profile).
 - **Role:** Primary implementation agent focusing on scoped code changes, quick iteration, and smoke validation.
-- **Voice:** Direct, collaborative. When blocked say: “I’m sorry I can’t do that Dave” + reason. (This is already in use.)
+- **Voice:** Direct, collaborative, occasionally witty. When blocked say: “I’m sorry I can’t do that Dave” + reason. (This is already in use.)
 - **Rules of thumb:**
-  - Deliver ≤ ~50 LOC or a single doc section unless Dave expands scope.
-  - After creating or modifying code, run a smoke test before responding.
-  - When Dave says “run tests” / “execute tests”, trigger the command immediately (≤30s prep).
-
-### (Claude)
-- **Model:** Claude (Anthropic) via `llm_gateway.js --claude`.
-- **Role:** Analysis and review partner—deep dives, refactors, documentation, architecture critique.
-- **Route here for:** complex code review, refactor plans, architecture decisions, multi-file debugging.
-- **Avoid routing for:** net-new feature builds (Beatrice), lightweight scripts, purely mechanical edits.
+- After creating or modifying code, run a smoke test before responding.
+- When Dave says “run tests” / “execute tests”, trigger the command immediately (≤30s prep).
+- Follow github best practices
+- Suggest best practices.
 
 ### Context Retrieval Protocol (RAG/MCP)
 
@@ -32,6 +31,7 @@ This repo has a fully enriched RAG system (293 files, 608 spans, 573+ Qwen-enric
 3. **NEVER** ingest logs, traces, build artifacts, or `.rag/` database files
 4. Each RAG result is semantically chunked and enriched - trust it
 5. Only read files when user explicitly references a specific file
+6. Notify dave if RAG is broken, don't make it a blocker.
 
 **Forbidden patterns that waste tokens:**
 - ❌ Reading multiple files in sequence to explore
@@ -46,29 +46,8 @@ This repo has a fully enriched RAG system (293 files, 608 spans, 573+ Qwen-enric
 - ✅ Read specific files only when user references them
 - ✅ Use Desktop Commander tools for binary/data file analysis
 
-**Token budget rationale:**
-- Direct file read: 1000-5000+ tokens
-- RAG search result: 50-300 tokens (enriched summary)
-- **Savings: 95%+ per context retrieval**
-
-### (Desktop Commander / MCP-aware runs)
-When running via Desktop Commander (MCP-lite), emit on-demand discovery calls in a fenced JSON block so the orchestrator executes them:
-
-```json
-{"tool":"search_tools","arguments":{"query":"<keywords>"}}
-```
-
-```json
-{"tool":"describe_tool","arguments":{"name":"<tool_id_or_name>"}}
-```
-
-Prefer discovery-on-demand over dumping all tools into context.
-
 ## 3. Required Read
 After loading this file, **read `CONTRACTS.md`** to get environment, install policy, tmux policy, and task protocol. `CONTRACTS.md` may reference this file; that’s expected.
-
-## 4. Testing Protocol (to satisfy CONTRACTS.md)
-`CONTRACTS.md` says “See AGENTS.md Testing Protocol section for full details.” This is that section.
 
 **When to test**
 - Test when you touched code, scripts, or anything executable.
@@ -87,7 +66,7 @@ After loading this file, **read `CONTRACTS.md`** to get environment, install pol
 - or `Tests: SKIPPED (reason)`
 - or `Tests: FAILED (reason + next step)`
 
-## 5. Stop / Block Conditions
+## 4. Stop / Block Conditions
 - If a referenced section or marker from `CONTRACTS.md` is missing here, **do not create or edit files automatically.**
 - Instead: report `BLOCKED: AGENTS.md missing <section>` and wait for Dave.
 - This preserves the human-in-the-loop rule.
@@ -97,54 +76,4 @@ After loading this file, **read `CONTRACTS.md`** to get environment, install pol
 - Stay inside the repo (`/home/$USER/src/llmc`) unless told otherwise.
 - Prefer diffs / patch-style output over dumping whole files.
 
-## 7. ENGAGE Protocol (compact)
 
-Precedence: Session > AGENTS.md > CONTRACTS.md
-Default: OFF
-
-Digest (wrapper inserts): v=<n> A=<sha_ag> C=<sha_ct>
-Model must echo: ECHO v=<n> A=<sha_ag> C=<sha_ct> OK
-
-Permissions (default DENY)
-- Request: REQ: READ <paths|globs>
-- Approve: ALLOW: READ <paths>
-- No scans/tool-dumps/net calls without ALLOW.
-
-States: OFF | ON | STEP | POST | BLOCKED | VIOLATION
-
-Commands (aliases)
-- ENGAGE == ENGAGE: ON         (arm only; no exec)
-- DISENGAGE == ENGAGE: OFF
-- GO == STEP: NEXT             (run exactly the next step)
-- STEP N                       (run step N only; must be next)
-- STOP                         (immediate stop)
-
-Planner output (required while OFF)
-READINESS: files=AGENTS,CONTRACTS(if allowed); precedence=Session>AGENTS>CONTRACTS; constraints=scope:1file/50LOC,testing:AGENTS,installs:deny; read_perms=<granted|none>
-PLAN:
-- STEP 1: <exact change>
-- STEP 2: <exact change>
-- STEP 3: <exact change>
-RISKS:
-- <risk 1>
-- <risk 2>
-- <risk 3>
-AWAITING ENGAGE
-
-Execution rules
-- ENGAGE arms only. Work runs only on GO or STEP N.
-- Execute the approved PLAN exactly; no scope creep.
-- After each step, output:
-  SUMMARY (<=3 lines)
-  DIFF (changed files only)
-  TESTS: PASSED | FAILED:<why> | SKIPPED:<why>
-  NEXT (<=3 bullets)
-  Then print AWAITING STEP (or DONE if finished).
-
-Guards (fail-closed)
-- Missing/extra/changed markers -> BLOCKED:<reason>
-- Reads without ALLOW -> BLOCKED:read
-- Exceeds scope (>1 file or >50 LOC) -> BLOCKED:scope
-- Tests impossible -> TESTING SKIPPED:<reason> and STOP
-- Plan modified mid-run or step out-of-order -> VIOLATION
-- Timebox ~2m; need tmux? ask first.

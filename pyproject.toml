@@ -3,32 +3,16 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llmc-rag"
-version = "0.3.1"
-description = "Production wrapper for a code-aware RAG engine: CLI/API, SQLite index, Docker/CI"
-readme = "README_SHIP.md"
-requires-python = ">=3.10"
-authors = [{name = "You"}]
-dependencies = [
-    "click>=8.1.7",
-    "jsonschema>=4.23.0",
-    "tree_sitter==0.20.1",
-    "tree_sitter_languages==1.9.1",
-    "pydantic>=2.7.0",
-    "requests>=2.31.0",
-]
-
-[project.optional-dependencies]
-api = ["fastapi>=0.111", "uvicorn[standard]>=0.30"]
-embed = ["sentence-transformers>=3.0.0", "torch>=2.1.0; platform_machine != 'armv7l'"]
-
-[tool.setuptools.packages.find]
-where = ["tools"]
-include = ["rag*"]
-
-[tool.setuptools.package-dir]
-"" = "tools"
+name = "llmcwrapper"
+version = "0.1.0"
+description = "Unixy LLM wrapper: shared adapter + dual CLIs for YOLO and RAG modes"
+authors = [{name="LLMC Core"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests>=2.31", "tomli; python_version<'3.11'"]
 
 [project.scripts]
-rag = "rag.cli:cli"
-
+llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
+llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
+llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
+llmc-profile = "llmcwrapper.cli.llmc_profile:main"

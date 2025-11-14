@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmcwrapper"
+version = "0.1.0"
+description = "Unixy LLM wrapper: shared adapter + dual CLIs for YOLO and RAG modes"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests>=2.31", "tomli; python_version<'3.11'"]
+
+[project.scripts]
+llmc-yolo   = "llmcwrapper.cli.llmc_yolo:main"
+llmc-rag    = "llmcwrapper.cli.llmc_rag:main"
+llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
+llmc-profile= "llmcwrapper.cli.llmc_profile:main"
+
+# ⬇️ Stop auto discovery; ship only this package
+[tool.setuptools]
+packages = [
+  "llmcwrapper",
+  "llmcwrapper.cli",
+  "llmcwrapper.providers",
+]
+package-dir = {"" = "."}

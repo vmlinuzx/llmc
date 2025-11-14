@@ -184,6 +184,23 @@ EOF
 ### With Quality Monitoring:
 ```
 🔄 Processing llmc...
+
+## Configuration (llmc.toml)
+
+Place at repo root (`llmc.toml`). Used for defaults; env/CLI override TOML.
+
+```
+[logging]
+max_file_size_mb = 10           # Non-JSONL truncate cap (MB)
+keep_jsonl_lines = 1000         # Tail lines for JSONL rotation
+enable_rotation = true          # Master on/off
+log_directory = "logs"          # Relative to repo root
+auto_rotation_interval = 0      # 0 => each service cycle
+
+[enrichment]
+batch_size = 50                 # Default if ENRICH_BATCH_SIZE unset
+```
+
   ✅ Synced 3 changed files
   🤖 Enriching with: backend=ollama, router=on, tier=7b
   ✅ Enriched pending spans with real LLM summaries

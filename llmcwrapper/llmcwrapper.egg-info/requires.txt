@@ -1,0 +1,4 @@
+requests>=2.31
+
+[:python_version < "3.11"]
+tomli

@@ -30,6 +30,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+try:  # Python 3.11+
+    import tomllib  # type: ignore
+except Exception:
+    tomllib = None  # type: ignore
+
+try:
+    # scripts is added to sys.path by scripts/llmc-rag-service wrapper
+    from scripts.llmc_log_manager import LLMCLogManager  # type: ignore
+except Exception:
+    LLMCLogManager = None  # type: ignore
+
 # State file location
 STATE_FILE = Path.home() / ".llmc" / "rag-service.json"
 FAILURE_DB = Path.home() / ".llmc" / "rag-failures.db"
@@ -192,11 +203,59 @@ class RAGService:
         self.state = state
         self.tracker = tracker
         self.running = True
+        # Load logging configuration for optional auto-rotation
+        self._repo_root = Path(__file__).resolve().parents[2]
+        self._logging_cfg = self._load_logging_cfg(self._repo_root)
+        self._toml_cfg = self._load_full_toml(self._repo_root)
+        self._last_rotate: float = 0.0
+        self._log_manager = None
+        if LLMCLogManager is not None:
+            max_mb = int(self._logging_cfg.get("max_file_size_mb", 10))
+            keep_lines = int(self._logging_cfg.get("keep_jsonl_lines", 1000))
+            enabled = bool(self._logging_cfg.get("enable_rotation", True))
+            try:
+                self._log_manager = LLMCLogManager(max_mb, keep_lines, enabled)
+            except Exception:
+                self._log_manager = None
     
     def handle_signal(self, signum, frame):
         """Handle shutdown signals gracefully."""
         print(f"\nReceived signal {signum}, shutting down gracefully...")
         self.running = False
+
+    def _load_logging_cfg(self, repo_root: Path) -> dict:
+        """Load [logging] section from llmc.toml at repo root if available."""
+        if tomllib is None:
+            return {}
+        cfg_path = repo_root / "llmc.toml"
+        if not cfg_path.exists():
+            # Fallback to dev repo config if present
+            dev_cfg = Path("/home/vmlinux/src/llmc/llmc.toml")
+            if dev_cfg.exists():
+                cfg_path = dev_cfg
+            else:
+                return {}
+        try:
+            with cfg_path.open("rb") as fh:
+                data = tomllib.load(fh) or {}
+            section = data.get("logging") or {}
+            return section if isinstance(section, dict) else {}
+        except Exception:
+            return {}
+
+    def _load_full_toml(self, repo_root: Path) -> dict:
+        """Load entire llmc.toml to support other sections (optional)."""
+        if tomllib is None:
+            return {}
+        cfg_path = repo_root / "llmc.toml"
+        if not cfg_path.exists():
+            return {}
+        try:
+            with cfg_path.open("rb") as fh:
+                data = tomllib.load(fh) or {}
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
     
     def run_rag_cli(self, repo: Path, command: list) -> tuple[bool, str]:
         """Run a RAG CLI command for a repo. DEPRECATED - use runner module instead."""
@@ -253,7 +312,11 @@ class RAGService:
             backend = os.getenv("ENRICH_BACKEND", "ollama")
             router = os.getenv("ENRICH_ROUTER", "on")
             start_tier = os.getenv("ENRICH_START_TIER", "7b")
-            batch_size = int(os.getenv("ENRICH_BATCH_SIZE", "5"))
+            # Precedence: env > TOML > default
+            if os.getenv("ENRICH_BATCH_SIZE") is not None:
+                batch_size = int(os.getenv("ENRICH_BATCH_SIZE", "5"))
+            else:
+                batch_size = int((self._toml_cfg.get("enrichment", {}) or {}).get("batch_size", 5))
             max_spans = int(os.getenv("ENRICH_MAX_SPANS", "50"))
             cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
             
@@ -336,6 +399,22 @@ class RAGService:
                 self.process_repo(repo)
             
             self.state.update_cycle()
+            # Optional: auto-rotate service logs based on config
+            try:
+                if self._log_manager is not None:
+                    interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
+                    log_dir_val = self._logging_cfg.get("log_directory", "logs")
+                    log_dir = Path(str(log_dir_val))
+                    if not log_dir.is_absolute():
+                        log_dir = (self._repo_root / log_dir).resolve()
+                    now = time.time()
+                    if interval == 0 or now - self._last_rotate >= interval:
+                        result = self._log_manager.rotate_logs(log_dir)
+                        self._last_rotate = now
+                        if result.get("rotated_files", 0) > 0:
+                            print(f"🔄 Rotated {result['rotated_files']} log files")
+            except Exception as e:
+                print(f"  ⚠️  Log rotation check failed: {e}")
             
             # Sleep for remaining interval
             elapsed = time.time() - cycle_start
@@ -441,11 +520,37 @@ def cmd_status(args, state: ServiceState, tracker: FailureTracker):
 
 
 def cmd_register(args, state: ServiceState, tracker: FailureTracker):
-    """Register a repo."""
+    """Register a repo - register + /full/path """
     repo_path = Path(args.repo_path).resolve()
-    if not repo_path.exists():
-        print(f"Error: Repo not found: {repo_path}")
+    # Basic path validation
+    errors: list[str] = []
+    warnings: list[str] = []
+    if not repo_path.exists() or not repo_path.is_dir():
+        print(f"Error: Path not found or not a directory: {repo_path}")
         return 1
+    # Permission checks: require read, write, and execute on directory
+    if not os.access(repo_path, os.R_OK):
+        errors.append("Directory is not readable")
+    if not os.access(repo_path, os.W_OK):
+        errors.append("Directory is not writable (cannot create .rag/logs)")
+    if not os.access(repo_path, os.X_OK):
+        errors.append("Directory is not accessible (execute permission missing)")
+    # Git check: warn if not a git repo (we can still operate via os.walk fallback)
+    try:
+        rc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_path, capture_output=True)
+        if rc.returncode != 0:
+            warnings.append("Not a git repository; falling back to filesystem scan")
+    except Exception:
+        warnings.append("Git not available; falling back to filesystem scan")
+    if errors:
+        print(f"Cannot register: {repo_path}")
+        for e in errors:
+            print(f"  ✖ {e}")
+        return 1
+    if warnings:
+        print(f"Registering with warnings for: {repo_path}")
+        for w in warnings:
+            print(f"  ⚠ {w}")
     
     if state.add_repo(str(repo_path)):
         print(f"Registered: {repo_path}")
@@ -457,7 +562,7 @@ def cmd_register(args, state: ServiceState, tracker: FailureTracker):
 
 
 def cmd_unregister(args, state: ServiceState, tracker: FailureTracker):
-    """Unregister a repo."""
+    """Unregister a repo - unregister + /full/path"""
     repo_path = Path(args.repo_path).resolve()
     
     if state.remove_repo(str(repo_path)):

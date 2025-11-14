@@ -172,12 +172,23 @@ def run_sync(repo_root: Path, paths: Sequence[str]) -> None:
     for path in paths:
         cmd.extend(["--path", path])
     log(f"Syncing {len(paths)} paths")
-    subprocess.run(cmd, cwd=repo_root, check=True)
+    env = os.environ.copy()
+    # Ensure LLMC_PROD tooling is importable when cwd=repo_root
+    py_paths = [str(PROJECT_ROOT)]
+    if env.get("PYTHONPATH"):
+        py_paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(py_paths)
+    subprocess.run(cmd, cwd=repo_root, check=True, env=env)
 
 
 def run_embed(repo_root: Path, limit: int) -> str:
     cmd = _python_env() + ["-m", "tools.rag.cli", "embed", "--execute", "--limit", str(limit)]
-    result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True)
+    env = os.environ.copy()
+    py_paths = [str(PROJECT_ROOT)]
+    if env.get("PYTHONPATH"):
+        py_paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(py_paths)
+    result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, env=env)
     print(result.stdout.strip())
     if result.returncode != 0:
         raise subprocess.CalledProcessError(result.returncode, cmd)
@@ -186,11 +197,19 @@ def run_embed(repo_root: Path, limit: int) -> str:
 
 def run_stats(repo_root: Path) -> None:
     cmd = _python_env() + ["-m", "tools.rag.cli", "stats"]
-    subprocess.run(cmd, cwd=repo_root, check=True)
+    env = os.environ.copy()
+    py_paths = [str(PROJECT_ROOT)]
+    if env.get("PYTHONPATH"):
+        py_paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(py_paths)
+    subprocess.run(cmd, cwd=repo_root, check=True, env=env)
 
 
 def run_enrich(repo_root: Path, backend: str, router: str, start_tier: str, batch_size: int, max_spans: int, cooldown: int) -> None:
+    # Prefer target repo script; fallback to LLMC_PROD's script if missing
     script = repo_root / "scripts" / "qwen_enrich_batch.py"
+    if not script.exists():
+        script = PROJECT_ROOT / "scripts" / "qwen_enrich_batch.py"
     cmd = _python_env() + [
         str(script),
         "--repo",
@@ -210,6 +229,11 @@ def run_enrich(repo_root: Path, backend: str, router: str, start_tier: str, batc
         cmd.extend(["--cooldown", str(cooldown)])
     env = os.environ.copy()
     env.update({"LLM_DISABLED": "false", "NEXT_PUBLIC_LLM_DISABLED": "false"})
+    # Ensure both the target repo and LLMC_PROD tooling are importable
+    py_paths = [str(repo_root), str(PROJECT_ROOT)]
+    if env.get("PYTHONPATH"):
+        py_paths.append(env["PYTHONPATH"])
+    env["PYTHONPATH"] = os.pathsep.join(py_paths)
     subprocess.run(cmd, cwd=repo_root, check=True, env=env)
 
 

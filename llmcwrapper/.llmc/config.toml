@@ -1,0 +1,3 @@
+# ./.llmc/config.toml
+[profiles.daily]
+model = "claude-3-5-sonnet-latest"

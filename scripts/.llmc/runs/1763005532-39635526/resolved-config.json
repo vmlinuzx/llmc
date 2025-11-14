@@ -1,0 +1,61 @@
+{
+  "defaults": {
+    "profile": "yolo",
+    "mode": "rag"
+  },
+  "profiles": {
+    "daily": {
+      "provider": "minimax",
+      "model": "m2-lite",
+      "temperature": 0.3,
+      "rag": {
+        "enabled": false,
+        "server": "http://127.0.0.1:8077"
+      },
+      "tools": {
+        "enabled": false
+      }
+    },
+    "yolo": {
+      "provider": "minimax",
+      "model": "m2-lite",
+      "temperature": 0.2,
+      "rag": {
+        "enabled": false
+      },
+      "tools": {
+        "enabled": false
+      }
+    }
+  },
+  "providers": {
+    "anthropic": {
+      "base_url": "https://api.anthropic.com/v1/messages",
+      "env_key": "ANTHROPIC_API_KEY",
+      "wire_api": "messages",
+      "anthropic_version": "2023-06-01"
+    },
+    "minimax": {
+      "base_url": "https://api.minimax.chat",
+      "env_key": "MINIMAX_API_KEY",
+      "wire_api": "chat"
+    }
+  },
+  "constraints": {
+    "max_input_tokens": 16000,
+    "budget_daily_usd": 5.0,
+    "fallback_profile": "yolo"
+  },
+  "pricing": {
+    "anthropic": {
+      "claude-3-5-sonnet-latest": {
+        "prompt": 0.0,
+        "completion": 0.0
+      }
+    }
+  },
+  "__run__": {
+    "mode": "rag",
+    "profile": "yolo"
+  }
+}

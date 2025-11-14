@@ -2,7 +2,8 @@
 """
 Create a repository context ZIP that honors .gitignore.
 
-Output filename: llmccontextMMDDYYHHSS.zip (UTC time)
+Output filename: <folder>.zip (in parent directory of repo root)
+ - If the file already exists, add a numeric suffix: <folder>-1.zip, -2.zip, ...
 Destination directory: parent of repo root (../ relative to repo root)
 
 Requirements:
@@ -17,6 +18,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Iterable
 import zipfile
 
 
@@ -33,21 +35,19 @@ def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
 
 
 def find_repo_root(start: Path) -> Path:
-    # Prefer git's view of the top-level, with a manual fallback.
+    """Return the repository root using git, with a manual fallback."""
     rc, out, _ = _run(["git", "rev-parse", "--show-toplevel"], cwd=start)
     if rc == 0 and out.strip():
         return Path(out.strip())
-    # Fallback: walk up until we see a .git directory.
     cur = start.resolve()
     for parent in [cur] + list(cur.parents):
         if (parent / ".git").exists():
             return parent
-    # If not found, default to start (will likely fail later when using git).
     return start
 
 
 def list_included_paths(repo_root: Path) -> list[Path]:
-    """Return files that are tracked or untracked-but-not-ignored.
+    """Files that are tracked or untracked-but-not-ignored.
 
     Uses: git ls-files -co --exclude-standard
     -c / --cached -> tracked files
@@ -61,62 +61,65 @@ def list_included_paths(repo_root: Path) -> list[Path]:
     rel_paths = [line.strip() for line in out.splitlines() if line.strip()]
     paths: list[Path] = []
     for rel in rel_paths:
-        p = (repo_root / rel).resolve()
-        # Only include regular files; skip directories or things that vanished.
+        # Preserve original path (do not .resolve()) to avoid collapsing hard/symlinks
+        p = repo_root / rel
         if p.is_file():
             paths.append(p)
     return paths
 
 
-def build_zip_name() -> str:
-    # UTC; format MMDDYYHHSS — note no minutes per request.
-    ts = datetime.now(timezone.utc).strftime("%m%d%y%H%S")
-    return f"llmccontext{ts}.zip"
+def next_available_zip_path(dest_dir: Path, base_name: str) -> Path:
+    """Return a zip path <base_name>.zip or with -N suffix if exists."""
+    candidate = dest_dir / f"{base_name}.zip"
+    if not candidate.exists():
+        return candidate
+    n = 1
+    while True:
+        alt = dest_dir / f"{base_name}-{n}.zip"
+        if not alt.exists():
+            return alt
+        n += 1
 
 
 def main() -> int:
-    # Use current working directory, not script location
     repo_root = find_repo_root(Path.cwd())
 
     # Destination is parent of repo root (e.g., ~/src)
     dest_dir = repo_root.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    zip_name = build_zip_name()
-    zip_path = dest_dir / zip_name
+    zip_path = next_available_zip_path(dest_dir, repo_root.name)
 
-    # Collect file list honoring .gitignore via git
     files = list_included_paths(repo_root)
     if not files:
         print("No files to include. Is this a git repo?", file=sys.stderr)
         return 3
 
-    # Write archive with paths relative to repo root
+    # Write archive with paths relative to repo root; skip duplicate arcnames
     try:
         with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            seen: set[str] = set()
             for abs_path in files:
                 try:
                     rel = abs_path.relative_to(repo_root)
                 except ValueError:
-                    # If for some reason it's outside root, skip it.
                     continue
-                # Get file stats to preserve timestamp
+                arcname = str(rel)
+                if arcname in seen:
+                    continue
+                seen.add(arcname)
                 stat = abs_path.stat()
-                # Use zipfile.ZipInfo to set date, ensuring it's after 1980
+                zinfo = zipfile.ZipInfo(filename=arcname)
                 # ZIP format cannot handle dates before 1980
-                zinfo = zipfile.ZipInfo(filename=str(rel))
-                zinfo.date_time = time.gmtime(stat.st_mtime)[:6]
-                # Ensure date is not before 1980
-                if zinfo.date_time[0] < 1980:
-                    zinfo.date_time = (1980, 1, 1, 0, 0, 0)
-                with open(abs_path, 'rb') as src:
+                zt = time.gmtime(stat.st_mtime)[:6]
+                if zt[0] < 1980:
+                    zt = (1980, 1, 1, 0, 0, 0)
+                zinfo.date_time = zt
+                with open(abs_path, "rb") as src:
                     zf.writestr(zinfo, src.read())
     except PermissionError as e:
         print(f"Permission denied creating {zip_path}: {e}", file=sys.stderr)
-        print(
-            "Hint: run from a context that can write to the parent directory, or adjust destination.",
-            file=sys.stderr,
-        )
+        print("Hint: run from a context that can write to the parent directory, or adjust destination.", file=sys.stderr)
         return 4
 
     print(f"Created: {zip_path}")
@@ -126,3 +129,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
