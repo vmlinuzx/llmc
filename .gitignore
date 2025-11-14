@@ -70,3 +70,15 @@ user_input_files/
 sys
 json
 click
+
+# Ensure generated DBs, backups, and RAG artifacts are ignored wholesale
+.rag/
+
+# Now-ignored codex template config
+template/.codex/
+
+# Built binary from minimax filesystem MCP
+minimax-filesystem-mcp/mcp-filesystem-server
+
+# Local repo inventory dumps
+.repo-inventory.json
