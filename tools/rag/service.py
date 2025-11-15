@@ -41,9 +41,18 @@ try:
 except Exception:
     LLMCLogManager = None  # type: ignore
 
-# State file location
-STATE_FILE = Path.home() / ".llmc" / "rag-service.json"
-FAILURE_DB = Path.home() / ".llmc" / "rag-failures.db"
+# State file locations (override via env for constrained environments)
+_state_override = os.environ.get("LLMC_RAG_SERVICE_STATE")
+if _state_override:
+    STATE_FILE = Path(os.path.expanduser(_state_override)).resolve()
+else:
+    STATE_FILE = Path.home() / ".llmc" / "rag-service.json"
+
+_failure_override = os.environ.get("LLMC_RAG_FAILURE_DB")
+if _failure_override:
+    FAILURE_DB = Path(os.path.expanduser(_failure_override)).resolve()
+else:
+    FAILURE_DB = Path.home() / ".llmc" / "rag-failures.db"
 
 # Failure policy
 MAX_FAILURES = 3  # 3 strikes and you're out
@@ -586,7 +595,31 @@ def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
     return 0
 
 
-def main():
+def main(argv: Optional[list[str]] | None = None):
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # Friendly top-level help for `llmc-rag-service` with no args or --help.
+    if not argv or argv[0] in ("-h", "--help"):
+        print(
+            "LLMC RAG Service\n\n"
+            "High-level manager for the LLMC RAG background service.\n\n"
+            "Usage:\n"
+            "  llmc-rag-service <command> [options]\n\n"
+            "Commands:\n"
+            "  register       Add a repo to the service\n"
+            "  unregister     Remove a repo from the service\n"
+            "  start          Start the background RAG service\n"
+            "  stop           Stop the background RAG service\n"
+            "  status         Show service + repo status\n"
+            "  clear-failures Clear recorded failures (globally or per repo)\n\n"
+            "Examples:\n"
+            "  llmc-rag-service register /home/you/src/llmc\n"
+            "  llmc-rag-service start --interval 300\n"
+            "  llmc-rag-service status\n"
+        )
+        return 0
+
     parser = argparse.ArgumentParser(description="LLMC RAG Service")
     subparsers = parser.add_subparsers(dest="command", required=True)
     
@@ -613,10 +646,21 @@ def main():
     clear_p = subparsers.add_parser("clear-failures", help="Clear failure cache")
     clear_p.add_argument("--repo", help="Clear failures for specific repo only")
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     
-    state = ServiceState()
-    tracker = FailureTracker()
+    try:
+        state = ServiceState()
+        tracker = FailureTracker()
+    except PermissionError as exc:
+        print(f"Error: cannot initialize RAG service state: {exc}")
+        print(
+            "Hint: set LLMC_RAG_SERVICE_STATE and LLMC_RAG_FAILURE_DB "
+            "to writable paths (for example: .llmc/rag-service.json)."
+        )
+        return 1
+    except Exception as exc:
+        print(f"Error: failed to initialize RAG service: {exc}")
+        return 1
     
     commands = {
         "start": cmd_start,
