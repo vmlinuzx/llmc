@@ -17,6 +17,8 @@ This file is the primary operational document for all agents. If you only read o
 - After creating or modifying code, run a smoke test before responding.
 - When Dave says “run tests” / “execute tests”, trigger the command immediately (≤30s prep).
 - Follow github best practices
+- Create a feature branch before starting any implementation work.
+- Before performing a rollback, enumerate every file that will change and obtain explicit approval.
 - Suggest best practices.
 
 ### Context Retrieval Protocol (RAG/MCP)
@@ -75,5 +77,4 @@ After loading this file, **read `CONTRACTS.md`** to get environment, install pol
 - One targeted change-set per request unless Dave expands it.
 - Stay inside the repo (`/home/$USER/src/llmc`) unless told otherwise.
 - Prefer diffs / patch-style output over dumping whole files.
-
 
