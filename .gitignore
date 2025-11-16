@@ -70,3 +70,6 @@ user_input_files/
 sys
 json
 click
+
+# Temporary top-level tests directory (to be removed)
+/tests/

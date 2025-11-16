@@ -1,3 +1,0 @@
-# ./.llmc/config.toml
-[profiles.daily]
-model = "m2-lite"

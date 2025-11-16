@@ -1,12 +1,18 @@
 [embeddings]
-preset = "e5"  # e5 | e5-large | mini
+# preset = "e5"  # e5 | e5-large | mini
 # model = "intfloat/e5-base-v2"  # or "hash-emb-v1" for deterministic CPU-only testing
 
 [storage]
 # index_path = ".rag/index_v2.db"
 
 [enrichment]
-enabled = false
-model = "gpt-4o-mini"
+# enabled = false
+# model = "gpt-4o-mini"
 batch_size = 50
 
+[logging]
+max_file_size_mb = 10
+keep_jsonl_lines = 1000
+enable_rotation = true
+log_directory = "logs"
+auto_rotation_interval = 0

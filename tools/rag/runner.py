@@ -205,7 +205,15 @@ def run_stats(repo_root: Path) -> None:
     subprocess.run(cmd, cwd=repo_root, check=True, env=env)
 
 
-def run_enrich(repo_root: Path, backend: str, router: str, start_tier: str, batch_size: int, max_spans: int, cooldown: int) -> None:
+def run_enrich(
+    repo_root: Path,
+    backend: str,
+    router: str,
+    start_tier: str,
+    batch_size: int,
+    max_spans: int,
+    cooldown: int,
+) -> None:
     # Prefer target repo script; fallback to LLMC_PROD's script if missing
     script = repo_root / "scripts" / "qwen_enrich_batch.py"
     if not script.exists():
@@ -227,6 +235,7 @@ def run_enrich(repo_root: Path, backend: str, router: str, start_tier: str, batc
     ]
     if cooldown:
         cmd.extend(["--cooldown", str(cooldown)])
+
     env = os.environ.copy()
     env.update({"LLM_DISABLED": "false", "NEXT_PUBLIC_LLM_DISABLED": "false"})
     # Ensure both the target repo and LLMC_PROD tooling are importable
@@ -234,7 +243,25 @@ def run_enrich(repo_root: Path, backend: str, router: str, start_tier: str, batc
     if env.get("PYTHONPATH"):
         py_paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(py_paths)
-    subprocess.run(cmd, cwd=repo_root, check=True, env=env)
+
+    timeout_raw = env.get("ENRICH_SUBPROCESS_TIMEOUT_SECONDS", "3600")
+    try:
+        timeout_s = int(timeout_raw)
+    except ValueError:
+        timeout_s = 3600
+
+    try:
+        subprocess.run(
+            cmd,
+            cwd=repo_root,
+            check=True,
+            env=env,
+            timeout=timeout_s,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"enrichment subprocess timed out after {timeout_s}s for repo {repo_root}"
+        ) from exc
 
 
 def command_detect(args: argparse.Namespace) -> None:

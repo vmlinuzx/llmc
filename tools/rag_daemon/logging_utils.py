@@ -29,6 +29,7 @@ def get_logger(name: str, config: DaemonConfig) -> logging.Logger:
 
     # File handler
     log_file = Path(config.log_path) / "rag-daemon.log"
+    log_file.parent.mkdir(parents=True, exist_ok=True)
     fh = logging.FileHandler(log_file, encoding="utf-8")
     fh.setFormatter(formatter)
     fh.setLevel(level)

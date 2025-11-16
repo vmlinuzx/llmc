@@ -457,8 +457,18 @@ def cmd_start(args, state: ServiceState, tracker: FailureTracker):
         # Child process continues
         os.setsid()
         sys.stdin.close()
-        sys.stdout = open(os.devnull, 'w')
-        sys.stderr = open(os.devnull, 'w')
+        # Write daemon logs to a stable location instead of /dev/null
+        log_dir = Path(os.path.expanduser("~/.llmc/logs/rag-daemon")).resolve()
+        try:
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_path = log_dir / "rag-service.log"
+            log_file = open(log_path, "a", buffering=1, encoding="utf-8")
+            sys.stdout = log_file
+            sys.stderr = log_file
+        except OSError:
+            # Fall back to discarding output if logging cannot be configured
+            sys.stdout = open(os.devnull, "w")
+            sys.stderr = open(os.devnull, "w")
     
     service = RAGService(state, tracker)
     service.run_loop(args.interval)

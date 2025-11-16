@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
+from dataclasses import dataclass
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -59,6 +61,14 @@ VRAM_WARN_THRESHOLD_MIB = 6800
 _LOW_UTIL_STREAK_SECONDS = 0.0
 
 
+@dataclass
+class HealthResult:
+    """Result of probing configured LLM backends."""
+
+    checked_hosts: List[Dict[str, str]]
+    reachable_hosts: List[Dict[str, str]]
+
+
 def _normalize_ollama_url(value: str) -> str:
     trimmed = (value or "").strip()
     if not trimmed:
@@ -100,6 +110,51 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> List[Dict
     default_local = env.get("OLLAMA_URL", "http://localhost:11434")
     add_host(env.get("OLLAMA_HOST_LABEL", "localhost"), default_local)
     return hosts
+
+
+def health_check_ollama_hosts(
+    hosts: List[Dict[str, str]],
+    env: Mapping[str, str],
+) -> HealthResult:
+    """Probe each Ollama host with a tiny request to detect obvious outages.
+
+    This is intentionally lightweight and best-effort; failures here should
+    not crash the caller, but they do inform whether it is safe to proceed.
+    """
+    checked: List[Dict[str, str]] = []
+    reachable: List[Dict[str, str]] = []
+
+    timeout_env = env.get("ENRICH_HEALTHCHECK_TIMEOUT_SECONDS", "5")
+    try:
+        timeout_s = float(timeout_env)
+    except ValueError:
+        timeout_s = 5.0
+
+    model_name = env.get("OLLAMA_MODEL", DEFAULT_7B_MODEL)
+
+    for host in hosts:
+        checked.append(host)
+        url = _normalize_ollama_url(host.get("url", ""))
+        if not url:
+            continue
+        payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
+            "utf-8"
+        )
+        req = urllib.request.Request(
+            f"{url}/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                # Any successful response is enough to mark this host as reachable.
+                _ = resp.read(1)
+        except Exception:
+            continue
+        reachable.append(host)
+
+    return HealthResult(checked_hosts=checked, reachable_hosts=reachable)
 
 
 def _read_yaml(path: Path) -> Dict[str, Any]:
@@ -1036,6 +1091,26 @@ def main() -> int:
     ollama_host_chain = resolve_ollama_host_chain()
     host_chain_count = max(1, len(ollama_host_chain))
 
+    # Optional pre-flight health check for backends to fail fast when LLMs are down.
+    env = os.environ
+    if env.get("ENRICH_HEALTHCHECK_ENABLED", "true").strip().lower() in _TRUTHY:
+        health = health_check_ollama_hosts(ollama_host_chain, env)
+        if not health.reachable_hosts:
+            checked_labels = [h.get("label") or h.get("url") for h in health.checked_hosts]
+            print(
+                f"[rag-enrich] ERROR: No reachable Ollama hosts for repo {repo_root}. "
+                f"Checked: {checked_labels}",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 2
+        else:
+            reachable_labels = [h.get("label") or h.get("url") for h in health.reachable_hosts]
+            print(
+                f"[rag-enrich] Healthcheck OK: reachable Ollama hosts = {reachable_labels}",
+                flush=True,
+            )
+
     db_file = index_path_for_write(repo_root)
     db = Database(db_file)
     processed = 0
@@ -1050,7 +1125,8 @@ def main() -> int:
                 print("No more spans pending enrichment.")
                 break
 
-            for item in plan:
+            total_spans = len(plan)
+            for idx, item in enumerate(plan, start=1):
                 wall_start = time.monotonic()
                 prompt = build_prompt(item, repo_root)
                 if args.dry_run:
@@ -1212,8 +1288,8 @@ def main() -> int:
                             "options": options,
                             "model": meta.get("model"),
                             "host": meta.get("host", host_label or host_url),
-                        }
-                    )
+                            }
+                        )
                     if failure_type == "validation":
                         schema_failures += 1
 
@@ -1222,7 +1298,7 @@ def main() -> int:
                     # promote on validation failure" policy documented in preprocessor_flow.md.
                     promote_due_to_schema = (
                         schema_failures >= policy_schema_threshold and tier_for_attempt != policy_fallback_tier
-                    )
+                        )
                     promote_due_to_size = (
                         router_enabled and line_count >= policy_line_threshold and tier_for_attempt != policy_fallback_tier
                     )
@@ -1375,6 +1451,15 @@ def main() -> int:
                     metrics_summary["estimated_remote_tokens_repo_cap"] = stats["spans"] * EST_TOKENS_PER_SPAN
 
                     processed += 1
+
+                # Heartbeat for long-running batches so foreground/daemon logs show progress.
+                if total_spans:
+                    if idx == 1 or idx == total_spans or idx % 10 == 0:
+                        print(
+                            f"[rag-enrich] Enriched span {idx}/{total_spans} "
+                            f"for {item.get('path', '<unknown>')}",
+                            flush=True,
+                        )
                     model_note = f" ({result_model})" if result_model else ""
                     router_note = ""
                     if final_tier != router_tier:

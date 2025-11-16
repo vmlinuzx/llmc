@@ -4,6 +4,15 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
 
 ---
 
+## Near-Term TODOs (Next Roadmap Warrior)
+
+- Draft `DOCS/TOOLS_DESKTOP_COMMANDER.md` as the authoritative tool manifest (MCP-style schemas) for `llmc-rag-*` and friends.
+- Seed a stub `tools/rag/enrichment_backends.py` with types and a skeleton API (`Backend`, `BackendChain`, `load_for_repo`), no behavior yet.
+- Seed a stub `tools/rag/enrichment_pipeline.py` with a no-op `run_pipeline(...)` that simply returns spans, matching current behavior.
+- Add `DOCS/RAG_Enrichment_Hardening.md` as a short operator guide for timeouts, health checks, and log locations.
+
+---
+
 ## Phases
 
 - **P0 – Immediate**: critical bugs, auth, deploy blockers.
@@ -128,6 +137,83 @@ This prevents “RAG lied to me” failures during refactors and upgrades and ma
 
 ---
 
+## P1 – RAG Navigation & Context Gateway
+
+### Task 1 – RAG Nav Index Status Metadata
+
+**Goal:** Add a minimal, durable status layer so tools can know whether the RAG graph/index is fresh, stale, rebuilding, or broken.
+
+**What it delivers:**
+
+- New package `tools.rag_nav` with:
+  - `IndexStatus` dataclass and `IndexState` enum (`fresh` | `stale` | `rebuilding` | `error`).
+  - JSON status file at `${REPO_ROOT}/.llmc/rag_index_status.json`.
+  - Safe helpers `load_status` / `save_status` with atomic writes.
+- Unit tests for status read/write and corrupt-file handling.
+- Docs describing the status schema and usage.
+
+**Why it matters:** This becomes the single source of truth for freshness and is the foundation for the Context Gateway and safe fallbacks.
+
+### Task 2 – Graph Builder + `llmc-rag-nav` CLI (build + status)
+
+**Goal:** Be able to manually build the schema-enriched graph and status for a repo, with zero daemon/MCP wiring.
+
+**What it delivers:**
+
+- `tools.rag_nav.tool_handlers.build_graph_for_repo(repo_root)` that:
+  - Builds graph artifacts (using existing RAG primitives).
+  - Writes `${REPO_ROOT}/.llmc/rag_graph.json`.
+  - Writes `IndexStatus` with `index_state="fresh"`, timestamp, commit, and schema version.
+- `tools.rag_nav.cli` with:
+  - `llmc-rag-nav build-graph --repo .`
+  - `llmc-rag-nav status --repo . [--json]`
+- Fixture repo and tests verifying graph and status generation.
+
+**Why it matters:** Provides a debuggable, standalone graph builder before wiring anything into the daemon—easy to trust, easy to revert.
+
+### Task 3 – RAG Where-Used / Lineage / Search Handlers (RAG-only)
+
+**Goal:** Implement core where-used, lineage, and code search operations using the graph/index only, callable via CLI (and later MCP). No freshness/fallback logic yet.
+
+**What it delivers:**
+
+- Extended `tools.rag_nav.models` with:
+  - `SnippetLocation`, `Snippet`.
+  - Result types: `SearchResult`, `WhereUsedResult`, `LineageResult` with `items`, `truncated`, `source`, `freshness_state`.
+- Handlers in `tools.rag_nav.tool_handlers`:
+  - `tool_rag_search(...)`
+  - `tool_rag_where_used(...)`
+  - `tool_rag_lineage(...)`
+  - All reading `${REPO_ROOT}/.llmc/rag_graph.json` and returning structured hits.
+- CLI subcommands:
+  - `llmc-rag-nav search`
+  - `llmc-rag-nav where-used`
+  - `llmc-rag-nav lineage`
+- Tests asserting basic correctness and truncation behavior.
+
+**Why it matters:** This is the actual “brain” of the where-used/lineage feature. Once this exists, everything else is just routing and plumbing.
+
+### Task 4 – Context Gateway + Freshness/Fallback Routing
+
+**Goal:** Add a small Context Gateway that decides whether to use RAG or local fallback based on `IndexStatus`, and ensure every tool result is tagged with `source` and `freshness_state`.
+
+**What it delivers:**
+
+- New module `tools.rag_nav.gateway` with:
+  - `Intent` enum (`search`, `where_used`, `lineage`, `status`).
+  - `classify_intent(text)` (keyword-based).
+  - `RouteDecision` with `use_rag`, `freshness_state`, `status`.
+  - `route(intent, repo_root)` using `IndexStatus` (and optionally git HEAD) to decide freshness.
+- Updated handlers in `tools.rag_nav.tool_handlers` that:
+  - Route through the gateway.
+  - Call RAG path when `use_rag=True` (`source="RAG_GRAPH"`).
+  - Call simple local fallback / “not available” when `use_rag=False` (`source="LOCAL_FALLBACK"`).
+- Tests for routing behavior (fresh vs. stale vs. unknown).
+
+**Why it matters:** This is the safety switch that prevents you from hitting stale RAG data and silently corrupting answers. It’s also the hook point for future MCP tools, TUIs, and daemons.
+
+---
+
 ## P1 – Tool Contract & Self-Describing Tools
 
 This section subsumes the prior `ROADMAP_P1_Tool_Contract_Self_Describing_Tools.md`.
@@ -184,3 +270,206 @@ Instead of jumping straight to dashboards, this P1 makes LLMC *much* smarter abo
 3. **M3 – Metrics emitting & validated**
    - Invalid-tool metrics are written; one ad-hoc analysis validates data quality and confirms the manifest is helping.
 
+---
+
+## Post-MVP – Enrichment Backends Module
+
+The current enrichment pipeline wires backend decisions (Ollama hosts, gateway usage, tiers) via environment variables and ad-hoc logic inside `qwen_enrich_batch.py`. This works, but it buries the “magic” in a single script and makes it hard to reason about or reuse.
+
+### TL;DR
+
+Extract enrichment backend orchestration into a dedicated `tools.rag.enrichment_backends` module that:
+
+- Owns the full backend chain configuration (hosts, tiers, gateway vs. local).
+- Encapsulates health checks, failover rules, and timeouts.
+- Exposes a small, testable API for “get me an LLM call for this span.”
+
+### Goals
+
+1. **Single source of truth** for enrichment backends:
+   - Represent all backends (ollama hosts, gateway profiles, future cloud providers) as structured config (likely TOML + env overrides).
+   - Make the chain discoverable from RAG/agents (“what LLMs are in play for this repo?”).
+2. **Pluggable orchestration logic**:
+   - Move host selection, tier routing, and failover rules into one module instead of scattering them across scripts.
+   - Keep the interface small: e.g., `choose_backend(span_meta) -> BackendConfig`.
+3. **Observability-friendly behavior**:
+   - Standardize heartbeat, health-check, and error reporting fields for logs/metrics.
+   - Make it easy to instrument “which backend handled which span and why”.
+
+### Scope / Implementation Notes
+
+- Define a small set of backend types (e.g., `ollama`, `gateway`, `azure`) and their required fields.
+- Implement a loader (e.g., `load_for_repo(repo_root, env)`) that:
+  - Reads repo-level defaults (TOML) and merges with environment.
+  - Returns an ordered chain of backends with explicit priorities and labels.
+- Refactor `qwen_enrich_batch.py` to:
+  - Ask `enrichment_backends` for a backend choice per span or per batch.
+  - Delegate health checking and host cycling to the module instead of hand-rolling it.
+
+### Why Post-MVP
+
+- The current hardening work (timeouts, health checks, logging) makes enrichment safe enough for day-to-day use.
+- This module is where the real “magic” and future UX lives; it deserves its own design/SDD and should land once the core RAG service is stable.
+
+---
+
+## Post-MVP – Modular Enrichment Pipeline & Plugin Architecture
+
+**Type:** Epic / Post-MVP  
+**Theme:** RAG / Enrichment / Extensibility
+
+### Problem / Why
+
+Enrichment logic today is tightly coupled to the core RAG pipeline (e.g., `qwen_enrich_batch.py`). That works for a single “house style” of enrichment (summaries + a bit of schema) but does not scale to:
+
+- Optional features (schema-enriched RAG, graph experiments, academic transforms).
+- Different user profiles (simple “vanilla RAG” vs. “research lab” modes).
+- Safe plugin-style experimentation over time.
+
+We need a modular enrichment pipeline so LLMC can host multiple enrichment “modules” (summarization, schema, graph, etc.) without baking those behaviors into a single script.
+
+### Goal
+
+Create a pluggable enrichment pipeline with a small, stable contract:
+
+- Core RAG code stays responsible for spans, storage, retrieval, and orchestration.
+- Enrichment becomes an ordered list of steps (modules) that each transform spans.
+- Each step can be turned on/off via config (per repo or globally).
+
+In short:
+
+> Codec is the engine; enrichment steps are bolt-on modules.
+
+### Scope (In)
+
+- Introduce an explicit enrichment pipeline layer (for example `tools/rag/enrichment_pipeline.py`).
+- Define a minimal interface for an enrichment step, e.g.:
+
+  ```python
+  def run(spans, context) -> list[Span]:
+      ...
+  ```
+
+- Implement at least one step using this pattern that mirrors the current baseline summarization.
+- Add a pipeline config surface (likely `llmc.toml`):
+
+  ```toml
+  [enrichment.pipeline]
+  steps = ["basic_summarization"]
+  ```
+
+- Make the main enrich script call something like:
+
+  ```python
+  pipeline.run_pipeline(spans, pipeline_config, backend_chain)
+  ```
+
+  instead of inlining all enrichment logic.
+- Keep all existing behavior working if no pipeline config is present (default pipeline = current behavior).
+
+### Scope (Out / Later)
+
+- Full schema-enrichment pipeline (multi-pass graph / relations / cross-doc work).
+- Complex routing (per-file, per-span, per-language).
+- UI/CLI for managing pipelines.
+- Multi-tenant plugin distribution/sharing.
+
+This epic is about carving a clean seam, not filling it with every future feature.
+
+### Functional Requirements
+
+- **Pipeline execution**
+  - Given spans and pipeline config, execute steps in order.
+  - Pass the current span list (or context) through each step.
+  - Return enriched spans to the caller.
+- **Step registration**
+  - Central registry mapping step names → callables (e.g. `"basic_summarization" -> basic_summarization.run`).
+  - Unknown step name: either log-and-skip or fail fast with a clear message (to be decided in the SDD).
+- **Config-driven behavior**
+  - Pipeline configuration via `llmc.toml` under `[enrichment.pipeline]`.
+  - If config is missing: use a baked-in default equal to “current behavior”.
+- **Backwards compatibility**
+  - Existing installs must still sync/enrich/generate context as today with no config changes.
+
+### Non-Functional Requirements
+
+- Low cognitive load: adding a step is “create module + register function + add name to config”.
+- Minimal diffusion: new modules should not reach deep into unrelated subsystems.
+- Testability: steps are testable in isolation with synthetic spans.
+
+### Acceptance Criteria
+
+- New module (e.g. `tools/rag/enrichment_pipeline.py`) with a core entrypoint such as:
+
+  ```python
+  run_pipeline(spans, pipeline_config, backend_chain, context)
+  ```
+
+- At least one existing enrichment path converted into a step (e.g. `basic_summarization.run(spans, context)`).
+- Config surface in `llmc.toml` (or equivalent) supports `[enrichment.pipeline]` and a `steps` array.
+- No config present → enrichment still works exactly as before for a default repo.
+- Docs updated:
+  - How to enable/disable enrichment modules via config.
+  - How to add a custom enrichment step.
+- Basic tests:
+  - `run_pipeline` runs multiple steps in order.
+  - Unknown step names are handled gracefully.
+  - Default pipeline matches existing behavior.
+
+---
+
+## Post-MVP – RAG Hardening Tests & Operator Docs
+
+The current RAG hardening work (timeouts, health checks, daemon logging, heartbeats) is implemented but not yet fully covered by tests or operator-facing documentation.
+
+### Problem / Why
+
+- There are no unit/integration tests that exercise:
+  - `ENRICH_SUBPROCESS_TIMEOUT_SECONDS` behavior (timeout vs. success).
+  - `ENRICH_HEALTHCHECK_ENABLED` behavior (healthy vs. unhealthy backends).
+  - Heartbeat logging under long-running enrichment batches.
+- Operators do not yet have a single place that documents:
+  - How to diagnose a “hung” enrichment vs. a timed-out one.
+  - How to interpret `~/.llmc/logs/rag-daemon/rag-service.log` and `logs/enrichment_metrics.jsonl`.
+  - How to safely tweak timeouts, batch sizes, and health-check knobs.
+
+### Goal
+
+Raise the “operational readiness” of hardening features to match their implementation quality by:
+
+- Adding targeted tests around the hardening paths.
+- Writing a short, focused operator guide for RAG enrichment hardening.
+
+### Scope (In)
+
+- **Tests**
+  - Add unit tests that:
+    - Simulate a long-running child process and assert `run_enrich` raises after the configured timeout.
+    - Exercise health check behavior with:
+      - No reachable hosts.
+      - Some reachable hosts.
+      - Health check disabled via `ENRICH_HEALTHCHECK_ENABLED=off`.
+    - Verify heartbeat logging is emitted for large batches (can be log-capture based).
+  - Add a minimal integration-style test that:
+    - Runs `qwen_enrich_batch.py` against a fake or stub backend.
+    - Confirms metrics/log files are created at the expected paths.
+- **Docs**
+  - Add a short operator doc (e.g. `DOCS/RAG_Enrichment_Hardening.md`) that covers:
+    - Environment knobs: `ENRICH_SUBPROCESS_TIMEOUT_SECONDS`, `ENRICH_HEALTHCHECK_ENABLED`, `ENRICH_MAX_SPANS`, `ENRICH_BATCH_SIZE`.
+    - Where to find logs/metrics and what to look for.
+    - Common failure modes: LLM down, timeouts, schema/validation errors.
+
+### Scope (Out)
+
+- Full-blown CI matrix for all possible backend combinations.
+- Detailed dashboards or log shipping; this epic stops at “tests + operator docs”.
+
+### Acceptance Criteria
+
+- Tests exist and are runnable locally to verify:
+  - Timeout behavior.
+  - Health check behavior (enabled/disabled, reachable/unreachable).
+  - Heartbeat logging for multi-span batches.
+- A concise doc exists and is discoverable from the main README/roadmap that explains:
+  - How to operate and tune the enrichment hardening features.
+  - How to diagnose common issues.

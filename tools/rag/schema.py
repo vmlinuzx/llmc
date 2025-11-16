@@ -90,6 +90,36 @@ class SchemaGraph:
             json.dump(self.to_dict(), f, indent=2)
     
     @classmethod
+    def from_dict(cls, data: dict) -> "SchemaGraph":
+        """Reconstruct a SchemaGraph from a plain dict payload."""
+        graph = cls(
+            version=data.get("version", 1),
+            indexed_at=data.get("indexed_at", ""),
+            repo=data.get("repo", ""),
+        )
+
+        for e in data.get("entities", []):
+            graph.entities.append(
+                Entity(
+                    id=e["id"],
+                    kind=e["kind"],
+                    path=e["path"],
+                    metadata=e.get("metadata", {}),
+                )
+            )
+
+        for r in data.get("relations", []):
+            graph.relations.append(
+                Relation(
+                    src=r["src"],
+                    edge=r["edge"],
+                    dst=r["dst"],
+                )
+            )
+
+        return graph
+    
+    @classmethod
     def load(cls, path: Path) -> SchemaGraph:
         """Load graph from JSON file"""
         with open(path, 'r') as f:

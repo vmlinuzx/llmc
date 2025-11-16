@@ -28,7 +28,7 @@ This file is the primary operational document for all agents. If you only read o
 This repo has a fully enriched RAG system (293 files, 608 spans, 573+ Qwen-enriched summaries). The background indexer keeps it within 3-4 minutes of perfect sync.
 
 **When you need repo context:**
-1. **ALWAYS use RAG search first:** `python -m tools.rag.cli search "your query"`
+1. **ALWAYS use RAG search first:** `python3 -m tools.rag.cli search "your query"`
 2. **NEVER** read files directly to "understand the system" or "get context"
 3. **NEVER** ingest logs, traces, build artifacts, or `.rag/` database files
 4. Each RAG result is semantically chunked and enriched - trust it
@@ -47,6 +47,12 @@ This repo has a fully enriched RAG system (293 files, 608 spans, 573+ Qwen-enric
 - ✅ Ask user if RAG results are insufficient
 - ✅ Read specific files only when user references them
 - ✅ Use Desktop Commander tools for binary/data file analysis
+
+### RAG CLI Invocation
+
+- Use `python3` (not `python`) for all repo tools.
+- Canonical RAG command: `python3 -m tools.rag.cli search "<query>"`.
+- If `python3` is missing, report `BLOCKED: python3 missing` instead of retrying with `python`.
 
 ## 3. Required Read
 After loading this file, **read `CONTRACTS.md`** to get environment, install policy, tmux policy, and task protocol. `CONTRACTS.md` may reference this file; that’s expected.
@@ -77,4 +83,3 @@ After loading this file, **read `CONTRACTS.md`** to get environment, install pol
 - One targeted change-set per request unless Dave expands it.
 - Stay inside the repo (`/home/$USER/src/llmc`) unless told otherwise.
 - Prefer diffs / patch-style output over dumping whole files.
-

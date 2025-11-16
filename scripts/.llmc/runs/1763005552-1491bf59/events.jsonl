@@ -1,3 +1,0 @@
-{"ts": 1763005552, "corr_id": "1763005552-1491bf59", "event": "start", "mode": "yolo", "profile": "yolo", "snapshot": "/home/vmlinux/src/llmc/scripts/.llmc/runs/1763005552-1491bf59/resolved-config.json"}
-{"ts": 1763005552, "corr_id": "1763005552-1491bf59", "event": "provider_request_meta", "provider": "minimax", "model": "m2-lite"}
-{"ts": 1763005552, "corr_id": "1763005552-1491bf59", "event": "cost_estimate", "usd": 0.0, "usage": {"input_tokens": null, "output_tokens": null}}

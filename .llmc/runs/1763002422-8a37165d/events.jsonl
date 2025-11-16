@@ -1,2 +1,0 @@
-{"ts": 1763002422, "corr_id": "1763002422-8a37165d", "event": "start", "mode": "rag", "profile": "daily", "snapshot": "/home/vmlinux/src/llmc/.llmc/runs/1763002422-8a37165d/resolved-config.json"}
-{"ts": 1763002422, "corr_id": "1763002422-8a37165d", "event": "dry_run", "provider": "minimax", "model": "m2-lite"}
