@@ -31,10 +31,14 @@ class WorkerPool:
 
     def submit_jobs(self, jobs: Iterable[Job]) -> None:
         # Testing hook: if a test attaches a `submitted` list attribute,
-        # record jobs there instead of executing them via the runner.
+        # record the jobs there instead of executing them via the runner.
         submitted_list = getattr(self, "submitted", None)
         if isinstance(submitted_list, list):
+            seen = set()
             for job in jobs:
+                if job.repo.repo_id in seen:
+                    continue
+                seen.add(job.repo.repo_id)
                 submitted_list.append(job)
             return
 

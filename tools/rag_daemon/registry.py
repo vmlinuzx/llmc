@@ -26,6 +26,32 @@ class RegistryClient:
     def from_config(cls, config: DaemonConfig) -> "RegistryClient":
         return cls(path=config.registry_path)
 
+    def _is_safe_path(self, path: Path) -> bool:
+        """Return True if path is not under sensitive system directories.
+
+        This mitigates trivial path traversal via the registry by preventing
+        repos from pointing at locations like /etc, /proc, /sys, /dev, /root.
+        """
+        try:
+            path_resolved = path.resolve()
+        except Exception:
+            return False
+
+        sensitive_roots = [
+            Path("/etc"),
+            Path("/proc"),
+            Path("/sys"),
+            Path("/dev"),
+            Path("/root"),
+        ]
+        for root in sensitive_roots:
+            try:
+                path_resolved.relative_to(root)
+                return False
+            except ValueError:
+                continue
+        return True
+
     def load(self) -> Dict[str, RepoDescriptor]:
         """Load all repo descriptors from the registry file."""
         if yaml is None:
@@ -64,10 +90,29 @@ class RegistryClient:
             entries_iter = []
 
         for repo_id, entry in entries_iter:
-            repo_path = Path(os.path.expanduser(entry["repo_path"])).resolve()
+            raw_repo_path = entry["repo_path"]
+            raw_workspace_path = entry["rag_workspace_path"]
+
+            # Reject obvious traversal attempts based on raw path segments.
+            try:
+                if ".." in Path(str(raw_repo_path)).parts:
+                    continue
+                if ".." in Path(str(raw_workspace_path)).parts:
+                    continue
+            except Exception:
+                continue
+
+            repo_path = Path(os.path.expanduser(raw_repo_path)).resolve()
             workspace_path = Path(
-                os.path.expanduser(entry["rag_workspace_path"])
+                os.path.expanduser(raw_workspace_path)
             ).resolve()
+
+            # Security: only accept paths under user-controlled roots.
+            if not self._is_safe_path(repo_path) or not self._is_safe_path(
+                workspace_path
+            ):
+                continue
+
             display_name = entry.get("display_name")
             rag_profile = entry.get("rag_profile")
             min_refresh = entry.get("min_refresh_interval_seconds")

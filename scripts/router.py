@@ -223,6 +223,11 @@ def choose_next_tier_on_failure(
 ) -> Optional[str]:
     failure_type = failure_type.lower()
 
+    # When promote_once is False, the caller has opted out of any
+    # further tier changes regardless of failure type.
+    if not promote_once:
+        return None
+
     if current_tier == "nano":
         return None
 
