@@ -38,7 +38,32 @@ class RegistryClient:
             data = yaml.safe_load(f) or {}
 
         result: Dict[str, RepoDescriptor] = {}
-        for repo_id, entry in data.items():
+        # Support both legacy dict format (repo_id -> entry) and new
+        # list-based format under a top-level "repos" key.
+        if isinstance(data, dict) and isinstance(data.get("repos"), list):
+            entries_iter = []
+            for entry in data["repos"]:
+                if not isinstance(entry, dict):
+                    continue
+                repo_id = entry.get("repo_id")
+                if not repo_id:
+                    continue
+                entries_iter.append((repo_id, entry))
+        elif isinstance(data, list):
+            entries_iter = []
+            for entry in data:
+                if not isinstance(entry, dict):
+                    continue
+                repo_id = entry.get("repo_id")
+                if not repo_id:
+                    continue
+                entries_iter.append((repo_id, entry))
+        elif isinstance(data, dict):
+            entries_iter = list(data.items())
+        else:
+            entries_iter = []
+
+        for repo_id, entry in entries_iter:
             repo_path = Path(os.path.expanduser(entry["repo_path"])).resolve()
             workspace_path = Path(
                 os.path.expanduser(entry["rag_workspace_path"])

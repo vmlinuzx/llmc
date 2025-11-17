@@ -15,7 +15,11 @@ def read_control_events(control_dir: Path) -> ControlEvents:
     shutdown = False
 
     if not control_dir.exists():
-        return ControlEvents()
+        try:
+            control_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            # If we can't create the directory, fall back to no events.
+            return ControlEvents()
 
     for path in control_dir.glob("*.flag"):
         name = path.name

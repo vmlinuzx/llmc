@@ -93,7 +93,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     return 1
 
 
-def _cmd_add(args, tool_config, registry: RegistryAdapter) -> int:
+def _cmd_add(args, tool_config, registry: Optional[RegistryAdapter]) -> int:
+    if registry is None:
+        registry = RegistryAdapter(tool_config)
+
     repo_path = canonical_repo_path(Path(args.path))
     inspection = inspect_repo(repo_path, tool_config)
     if not inspection.exists:

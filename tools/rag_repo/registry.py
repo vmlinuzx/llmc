@@ -20,8 +20,12 @@ from .utils import canonical_repo_path
 class RegistryAdapter:
     """YAML-based registry of repos for LLMC RAG."""
 
-    def __init__(self, config: ToolConfig) -> None:
-        self.path = config.registry_path
+    def __init__(self, config: ToolConfig | Path) -> None:
+        """Create an adapter from a ToolConfig or direct path."""
+        if isinstance(config, Path):
+            self.path = config
+        else:
+            self.path = config.registry_path
 
     def load_all(self) -> Dict[str, RegistryEntry]:
         if yaml is None or not self.path.exists():

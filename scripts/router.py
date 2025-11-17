@@ -118,17 +118,41 @@ def detect_truncation(output_text: str, max_tokens_used: Optional[int], finish_r
 class RouterSettings:
     """Tunable thresholds for routing decisions."""
 
-    context_limit: int = int(os.getenv("ROUTER_CONTEXT_LIMIT", "32000"))
-    headroom: int = int(os.getenv("ROUTER_MAX_TOKENS_HEADROOM", "4000"))
-    preflight_limit: int = int(os.getenv("ROUTER_PRE_FLIGHT_LIMIT", "28000"))
-    node_limit: int = int(os.getenv("ROUTER_NODE_LIMIT", "800"))
-    depth_limit: int = int(os.getenv("ROUTER_DEPTH_LIMIT", "6"))
-    array_limit: int = int(os.getenv("ROUTER_ARRAY_LIMIT", "5000"))
-    csv_limit: int = int(os.getenv("ROUTER_CSV_LIMIT", "60"))
-    nesting_limit: int = int(os.getenv("ROUTER_NESTING_LIMIT", "3"))
+    context_limit: int = 32000
+    headroom: int = 4000
+    preflight_limit: int = 28000
+    node_limit: int = 800
+    depth_limit: int = 6
+    array_limit: int = 5000
+    csv_limit: int = 60
+    nesting_limit: int = 3
     line_thresholds: Tuple[int, int] = None  # type: ignore
 
     def __post_init__(self) -> None:
+        def _read_int_env(name: str, current: int) -> int:
+            raw = os.getenv(name)
+            if raw is None:
+                return current
+            try:
+                return int(raw)
+            except Exception:
+                return current
+
+        self.context_limit = _read_int_env("ROUTER_CONTEXT_LIMIT", self.context_limit)
+        self.headroom = _read_int_env(
+            "ROUTER_MAX_TOKENS_HEADROOM", self.headroom
+        )
+        self.preflight_limit = _read_int_env(
+            "ROUTER_PRE_FLIGHT_LIMIT", self.preflight_limit
+        )
+        self.node_limit = _read_int_env("ROUTER_NODE_LIMIT", self.node_limit)
+        self.depth_limit = _read_int_env("ROUTER_DEPTH_LIMIT", self.depth_limit)
+        self.array_limit = _read_int_env("ROUTER_ARRAY_LIMIT", self.array_limit)
+        self.csv_limit = _read_int_env("ROUTER_CSV_LIMIT", self.csv_limit)
+        self.nesting_limit = _read_int_env(
+            "ROUTER_NESTING_LIMIT", self.nesting_limit
+        )
+
         thresholds = os.getenv("ROUTER_LINE_THRESHOLDS", "60,100")
         try:
             low, high = [int(part.strip()) for part in thresholds.split(",", 1)]
@@ -231,4 +255,3 @@ def clamp_usage_snippet(result: Dict[str, object], max_lines: int = 12) -> None:
     if len(lines) <= max_lines:
         return
     result["usage_snippet"] = "\n".join(lines[:max_lines])
-
