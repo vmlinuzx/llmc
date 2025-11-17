@@ -24,6 +24,12 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
 
 ## Current Priorities
 
+- **P0: Enrichment Data Integration (DB → Graph → API)**
+  - Close the loop between the `.rag/index_v2.db` enrichment store, the schema graph builder, and the public `tools.rag` API so that enriched summaries/evidence actually surface in user-facing results.
+  - Add a robust mapping layer from `enrichments.span_hash`/`spans` (file path + line range) to `SchemaGraph.entities[*]` and merge enrichment fields into `Entity.metadata` during graph build/export.
+  - Replace the current `tool_rag_search` / `tool_rag_where_used` / `tool_rag_lineage` stubs with thin adapters over the real search + enrichment pipeline, wired to the graph and database.
+  - Ship end-to-end tests that assert: (1) enrichments exist in the DB, (2) graph entities expose enrichment metadata, and (3) the public API returns enriched results instead of empty lists.
+
 - **P1: RAG Freshness Gate + Safe Local Fallback**
   - Add a freshness gate in front of RAG so tools only use RAG when slice state is known-good, otherwise fall back automatically to local filesystem/AST-based logic.
   - Ensure callers (Codex, Claude, Desktop Commander, future GUIs) never have to care whether RAG is in play; they always get correct results plus metadata about source and freshness.
@@ -65,6 +71,7 @@ This section is a trimmed, de-duplicated version of the prior backlog; items rem
 - Standardize RAG architecture across wrappers using a shared helper (e.g., `scripts/rag_common.sh`).
 - Harden freshness automation (cron-friendly refresh wrapper + docs/locks/logs).
 - Introduce AST-driven chunking for key languages (Python, TS/JS, Bash, Markdown).
+- Add deterministic enrichment fallback: when RAG execution fails due to stale/out-of-date indexes for non-context queries, attempt a local/AST-based enrichment path before surfacing a structured error to callers.
 
 ### Tooling & Templates
 
@@ -141,6 +148,8 @@ This prevents “RAG lied to me” failures during refactors and upgrades and ma
 
 ### Task 1 – RAG Nav Index Status Metadata
 
+**Status:** COMPLETED (metadata + helpers + tests are in place).
+
 **Goal:** Add a minimal, durable status layer so tools can know whether the RAG graph/index is fresh, stale, rebuilding, or broken.
 
 **What it delivers:**
@@ -155,6 +164,8 @@ This prevents “RAG lied to me” failures during refactors and upgrades and ma
 **Why it matters:** This becomes the single source of truth for freshness and is the foundation for the Context Gateway and safe fallbacks.
 
 ### Task 2 – Graph Builder + `llmc-rag-nav` CLI (build + status)
+
+**Status:** COMPLETED (schema-enriched graph v2 + CLI).
 
 **Goal:** Be able to manually build the schema-enriched graph and status for a repo, with zero daemon/MCP wiring.
 
@@ -172,6 +183,8 @@ This prevents “RAG lied to me” failures during refactors and upgrades and ma
 **Why it matters:** Provides a debuggable, standalone graph builder before wiring anything into the daemon—easy to trust, easy to revert.
 
 ### Task 3 – RAG Where-Used / Lineage / Search Handlers (RAG-only)
+
+**Status:** COMPLETED (graph-backed handlers with grep fallback).
 
 **Goal:** Implement core where-used, lineage, and code search operations using the graph/index only, callable via CLI (and later MCP). No freshness/fallback logic yet.
 
@@ -194,6 +207,8 @@ This prevents “RAG lied to me” failures during refactors and upgrades and ma
 **Why it matters:** This is the actual “brain” of the where-used/lineage feature. Once this exists, everything else is just routing and plumbing.
 
 ### Task 4 – Context Gateway + Freshness/Fallback Routing
+
+**Status:** PARTIAL / DEFERRED – basic gateway + routing are implemented and in use; additional end-to-end freshness/fallback scenarios are tracked in the Backlog and will be finished when they become pressing.
 
 **Goal:** Add a small Context Gateway that decides whether to use RAG or local fallback based on `IndexStatus`, and ensure every tool result is tagged with `source` and `freshness_state`.
 
