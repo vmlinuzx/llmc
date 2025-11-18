@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+"""
+Configuration helpers for RAG components: storage paths, embedding presets,
+and reranker weights for RAG Nav search.
+"""
+
+import configparser
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 RAG_DIR_NAME = ".rag"
 DEFAULT_INDEX_NEW = "index_v2.db"
@@ -202,3 +208,76 @@ def embedding_gpu_max_retries() -> int:
 
 def embedding_gpu_retry_seconds() -> int:
     return max(1, _env_int("EMBEDDINGS_GPU_RETRY_SECONDS", DEFAULT_GPU_RETRY_SECONDS))
+
+
+# --- Reranker configuration for RAG Nav --------------------------------------
+
+DEFAULT_WEIGHTS: Dict[str, float] = {
+    "bm25": 0.60,
+    "uni": 0.20,
+    "bi": 0.15,
+    "path": 0.03,
+    "lit": 0.02,
+}
+
+ENV_KEYS: Dict[str, str] = {
+    "bm25": "RAG_RERANK_W_BM25",
+    "uni": "RAG_RERANK_W_UNI",
+    "bi": "RAG_RERANK_W_BI",
+    "path": "RAG_RERANK_W_PATH",
+    "lit": "RAG_RERANK_W_LIT",
+}
+
+INI_SECTION = "rerank"  # Section name in .llmc/rag_nav.ini
+
+
+def _parse_float(value: str, default: float) -> float:
+    """Convert value to float, falling back to default on error."""
+    try:
+        return float(value)
+    except Exception:
+        return default
+
+
+def _normalize(weights: Dict[str, float]) -> Dict[str, float]:
+    """Normalize non-negative weights so they sum to 1.0."""
+    total = sum(max(0.0, v) for v in weights.values())
+    if total <= 0.0:
+        return dict(DEFAULT_WEIGHTS)
+    return {key: max(0.0, value) / total for key, value in weights.items()}
+
+
+def load_rerank_weights(repo_root: Path | None = None) -> Dict[str, float]:
+    """
+    Load reranker weights from `.llmc/rag_nav.ini` and environment overrides.
+
+    Precedence:
+    - Defaults in DEFAULT_WEIGHTS
+    - Values from `[rerank]` section in `.llmc/rag_nav.ini` under repo_root
+    - Environment variables (RAG_RERANK_W_*)
+    """
+    weights: Dict[str, float] = dict(DEFAULT_WEIGHTS)
+
+    # INI file (if present)
+    if repo_root is not None:
+        ini_path = Path(repo_root) / ".llmc" / "rag_nav.ini"
+        if ini_path.exists():
+            parser = configparser.ConfigParser()
+            try:
+                parser.read(ini_path)
+                if INI_SECTION in parser:
+                    section = parser[INI_SECTION]
+                    for key in list(weights.keys()):
+                        if key in section:
+                            weights[key] = _parse_float(section.get(key, ""), weights[key])
+            except Exception:
+                # Treat config errors as "use defaults".
+                pass
+
+    # Environment overrides
+    for key, env_name in ENV_KEYS.items():
+        value = os.environ.get(env_name)
+        if value is not None and value.strip() != "":
+            weights[key] = _parse_float(value, weights[key])
+
+    return _normalize(weights)

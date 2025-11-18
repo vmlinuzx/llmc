@@ -361,6 +361,7 @@ def _grep_snippets(repo_root, needle, max_items):
 # --- Context Gateway integration ----------------------------------------------
 from pathlib import Path as _Path
 
+from tools.rag.config import load_rerank_weights
 from tools.rag.graph_index import (
     GraphNotFound as IndexGraphNotFound,
     lineage_files as lineage_files_from_index,
@@ -401,7 +402,8 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
                 )
                 for h in hits
             ]
-            ranked = rerank_hits(query, rr_hits, top_k=max_results)
+            weights = load_rerank_weights(repo_root_path)
+            ranked = rerank_hits(query, rr_hits, top_k=max_results, weights=weights)
             items: List[SearchItem] = [
                 SearchItem(
                     file=h.file,

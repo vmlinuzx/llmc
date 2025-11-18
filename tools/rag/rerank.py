@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 import math
 import re
 
@@ -54,8 +54,43 @@ def _normalize_bm25(raw: float) -> float:
     return 1.0 / (1.0 + r)
 
 
-def rerank_hits(query: str, hits: List[RerankHit], top_k: int = 20) -> List[RerankHit]:
+DEFAULT_WEIGHTS: Dict[str, float] = {
+    "bm25": 0.60,
+    "uni": 0.20,
+    "bi": 0.15,
+    "path": 0.03,
+    "lit": 0.02,
+}
+
+
+def _normalize_weights(weights: Dict[str, float]) -> Dict[str, float]:
+    """Normalize a weight mapping, falling back to DEFAULT_WEIGHTS if invalid."""
+    base = dict(DEFAULT_WEIGHTS)
+    if not isinstance(weights, dict) or not weights:
+        return base
+    total = 0.0
+    normalized: Dict[str, float] = {}
+    for key in base.keys():
+        try:
+            value = float(weights.get(key, base[key]))
+        except Exception:
+            value = base[key]
+        value = max(0.0, value)
+        normalized[key] = value
+        total += value
+    if total <= 0.0:
+        return base
+    return {key: value / total for key, value in normalized.items()}
+
+
+def rerank_hits(
+    query: str,
+    hits: List[RerankHit],
+    top_k: int = 20,
+    weights: Optional[Dict[str, float]] = None,
+) -> List[RerankHit]:
     """Combine bm25 and token-overlap signals to rerank FTS hits."""
+    w = _normalize_weights(weights or DEFAULT_WEIGHTS)
     q_tokens = _tokens(query)
     q_bigrams = _bigrams(q_tokens)
     joined = " ".join(q_tokens)
@@ -72,9 +107,14 @@ def rerank_hits(query: str, hits: List[RerankHit], top_k: int = 20) -> List[Rera
         s_lit = _presence(joined, t)
         s_path = _jaccard(q_tokens, _tokens(h.file))
 
-        score = (0.60 * s_bm25) + (0.20 * s_uni) + (0.15 * s_bi) + (0.03 * s_path) + (0.02 * s_lit)
+        score = (
+            (w["bm25"] * s_bm25)
+            + (w["uni"] * s_uni)
+            + (w["bi"] * s_bi)
+            + (w["path"] * s_path)
+            + (w["lit"] * s_lit)
+        )
         rescored.append((score, h))
 
     rescored.sort(key=lambda x: x[0], reverse=True)
     return [h for _, h in rescored[:top_k]]
-

@@ -73,3 +73,13 @@ click
 
 # Temporary top-level tests directory (to be removed)
 
+# RAG / LLMC runtime artifacts and reports
+.rag/
+.llmc/
+logs/
+tests/rag_nav_test_report.json
+tests/rag_test_report.json
+RUTHLESS_TESTING_REPORT_*.md
+TESTING_GAP_ANALYSIS_*.md
+TEST_FIXES_SUMMARY_*.md
+*~
