@@ -363,17 +363,27 @@ from pathlib import Path as _Path
 from tools.rag_nav.gateway import compute_route as _compute_route
 from tools.rag.db_fts import fts_search, RagDbNotFound, FtsHit
 from tools.rag.rerank import rerank_hits, RerankHit
+from tools.rag.graph_stitch import expand_search_items, Neighbor, GraphNotFound
+
+
+def _neighbors_to_items(neigh: List[Neighbor]) -> List[SearchItem]:
+    items: List[SearchItem] = []
+    for n in neigh:
+        loc = SnippetLocation(path=n.path, start_line=1, end_line=1)
+        items.append(SearchItem(file=n.path, snippet=Snippet(text="", location=loc)))
+    return items
 
 
 def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
-    """Search using DB FTS + reranker when route allows RAG; otherwise local fallback."""
+    """Search using DB FTS + reranker + 1-hop graph stitch when route allows RAG."""
     route = _compute_route(_Path(repo_root))
+    repo_root_path = _Path(repo_root)
     max_results = _max_n(limit, default=20)
     source = "RAG_GRAPH" if route.use_rag else "LOCAL_FALLBACK"
 
     if route.use_rag:
         try:
-            hits = fts_search(_Path(repo_root), query, limit=max(100, max_results * 3))
+            hits = fts_search(repo_root_path, query, limit=max(100, max_results * 3))
             rr_hits = [
                 RerankHit(
                     file=h.file,
@@ -385,7 +395,7 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
                 for h in hits
             ]
             ranked = rerank_hits(query, rr_hits, top_k=max_results)
-            items = [
+            items: List[SearchItem] = [
                 SearchItem(
                     file=h.file,
                     snippet=Snippet(
@@ -395,17 +405,38 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
                 )
                 for h in ranked
             ]
+            truncated = len(hits) > len(items)
+
+            # P9c: graph-stitch 1-hop neighbors to fill remaining budget.
+            remaining = max(0, max_results - len(items))
+            if remaining > 0:
+                try:
+                    res = expand_search_items(repo_root_path, items, max_expansion=min(remaining, max_results), hops=1)
+                    if isinstance(res, tuple):
+                        _, neigh = res
+                        neighbor_items = _neighbors_to_items(neigh)
+                        seen_files = {it.file for it in items}
+                        for ni in neighbor_items:
+                            if len(items) >= max_results:
+                                break
+                            if ni.file in seen_files:
+                                continue
+                            seen_files.add(ni.file)
+                            items.append(ni)
+                except Exception:
+                    pass
+
             return SearchResult(
                 query=query,
-                items=items,
-                truncated=len(hits) > len(items),
+                items=items[:max_results],
+                truncated=truncated if "truncated" in locals() else False,
                 source=source,
                 freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
             )
         except (RagDbNotFound, RuntimeError):
             source = "LOCAL_FALLBACK"
 
-    # Fallback: local grep over .py files
+    # Fallback: local grep over .py files when no RAG route or DB issues.
     grep_hits = _grep_snippets(repo_root, query, max_results)
     items: List[SearchItem] = []
     for rel, sl, el, text in grep_hits:
