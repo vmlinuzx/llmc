@@ -360,6 +360,12 @@ def _grep_snippets(repo_root, needle, max_items):
 
 # --- Context Gateway integration ----------------------------------------------
 from pathlib import Path as _Path
+
+from tools.rag.graph_index import (
+    GraphNotFound as IndexGraphNotFound,
+    load_indices as load_graph_indices,
+    where_used_files as where_used_files_from_index,
+)
 from tools.rag_nav.gateway import compute_route as _compute_route
 from tools.rag.db_fts import fts_search, RagDbNotFound, FtsHit
 from tools.rag.rerank import rerank_hits, RerankHit
@@ -459,50 +465,48 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
 
 
 def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> WhereUsedResult:
+    """Where-used query using graph indices when the Context Gateway allows RAG."""
     route = _compute_route(_Path(repo_root))
     max_results = _max_n(limit, default=50)
+    source = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
 
-    if route.use_rag:
-        nodes, edges = _load_graph(str(repo_root))
-        by_id, _ = _index_nodes(nodes)
-        targets = _resolve_symbol_nodes(nodes, symbol)
-        target_ids: Set[str] = {str(t.get("id") or _node_name(t)) for t in targets}
-        items: List[WhereUsedItem] = []
-        if target_ids:
-            for e in edges:
-                etype = str(e.get("type") or "").upper()
-                if etype not in _SUPPORTED_EDGE_TYPES:
-                    continue
-                src = str(e.get("source") or e.get("src") or "")
-                dst = str(e.get("target") or e.get("dst") or "")
-                if dst in target_ids:
-                    n = by_id.get(src)
-                    if not n:
-                        continue
-                    path = _node_path(n)
-                    sl, el = _node_span(n)
-                    snippet = _read_snippet(str(repo_root), path, sl, el)
-                    items.append(WhereUsedItem(file=path, snippet=snippet))
-                    if len(items) >= max_results:
-                        break
-        return WhereUsedResult(
-            symbol=symbol,
-            items=items,
-            truncated=False,
-            source="RAG_GRAPH",
-            freshness_state=route.freshness_state,
-        )
+    if getattr(route, "use_rag", False):
+        try:
+            indices = load_graph_indices(_Path(repo_root))
+            files = where_used_files_from_index(indices, symbol, limit=max_results)
+            items: List[WhereUsedItem] = []
+            for path in files[:max_results]:
+                loc = SnippetLocation(path=path, start_line=1, end_line=1)
+                snippet = Snippet(text="", location=loc)
+                items.append(WhereUsedItem(file=path, snippet=snippet))
+            return WhereUsedResult(
+                symbol=symbol,
+                items=items,
+                truncated=len(files) > len(items),
+                source=source,
+                freshness_state=route.freshness_state,
+            )
+        except (IndexGraphNotFound, Exception):
+            # Any graph loading/indexing issue should route to the local fallback.
+            source = "LOCAL_FALLBACK"
 
-    # Fallback: grep symbol usages
+    # Fallback: grep symbol usages when RAG is unavailable or index loading failed.
     grep_hits = _grep_snippets(repo_root, symbol, max_results)
-    items: List[WhereUsedItem] = []
-    for rel, sl, el, text in grep_hits:
-        items.append(WhereUsedItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+    items = [
+        WhereUsedItem(
+            file=rel,
+            snippet=Snippet(
+                text=text,
+                location=SnippetLocation(path=rel, start_line=sl, end_line=el),
+            ),
+        )
+        for rel, sl, el, text in grep_hits
+    ]
     return WhereUsedResult(
         symbol=symbol,
         items=items,
         truncated=False,
-        source="LOCAL_FALLBACK",
+        source=source,
         freshness_state=route.freshness_state,
     )
 
