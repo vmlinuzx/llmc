@@ -361,43 +361,63 @@ def _grep_snippets(repo_root, needle, max_items):
 # --- Context Gateway integration ----------------------------------------------
 from pathlib import Path as _Path
 from tools.rag_nav.gateway import compute_route as _compute_route
-from tools.rag.db_fts import fts_search, RagDbNotFound
+from tools.rag.db_fts import fts_search, RagDbNotFound, FtsHit
+from tools.rag.rerank import rerank_hits, RerankHit
 
 
 def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
-    """Search using either DB FTS (when route allows RAG) or local fallback."""
+    """Search using DB FTS + reranker when route allows RAG; otherwise local fallback."""
     route = _compute_route(_Path(repo_root))
     max_results = _max_n(limit, default=20)
-
-    items: List[SearchItem] = []
-    source = "LOCAL_FALLBACK"
+    source = "RAG_GRAPH" if route.use_rag else "LOCAL_FALLBACK"
 
     if route.use_rag:
         try:
-            hits = fts_search(_Path(repo_root), query, limit=max_results)
-            for h in hits:
-                loc = SnippetLocation(path=h.file, start_line=h.start_line, end_line=h.end_line)
-                snip = Snippet(text=h.text, location=loc)
-                items.append(SearchItem(file=h.file, snippet=snip))
-            source = "RAG_GRAPH"
-        except (RagDbNotFound, RuntimeError):
-            # Fall back to local grep below.
-            pass
-
-    if not items:
-        grep_hits = _grep_snippets(repo_root, query, max_results)
-        for rel, sl, el, text in grep_hits:
-            items.append(
+            hits = fts_search(_Path(repo_root), query, limit=max(100, max_results * 3))
+            rr_hits = [
+                RerankHit(
+                    file=h.file,
+                    start_line=h.start_line,
+                    end_line=h.end_line,
+                    text=h.text,
+                    score=h.score,
+                )
+                for h in hits
+            ]
+            ranked = rerank_hits(query, rr_hits, top_k=max_results)
+            items = [
                 SearchItem(
-                    file=rel,
+                    file=h.file,
                     snippet=Snippet(
-                        text=text,
-                        location=SnippetLocation(path=rel, start_line=sl, end_line=el),
+                        text=h.text,
+                        location=SnippetLocation(path=h.file, start_line=h.start_line, end_line=h.end_line),
                     ),
                 )
+                for h in ranked
+            ]
+            return SearchResult(
+                query=query,
+                items=items,
+                truncated=len(hits) > len(items),
+                source=source,
+                freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
             )
-        source = "LOCAL_FALLBACK"
+        except (RagDbNotFound, RuntimeError):
+            source = "LOCAL_FALLBACK"
 
+    # Fallback: local grep over .py files
+    grep_hits = _grep_snippets(repo_root, query, max_results)
+    items: List[SearchItem] = []
+    for rel, sl, el, text in grep_hits:
+        items.append(
+            SearchItem(
+                file=rel,
+                snippet=Snippet(
+                    text=text,
+                    location=SnippetLocation(path=rel, start_line=sl, end_line=el),
+                ),
+            )
+        )
     return SearchResult(
         query=query,
         items=items,

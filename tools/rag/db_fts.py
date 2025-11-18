@@ -14,7 +14,7 @@ class FtsHit:
     start_line: int
     end_line: int
     text: str
-    score: float
+    score: float  # raw bm25 (lower is better) or 0.0 if unavailable
 
 
 class RagDbNotFound(FileNotFoundError):
@@ -91,44 +91,50 @@ def _column_map(conn: sqlite3.Connection, table: str) -> Dict[str, str]:
     return {"path": path_col, "start": start_col, "end": end_col, "text": text_col}
 
 
-def fts_search(
-    repo_root: Path,
-    query: str,
-    limit: int = 20,
-    db_path: Optional[Path] = None,
-) -> List[FtsHit]:
-    """Run an FTS MATCH search against the enrichment DB.
-
-    Heuristics and defensive fallbacks let this work against slightly different
-    table/column names without requiring a strict schema.
-    """
+def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Optional[Path] = None) -> List[FtsHit]:
+    """Run an FTS MATCH search against the enrichment DB with optional bm25 ordering."""
     conn, path = _open_db(repo_root, db_path)
     try:
         table = _detect_fts_table(conn)
         col = _column_map(conn, table)
-        sql = f"""
+
+        cur = conn.cursor()
+        sql_bm25 = f"""
             SELECT {col['path']} as path,
                    COALESCE({col['start']}, 1) as start_line,
                    COALESCE({col['end']},   COALESCE({col['start']},1)+1) as end_line,
-                   {col['text']} as text
+                   {col['text']} as text,
+                   bm25({table}) as score
             FROM {table}
             WHERE {table} MATCH ?
+            ORDER BY score ASC
             LIMIT ?
         """
-        cur = conn.cursor()
-        cur.execute(sql, (query, int(limit)))
-        rows = cur.fetchall()
+        try:
+            cur.execute(sql_bm25, (query, int(limit)))
+            rows = cur.fetchall()
+        except Exception:
+            sql = f"""
+                SELECT {col['path']} as path,
+                       COALESCE({col['start']}, 1) as start_line,
+                       COALESCE({col['end']},   COALESCE({col['start']},1)+1) as end_line,
+                       {col['text']} as text
+                FROM {table}
+                WHERE {table} MATCH ?
+                LIMIT ?
+            """
+            cur.execute(sql, (query, int(limit)))
+            rows = [(*r, 0.0) for r in cur.fetchall()]
+
         hits: List[FtsHit] = []
-        for p, s, e, t in rows:
-            start = int(s or 1)
-            end = int(e or (s or 1) or 1)
+        for p, s, e, t, sc in rows:
             hits.append(
                 FtsHit(
                     file=str(p),
-                    start_line=start,
-                    end_line=end,
+                    start_line=int(s or 1),
+                    end_line=int(e or (s or 1) + 1),
                     text=str(t or ""),
-                    score=0.0,
+                    score=float(sc or 0.0),
                 )
             )
         return hits
