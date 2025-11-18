@@ -63,8 +63,22 @@ class GraphStore:
             self.adjacency[relation.dst]["incoming"][reverse_edge].append(relation.src)
     
     def load_from_file(self, path: Path):
-        """Load graph from JSON file"""
-        graph = SchemaGraph.load(path)
+        """Load graph from JSON file.
+
+        Supports both raw SchemaGraph JSON files and the nested
+        `schema_graph` payload inside `.llmc/rag_graph.json`.
+        """
+        with path.open("r", encoding="utf-8") as handle:
+            data = json.load(handle)
+
+        # If this is a RAG Nav graph artifact, extract the nested schema_graph.
+        payload = data.get("schema_graph") if isinstance(data, dict) else None
+        if isinstance(payload, dict):
+            graph = SchemaGraph.from_dict(payload)
+        else:
+            # Fallback to the flat SchemaGraph format.
+            graph = SchemaGraph.from_dict(data)
+
         self.load_from_schema(graph)
     
     def save_to_file(self, path: Path):

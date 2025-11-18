@@ -98,14 +98,26 @@ def _cmd_add(args, tool_config, registry: Optional[RegistryAdapter]) -> int:
         registry = RegistryAdapter(tool_config)
 
     repo_path = canonical_repo_path(Path(args.path))
-    inspection = inspect_repo(repo_path, tool_config)
-    if not inspection.exists:
-        print(f"Error: repo path does not exist: {repo_path}")
+
+    try:
+        inspection = inspect_repo(repo_path, tool_config)
+        if not inspection.exists:
+            print(f"Error: repo path does not exist: {repo_path}")
+            return 1
+
+        plan = plan_workspace(repo_path, tool_config, inspection)
+        init_workspace(plan, inspection, tool_config, non_interactive=args.yes)
+        validation = validate_workspace(plan)
+    except PermissionError as exc:
+        # Common case: attempting to register a repo under a protected path
+        # like /root without sufficient privileges.
+        print(
+            f"Permission denied while accessing {repo_path}: {exc}. "
+            "Use a repo you own or adjust permissions.",
+            file=sys.stderr,
+        )
         return 1
 
-    plan = plan_workspace(repo_path, tool_config, inspection)
-    init_workspace(plan, inspection, tool_config, non_interactive=args.yes)
-    validation = validate_workspace(plan)
     if validation.status == "error":
         print("Workspace validation failed:")
         for issue in validation.issues:

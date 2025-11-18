@@ -1,0 +1,511 @@
+from __future__ import annotations
+
+"""
+Phase 3 — Patch P3: Minimal graph-backed results for RAG Nav tools.
+
+Reads `.llmc/rag_graph.json` under the provided repo_root and returns real items
+for search/where-used/lineage using lightweight heuristics. No DB writes, no
+advanced scoring — just enough to satisfy tests with deterministic behavior.
+"""
+
+import json
+import os
+from pathlib import Path
+from typing import Optional, Iterable, Dict, Any, List, Set, Tuple
+
+from tools.rag_nav.models import (
+    Snippet,
+    SnippetLocation,
+    SearchItem,
+    SearchResult,
+    WhereUsedItem,
+    WhereUsedResult,
+    LineageItem,
+    LineageResult,
+)
+
+
+_GRAPH_REL_PATH = os.path.join(".llmc", "rag_graph.json")
+_SUPPORTED_EDGE_TYPES = {"CALLS", "IMPORTS", "READS", "WRITES", "USES"}
+
+
+def _rag_graph_path(repo_root: Path | str) -> Path:
+    """Internal helper: path to the RAG Nav graph JSON."""
+    return Path(repo_root) / ".llmc" / "rag_graph.json"
+
+
+def _graph_path(repo_root: Path | str) -> Path:
+    """
+    Compatibility wrapper for the legacy schema graph path.
+
+    Tests for the Phase 2 builder expect this function to return the
+    path used by tools.rag.build_graph_for_repo (schema_graph.json).
+    """
+    from tools.rag import _graph_path as _core_graph_path
+
+    return _core_graph_path(Path(repo_root))
+
+
+def _load_graph(repo_root: str) -> tuple[list[dict], list[dict]]:
+    """Return (nodes, edges). If missing or invalid, return ([], [])."""
+    path = _rag_graph_path(repo_root)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        nodes = data.get("nodes") or data.get("entities") or []
+        edges = data.get("edges") or []
+        # Allow consuming schema_graph artifacts by projecting relations into edges.
+        if not edges and isinstance(data.get("schema_graph"), dict):
+            rels = data["schema_graph"].get("relations") or []
+            if isinstance(rels, list):
+                edges = [
+                    {
+                        "type": str(r.get("edge") or "").upper(),
+                        "source": r.get("src") or r.get("from") or "",
+                        "target": r.get("dst") or r.get("to") or "",
+                    }
+                    for r in rels
+                ]
+        if not isinstance(nodes, list) or not isinstance(edges, list):
+            return [], []
+        return nodes, edges
+    except Exception:
+        return [], []
+
+
+def _node_name(n: dict) -> str:
+    return str(n.get("name") or n.get("id") or "")
+
+
+def _node_path(n: dict) -> str:
+    return str(n.get("path") or n.get("file") or n.get("filepath") or "")
+
+
+def _node_span(n: dict) -> tuple[Optional[int], Optional[int]]:
+    span = n.get("span") or n.get("loc") or {}
+    start = span.get("start_line") or span.get("start") or span.get("line_start") or n.get("start_line")
+    end = span.get("end_line") or span.get("end") or span.get("line_end") or n.get("end_line")
+    try:
+        start_i = int(start) if start is not None else None
+        end_i = int(end) if end is not None else None
+        return start_i, end_i
+    except Exception:
+        return None, None
+
+
+def _read_snippet(repo_root: str, path: str, start_line: Optional[int], end_line: Optional[int]) -> Snippet:
+    """Read file and slice [start_line, end_line]. Lines are 1-based, inclusive."""
+    abspath = os.path.join(repo_root, path) if path else ""
+    text = ""
+    sl = start_line or 1
+    el = end_line or (sl + 15)
+    if os.path.isfile(abspath):
+        try:
+            with open(abspath, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+            total = len(lines)
+            sl = max(1, min(sl, total if total else 1))
+            el = max(sl, min(el, total if total else sl))
+            text = "".join(lines[sl - 1 : el])
+        except Exception:
+            text = ""
+    return Snippet(text=text, location=SnippetLocation(path=path or "", start_line=sl, end_line=el))
+
+
+def _max_n(max_results: Optional[int], default: int = 20) -> int:
+    try:
+        if max_results is None:
+            return default
+        return max(1, int(max_results))
+    except Exception:
+        return default
+
+
+def _index_nodes(nodes: list[dict]) -> tuple[Dict[str, dict], Dict[str, List[dict]]]:
+    by_id: Dict[str, dict] = {}
+    by_name_lower: Dict[str, List[dict]] = {}
+    for n in nodes:
+        nid = str(n.get("id") or _node_name(n))
+        by_id[nid] = n
+        nm = _node_name(n).lower()
+        if nm:
+            by_name_lower.setdefault(nm, []).append(n)
+    return by_id, by_name_lower
+
+
+def _match_nodes(nodes: list[dict], query: str) -> List[dict]:
+    q = (query or "").lower().strip()
+    if not q:
+        return []
+    out: List[dict] = []
+    seen: Set[int] = set()
+    for i, n in enumerate(nodes):
+        name = _node_name(n).lower()
+        path = _node_path(n).lower()
+        if q in name or q in path:
+            if i not in seen:
+                seen.add(i)
+                out.append(n)
+    return out
+
+
+def _resolve_symbol_nodes(nodes: list[dict], symbol: str) -> List[dict]:
+    if not symbol:
+        return []
+    q = symbol.lower()
+    out: List[dict] = []
+    for n in nodes:
+        name = _node_name(n).lower()
+        if name.endswith(q) or q in name:
+            out.append(n)
+    return out
+
+
+def build_graph_for_repo(repo_root: Path | str):
+    """
+    Build both the legacy schema_graph artifact and a nav-ready rag_graph.json.
+
+    This function:
+      - Delegates to tools.rag.build_graph_for_repo to generate a simple
+        schema_graph.json and persist index status.
+      - Uses the Phase 2 schema graph builder to construct an AST-only graph
+        and projects it into a lightweight nodes/edges structure consumed by
+        the search/where-used/lineage helpers in this module.
+    """
+    from tools.rag import build_graph_for_repo as _core_build_graph_for_repo, _graph_path as _core_graph_path
+    from tools.rag.schema import build_graph_for_repo as _schema_build_graph_for_repo
+
+    repo_root_path = Path(repo_root)
+
+    # First, build the legacy graph + status so existing callers and tests
+    # that inspect schema_graph.json continue to work.
+    status = _core_build_graph_for_repo(repo_root_path)
+
+    # Next, build an AST-only schema graph (no DB required) and derive a
+    # minimal nodes/edges representation for RAG Nav.
+    nodes: List[Dict[str, Any]] = []
+    edges: List[Dict[str, Any]] = []
+
+    try:
+        schema_graph = _schema_build_graph_for_repo(repo_root_path, require_enrichment=False)
+    except Exception:
+        schema_graph = None
+
+    if schema_graph and schema_graph.entities:
+        # Preferred path: use the Phase 2 schema graph if we have entities.
+        for entity in schema_graph.entities:
+            path = entity.file_path or entity.path
+            if isinstance(path, str) and ":" in path and not entity.file_path:
+                # Strip line-range suffix if present (e.g., "foo.py:10-20")
+                path = path.split(":", 1)[0]
+            span: Dict[str, int] = {}
+            if entity.start_line is not None:
+                span["start_line"] = int(entity.start_line)
+            if entity.end_line is not None:
+                span["end_line"] = int(entity.end_line)
+
+            node: Dict[str, Any] = {
+                "id": entity.id,
+                "name": entity.id,
+                "path": path or "",
+            }
+            if span:
+                node["span"] = span
+            nodes.append(node)
+
+        for relation in schema_graph.relations:
+            edges.append(
+                {
+                    "type": str(relation.edge or "").upper(),
+                    "source": relation.src,
+                    "target": relation.dst,
+                }
+            )
+    else:
+        # Fallback path: simple text-based scan over .py files that tolerates
+        # syntactically invalid Python (e.g., leading indentation).
+        def _iter_py_files(root: Path) -> Iterable[Path]:
+            for path in root.rglob("*.py"):
+                # Skip common junk directories.
+                if any(part in {".git", ".venv", "venv", "__pycache__", "node_modules"} for part in path.parts):
+                    continue
+                yield path
+
+        # First pass: collect defined symbol names by scanning for def/class.
+        defined_symbols: Set[str] = set()
+        file_paths: List[Path] = []
+        for file_path in _iter_py_files(repo_root_path):
+            file_paths.append(file_path)
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for line in text.splitlines():
+                stripped = line.lstrip()
+                if stripped.startswith("def ") or stripped.startswith("class "):
+                    name_part = stripped.split(" ", 1)[1]
+                    name = name_part.split("(", 1)[0].split(":", 1)[0].strip()
+                    if name:
+                        defined_symbols.add(name)
+
+        # Create file-level nodes so where-used results can report file paths.
+        for file_path in file_paths:
+            rel_path = str(file_path.relative_to(repo_root_path))
+            nodes.append(
+                {
+                    "id": rel_path,
+                    "name": rel_path,
+                    "path": rel_path,
+                }
+            )
+
+        # Create symbol definition nodes.
+        for file_path in file_paths:
+            rel_path = str(file_path.relative_to(repo_root_path))
+            try:
+                lines = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+            except OSError:
+                continue
+            for idx, line in enumerate(lines, start=1):
+                stripped = line.lstrip()
+                if stripped.startswith("def ") or stripped.startswith("class "):
+                    name_part = stripped.split(" ", 1)[1]
+                    name = name_part.split("(", 1)[0].split(":", 1)[0].strip()
+                    if name in defined_symbols:
+                        nodes.append(
+                            {
+                                "id": name,
+                                "name": name,
+                                "path": rel_path,
+                                "span": {"start_line": idx, "end_line": idx},
+                            }
+                        )
+
+        # Second pass: add simple CALLS edges based on `name(` occurrences.
+        for file_path in file_paths:
+            rel_path = str(file_path.relative_to(repo_root_path))
+            try:
+                text = file_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            for sym in defined_symbols:
+                token = f"{sym}("
+                if token in text:
+                    # Edge from caller file -> callee symbol (where-used).
+                    edges.append(
+                        {
+                            "type": "CALLS",
+                            "source": rel_path,  # file-level node id
+                            "target": sym,  # symbol-level node id
+                        }
+                    )
+                    # Symmetric edge from symbol -> caller file (lineage downstream).
+                    edges.append(
+                        {
+                            "type": "CALLS",
+                            "source": sym,
+                            "target": rel_path,
+                        }
+                    )
+
+    rag_path = _rag_graph_path(repo_root_path)
+    rag_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "nodes": nodes,
+        "edges": edges,
+    }
+    try:
+        rag_path.write_text(json.dumps(payload), encoding="utf-8")
+    except Exception:
+        # Writing the nav graph is best-effort; status + legacy graph already exist.
+        pass
+
+    return status
+
+
+# --- Fallback helpers (local scan) ---------------------------------------------
+def _iter_repo_py_files(repo_root):
+    import os
+    skip_dirs = {".git", ".llmc", ".trash", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache"}
+    for root, dirs, files in os.walk(str(repo_root)):
+        dirs[:] = [d for d in dirs if d not in skip_dirs]
+        for name in files:
+            if name.endswith(".py"):
+                rel = os.path.relpath(os.path.join(root, name), str(repo_root))
+                yield rel
+
+
+def _grep_snippets(repo_root, needle, max_items):
+    items = []
+    try:
+        for rel in _iter_repo_py_files(repo_root):
+            abspath = os.path.join(str(repo_root), rel)
+            try:
+                with open(abspath, "r", encoding="utf-8", errors="ignore") as f:
+                    lines = f.readlines()
+                for i, line in enumerate(lines, start=1):
+                    if needle in line:
+                        sl = max(1, i - 2)
+                        el = min(len(lines), i + 2)
+                        text = "".join(lines[sl-1:el])
+                        items.append((rel, sl, el, text))
+                        if len(items) >= max_items:
+                            return items
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return items
+
+
+# --- Context Gateway integration ----------------------------------------------
+from pathlib import Path as _Path
+from tools.rag_nav.gateway import compute_route as _compute_route
+
+
+def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
+    route = _compute_route(_Path(repo_root))
+    max_results = _max_n(limit, default=20)
+
+    if route.use_rag:
+        nodes, _ = _load_graph(str(repo_root))
+        hits = _match_nodes(nodes, query)[:max_results]
+        items: List[SearchItem] = []
+        for n in hits:
+            path = _node_path(n)
+            sl, el = _node_span(n)
+            snippet = _read_snippet(str(repo_root), path, sl, el)
+            items.append(SearchItem(file=path, snippet=snippet))
+        return SearchResult(
+            query=query,
+            items=items,
+            truncated=False,
+            source="RAG_GRAPH",
+            freshness_state=route.freshness_state,
+        )
+
+    # Fallback: local grep
+    grep_hits = _grep_snippets(repo_root, query, max_results)
+    items: List[SearchItem] = []
+    for rel, sl, el, text in grep_hits:
+        items.append(SearchItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+    return SearchResult(
+        query=query,
+        items=items,
+        truncated=False,
+        source="LOCAL_FALLBACK",
+        freshness_state=route.freshness_state,
+    )
+
+
+def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> WhereUsedResult:
+    route = _compute_route(_Path(repo_root))
+    max_results = _max_n(limit, default=50)
+
+    if route.use_rag:
+        nodes, edges = _load_graph(str(repo_root))
+        by_id, _ = _index_nodes(nodes)
+        targets = _resolve_symbol_nodes(nodes, symbol)
+        target_ids: Set[str] = {str(t.get("id") or _node_name(t)) for t in targets}
+        items: List[WhereUsedItem] = []
+        if target_ids:
+            for e in edges:
+                etype = str(e.get("type") or "").upper()
+                if etype not in _SUPPORTED_EDGE_TYPES:
+                    continue
+                src = str(e.get("source") or e.get("src") or "")
+                dst = str(e.get("target") or e.get("dst") or "")
+                if dst in target_ids:
+                    n = by_id.get(src)
+                    if not n:
+                        continue
+                    path = _node_path(n)
+                    sl, el = _node_span(n)
+                    snippet = _read_snippet(str(repo_root), path, sl, el)
+                    items.append(WhereUsedItem(file=path, snippet=snippet))
+                    if len(items) >= max_results:
+                        break
+        return WhereUsedResult(
+            symbol=symbol,
+            items=items,
+            truncated=False,
+            source="RAG_GRAPH",
+            freshness_state=route.freshness_state,
+        )
+
+    # Fallback: grep symbol usages
+    grep_hits = _grep_snippets(repo_root, symbol, max_results)
+    items: List[WhereUsedItem] = []
+    for rel, sl, el, text in grep_hits:
+        items.append(WhereUsedItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+    return WhereUsedResult(
+        symbol=symbol,
+        items=items,
+        truncated=False,
+        source="LOCAL_FALLBACK",
+        freshness_state=route.freshness_state,
+    )
+
+
+def tool_rag_lineage(
+    repo_root,
+    symbol: str,
+    direction: str,
+    max_results: Optional[int] = None,
+) -> LineageResult:
+    route = _compute_route(_Path(repo_root))
+    limit = _max_n(max_results, default=50)
+
+    if route.use_rag:
+        nodes, edges = _load_graph(str(repo_root))
+        by_id, _ = _index_nodes(nodes)
+        start_nodes = _resolve_symbol_nodes(nodes, symbol)
+        start_ids: Set[str] = {str(n.get("id") or _node_name(n)) for n in start_nodes}
+        items: List[LineageItem] = []
+        if start_ids:
+            dir_norm = (direction or "").lower().strip()
+            forward = dir_norm in ("downstream", "forward", "callees")
+            for e in edges:
+                if str(e.get("type") or "").upper() != "CALLS":
+                    continue
+                src = str(e.get("source") or e.get("src") or "")
+                dst = str(e.get("target") or e.get("dst") or "")
+                hop_id = None
+                if forward and src in start_ids:
+                    hop_id = dst
+                elif (not forward) and dst in start_ids:
+                    hop_id = src
+                if hop_id is None:
+                    continue
+                n = by_id.get(hop_id)
+                if not n:
+                    continue
+                path = _node_path(n)
+                sl, el = _node_span(n)
+                snippet = _read_snippet(str(repo_root), path, sl, el)
+                items.append(LineageItem(file=path, snippet=snippet))
+                if len(items) >= limit:
+                    break
+        return LineageResult(
+            symbol=symbol,
+            direction=direction,
+            items=items,
+            truncated=False,
+            source="RAG_GRAPH",
+            freshness_state=route.freshness_state,
+        )
+
+    # Fallback: naive grep for callsites "symbol(" as pseudo-lineage
+    grep_hits = _grep_snippets(repo_root, f"{symbol}(", limit)
+    items: List[LineageItem] = []
+    for rel, sl, el, text in grep_hits:
+        items.append(LineageItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+    return LineageResult(
+        symbol=symbol,
+        direction=direction,
+        items=items,
+        truncated=False,
+        source="LOCAL_FALLBACK",
+        freshness_state=route.freshness_state,
+    )
+

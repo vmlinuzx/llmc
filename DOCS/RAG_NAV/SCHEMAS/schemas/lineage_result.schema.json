@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llmc://schemas/rag_nav/lineage_result.schema.json",
+  "title": "CLI JSON: nav lineage",
+  "type": "object",
+  "properties": {
+    "symbol": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "upstream",
+        "downstream"
+      ]
+    },
+    "route": {
+      "$ref": "llmc://schemas/rag_nav/route.schema.json"
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": [
+            "RAG_GRAPH",
+            "LOCAL_FALLBACK"
+          ]
+        },
+        "freshness_state": {
+          "type": "string",
+          "enum": [
+            "FRESH",
+            "STALE",
+            "UNKNOWN"
+          ]
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "llmc://schemas/rag_nav/item.schema.json"
+          }
+        }
+      },
+      "required": [
+        "source",
+        "freshness_state",
+        "items"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "symbol",
+    "direction",
+    "route",
+    "result"
+  ],
+  "additionalProperties": false
+}
+

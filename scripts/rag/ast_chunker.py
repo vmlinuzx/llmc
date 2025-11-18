@@ -140,7 +140,8 @@ class ASTChunker:
         self._parsers: Dict[str, object] = {}
         self._text: str = ""
         self._text_bytes: bytes = b""
-        self._char_to_byte: List[int] = []
+        # Mapping from character index to byte offset in _text_bytes.
+        self._char_to_byte_index: List[int] = []
         self._line_offsets: List[int] = []
         self._span_counter: int = 0
 
@@ -508,13 +509,13 @@ class ASTChunker:
     def _reset_state(self, text: str) -> None:
         self._text = text
         self._text_bytes = text.encode("utf-8", errors="ignore")
-        self._char_to_byte = []
+        self._char_to_byte_index = []
 
         byte_offset = 0
         for ch in text:
-            self._char_to_byte.append(byte_offset)
+            self._char_to_byte_index.append(byte_offset)
             byte_offset += len(ch.encode("utf-8"))
-        self._char_to_byte.append(byte_offset)
+        self._char_to_byte_index.append(byte_offset)
 
         self._line_offsets = [0]
         for idx, ch in enumerate(text):
@@ -533,12 +534,12 @@ class ASTChunker:
     def _char_to_byte(self, char_index: int) -> int:
         if char_index < 0:
             return 0
-        if char_index >= len(self._char_to_byte):
-            return self._char_to_byte[-1]
-        return self._char_to_byte[char_index]
+        if char_index >= len(self._char_to_byte_index):
+            return self._char_to_byte_index[-1]
+        return self._char_to_byte_index[char_index]
 
     def _byte_to_char(self, byte_offset: int) -> int:
-        idx = bisect_right(self._char_to_byte, byte_offset) - 1
+        idx = bisect_right(self._char_to_byte_index, byte_offset) - 1
         return max(idx, 0)
 
     def _char_to_line_col(self, char_index: int) -> Tuple[int, int]:

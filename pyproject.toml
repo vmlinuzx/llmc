@@ -30,8 +30,19 @@ rag = [
   "python-multipart>=0.0.6",
 ]
 
+[tool.setuptools]
+# Explicitly declare which top-level packages are part of the install.
+# This avoids setuptools' flat-layout safety check on unrelated dirs
+# like DOCS/, logs/, and legacy/.
+packages = ["llmcwrapper", "tools", "mcp"]
+
 [project.scripts]
 llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
 llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
 llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
 llmc-profile = "llmcwrapper.cli.llmc_profile:main"
+
+[tool.pytest.ini_options]
+markers = [
+    "rag_freshness: tests for RAG freshness, envelopes, and routing",
+]

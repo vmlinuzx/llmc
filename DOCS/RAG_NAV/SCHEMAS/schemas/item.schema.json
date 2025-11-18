@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "llmc://schemas/rag_nav/item.schema.json",
+  "title": "Result Item",
+  "type": "object",
+  "properties": {
+    "file": {
+      "type": "string"
+    },
+    "snippet": {
+      "$ref": "llmc://schemas/rag_nav/snippet.schema.json"
+    }
+  },
+  "required": [
+    "file",
+    "snippet"
+  ],
+  "additionalProperties": false
+}
+

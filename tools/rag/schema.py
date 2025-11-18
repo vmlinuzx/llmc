@@ -36,19 +36,37 @@ def language_for_path(path: Path) -> Optional[str]:
 
 @dataclass
 class Entity:
-    """Represents a code entity (function, class, table, etc.)"""
+    """Represents a code entity (function, class, table, etc.)
+    
+    Phase 2 additions:
+    - file_path: Stable path for matching with spans (without line numbers)
+    - start_line: Start line number (for precise matching)
+    - end_line: End line number (for precise matching)
+    """
     id: str  # Unique identifier (e.g., "sym:auth.login")
     kind: str  # "function", "class", "table", "variable"
     path: str  # File path with line numbers (e.g., "src/auth.py:10-15")
     metadata: Dict = field(default_factory=dict)
+    # Phase 2: Location fields for enrichment matching
+    file_path: Optional[str] = None  # Path without line numbers (e.g., "src/auth.py")
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
     
     def to_dict(self) -> dict:
-        return {
+        base = {
             "id": self.id,
             "kind": self.kind,
             "path": self.path,
             "metadata": self.metadata,
         }
+        # Include location fields if present (Phase 2)
+        if self.file_path is not None:
+            base["file_path"] = self.file_path
+        if self.start_line is not None:
+            base["start_line"] = self.start_line
+        if self.end_line is not None:
+            base["end_line"] = self.end_line
+        return base
 
 
 @dataclass
@@ -105,6 +123,9 @@ class SchemaGraph:
                     kind=e["kind"],
                     path=e["path"],
                     metadata=e.get("metadata", {}),
+                    file_path=e.get("file_path"),  # Phase 2
+                    start_line=e.get("start_line"),  # Phase 2
+                    end_line=e.get("end_line"),  # Phase 2
                 )
             )
 
@@ -137,6 +158,9 @@ class SchemaGraph:
                 kind=e["kind"],
                 path=e["path"],
                 metadata=e.get("metadata", {}),
+                file_path=e.get("file_path"),  # Phase 2
+                start_line=e.get("start_line"),  # Phase 2
+                end_line=e.get("end_line"),  # Phase 2
             )
             for e in data["entities"]
         ]
@@ -190,7 +214,7 @@ class PythonSchemaExtractor:
         
         entity_id = f"sym:{symbol}"
         
-        # Create entity
+        # Create entity (Phase 2: include location fields)
         entity = Entity(
             id=entity_id,
             kind="function",
@@ -198,7 +222,10 @@ class PythonSchemaExtractor:
             metadata={
                 "params": [arg.arg for arg in node.args.args],
                 "returns": ast.unparse(node.returns) if node.returns else None,
-            }
+            },
+            file_path=str(self.file_path),  # Phase 2: stable path for matching
+            start_line=node.lineno,  # Phase 2
+            end_line=node.end_lineno if node.end_lineno else node.lineno,  # Phase 2
         )
         self.entities.append(entity)
         
@@ -214,14 +241,17 @@ class PythonSchemaExtractor:
         class_name = f"{self.module_name}.{node.name}"
         entity_id = f"type:{class_name}"
         
-        # Create class entity
+        # Create class entity (Phase 2: include location fields)
         entity = Entity(
             id=entity_id,
             kind="class",
             path=f"{self.file_path}:{node.lineno}-{node.end_lineno}",
             metadata={
                 "bases": [ast.unparse(base) for base in node.bases],
-            }
+            },
+            file_path=str(self.file_path),  # Phase 2
+            start_line=node.lineno,  # Phase 2
+            end_line=node.end_lineno if node.end_lineno else node.lineno,  # Phase 2
         )
         self.entities.append(entity)
         
@@ -393,28 +423,305 @@ def build_schema_graph(repo_root: Path, file_paths: List[Path]) -> SchemaGraph:
             seen_relations.add(key)
     
     return graph
+
+
+
+# ============================================================================
+# Phase 2: Enriched Schema Graph Builder
+# ============================================================================
+
+def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List[Path]) -> SchemaGraph:
+    """Build schema graph with enrichment metadata merged from database.
     
-    all_entities = []
-    all_relations = []
+    This is the Phase 2 integration function that:
+    1. Builds the base schema graph from AST parsing
+    2. Loads all enrichments from the database
+    3. Matches entities to enrichments by (file_path, symbol) or location
+    4. Attaches enrichment metadata to matching entities
     
-    for file_path in file_paths:
-        entities, relations = extract_schema_from_file(file_path)
-        all_entities.extend(entities)
-        all_relations.extend(relations)
+    Args:
+        repo_root: Root directory of repository
+        db_path: Path to enrichment database (.rag/index_v2.db)
+        file_paths: List of source files to analyze
     
-    # Deduplicate entities by ID
-    seen_ids = set()
-    for entity in all_entities:
-        if entity.id not in seen_ids:
-            graph.entities.append(entity)
-            seen_ids.add(entity.id)
+    Returns:
+        SchemaGraph with enrichment metadata attached to entities
+    """
+    from .database import Database
     
-    # Deduplicate relations
-    seen_relations = set()
-    for relation in all_relations:
-        key = (relation.src, relation.edge, relation.dst)
-        if key not in seen_relations:
-            graph.relations.append(relation)
-            seen_relations.add(key)
+    # Step 1: Build base schema graph (entities + relations from AST)
+    graph = build_schema_graph(repo_root, file_paths)
+    
+    # Step 2: Load enrichments from database
+    db = Database(db_path)
+    try:
+        enrichments = db.fetch_all_enrichments()
+        spans = db.fetch_all_spans()
+    finally:
+        db.close()
+    
+    # Step 3: Build mapping index for fast lookup.
+    # Key: (normalized_file_path, symbol) -> EnrichmentRecord
+    enrich_by_symbol: Dict[Tuple[str, str], any] = {}
+
+    for enrich in enrichments:
+        symbol = enrich.symbol
+        # Try to find the corresponding span to get file path.
+        for span in spans:
+            if span.span_hash != enrich.span_hash:
+                continue
+
+            # Normalize path for matching (relative to repo_root).
+            try:
+                norm_path = str(Path(span.file_path).relative_to(repo_root))
+            except ValueError:
+                norm_path = str(span.file_path)
+
+            # Primary key: (path, fully-qualified symbol) if available.
+            key = (norm_path, symbol)
+            enrich_by_symbol[key] = enrich
+
+            # Fallback key: (path, short symbol) for legacy indices where
+            # spans.symbol stored only the function name (e.g. "build_graph_for_repo")
+            # instead of "module.build_graph_for_repo".
+            short_symbol = symbol.split(".")[-1]
+            if short_symbol != symbol:
+                fallback_key = (norm_path, short_symbol)
+                enrich_by_symbol.setdefault(fallback_key, enrich)
+            break
+    
+    # Step 4: Match entities to enrichments and attach metadata
+    enriched_count = 0
+    unmatched_entities = []
+    
+    for entity in graph.entities:
+        if not entity.file_path:
+            continue  # Can't match without location
+        
+        # Normalize entity file path
+        try:
+            norm_entity_path = str(Path(entity.file_path).relative_to(repo_root))
+        except ValueError:
+            norm_entity_path = entity.file_path
+        # Persist normalized path so JSON exports remain repo-relative.
+        entity.file_path = norm_entity_path
+        
+        # Extract symbol from entity ID (strip "sym:" or "type:" prefix).
+        symbol = entity.id
+        if symbol.startswith("sym:"):
+            symbol = symbol[4:]
+        elif symbol.startswith("type:"):
+            symbol = symbol[5:]
+        
+        # Try to find enrichment by (file_path, symbol).
+        key = (norm_entity_path, symbol)
+        enrich = enrich_by_symbol.get(key)
+
+        # Legacy fallback: older indices may have stored only the short symbol
+        # name in spans.symbol (e.g. "build_graph_for_repo"). If the fully-
+        # qualified lookup failed, retry using the short name.
+        if enrich is None:
+            short_symbol = symbol.split(".")[-1]
+            if short_symbol != symbol:
+                fallback_key = (norm_entity_path, short_symbol)
+                enrich = enrich_by_symbol.get(fallback_key)
+        
+        if enrich:
+            # Attach enrichment fields to entity metadata
+            _attach_enrichment_to_entity(entity, enrich)
+            enriched_count += 1
+        else:
+            # Phase 2 policy: missing/partial enrichment is non-fatal.
+            # We leave the entity.metadata untouched and record the
+            # unmatched entity ID for logging/observability only.
+            unmatched_entities.append(entity.id)
+    
+    # Step 5: Log integration stats
+    total_entities = len(graph.entities)
+    total_enrichments = len(enrichments)
+    coverage_pct = (enriched_count / total_entities * 100) if total_entities > 0 else 0
+    
+    print(f"    📊 Enrichment integration: {enriched_count}/{total_entities} entities enriched ({coverage_pct:.1f}%)")
+    print(f"    📊 Database had {total_enrichments} enrichments available")
+    
+    if unmatched_entities and len(unmatched_entities) <= 10:
+        print(f"    ⚠️  Unmatched entities: {unmatched_entities[:10]}")
+    elif unmatched_entities:
+        print(f"    ⚠️  {len(unmatched_entities)} entities could not be matched to enrichments")
     
     return graph
+
+
+def _attach_enrichment_to_entity(entity: Entity, enrich: any) -> None:
+    """Internal helper to attach enrichment fields to entity metadata.
+    
+    Args:
+        entity: Entity to enrich
+        enrich: EnrichmentRecord with metadata
+    """
+    # Parse JSON fields if they're stored as strings
+    import json
+    
+    def safe_json_load(value: Optional[str]) -> Optional[list]:
+        if not value:
+            return None
+        try:
+            return json.loads(value) if isinstance(value, str) else value
+        except (json.JSONDecodeError, TypeError):
+            return None
+    
+    # Attach all enrichment fields
+    if enrich.summary:
+        entity.metadata["summary"] = enrich.summary
+    
+    evidence = safe_json_load(enrich.evidence)
+    if evidence:
+        entity.metadata["evidence"] = evidence
+    
+    inputs = safe_json_load(enrich.inputs)
+    if inputs:
+        entity.metadata["inputs"] = inputs
+    
+    outputs = safe_json_load(enrich.outputs)
+    if outputs:
+        entity.metadata["outputs"] = outputs
+    
+    side_effects = safe_json_load(enrich.side_effects)
+    if side_effects:
+        entity.metadata["side_effects"] = side_effects
+    
+    pitfalls = safe_json_load(enrich.pitfalls)
+    if pitfalls:
+        entity.metadata["pitfalls"] = pitfalls
+    
+    if enrich.usage_snippet:
+        entity.metadata["usage_snippet"] = enrich.usage_snippet
+    
+    if enrich.tags:
+        entity.metadata["tags"] = enrich.tags
+    
+    # Always store symbol/span_hash for downstream tools.
+    if getattr(enrich, "symbol", None):
+        entity.metadata["symbol"] = enrich.symbol
+    entity.metadata["span_hash"] = enrich.span_hash
+
+
+def build_graph_for_repo(
+    repo_root: Path,
+    require_enrichment: bool = True,
+    db_path: Optional[Path] = None,
+) -> SchemaGraph:
+    """Orchestration function to build a schema graph for a repository.
+
+    This is the main entry point for Phase 2 that:
+
+    1. Discovers source files in the repository.
+    2. Builds either a plain AST-only graph (when require_enrichment=False)
+       or an enriched graph backed by the SQLite index (when require_enrichment=True).
+    3. Optionally validates that enrichment data is present and actually
+       attached to entities in the graph.
+
+    Args:
+        repo_root:
+            Root directory of the repository being indexed.
+        require_enrichment:
+            When True (default), the function will ensure that the enrichment
+            database contains at least one enrichment row and that at least one
+            entity in the resulting graph has enrichment metadata attached.
+            When False, the function will build a plain AST-only graph and will
+            not touch the database.
+        db_path:
+            Optional explicit path to the enrichment database. When omitted and
+            require_enrichment is True, this defaults to ``repo_root/.rag/index_v2.db``.
+
+    Returns:
+        SchemaGraph: The built schema graph (plain or enriched depending on
+        require_enrichment).
+
+    Raises:
+        RuntimeError:
+            - If no source files are discovered under repo_root.
+            - If require_enrichment is True but the database has zero rows in
+              the ``enrichments`` table.
+            - If require_enrichment is True and the database reports
+              enrichments, but none of the entities in the graph ended up with
+              enrichment metadata (indicating a mapping bug).
+    """
+    # Discover source files once; both plain and enriched modes share this.
+    file_paths = _discover_source_files(repo_root)
+    
+    if not file_paths:
+        raise RuntimeError(f"No source files found in {repo_root}")
+    
+    # Plain, AST-only graph path: never touches the DB.
+    if not require_enrichment:
+        return build_schema_graph(repo_root, file_paths)
+
+    # Enriched path: wire DB + graph and validate coverage.
+    if db_path is None:
+        db_path = repo_root / ".rag" / "index_v2.db"
+
+    graph = build_enriched_schema_graph(repo_root, db_path, file_paths)
+
+    # Optionally validate enrichment presence and coverage.
+    from .database import Database
+
+    db = Database(db_path)
+    try:
+        enrich_count = db.conn.execute(
+            "SELECT COUNT(*) FROM enrichments"
+        ).fetchone()[0]
+    finally:
+        db.close()
+
+    if enrich_count == 0:
+        raise RuntimeError(
+            "require_enrichment=True but database has 0 enrichments. "
+            "Run enrichment pipeline first or set require_enrichment=False."
+        )
+
+    enriched_entities = sum(1 for e in graph.entities if "summary" in e.metadata)
+    if enriched_entities == 0:
+        raise RuntimeError(
+            f"Enrichment integration failed: {enrich_count} enrichments in DB "
+            "but 0 entities enriched in graph. Check ID mapping logic."
+        )
+
+    return graph
+
+
+def _discover_source_files(repo_root: Path, max_files: int = 10000) -> List[Path]:
+    """Discover Python source files in a repository.
+
+    This helper is intentionally conservative:
+
+    * It walks ``repo_root`` recursively looking for ``*.py`` files.
+    * It skips common virtualenv, cache, and VCS directories.
+    * It returns **absolute** paths so that downstream extractors can always
+      open the files regardless of the current working directory.
+      Callers who need repo-relative paths can derive them via
+      ``path.relative_to(repo_root)`` where appropriate.
+
+    Args:
+        repo_root:
+            Root directory to search.
+        max_files:
+            Maximum number of files to return (safety limit).
+
+    Returns:
+        List[Path]: Absolute paths to discovered Python source files.
+    """
+    files: List[Path] = []
+    exclude_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".pytest_cache"}
+    
+    for path in repo_root.rglob("*.py"):
+        # Skip excluded directories anywhere in the path.
+        if any(part in exclude_dirs for part in path.parts):
+            continue
+
+        files.append(path)
+
+        if len(files) >= max_files:
+            break
+    
+    return files

@@ -1,23 +1,23 @@
-    #!/usr/bin/env bash
-    # cw.sh - Lightweight Codex TUI wrapper for LLMC
-    #
-    # Purpose:
-    #   - Give Dave a boring, reliable Codex TUI entrypoint.
-    #   - Always start in the target repo with LLMC context.
-    #   - Nudge Codex to use the existing RAG tooling instead of raw repo scanning.
-    #   - Enable Codex YOLO mode by default (local sandbox is already Dave's problem).
-    #
-    # Non-goals:
-    #   - No routing between engines.
-    #   - No semantic cache.
-    #   - No deep-research gating.
-    #   - No enrichment or llmcwrapper refactors.
+#!/usr/bin/env bash
+# cw.sh - Lightweight Codex TUI wrapper for LLMC
+#
+# Purpose:
+#   - Give Dave a boring, reliable Codex TUI entrypoint.
+#   - Always start in the target repo with LLMC context.
+#   - Nudge Codex to use the existing RAG tooling instead of raw repo scanning.
+#   - Enable Codex YOLO mode by default (local sandbox is already Dave's problem).
+#
+# Non-goals:
+#   - No routing between engines.
+#   - No semantic cache.
+#   - No deep-research gating.
+#   - No enrichment or llmcwrapper refactors.
 
-    set -euo pipefail
+set -euo pipefail
 
-    # Resolve execution and target roots
-    SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-    EXEC_ROOT="${LLMC_EXEC_ROOT:-$SCRIPT_ROOT}"
+# Resolve execution and target roots
+SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+EXEC_ROOT="${LLMC_EXEC_ROOT:-$SCRIPT_ROOT}"
     REPO_ROOT="${LLMC_TARGET_REPO:-$EXEC_ROOT}"
 
     PYTHON_BIN="${PYTHON_BIN:-python3}"

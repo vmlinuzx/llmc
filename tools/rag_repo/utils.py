@@ -19,7 +19,12 @@ def generate_repo_id(repo_path: Path) -> str:
 
 
 def is_git_repo(path: Path) -> bool:
-    return (path / ".git").exists()
+    try:
+        return (path / ".git").exists()
+    except PermissionError:
+        # Treat protected paths as "not a git repo" and let callers
+        # surface a clearer permission error at the CLI boundary.
+        return False
 
 
 def read_text_if_exists(path: Path) -> Optional[str]:

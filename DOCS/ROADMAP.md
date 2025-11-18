@@ -30,6 +30,35 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
   - Replace the current `tool_rag_search` / `tool_rag_where_used` / `tool_rag_lineage` stubs with thin adapters over the real search + enrichment pipeline, wired to the graph and database.
   - Ship end-to-end tests that assert: (1) enrichments exist in the DB, (2) graph entities expose enrichment metadata, and (3) the public API returns enriched results instead of empty lists.
 
+  ### Phase 1 – DB / FTS foundation (this patch)
+
+  - Add a typed enrichment projection (`EnrichmentRecord`) that represents joined `spans` + `enrichments` rows.
+  - Implement DB helpers to join spans and enrichments and expose them as typed records.
+  - Add an optional FTS5 surface over enrichment summaries to support text search on enrichment content.
+  - Add unit tests for the DB helpers and FTS plumbing only.
+  - No graph or public tool changes in this phase.
+
+  ### Phase 2 – Graph enrichment + builder orchestration
+
+  - Extend `Entity` in `tools.rag.schema` with stable location fields (`file_path`, `start_line`, `end_line`) alongside the existing `id`/`path`.
+  - Implement `build_enriched_schema_graph(repo_root)` that uses the new DB helpers to attach enrichment metadata onto `SchemaGraph.entities[*]`.
+  - Implement `build_graph_for_repo(repo_root, require_enrichment=True)` and wire it into the RAG CLI / graph export path.
+  - Add tests that assert enriched metadata appears in `.llmc/rag_graph.json` for repos with populated enrichment DBs.
+
+  ### Phase 3 – Public RAG tools over DB + graph
+
+  - Implement real `tool_rag_search`, `tool_rag_where_used`, and `tool_rag_lineage` using:
+    - DB FTS helpers for query → span/symbol resolution.
+    - `GraphStore` + enriched entities for structural and enrichment context.
+  - Wrap responses in `RagResult` / `RagToolMeta` envelopes so MCP/CLI callers get consistent metadata about source, freshness, and enrichment.
+  - Add integration tests for the MCP/CLI contracts that assert non-empty, enriched results for realistic queries.
+
+  ### Phase 4 – CLI / MCP wiring + observability
+
+  - Add CLI commands for `search` / `where-used` / `lineage` that call the new `tools.rag` entrypoints, plus a command to rebuild FTS indexes.
+  - Add a debug CLI (counts, sample records) to inspect enrichment coverage, graph attachment rate, and FTS health.
+  - Wire the tools into the MCP server and update docs so upstream agents (Desktop Commander, Codex wrappers) can rely on the enriched RAG surface.
+
 - **P1: RAG Freshness Gate + Safe Local Fallback**
   - Add a freshness gate in front of RAG so tools only use RAG when slice state is known-good, otherwise fall back automatically to local filesystem/AST-based logic.
   - Ensure callers (Codex, Claude, Desktop Commander, future GUIs) never have to care whether RAG is in play; they always get correct results plus metadata about source and freshness.
@@ -488,3 +517,26 @@ Raise the “operational readiness” of hardening features to match their imple
 - A concise doc exists and is discoverable from the main README/roadmap that explains:
   - How to operate and tune the enrichment hardening features.
   - How to diagnose common issues.
+
+---
+
+## R&D – Experimental & Research Tasks
+
+### Vibrations HLD – Non-Code Fuzzy Fast Relationship Engine
+
+**Type:** R&D / Research Task
+**Theme:** Narrative Meaning Field Engine / AI-Assisted Authoring
+**Source:** `/home/vmlinux/Downloads/LLMC_VIBRATIONS_HLD.md`
+**Documentation:** `DOCS/RESEARCH/VIBRATIONS.md`
+
+**Goal:**
+Research and prototype a "vibrations" engine that builds a **narrative meaning field** over long-form text (novels, serial fiction, worldbuilding docs). The system maintains a scene + vibe graph capturing entities (characters, locations, objects), actions, and emotional tones/themes ("vibes") for fast, contextual recall while authoring.
+
+**Research Focus:**
+- **Fuzzy relationship extraction** using embeddings and LLM analysis
+- **Fast ANN indexing** for realtime scene suggestions
+- **LLM-based scene enrichment** for summaries, tone tags, and themes
+- **Graph-based narrative memory** with SQLite backing
+- **Live authoring integration** with sub-100ms reminder queries
+
+This is a **research task**—the goal is exploration and proof-of-concept, not production hardening. See `DOCS/RESEARCH/VIBRATIONS.md` for full technical details and architecture.
