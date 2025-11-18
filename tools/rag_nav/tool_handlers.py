@@ -361,40 +361,49 @@ def _grep_snippets(repo_root, needle, max_items):
 # --- Context Gateway integration ----------------------------------------------
 from pathlib import Path as _Path
 from tools.rag_nav.gateway import compute_route as _compute_route
+from tools.rag.db_fts import fts_search, RagDbNotFound
 
 
 def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
+    """Search using either DB FTS (when route allows RAG) or local fallback."""
     route = _compute_route(_Path(repo_root))
     max_results = _max_n(limit, default=20)
 
-    if route.use_rag:
-        nodes, _ = _load_graph(str(repo_root))
-        hits = _match_nodes(nodes, query)[:max_results]
-        items: List[SearchItem] = []
-        for n in hits:
-            path = _node_path(n)
-            sl, el = _node_span(n)
-            snippet = _read_snippet(str(repo_root), path, sl, el)
-            items.append(SearchItem(file=path, snippet=snippet))
-        return SearchResult(
-            query=query,
-            items=items,
-            truncated=False,
-            source="RAG_GRAPH",
-            freshness_state=route.freshness_state,
-        )
-
-    # Fallback: local grep
-    grep_hits = _grep_snippets(repo_root, query, max_results)
     items: List[SearchItem] = []
-    for rel, sl, el, text in grep_hits:
-        items.append(SearchItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+    source = "LOCAL_FALLBACK"
+
+    if route.use_rag:
+        try:
+            hits = fts_search(_Path(repo_root), query, limit=max_results)
+            for h in hits:
+                loc = SnippetLocation(path=h.file, start_line=h.start_line, end_line=h.end_line)
+                snip = Snippet(text=h.text, location=loc)
+                items.append(SearchItem(file=h.file, snippet=snip))
+            source = "RAG_GRAPH"
+        except (RagDbNotFound, RuntimeError):
+            # Fall back to local grep below.
+            pass
+
+    if not items:
+        grep_hits = _grep_snippets(repo_root, query, max_results)
+        for rel, sl, el, text in grep_hits:
+            items.append(
+                SearchItem(
+                    file=rel,
+                    snippet=Snippet(
+                        text=text,
+                        location=SnippetLocation(path=rel, start_line=sl, end_line=el),
+                    ),
+                )
+            )
+        source = "LOCAL_FALLBACK"
+
     return SearchResult(
         query=query,
         items=items,
         truncated=False,
-        source="LOCAL_FALLBACK",
-        freshness_state=route.freshness_state,
+        source=source,
+        freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
     )
 
 
@@ -508,4 +517,3 @@ def tool_rag_lineage(
         source="LOCAL_FALLBACK",
         freshness_state=route.freshness_state,
     )
-
