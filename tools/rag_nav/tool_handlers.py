@@ -363,6 +363,7 @@ from pathlib import Path as _Path
 
 from tools.rag.graph_index import (
     GraphNotFound as IndexGraphNotFound,
+    lineage_files as lineage_files_from_index,
     load_indices as load_graph_indices,
     where_used_files as where_used_files_from_index,
 )
@@ -517,58 +518,57 @@ def tool_rag_lineage(
     direction: str,
     max_results: Optional[int] = None,
 ) -> LineageResult:
+    """Lineage query using graph indices when the Context Gateway allows RAG."""
     route = _compute_route(_Path(repo_root))
     limit = _max_n(max_results, default=50)
+    dir_norm = (direction or "downstream").lower().strip()
+    normalized_direction = "upstream" if dir_norm in ("upstream", "callers") else "downstream"
+    source = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
 
-    if route.use_rag:
-        nodes, edges = _load_graph(str(repo_root))
-        by_id, _ = _index_nodes(nodes)
-        start_nodes = _resolve_symbol_nodes(nodes, symbol)
-        start_ids: Set[str] = {str(n.get("id") or _node_name(n)) for n in start_nodes}
-        items: List[LineageItem] = []
-        if start_ids:
-            dir_norm = (direction or "").lower().strip()
-            forward = dir_norm in ("downstream", "forward", "callees")
-            for e in edges:
-                if str(e.get("type") or "").upper() != "CALLS":
-                    continue
-                src = str(e.get("source") or e.get("src") or "")
-                dst = str(e.get("target") or e.get("dst") or "")
-                hop_id = None
-                if forward and src in start_ids:
-                    hop_id = dst
-                elif (not forward) and dst in start_ids:
-                    hop_id = src
-                if hop_id is None:
-                    continue
-                n = by_id.get(hop_id)
-                if not n:
-                    continue
-                path = _node_path(n)
-                sl, el = _node_span(n)
-                snippet = _read_snippet(str(repo_root), path, sl, el)
+    if getattr(route, "use_rag", False):
+        try:
+            indices = load_graph_indices(_Path(repo_root))
+            files = lineage_files_from_index(
+                indices,
+                symbol,
+                direction=normalized_direction,
+                limit=limit,
+            )
+            items: List[LineageItem] = []
+            for path in files[:limit]:
+                loc = SnippetLocation(path=path, start_line=1, end_line=1)
+                snippet = Snippet(text="", location=loc)
                 items.append(LineageItem(file=path, snippet=snippet))
-                if len(items) >= limit:
-                    break
-        return LineageResult(
-            symbol=symbol,
-            direction=direction,
-            items=items,
-            truncated=False,
-            source="RAG_GRAPH",
-            freshness_state=route.freshness_state,
-        )
+            return LineageResult(
+                symbol=symbol,
+                direction=normalized_direction,
+                items=items,
+                truncated=len(files) > len(items),
+                source=source,
+                freshness_state=route.freshness_state,
+            )
+        except (IndexGraphNotFound, Exception):
+            # Any graph loading/indexing issue should route to the local fallback.
+            source = "LOCAL_FALLBACK"
 
-    # Fallback: naive grep for callsites "symbol(" as pseudo-lineage
+    # Fallback: naive grep for callsites "symbol(" as pseudo-lineage.
     grep_hits = _grep_snippets(repo_root, f"{symbol}(", limit)
     items: List[LineageItem] = []
     for rel, sl, el, text in grep_hits:
-        items.append(LineageItem(file=rel, snippet=Snippet(text=text, location=SnippetLocation(path=rel, start_line=sl, end_line=el))))
+        items.append(
+            LineageItem(
+                file=rel,
+                snippet=Snippet(
+                    text=text,
+                    location=SnippetLocation(path=rel, start_line=sl, end_line=el),
+                ),
+            )
+        )
     return LineageResult(
         symbol=symbol,
-        direction=direction,
+        direction=normalized_direction,
         items=items,
         truncated=False,
-        source="LOCAL_FALLBACK",
+        source=source,
         freshness_state=route.freshness_state,
     )

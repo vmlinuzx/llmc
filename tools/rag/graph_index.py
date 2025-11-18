@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 """
-Lightweight graph indices for where-used queries backed by `.llmc/rag_graph.json`.
+Lightweight graph indices for where-used and lineage queries backed by
+`.llmc/rag_graph.json`.
 
 The index is intentionally tolerant of different graph shapes:
 - Nav graph payloads with `nodes`/`edges` or `vertices`/`links`
@@ -41,6 +42,8 @@ class GraphIndices:
 
     # Map a "symbol key" to the set of file paths that reference/use it (where-used).
     symbol_to_files: Dict[str, Set[str]] = field(default_factory=dict)
+    # Lineage: for a given source symbol key, files of its callees (downstream).
+    symbol_to_callee_files: Dict[str, Set[str]] = field(default_factory=dict)
 
 
 def _read_graph_payload(path: Path) -> dict:
@@ -214,6 +217,7 @@ def build_indices_from_graph(graph: dict) -> GraphIndices:
     """
     id_to_node = _index_nodes(graph)
     symbol_to_files: Dict[str, Set[str]] = {}
+    symbol_to_callee_files: Dict[str, Set[str]] = {}
 
     for edge in _iter_edges(graph):
         etype = str(edge.get("type") or edge.get("label") or "").upper()
@@ -236,14 +240,22 @@ def build_indices_from_graph(graph: dict) -> GraphIndices:
             continue
 
         symbol_name = dst_node.name or dst_node.nid
-        if not symbol_name:
-            continue
+        if symbol_name:
+            for key in _candidate_keys(symbol_name):
+                # where-used semantics: source file is the user of the destination symbol.
+                _accumulate(symbol_to_files, key, src_node.path or dst_node.path)
 
-        for key in _candidate_keys(symbol_name):
-            # where-used semantics: source file is the user of the destination symbol.
-            _accumulate(symbol_to_files, key, src_node.path or dst_node.path)
+        # Lineage downstream: for a given SRC symbol, record callee files.
+        if etype == "CALLS":
+            src_symbol = src_node.name or src_node.nid
+            if src_symbol:
+                for key in _candidate_keys(src_symbol):
+                    _accumulate(symbol_to_callee_files, key, dst_node.path or src_node.path)
 
-    return GraphIndices(symbol_to_files=symbol_to_files)
+    return GraphIndices(
+        symbol_to_files=symbol_to_files,
+        symbol_to_callee_files=symbol_to_callee_files,
+    )
 
 
 def load_indices(repo_root: Path | str) -> GraphIndices:
@@ -262,7 +274,7 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
     indices = build_indices_from_graph(graph_payload)
 
     # If we ended up with no indices at all, treat this as effectively missing.
-    if not indices.symbol_to_files:
+    if not indices.symbol_to_files and not indices.symbol_to_callee_files:
         raise GraphNotFound(str(graph_path))
 
     return indices
@@ -306,3 +318,45 @@ def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> Lis
 
     return out[:limit]
 
+
+def lineage_files(indices: GraphIndices, symbol: str, direction: str, limit: int = 50) -> List[str]:
+    """
+    Return files related by CALLS edges for lineage queries.
+
+    Semantics:
+    - direction == "upstream": callers of symbol (same as where-used).
+    - direction == "downstream": callees of symbol.
+    """
+    if not symbol:
+        return []
+
+    direction_norm = (direction or "downstream").lower()
+    if direction_norm == "upstream":
+        return where_used_files(indices, symbol, limit=limit)
+
+    # Downstream: use symbol_to_callee_files index.
+    keys = _candidate_keys(symbol)
+    limit = max(1, int(limit)) if limit > 0 else 1
+    seen: Set[str] = set()
+    out: List[str] = []
+
+    for key in keys:
+        for path in indices.symbol_to_callee_files.get(key, ()):
+            if path and path not in seen:
+                seen.add(path)
+                out.append(path)
+                if len(out) >= limit:
+                    return out
+
+    if len(out) < limit:
+        sym_lower = symbol.lower()
+        for key, paths in indices.symbol_to_callee_files.items():
+            if key.lower().endswith(sym_lower):
+                for path in paths:
+                    if path and path not in seen:
+                        seen.add(path)
+                        out.append(path)
+                        if len(out) >= limit:
+                            return out
+
+    return out[:limit]
