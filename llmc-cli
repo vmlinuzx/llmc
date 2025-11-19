@@ -1,0 +1,3 @@
+#!/bin/bash
+export PYTHONPATH="$PWD"
+python3 llmc/cli.py "$@"

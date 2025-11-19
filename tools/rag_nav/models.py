@@ -8,8 +8,8 @@ This module defines:
  - Result item / envelope types for search, where-used, and lineage tools.
 """
 
-from dataclasses import dataclass
-from typing import List, Literal
+from dataclasses import dataclass, asdict
+from typing import List, Literal, Optional, Dict, Any
 
 from tools.rag.freshness import (
     FreshnessState as _FreshnessState,
@@ -58,11 +58,29 @@ class Snippet:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class EnrichmentData:
+    """Semantic enrichment for a code entity."""
+    summary: Optional[str] = None
+    usage_guide: Optional[str] = None
+    # Extensible for future fields (inputs, outputs, etc.)
+    
+    def to_dict(self) -> dict:
+        return {k: v for k, v in asdict(self).items() if v is not None}
+
+
+@dataclass
 class SearchItem:
     """Single search hit within a repository."""
 
     file: str
     snippet: Snippet
+    enrichment: Optional[EnrichmentData] = None
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        if self.enrichment:
+            d["enrichment"] = self.enrichment.to_dict()
+        return d
 
 
 @dataclass
@@ -74,6 +92,15 @@ class SearchResult:
     truncated: bool = False
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
+    
+    def to_dict(self) -> dict:
+        return {
+            "query": self.query,
+            "items": [item.to_dict() for item in self.items],
+            "truncated": self.truncated,
+            "source": self.source,
+            "freshness_state": self.freshness_state,
+        }
 
 
 @dataclass
@@ -82,6 +109,13 @@ class WhereUsedItem:
 
     file: str
     snippet: Snippet
+    enrichment: Optional[EnrichmentData] = None
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        if self.enrichment:
+            d["enrichment"] = self.enrichment.to_dict()
+        return d
 
 
 @dataclass
@@ -94,6 +128,15 @@ class WhereUsedResult:
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
 
+    def to_dict(self) -> dict:
+        return {
+            "symbol": self.symbol,
+            "items": [item.to_dict() for item in self.items],
+            "truncated": self.truncated,
+            "source": self.source,
+            "freshness_state": self.freshness_state,
+        }
+
 
 @dataclass
 class LineageItem:
@@ -101,6 +144,13 @@ class LineageItem:
 
     file: str
     snippet: Snippet
+    enrichment: Optional[EnrichmentData] = None
+
+    def to_dict(self) -> dict:
+        d = asdict(self)
+        if self.enrichment:
+            d["enrichment"] = self.enrichment.to_dict()
+        return d
 
 
 @dataclass
@@ -114,6 +164,16 @@ class LineageResult:
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
 
+    def to_dict(self) -> dict:
+        return {
+            "symbol": self.symbol,
+            "direction": self.direction,
+            "items": [item.to_dict() for item in self.items],
+            "truncated": self.truncated,
+            "source": self.source,
+            "freshness_state": self.freshness_state,
+        }
+
 
 __all__ = [
     "IndexState",
@@ -122,6 +182,7 @@ __all__ = [
     "SourceTag",
     "SnippetLocation",
     "Snippet",
+    "EnrichmentData",
     "SearchItem",
     "SearchResult",
     "WhereUsedItem",

@@ -47,8 +47,8 @@ class Entity:
     kind: str  # "function", "class", "table", "variable"
     path: str  # File path with line numbers (e.g., "src/auth.py:10-15")
     metadata: Dict = field(default_factory=dict)
-    # Phase 2: Location fields for enrichment matching
-    file_path: Optional[str] = None  # Path without line numbers (e.g., "src/auth.py")
+    span_hash: Optional[str] = None # Phase 2: Link to enrichment record
+    file_path: Optional[str] = None
     start_line: Optional[int] = None
     end_line: Optional[int] = None
     
@@ -59,8 +59,9 @@ class Entity:
             "path": self.path,
             "metadata": self.metadata,
         }
-        # Include location fields if present (Phase 2)
-        if self.file_path is not None:
+        if self.span_hash:
+            base["span_hash"] = self.span_hash
+        if self.file_path:
             base["file_path"] = self.file_path
         if self.start_line is not None:
             base["start_line"] = self.start_line
@@ -123,6 +124,7 @@ class SchemaGraph:
                     kind=e["kind"],
                     path=e["path"],
                     metadata=e.get("metadata", {}),
+                    span_hash=e.get("span_hash"), # Phase 2
                     file_path=e.get("file_path"),  # Phase 2
                     start_line=e.get("start_line"),  # Phase 2
                     end_line=e.get("end_line"),  # Phase 2
@@ -158,6 +160,7 @@ class SchemaGraph:
                 kind=e["kind"],
                 path=e["path"],
                 metadata=e.get("metadata", {}),
+                span_hash=e.get("span_hash"), # Phase 2
                 file_path=e.get("file_path"),  # Phase 2
                 start_line=e.get("start_line"),  # Phase 2
                 end_line=e.get("end_line"),  # Phase 2
@@ -214,6 +217,13 @@ class PythonSchemaExtractor:
         
         entity_id = f"sym:{symbol}"
         
+        # Compute span hash
+        # This must match the hash used by the enrichment pipeline (tools.rag.spans)
+        # Hash input: "file_path:start_line:end_line" (relative to repo root conceptually)
+        # Ideally we use the same utility, but for now we implement a stable hash here
+        span_id = f"{self.file_path}:{node.lineno}:{node.end_lineno}"
+        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+
         # Create entity (Phase 2: include location fields)
         entity = Entity(
             id=entity_id,
@@ -223,6 +233,7 @@ class PythonSchemaExtractor:
                 "params": [arg.arg for arg in node.args.args],
                 "returns": ast.unparse(node.returns) if node.returns else None,
             },
+            span_hash=span_hash,
             file_path=str(self.file_path),  # Phase 2: stable path for matching
             start_line=node.lineno,  # Phase 2
             end_line=node.end_lineno if node.end_lineno else node.lineno,  # Phase 2
@@ -241,6 +252,9 @@ class PythonSchemaExtractor:
         class_name = f"{self.module_name}.{node.name}"
         entity_id = f"type:{class_name}"
         
+        span_id = f"{self.file_path}:{node.lineno}:{node.end_lineno}"
+        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+        
         # Create class entity (Phase 2: include location fields)
         entity = Entity(
             id=entity_id,
@@ -249,6 +263,7 @@ class PythonSchemaExtractor:
             metadata={
                 "bases": [ast.unparse(base) for base in node.bases],
             },
+            span_hash=span_hash,
             file_path=str(self.file_path),  # Phase 2
             start_line=node.lineno,  # Phase 2
             end_line=node.end_lineno if node.end_lineno else node.lineno,  # Phase 2

@@ -30,6 +30,7 @@ class TestWrapperScripts:
             [str(wrapper_path)],
             capture_output=True,
             text=True,
+            timeout=10
         )
 
         # Script should fail because ANTHROPIC_AUTH_TOKEN is not set
@@ -45,7 +46,8 @@ class TestWrapperScripts:
             [str(wrapper_path), "test prompt"],
             capture_output=True,
             text=True,
-            env={}
+            env={},
+            timeout=10
         )
 
         # Should fail with clear error about missing token
@@ -67,7 +69,8 @@ class TestWrapperScripts:
                 [str(wrapper_path), "--repo", tmpdir, "test prompt"],
                 capture_output=True,
                 text=True,
-                env=env
+                env=env,
+                timeout=10
             )
 
             # Script will try to run but may fail on other checks
@@ -87,7 +90,8 @@ class TestWrapperScripts:
                 [str(wrapper_path), "--repo", tmpdir, "--yolo", "test prompt"],
                 capture_output=True,
                 text=True,
-                env=env
+                env=env,
+                timeout=10
             )
 
             # Verify flag is accepted (won't assert success due to missing CLI)
@@ -102,7 +106,8 @@ class TestWrapperScripts:
         result = subprocess.run(
             [str(wrapper_path), "test prompt"],
             capture_output=True,
-            text=True
+            text=True,
+            timeout=10
         )
 
         # May fail because codex CLI is not available
@@ -117,7 +122,8 @@ class TestWrapperScripts:
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, "test prompt"],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=10
             )
 
             # Verify repo flag is parsed
@@ -132,7 +138,8 @@ class TestWrapperScripts:
             result = subprocess.run(
                 [str(wrapper_path), f"--repo={tmpdir}", "test prompt"],
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=10
             )
 
             # Verify this syntax works
@@ -177,7 +184,8 @@ class TestWrapperScripts:
                 [str(wrapper_path), "--repo", tmpdir, test_prompt],
                 capture_output=True,
                 text=True,
-                env=env
+                env=env,
+                timeout=10
             )
 
             # The script should accept the prompt with special characters

@@ -24,7 +24,7 @@ import argparse
 
 # Test framework utilities
 @dataclass
-class TestResult:
+class NavTestResult:
     name: str
     category: str
     passed: bool
@@ -36,11 +36,11 @@ class TestResult:
         return asdict(self)
 
 
-class TestRunner:
+class NavTestRunner:
     def __init__(self, repo_root: Path, verbose: bool = False):
         self.repo_root = Path(repo_root)
         self.verbose = verbose
-        self.results: List[TestResult] = []
+        self.results: List[NavTestResult] = []
         self.temp_dir: Optional[Path] = None
 
     def log(self, msg: str):
@@ -134,7 +134,7 @@ def complex_usage():
     def add_result(self, name: str, category: str, passed: bool,
                    message: str, duration_ms: float, details: Optional[Dict] = None):
         """Record a test result."""
-        result = TestResult(name, category, passed, message, duration_ms, details)
+        result = NavTestResult(name, category, passed, message, duration_ms, details)
         self.results.append(result)
 
         status = "✓ PASS" if passed else "✗ FAIL"
@@ -1648,8 +1648,8 @@ def main():
     parser.add_argument("--filter", help="Filter tests by name pattern")
     args = parser.parse_args()
 
-    repo_root = Path(__file__).parent.resolve()
-    runner = TestRunner(repo_root, verbose=args.verbose)
+    repo_root = Path(__file__).parent.parent.resolve()
+    runner = NavTestRunner(repo_root, verbose=args.verbose)
 
     runner.run_all_tests()
 

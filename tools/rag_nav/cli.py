@@ -4,11 +4,37 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any
 
 from tools.rag_nav import metadata, tool_handlers
+from tools.rag.nav_meta import RagResult, RagToolMeta
+
+
+def _wrap_in_envelope(res: Any) -> dict:
+    """Wrap a domain result in a standard RagResult envelope."""
+    # Determine status based on source/error (assuming if we got a result, it's OK or FALLBACK)
+    status = "OK"
+    if getattr(res, "source", "") == "LOCAL_FALLBACK":
+        status = "FALLBACK"
+    
+    # Determine message (e.g. truncation warning)
+    message = None
+    if getattr(res, "truncated", False):
+        message = "Result truncated due to limit."
+
+    meta = RagToolMeta(
+        status=status,
+        source=getattr(res, "source", "RAG_GRAPH"),
+        freshness_state=getattr(res, "freshness_state", "UNKNOWN"),
+        message=message
+    )
+    
+    items = getattr(res, "items", [])
+    envelope = RagResult(meta=meta, items=items)
+    return envelope.to_dict()
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -49,6 +75,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     p_lineage.add_argument("--limit", type=int, default=50, help="Max results")
     p_lineage.add_argument("--json", action="store_true", help="Output as JSON")
 
+    # stats
+    p_stats = sub.add_parser("stats", help="Show graph enrichment statistics")
+    p_stats.add_argument("--repo", required=True, help="Repository root path")
+    p_stats.add_argument("--json", action="store_true", help="Output as JSON")
+
     args = parser.parse_args(argv)
 
     try:
@@ -77,10 +108,20 @@ def main(argv: Optional[list[str]] = None) -> int:
                     print(f"Commit: {st.last_indexed_commit}")
             return 0
 
+        elif args.command == "stats":
+            stats = tool_handlers.tool_rag_stats(repo)
+            if args.json:
+                print(json.dumps(stats, indent=2))
+            else:
+                print(f"Total Nodes: {stats['total_nodes']}")
+                print(f"Enriched Nodes: {stats['enriched_nodes']}")
+                print(f"Coverage: {stats['coverage_pct']:.1f}%")
+            return 0
+
         elif args.command == "search":
             res = tool_handlers.tool_rag_search(str(repo), args.query, limit=args.limit)
             if args.json:
-                print(json.dumps(res.to_dict(), indent=2))
+                print(json.dumps(_wrap_in_envelope(res), indent=2))
             else:
                 _print_search(res)
             return 0
@@ -88,7 +129,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         elif args.command == "where-used":
             res = tool_handlers.tool_rag_where_used(str(repo), args.symbol, limit=args.limit)
             if args.json:
-                print(json.dumps(res.to_dict(), indent=2))
+                print(json.dumps(_wrap_in_envelope(res), indent=2))
             else:
                 _print_where_used(res)
             return 0
@@ -97,7 +138,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             direction = "upstream" if args.direction in ("upstream", "callers") else "downstream"
             res = tool_handlers.tool_rag_lineage(str(repo), args.symbol, direction, limit=args.limit)
             if args.json:
-                print(json.dumps(res.to_dict(), indent=2))
+                print(json.dumps(_wrap_in_envelope(res), indent=2))
             else:
                 _print_lineage(res)
             return 0
@@ -117,9 +158,15 @@ def _print_search(res):
         print("  No results.")
         return
     for i, item in enumerate(res.items, 1):
-        enrich = getattr(item, "enrichment", None)
-        enrich_tag = " [ENRICHED]" if enrich else ""
+        enrich_tag = " [ENRICHED]" if item.enrichment else ""
         print(f"{i}. {item.file}{enrich_tag}")
+        
+        if item.enrichment:
+            if item.enrichment.summary:
+                print(f"   💡 Summary: {item.enrichment.summary}")
+            if item.enrichment.usage_guide:
+                print(f"   📘 Usage:   {item.enrichment.usage_guide}")
+
         if item.snippet and item.snippet.text:
             print(f"   {item.snippet.text.strip()[:80]}...")
 
@@ -130,9 +177,11 @@ def _print_where_used(res):
         print("  No usages found.")
         return
     for i, item in enumerate(res.items, 1):
-        enrich = getattr(item, "enrichment", None)
-        enrich_tag = " [ENRICHED]" if enrich else ""
+        enrich_tag = " [ENRICHED]" if item.enrichment else ""
         print(f"{i}. {item.file}{enrich_tag}")
+        if item.enrichment:
+            if item.enrichment.summary:
+                print(f"   💡 Summary: {item.enrichment.summary}")
 
 
 def _print_lineage(res):
@@ -141,9 +190,11 @@ def _print_lineage(res):
         print("  No lineage found.")
         return
     for i, item in enumerate(res.items, 1):
-        enrich = getattr(item, "enrichment", None)
-        enrich_tag = " [ENRICHED]" if enrich else ""
+        enrich_tag = " [ENRICHED]" if item.enrichment else ""
         print(f"{i}. {item.file}{enrich_tag}")
+        if item.enrichment:
+            if item.enrichment.summary:
+                print(f"   💡 Summary: {item.enrichment.summary}")
 
 
 if __name__ == "__main__":

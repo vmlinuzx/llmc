@@ -25,7 +25,7 @@ import argparse
 
 # Test framework utilities
 @dataclass
-class TestResult:
+class RagTestResult:
     name: str
     category: str
     passed: bool
@@ -37,11 +37,11 @@ class TestResult:
         return asdict(self)
 
 
-class TestRunner:
+class RagTestRunner:
     def __init__(self, repo_root: Path, verbose: bool = False):
         self.repo_root = Path(repo_root)
         self.verbose = verbose
-        self.results: List[TestResult] = []
+        self.results: List[RagTestResult] = []
         self.temp_dir: Optional[Path] = None
 
     def log(self, msg: str):
@@ -111,7 +111,7 @@ class TestClass:
     def add_result(self, name: str, category: str, passed: bool,
                    message: str, duration_ms: float, details: Optional[Dict] = None):
         """Record a test result."""
-        result = TestResult(name, category, passed, message, duration_ms, details)
+        result = RagTestResult(name, category, passed, message, duration_ms, details)
         self.results.append(result)
 
         status = "✓ PASS" if passed else "✗ FAIL"
@@ -1031,7 +1031,7 @@ def main():
     args = parser.parse_args()
 
     repo_root = Path(__file__).parent.resolve()
-    runner = TestRunner(repo_root, verbose=args.verbose)
+    runner = RagTestRunner(repo_root, verbose=args.verbose)
 
     runner.run_all_tests()
 

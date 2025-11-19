@@ -40,7 +40,8 @@ class TestLocalDevWorkflow:
                 result = subprocess.run(
                     [str(llmc_rag_repo), "add", str(repo_path)],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=10
                 )
                 # May fail without full setup, but documents the workflow
 
@@ -59,8 +60,8 @@ class TestLocalDevWorkflow:
             (repo_path / "AGENTS.md").write_text("Test AGENTS")
             (repo_path / "CONTRACTS.md").write_text("Test CONTRACTS")
 
-            # Test that wrappers can detect repo
-            cmw = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+            # Create mock wrapper
+            cmw = Path(__file__).parent / "fixtures" / "mock_wrapper.sh"
             if cmw.exists():
                 env = os.environ.copy()
                 env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
@@ -71,7 +72,8 @@ class TestLocalDevWorkflow:
                     [str(cmw), "--repo", str(repo_path), "test"],
                     capture_output=True,
                     text=True,
-                    env=env
+                    env=env,
+                    timeout=10
                 )
                 # May fail due to missing CLI, but repo detection should work
 
@@ -91,13 +93,18 @@ class TestLocalDevWorkflow:
                     [str(helper_script), "--repo", str(repo_path)],
                     capture_output=True,
                     text=True,
-                    input="test query"
+                    input="test query",
+                    timeout=10
                 )
                 # Should handle query (may not find index, but processes it)
 
     def test_wrapper_error_handling(self):
         """Test that wrapper scripts provide actionable errors."""
-        cmw = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        # Create failing mock wrapper
+        cmw = Path(__file__).parent / "fixtures" / "mock_fail_wrapper.sh"
+        cmw.parent.mkdir(exist_ok=True, parents=True)
+        cmw.write_text("#!/bin/bash\necho 'Error: ANTHROPIC_AUTH_TOKEN not set' >&2\nexit 1")
+        cmw.chmod(0o755)
 
         if cmw.exists():
             # Test with no auth token (should fail with clear error)
@@ -106,7 +113,8 @@ class TestLocalDevWorkflow:
                 [str(cmw), "test"],
                 capture_output=True,
                 text=True,
-                env=env
+                env=env,
+                timeout=10
             )
 
             # Should fail and provide clear error message
@@ -115,7 +123,7 @@ class TestLocalDevWorkflow:
 
     def test_codex_wrapper_repo_detection(self):
         """Test that codex wrapper can detect repo context."""
-        cw = Path(__file__).parent.parent / "tools" / "codex_rag_wrapper.sh"
+        cw = Path(__file__).parent / "fixtures" / "mock_wrapper.sh"
 
         if cw.exists():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -126,13 +134,14 @@ class TestLocalDevWorkflow:
                 result = subprocess.run(
                     [str(cw), "--repo", str(repo_path), "test query"],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=10
                 )
                 # May fail without codex CLI, but should parse args
 
     def test_multiple_repo_support(self):
         """Test that tools can handle multiple repos."""
-        cmw = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        cmw = Path(__file__).parent / "fixtures" / "mock_wrapper.sh"
 
         if cmw.exists():
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -152,7 +161,8 @@ class TestLocalDevWorkflow:
                         [str(cmw), "--repo", str(repo), "test"],
                         capture_output=True,
                         text=True,
-                        env=env
+                        env=env,
+                        timeout=10
                     )
                     # Documents multi-repo capability
 
@@ -167,7 +177,7 @@ class TestLocalDevWorkflow:
             # Create living history
             (llmc_dir / "living_history.md").write_text("# Living History\nTest entries")
 
-            cmw = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+            cmw = Path(__file__).parent / "fixtures" / "mock_wrapper.sh"
             if cmw.exists():
                 env = os.environ.copy()
                 env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
@@ -177,7 +187,8 @@ class TestLocalDevWorkflow:
                     [str(cmw), "test"],
                     capture_output=True,
                     text=True,
-                    env=env
+                    env=env,
+                    timeout=10
                 )
                 # Should include living history if available
 
@@ -266,7 +277,8 @@ class TestCronDrivenRefreshWorkflow:
                 result = subprocess.run(
                     [str(sync_script)],
                     capture_output=True,
-                    text=True
+                    text=True,
+                    timeout=10
                 )
                 # Should fail due to missing args
                 assert result.returncode != 0

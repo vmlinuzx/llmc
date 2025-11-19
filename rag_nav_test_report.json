@@ -1,0 +1,234 @@
+{
+  "summary": {
+    "total": 22,
+    "passed": 8,
+    "failed": 14,
+    "success_rate": 36.36363636363637
+  },
+  "by_category": {
+    "Task 1: Index Status": {
+      "passed": 4,
+      "failed": 0,
+      "total": 4
+    },
+    "Task 2: Graph Builder CLI": {
+      "passed": 2,
+      "failed": 2,
+      "total": 4
+    },
+    "Task 3: Search/Where-Used/Lineage": {
+      "passed": 0,
+      "failed": 4,
+      "total": 4
+    },
+    "Task 4: Context Gateway & Routing": {
+      "passed": 0,
+      "failed": 3,
+      "total": 3
+    },
+    "Task 5: CLI/MCP Tools": {
+      "passed": 0,
+      "failed": 2,
+      "total": 2
+    },
+    "Task 6: Cross-Component Consistency": {
+      "passed": 2,
+      "failed": 0,
+      "total": 2
+    },
+    "Task 7: End-to-End Scenarios": {
+      "passed": 0,
+      "failed": 3,
+      "total": 3
+    }
+  },
+  "tests": [
+    {
+      "name": "index_status_save_load",
+      "category": "Task 1: Index Status",
+      "passed": true,
+      "message": "Status file format valid (module not yet implemented)",
+      "duration_ms": 0.49376487731933594,
+      "details": {
+        "status_path": "/tmp/rag_nav_test_lx3r4cq4/.llmc/rag_index_status.json",
+        "format_valid": true
+      }
+    },
+    {
+      "name": "index_status_missing_file",
+      "category": "Task 1: Index Status",
+      "passed": true,
+      "message": "Missing file handled (module not yet implemented)",
+      "duration_ms": 0.22459030151367188,
+      "details": null
+    },
+    {
+      "name": "index_status_corrupt_file",
+      "category": "Task 1: Index Status",
+      "passed": true,
+      "message": "Corrupt JSON detected (would be handled by wrapper)",
+      "duration_ms": 0.244140625,
+      "details": null
+    },
+    {
+      "name": "index_status_multi_repo",
+      "category": "Task 1: Index Status",
+      "passed": true,
+      "message": "Multiple repo statuses independent (module not yet implemented)",
+      "duration_ms": 0.3361701965332031,
+      "details": null
+    },
+    {
+      "name": "graph_cli_help",
+      "category": "Task 2: Graph Builder CLI",
+      "passed": true,
+      "message": "CLI help works correctly",
+      "duration_ms": 62.21437454223633,
+      "details": {
+        "stdout": "usage: cli.py build-graph [-h] --repo REPO\n\noptions:\n  -h, --help   show this help message and exit\n  --repo REPO  Repository root path\n"
+      }
+    },
+    {
+      "name": "graph_build_small_repo",
+      "category": "Task 2: Graph Builder CLI",
+      "passed": false,
+      "message": "Graph file doesn't exist and module not implemented",
+      "duration_ms": 0.3879070281982422,
+      "details": null
+    },
+    {
+      "name": "graph_idempotent_rebuild",
+      "category": "Task 2: Graph Builder CLI",
+      "passed": false,
+      "message": "Cannot test - module not yet implemented",
+      "duration_ms": 0.20384788513183594,
+      "details": null
+    },
+    {
+      "name": "graph_failure_handling",
+      "category": "Task 2: Graph Builder CLI",
+      "passed": true,
+      "message": "Cannot test failure handling - module not implemented (checking artifact preservation)",
+      "duration_ms": 0.23865699768066406,
+      "details": null
+    },
+    {
+      "name": "search_results_format",
+      "category": "Task 3: Search/Where-Used/Lineage",
+      "passed": false,
+      "message": "Cannot test - tool_handlers not yet implemented",
+      "duration_ms": 0.1914501190185547,
+      "details": null
+    },
+    {
+      "name": "where_used_finds_usages",
+      "category": "Task 3: Search/Where-Used/Lineage",
+      "passed": false,
+      "message": "Cannot test - tool_handlers not yet implemented",
+      "duration_ms": 0.1747608184814453,
+      "details": null
+    },
+    {
+      "name": "lineage_placeholder",
+      "category": "Task 3: Search/Where-Used/Lineage",
+      "passed": false,
+      "message": "Cannot test - tool_handlers not yet implemented",
+      "duration_ms": 0.17261505126953125,
+      "details": null
+    },
+    {
+      "name": "error_cases_unknown_symbol",
+      "category": "Task 3: Search/Where-Used/Lineage",
+      "passed": false,
+      "message": "Cannot test - tool_handlers not yet implemented",
+      "duration_ms": 0.171661376953125,
+      "details": null
+    },
+    {
+      "name": "routing_rules",
+      "category": "Task 4: Context Gateway & Routing",
+      "passed": false,
+      "message": "Cannot test - gateway not yet implemented",
+      "duration_ms": 0.17690658569335938,
+      "details": null
+    },
+    {
+      "name": "routing_freshness_check",
+      "category": "Task 4: Context Gateway & Routing",
+      "passed": false,
+      "message": "Cannot test - gateway not yet implemented",
+      "duration_ms": 0.1742839813232422,
+      "details": null
+    },
+    {
+      "name": "routing_degradation",
+      "category": "Task 4: Context Gateway & Routing",
+      "passed": false,
+      "message": "Cannot test - gateway not yet implemented",
+      "duration_ms": 0.1647472381591797,
+      "details": null
+    },
+    {
+      "name": "cli_tools_accept_flags",
+      "category": "Task 5: CLI/MCP Tools",
+      "passed": false,
+      "message": "CLI tools not yet implemented",
+      "duration_ms": 57.17301368713379,
+      "details": {
+        "stderr": ""
+      }
+    },
+    {
+      "name": "cli_json_output",
+      "category": "Task 5: CLI/MCP Tools",
+      "passed": false,
+      "message": "JSON flag not working",
+      "duration_ms": 52.704572677612305,
+      "details": {
+        "stderr": "usage: cli.py search [-h] --repo REPO [--limit LIMIT] [--json] query\ncli.py search: error: the following arguments are required: --repo\n"
+      }
+    },
+    {
+      "name": "file_path_consistency",
+      "category": "Task 6: Cross-Component Consistency",
+      "passed": true,
+      "message": "Real repo graph validated (0 files)",
+      "duration_ms": 8.473634719848633,
+      "details": {
+        "sample_files": []
+      }
+    },
+    {
+      "name": "id_consistency",
+      "category": "Task 6: Cross-Component Consistency",
+      "passed": true,
+      "message": "No stable IDs yet (acceptable for early implementation)",
+      "duration_ms": 6.908893585205078,
+      "details": null
+    },
+    {
+      "name": "e2e_simple_where_used",
+      "category": "Task 7: End-to-End Scenarios",
+      "passed": false,
+      "message": "Cannot test - module not yet implemented",
+      "duration_ms": 0.331878662109375,
+      "details": null
+    },
+    {
+      "name": "e2e_multi_hop_lineage",
+      "category": "Task 7: End-to-End Scenarios",
+      "passed": false,
+      "message": "Cannot test - module not yet implemented",
+      "duration_ms": 0.19621849060058594,
+      "details": null
+    },
+    {
+      "name": "e2e_failure_reporting",
+      "category": "Task 7: End-to-End Scenarios",
+      "passed": false,
+      "message": "Exception: No module named 'tools'",
+      "duration_ms": 0.17881393432617188,
+      "details": null
+    }
+  ]
+}

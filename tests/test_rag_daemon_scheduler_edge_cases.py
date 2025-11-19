@@ -403,7 +403,7 @@ class TestSchedulerEdgeCases:
         # Should handle empty registry gracefully
         mock_registry.load.assert_called()
         # No jobs should be submitted
-        mock_workers.submit.assert_not_called()
+        mock_workers.submit_jobs.assert_not_called()
 
     def test_all_repos_ineligible(self):
         """Test when all repos are ineligible (too soon, errors, etc.)."""
@@ -468,7 +468,7 @@ class TestSchedulerEdgeCases:
             tick_interval_seconds=10,
             max_concurrent_jobs=5,
             max_consecutive_failures=3,
-            base_backback_seconds=60,
+            base_backoff_seconds=60,
             max_backoff_seconds=3600,
             registry_path=Path("/tmp/reg.yaml"),
             state_store_path=Path("/tmp/state.json"),
@@ -530,4 +530,4 @@ class TestMinRefreshInterval:
         )
 
         # Repo-specific interval should be respected
-        assert repo_desc.min_refresh_interval > config.tick_interval_seconds
+        assert repo_desc.min_refresh_interval > timedelta(seconds=config.tick_interval_seconds)

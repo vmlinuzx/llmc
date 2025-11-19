@@ -25,12 +25,14 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
 ## Current Priorities
 
 - **P0: Enrichment Data Integration (DB → Graph → API)**
-  - Close the loop between the `.rag/index_v2.db` enrichment store, the schema graph builder, and the public `tools.rag` API so that enriched summaries/evidence actually surface in user-facing results.
-  - Add a robust mapping layer from `enrichments.span_hash`/`spans` (file path + line range) to `SchemaGraph.entities[*]` and merge enrichment fields into `Entity.metadata` during graph build/export.
-  - Replace the current `tool_rag_search` / `tool_rag_where_used` / `tool_rag_lineage` stubs with thin adapters over the real search + enrichment pipeline, wired to the graph and database.
+  IMPLEMENTING - Close the loop between the `.rag/index_v2.db` enrichment store, the schema graph builder, and the public `tools.rag` API so that enriched summaries/evidence actually surface in user-facing results.
+  IMPLEMENTING - Add a robust mapping layer from `enrichments.span_hash`/`spans` (file path + line range) to `SchemaGraph.entities[*]` and merge enrichment fields into `Entity.metadata` during graph build/export.
+  IMPLEMENTING - Replace the current `tool_rag_search` / `tool_rag_where_used` / `tool_rag_lineage` stubs with thin adapters over the real search + enrichment pipeline, wired to the graph and database.
   - Ship end-to-end tests that assert: (1) enrichments exist in the DB, (2) graph entities expose enrichment metadata, and (3) the public API returns enriched results instead of empty lists.
 
+
   ### Phase 1 – DB / FTS foundation (this patch)
+ Consider embedding model converted to matryoshka support 
 
   - Add a typed enrichment projection (`EnrichmentRecord`) that represents joined `spans` + `enrichments` rows.
   - Implement DB helpers to join spans and enrichments and expose them as typed records.
@@ -296,6 +298,17 @@ This section is a trimmed, de-duplicated version of the prior backlog; items rem
 - Re-architect sidecar system to store summaries in RAG instead of loose repo files.
 - Consolidate enrichment/runtime flags into a shared, documented configuration.
 - Explore GUI tooling for compressor/configuration once the core flows are stable.
+
+### Epic: Productization & Speed (The "Defuckingscriptify" Pass)
+
+**Goal:** Transform LLMC from a collection of hacker scripts into a fast, installable Python package (`pip install llmc`).
+
+**Objectives:**
+1.  **Eliminate Script Overhead:** Replace `bash -> python` chains with direct Python API calls to remove interpreter startup latency (50-200ms per call).
+2.  **Unified Configuration:** Replace scattered env vars with a single `llmc.toml` (e.g., LLM providers, enabled features).
+3.  **Single Entrypoint:** Consolidate `rag_plan_helper.sh`, `qwen_enrich_batch.py`, etc. into a single `llmc` CLI.
+4.  **Distribution:** Make the system installable and usable with a simple `llmc init && llmc start`.
+5.  **Interactive TUI Polish:** Enhance the 6-panel dashboard into a fully interactive application with navigation stacks, configuration editing, and live analytics visualizations (Post-MVP).
 
 ---
 
@@ -697,6 +710,30 @@ Raise the “operational readiness” of hardening features to match their imple
 ---
 
 ## R&D – Experimental & Research Tasks
+
+  1. Graph Enrichment & Intelligence (Phase 2/3 Follow-ups)                                                                                                                                                                                                                     
+   * Fuzzy Linking: Match enrichment data to code spans using fuzzy logic (e.g., Levenshtein distance on function signatures) instead of just exact line numbers, making the graph robust to minor code edits.                                                                  
+   * The "Gist" Layer: Auto-aggregate child summaries (e.g., summarize all methods in a class) to create synthesized "Class Summaries" or "Module Summaries" where none exist.                                                                                                  
+   * Graph Pruning: Automatically prune graph nodes that have zero enrichment and zero meaningful connections to keep the context window small and potent.                                                                                                                      
+   * Instructional Metadata: Instead of just "summaries", store specific "Intelligence Boosters" like:                                                                                                                                                                          
+       * usage_guide: "Do X, don't do Y."                                                                                                                                                                                                                                       
+       * related_concepts: "See also Auth Module."                                                                                                                                                                                                                              
+       * pitfalls: "This function is not thread-safe."                                                                                                                                                                                                                          
+   * Confidence Scoring: Color graph nodes by "how well we understand them" (Enriched vs. Raw vs. Stub) to help the agent decide which path to trust.                                                                                                                           
+                                                                                                                                                                                                                                                                                
+  2. Tooling & Agent UX                                                                                                                                                                                                                                                         
+   * Semantic Hyperlinks: Use enrichment data to create links between disparate parts of the graph (e.g., if a comment mentions "Auth", link it to the Auth module even without an import).                                                                                     
+   * "Adaptive Detail": Store multiple levels of enrichment (One-line gist vs. Full technical spec) and serve the right one based on the user's query intent.                                                                                                                   
+   * Self-Correcting Tools: The "Tool Manifest" idea (P1) where invalid commands return a menu of valid commands to help the agent self-heal.                                                                                                                                   
+                                                                                                                                                                                                                                                                                
+  3. Testing & Quality                                                                                                                                                                                                                                                          
+   * Mocking Strategy: Move away from subprocess.run for internal CLI testing. Use direct python calls with mocked args to avoid "environment flakiness" and timeouts.                                                                                                          
+   * Hermeticity: Continue the "Ruthless" path of testing with read-only filesystems, locked databases, and missing binaries to bulletproof the agent.                                                                                                                          
+                                                                                                                                                                                                                                                                                
+  4. Research / Big Picture                                                                                                                                                                                                                                                     
+   * "Vibrations" (Literature Graph): Apply this exact "Structure + Meaning" graph engine to creative writing (Entities = Characters, Calls = Interactions, Enrichment = Vibe/Theme).                                                                                           
+   * Local LLM Optimization: The core thesis: Making "dumb" local models (Minimax/7B) perform like "smart" models (GPT-4) by feeding them this high-quality, pre-chewed graph context.         
+
 
 ### Vibrations HLD – Non-Code Fuzzy Fast Relationship Engine
 

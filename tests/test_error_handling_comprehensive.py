@@ -816,21 +816,26 @@ class TestConcurrencyErrorHandling:
     def test_handles_file_locked_by_other_process(self):
         """Test handling when file is locked by another process."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            lock_file = Path(tmpdir) / "lock.db"
+            db_path = Path(tmpdir) / "lock.db"
 
-            # Create and lock the file
-            with open(lock_file, "w") as f:
-                f.write("locked")
-                # File is now locked
+            # Open connection 1 and lock the database
+            conn1 = sqlite3.connect(str(db_path))
+            conn1.execute("CREATE TABLE test (id INTEGER PRIMARY KEY)")
+            conn1.execute("BEGIN EXCLUSIVE")
 
-            # Attempt to access from another context
             try:
-                db = Database(lock_file)
-                # If successful, lock was released or not enforced
-                assert True
-            except (OSError, sqlite3.OperationalError) as e:
-                # Expected - file locked
-                assert e is not None
+                # Attempt to access from another connection with immediate timeout
+                # Using a short timeout ensures we don't hang the test suite
+                conn2 = sqlite3.connect(str(db_path), timeout=0.1)
+                try:
+                    conn2.execute("CREATE TABLE test2 (id INTEGER)")
+                    assert False, "Should have raised OperationalError (locked)"
+                except sqlite3.OperationalError as e:
+                    assert "locked" in str(e).lower()
+                finally:
+                    conn2.close()
+            finally:
+                conn1.close()
 
     def test_handles_rapid_concurrent_writes(self):
         """Test handling of rapid concurrent writes."""

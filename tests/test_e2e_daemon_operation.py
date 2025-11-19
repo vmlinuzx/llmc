@@ -16,8 +16,12 @@ from tools.rag_daemon.workers import WorkerPool
 from tools.rag_repo.cli import _cmd_add
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_tick_with_dummy_runner(tmp_path: Path) -> None:
     """End-to-end test: daemon tick with dummy job runner."""
+    # Import RegistryAdapter locally as it's used here
+    from tools.rag_repo.registry import RegistryAdapter
+
     with tempfile.TemporaryDirectory() as home:
         home = Path(home)
 
@@ -106,6 +110,7 @@ sys.exit(0)
         print("✓ PASS: E2E daemon tick with dummy runner")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_multiple_repos(tmp_path: Path) -> None:
     """End-to-end test: daemon processes multiple repos."""
     with tempfile.TemporaryDirectory() as home:
@@ -190,6 +195,7 @@ exit 0
         print("✓ PASS: E2E multiple repos processed")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_with_failures(tmp_path: Path) -> None:
     """End-to-end test: daemon handles job failures correctly."""
     with tempfile.TemporaryDirectory() as home:
@@ -265,6 +271,7 @@ exit 1
         print("✓ PASS: E2E failure handling")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_control_flags(tmp_path: Path) -> None:
     """End-to-end test: control flags trigger immediate refresh."""
     with tempfile.TemporaryDirectory() as home:
@@ -353,6 +360,7 @@ exit 0
         print("✓ PASS: E2E control flags")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_state_persistence(tmp_path: Path) -> None:
     """End-to-end test: daemon state persists across restarts."""
     with tempfile.TemporaryDirectory() as home:
@@ -430,6 +438,7 @@ exit 0
         print("✓ PASS: E2E state persistence")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_daemon_max_concurrent_jobs(tmp_path: Path) -> None:
     """End-to-end test: daemon respects max_concurrent_jobs."""
     with tempfile.TemporaryDirectory() as home:
@@ -590,6 +599,7 @@ def test_e2e_daemon_shutdown_flag(tmp_path: Path) -> None:
         print("✓ PASS: E2E shutdown flag")
 
 
+@pytest.mark.allow_sleep
 def test_e2e_full_workflow(tmp_path: Path) -> None:
     """End-to-end test: complete workflow from add to daemon processing."""
     with tempfile.TemporaryDirectory() as home:
@@ -656,6 +666,9 @@ exit 0
         # Step 5: Run daemon
         scheduler.run_once()
         time.sleep(3)
+        
+        # Explicitly shut down workers to release file handles
+        workers._executor.shutdown(wait=True)
 
         # Step 6: Verify results
         entries = registry_client.load()

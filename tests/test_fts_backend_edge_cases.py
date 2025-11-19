@@ -14,69 +14,84 @@ from unittest.mock import Mock, patch, MagicMock
 import pytest
 
 
+def create_test_db(tmp_path: Path, db_name: str = "rag.db") -> Path:
+    """Create a test RAG database."""
+    db_path = tmp_path / db_name
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except Exception:
+            pass
+
+    # Create main DB with traditional tables
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY,
+            path TEXT UNIQUE NOT NULL,
+            content TEXT,
+            indexed_at TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS symbols (
+            id INTEGER PRIMARY KEY,
+            file_id INTEGER,
+            name TEXT,
+            type TEXT,
+            FOREIGN KEY (file_id) REFERENCES files(id)
+        )
+    """)
+
+    # Add sample data
+    conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
+                ("file1.py", "def function_a(): return 42"))
+    conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
+                ("file2.py", "def function_b(): return function_a()"))
+    conn.commit()
+    conn.close()
+
+    return db_path
+
+def create_fts_db(tmp_path: Path, db_name: str = "rag_fts.db") -> Path:
+    """Create a test FTS database."""
+    db_path = tmp_path / db_name
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except Exception:
+            pass
+
+    conn = sqlite3.connect(str(db_path))
+    
+    # Create base table for external content FTS
+    conn.execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, path TEXT, content TEXT)")
+
+    conn.execute("""
+        CREATE VIRTUAL TABLE IF NOT EXISTS fts_files USING fts5(
+            path,
+            content,
+            content='files',
+            content_rowid='id'
+        )
+    """)
+
+    # Initialize FTS index
+    conn.execute("INSERT INTO fts_files(fts_files) VALUES('rebuild')")
+    conn.commit()
+    conn.close()
+
+    return db_path
+
+
 class TestFTSFallback:
     """Test database to FTS backend fallback."""
 
-    def create_test_db(self, tmp_path: Path, db_name: str = "rag.db") -> Path:
-        """Create a test RAG database."""
-        db_path = tmp_path / db_name
-
-        # Create main DB with traditional tables
-        conn = sqlite3.connect(str(db_path))
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS files (
-                id INTEGER PRIMARY KEY,
-                path TEXT UNIQUE NOT NULL,
-                content TEXT,
-                indexed_at TIMESTAMP
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS symbols (
-                id INTEGER PRIMARY KEY,
-                file_id INTEGER,
-                name TEXT,
-                type TEXT,
-                FOREIGN KEY (file_id) REFERENCES files(id)
-            )
-        """)
-
-        # Add sample data
-        conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
-                    ("file1.py", "def function_a(): return 42"))
-        conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
-                    ("file2.py", "def function_b(): return function_a()"))
-        conn.commit()
-        conn.close()
-
-        return db_path
-
-    def create_fts_db(self, tmp_path: Path, db_name: str = "rag_fts.db") -> Path:
-        """Create a test FTS database."""
-        db_path = tmp_path / db_name
-
-        conn = sqlite3.connect(str(db_path))
-        conn.execute("""
-            CREATE VIRTUAL TABLE IF NOT EXISTS fts_files USING fts5(
-                path,
-                content,
-                content='files',
-                content_rowid='id'
-            )
-        """)
-
-        # Initialize FTS index
-        conn.execute("INSERT INTO fts_files(fts_files) VALUES('rebuild')")
-        conn.commit()
-        conn.close()
-
-        return db_path
-
     def test_fts_search_with_fresh_db(self, tmp_path: Path):
         """Test FTS search when both DBs are available."""
-        main_db = self.create_test_db(tmp_path)
-        fts_db = self.create_fts_db(tmp_path)
+        main_db = create_test_db(tmp_path)
+        fts_db = create_fts_db(tmp_path)
 
         # Both databases exist
         # Should prefer FTS for search
@@ -84,12 +99,12 @@ class TestFTSFallback:
 
     def test_fallback_to_traditional_when_fts_missing(self, tmp_path: Path):
         """Test fallback when FTS table doesn't exist."""
-        main_db = self.create_test_db(tmp_path)
+        main_db = create_test_db(tmp_path)
 
         # Create FTS DB but drop the FTS table
         fts_db_path = tmp_path / "rag_fts.db"
         conn = sqlite3.connect(str(fts_db_path))
-        conn.execute("DROP TABLE IF NOT EXISTS fts_files")
+        conn.execute("DROP TABLE IF EXISTS fts_files")
         conn.commit()
         conn.close()
 
@@ -103,7 +118,7 @@ class TestFTSFallback:
 
     def test_fallback_on_fts_corruption(self, tmp_path: Path):
         """Test fallback when FTS table is corrupted."""
-        fts_db = self.create_fts_db(tmp_path)
+        fts_db = create_fts_db(tmp_path)
 
         # Corrupt the FTS table
         conn = sqlite3.connect(str(fts_db))
@@ -123,7 +138,7 @@ class TestFTSFallback:
 
     def test_fallback_on_fts_permission_error(self, tmp_path: Path):
         """Test fallback when FTS DB has permission issues."""
-        fts_db = self.create_fts_db(tmp_path)
+        fts_db = create_fts_db(tmp_path)
 
         # Make database read-only
         import stat
@@ -220,7 +235,7 @@ class TestGracefulDegradation:
 
     def test_degradation_with_readonly_db(self, tmp_path: Path):
         """Test degradation when database is read-only."""
-        main_db = self.create_test_db(tmp_path)
+        main_db = create_test_db(tmp_path)
 
         # Make database read-only
         import stat
@@ -309,7 +324,7 @@ class TestFTSSearchEdgeCases:
 
     def test_fts_search_empty_query(self, tmp_path: Path):
         """Test FTS search with empty query."""
-        fts_db = self.create_fts_db(tmp_path)
+        fts_db = create_fts_db(tmp_path)
 
         # Empty query should return all results or none
         # Implementation-specific
@@ -397,7 +412,7 @@ class TestFTSSearchEdgeCases:
 
     def test_fts_search_limit_parameter(self, tmp_path: Path):
         """Test FTS search with limit parameter."""
-        fts_db = self.create_fts_db(tmp_path)
+        fts_db = create_fts_db(tmp_path)
 
         # Test various limits: 1, 10, 100, 1000
         # Should respect limit
@@ -449,7 +464,7 @@ class TestDatabaseMigration:
     def test_migrate_to_fts(self, tmp_path: Path):
         """Test migration from traditional to FTS."""
         # Create traditional DB
-        main_db = self.create_test_db(tmp_path)
+        main_db = create_test_db(tmp_path)
 
         # Migrate to FTS
         # Build FTS index from traditional data

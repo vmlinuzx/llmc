@@ -9,6 +9,7 @@ Tests cover:
 """
 
 import tempfile
+import json
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 import pytest
@@ -28,7 +29,6 @@ class TestComputeRoute:
         """Test compute_route when no status file exists."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Mock load_status to return None
@@ -43,7 +43,6 @@ class TestComputeRoute:
         """Test compute_route when load_status module is unavailable."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Mock load_status to raise exception
@@ -58,7 +57,6 @@ class TestComputeRoute:
         """Test compute_route when index_state is not 'fresh'."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Create mock status with stale index
@@ -76,7 +74,6 @@ class TestComputeRoute:
         """Test compute_route with fresh index and matching HEAD."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Mock git HEAD
@@ -99,7 +96,6 @@ class TestComputeRoute:
         """Test compute_route with fresh index but mismatched HEAD returns STALE."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Mock git HEAD different from last_indexed_commit
@@ -122,7 +118,6 @@ class TestComputeRoute:
         """Test compute_route when git HEAD cannot be detected."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             mock_status = Mock()
@@ -141,7 +136,6 @@ class TestComputeRoute:
         """Test compute_route when last_indexed_commit is missing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             mock_status = Mock()
@@ -161,7 +155,6 @@ class TestComputeRoute:
         """Test that 'fresh' is case-insensitive."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             test_sha = "abc123"
@@ -183,7 +176,6 @@ class TestComputeRoute:
         """Test compute_route when index_state is missing."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             mock_status = Mock()
@@ -200,7 +192,6 @@ class TestComputeRoute:
         """Test that any non-'fresh' index_state returns STALE."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             non_fresh_states = [
@@ -227,7 +218,6 @@ class TestComputeRoute:
         """Test that compute_route returns proper RouteDecision object."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             mock_status = Mock()
@@ -248,7 +238,7 @@ class TestComputeRoute:
 class TestDetectGitHead:
     """Test _detect_git_head function."""
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_success(self, mock_run):
         """Test successful git HEAD detection."""
         # Mock successful git command
@@ -263,7 +253,7 @@ class TestDetectGitHead:
 
             assert result == "abc123def456789"
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_with_whitespace(self, mock_run):
         """Test git HEAD detection strips whitespace."""
         mock_process = Mock()
@@ -277,7 +267,7 @@ class TestDetectGitHead:
 
             assert result == "abc123"
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_empty_output(self, mock_run):
         """Test git HEAD detection with empty output."""
         mock_process = Mock()
@@ -291,7 +281,7 @@ class TestDetectGitHead:
 
             assert result is None
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_git_error(self, mock_run):
         """Test git HEAD detection when git command fails."""
         mock_run.side_effect = Exception("git not found")
@@ -302,7 +292,7 @@ class TestDetectGitHead:
 
             assert result is None
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_nonzero_exit(self, mock_run):
         """Test git HEAD detection with non-zero exit code."""
         mock_process = Mock()
@@ -316,7 +306,7 @@ class TestDetectGitHead:
 
             assert result is None
 
-    @patch("tools.rag.gateway.subprocess.run")
+    @patch("tools.rag_nav.gateway.run")
     def test_detect_git_head_uses_git_flag(self, mock_run):
         """Test that git command uses -C flag."""
         mock_process = Mock()
@@ -349,7 +339,6 @@ class TestMissingGraphWhenUseRagTrue:
         """
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
             (repo_root / ".llmc").mkdir()  # Create .llmc directory
             # But don't create rag_graph.json
@@ -380,7 +369,6 @@ class TestMissingGraphWhenUseRagTrue:
         """Test that missing .llmc directory is handled."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
             # Don't create .llmc directory
 
@@ -402,7 +390,6 @@ class TestMissingGraphWhenUseRagTrue:
         """Test that empty graph file is handled."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
             (repo_root / ".llmc").mkdir()
 
@@ -423,7 +410,6 @@ class TestMissingGraphWhenUseRagTrue:
                     # Graph exists but is empty - should be handled gracefully
                     # Actual loading would fail with validation error
                     with pytest.raises((json.JSONDecodeError, ValueError)):
-                        import json
                         with open(graph_path, "r") as f:
                             json.load(f)
 
@@ -431,7 +417,6 @@ class TestMissingGraphWhenUseRagTrue:
         """Test that malformed JSON in graph file is handled."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
             (repo_root / ".llmc").mkdir()
 
@@ -450,7 +435,6 @@ class TestMissingGraphWhenUseRagTrue:
                     assert decision.use_rag is True
 
                     # Should fail when loading
-                    import json
                     with pytest.raises(json.JSONDecodeError):
                         with open(graph_path, "r") as f:
                             json.load(f)

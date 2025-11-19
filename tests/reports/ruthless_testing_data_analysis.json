@@ -1,0 +1,88 @@
+{
+  "timestamp": "2025-11-19T18:14:25.089760Z",
+  "branch": "fix/tests-compat-guardrails-v2",
+  "commit": "183970e",
+  "agent": "Ruthless Testing Agent",
+  "summary": {
+    "total_tests": 1202,
+    "estimated_failures": 150,
+    "critical_failures": 2,
+    "high_priority_failures": 5,
+    "affected_modules": [
+      "tools/rag_nav/cli.py",
+      "tools/rag/enrichment.py",
+      "tools/rag/graph_enrich.py",
+      "tools/rag_nav/tool_handlers.py"
+    ]
+  },
+  "critical_bugs": [
+    {
+      "id": "BUG-001",
+      "severity": "CRITICAL",
+      "component": "CLI",
+      "title": "RAG Nav CLI ModuleNotFoundError",
+      "file": "tools/rag_nav/cli.py:11",
+      "repro": "python3 tools/rag_nav/cli.py --help"
+    },
+    {
+      "id": "BUG-002",
+      "severity": "CRITICAL",
+      "component": "Data Pipeline",
+      "title": "Graph enrichment produces empty graph",
+      "file": "tools/rag/graph_enrich.py",
+      "details": "0 entities vs 4372 DB entries"
+    },
+    {
+      "id": "BUG-003",
+      "severity": "HIGH",
+      "component": "API",
+      "title": "API signature mismatch",
+      "file": "tools/rag_nav/tool_handlers.py",
+      "details": "tool_rag_search missing repo_root arg"
+    }
+  ],
+  "test_failures": {
+    "test_enrichment_data_integration_failure.py": {
+      "failed": 5,
+      "total": 6
+    },
+    "test_rag_failures.py": {
+      "failed": 6,
+      "total": 6
+    },
+    "test_rag_analytics.py": {
+      "failed": 15,
+      "total": "unknown"
+    },
+    "test_rag_daemon_complete.py": {
+      "failed": 5,
+      "total": "unknown"
+    },
+    "test_graph_stitching_edge_cases.py": {
+      "failed": 7,
+      "total": "unknown"
+    }
+  },
+  "static_analysis": {
+    "ruff": {
+      "violations": "multiple",
+      "critical": "import organization"
+    },
+    "mypy": {
+      "missing_stubs": 10,
+      "critical_imports": [
+        "pytest",
+        "click",
+        "numpy",
+        "torch"
+      ]
+    }
+  },
+  "recommendations": [
+    "Fix CLI import path immediately",
+    "Investigate graph enrichment data flow",
+    "Audit API signatures for compatibility",
+    "Install missing type stubs",
+    "Run systematic test review"
+  ]
+}

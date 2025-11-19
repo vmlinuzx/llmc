@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from subprocess import DEVNULL, PIPE, run
 from typing import Optional
 
 from tools.rag_nav.models import FreshnessState, IndexStatus
+
+try:
+    from tools.rag_nav.metadata import load_status
+except ImportError:
+    def load_status(*args, **kwargs):
+        return None
 
 
 @dataclass
@@ -21,8 +28,6 @@ def _detect_git_head(repo_root: Path) -> Optional[str]:
     Return the current git HEAD SHA for the given repo, or None on error.
     """
     try:
-        from subprocess import DEVNULL, PIPE, run
-
         result = run(
             ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
             stdout=PIPE,
@@ -48,11 +53,6 @@ def compute_route(repo_root: Path) -> RouteDecision:
     - fresh + mismatched HEAD: STALE, do not use RAG.
     """
     try:
-        from tools.rag_nav.metadata import load_status
-    except Exception:
-        return RouteDecision(use_rag=False, freshness_state="UNKNOWN", status=None)
-
-    try:
         status = load_status(repo_root)
     except Exception:
         status = None
@@ -64,7 +64,11 @@ def compute_route(repo_root: Path) -> RouteDecision:
     if (index_state or "").lower() != "fresh":
         return RouteDecision(use_rag=False, freshness_state="STALE", status=status)
 
-    head = _detect_git_head(repo_root)
+    try:
+        head = _detect_git_head(repo_root)
+    except Exception:
+        head = None
+    
     last_indexed = getattr(status, "last_indexed_commit", None)
 
     if not head or not last_indexed:

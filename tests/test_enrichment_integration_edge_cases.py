@@ -17,6 +17,42 @@ import pytest
 # Import enrichment modules
 # Note: These imports should work after enrichment is properly integrated
 
+def create_test_db(tmp_path: Path, db_name: str = "enrichment.db") -> Path:
+    """Helper to create a test enrichment database."""
+    db_path = tmp_path / db_name
+    if db_path.exists():
+        try:
+            db_path.unlink()
+        except Exception:
+            pass
+            
+    conn = sqlite3.connect(str(db_path))
+
+    # Create basic enrichment schema
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS enrichments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            file_path TEXT NOT NULL,
+            content TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS metrics (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            operation TEXT NOT NULL,
+            items_count INTEGER,
+            attached_count INTEGER,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+    return db_path
+
 
 class TestEnrichmentEnvironmentVariables:
     """Test enrichment control via environment variables."""
@@ -130,39 +166,9 @@ class TestEnrichmentEnvironmentVariables:
 class TestEnrichmentDatabaseDiscovery:
     """Test enrichment database discovery mechanisms."""
 
-    def create_test_db(self, tmp_path: Path, db_name: str = "enrichment.db") -> Path:
-        """Helper to create a test enrichment database."""
-        db_path = tmp_path / db_name
-        conn = sqlite3.connect(str(db_path))
-
-        # Create basic enrichment schema
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS enrichments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                file_path TEXT NOT NULL,
-                content TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS metrics (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                operation TEXT NOT NULL,
-                items_count INTEGER,
-                attached_count INTEGER,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-
-        conn.commit()
-        conn.close()
-
-        return db_path
-
     def test_discover_enrichment_db_with_env_path(self, tmp_path: Path):
         """Test discovery via LLMC_ENRICH_DB environment variable."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         with patch.dict(os.environ, {"LLMC_ENRICH_DB": str(db_path)}):
             env_db = os.getenv("LLMC_ENRICH_DB")
@@ -186,7 +192,7 @@ class TestEnrichmentDatabaseDiscovery:
         workspace = repo_root / ".llmc" / "rag"
         workspace.mkdir(parents=True)
 
-        db_path = self.create_test_db(workspace, "enrichment.db")
+        db_path = create_test_db(workspace, "enrichment.db")
 
         # Should find DB in workspace
         assert (workspace / "enrichment.db").exists()
@@ -199,7 +205,7 @@ class TestEnrichmentDatabaseDiscovery:
         llmc_dir = repo_root / ".llmc"
         llmc_dir.mkdir()
 
-        db_path = self.create_test_db(llmc_dir, "enrichment.db")
+        db_path = create_test_db(llmc_dir, "enrichment.db")
 
         # Should find DB in .llmc
         assert (llmc_dir / "enrichment.db").exists()
@@ -218,7 +224,7 @@ class TestEnrichmentDatabaseDiscovery:
         ]
 
         for name in names_to_try:
-            db_path = self.create_test_db(workspace, name)
+            db_path = create_test_db(workspace, name)
             assert db_path.exists()
 
     def test_discover_enrichment_db_with_search_items(self, tmp_path: Path):
@@ -230,7 +236,7 @@ class TestEnrichmentDatabaseDiscovery:
         workspace.mkdir(parents=True)
 
         # Create DB with items
-        db_path = self.create_test_db(workspace, "enrichment.db")
+        db_path = create_test_db(workspace, "enrichment.db")
 
         # Simulate search items
         search_items = [
@@ -244,7 +250,7 @@ class TestEnrichmentDatabaseDiscovery:
 
     def test_enrichment_db_version_check(self, tmp_path: Path):
         """Test that enrichment DB version is checked."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         conn = sqlite3.connect(str(db_path))
 
@@ -268,7 +274,7 @@ class TestEnrichmentDatabaseDiscovery:
 
     def test_enrichment_db_schema_migration(self, tmp_path: Path):
         """Test database schema migration on upgrade."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Create old schema (without version)
         conn = sqlite3.connect(str(db_path))
@@ -282,7 +288,7 @@ class TestEnrichmentDatabaseDiscovery:
 
     def test_enrichment_db_locked(self, tmp_path: Path):
         """Test handling when DB is locked by another process."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Open connection and hold it
         conn1 = sqlite3.connect(str(db_path))
@@ -306,7 +312,7 @@ class TestEnrichmentDatabaseDiscovery:
         # Should detect corruption
         try:
             conn = sqlite3.connect(str(db_path))
-            conn.execute("SELECT 1")
+            conn.execute("SELECT * FROM sqlite_master")
             conn.close()
             assert False, "Should have failed to open corrupted DB"
         except sqlite3.DatabaseError:
@@ -314,7 +320,7 @@ class TestEnrichmentDatabaseDiscovery:
 
     def test_enrichment_db_permissions(self, tmp_path: Path):
         """Test DB with restricted permissions."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Make file read-only
         import stat
@@ -335,7 +341,7 @@ class TestEnrichmentAttachment:
 
     def test_attach_enrichments_to_search_result(self, tmp_path: Path):
         """Test attaching enrichments to SearchResult."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add enrichment data
         conn = sqlite3.connect(str(db_path))
@@ -359,7 +365,7 @@ class TestEnrichmentAttachment:
 
     def test_attach_enrichments_where_used(self, tmp_path: Path):
         """Test attaching enrichments to WhereUsedResult."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Similar to search result test
         where_used_result = Mock()
@@ -370,7 +376,7 @@ class TestEnrichmentAttachment:
 
     def test_attach_enrichments_lineage(self, tmp_path: Path):
         """Test attaching enrichments to LineageResult."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         lineage_result = Mock()
         lineage_result.items = [
@@ -380,7 +386,7 @@ class TestEnrichmentAttachment:
 
     def test_max_snippets_per_item(self, tmp_path: Path):
         """Test max_snippets parameter for enrichment attachment."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add multiple enrichments for same file
         conn = sqlite3.connect(str(db_path))
@@ -397,7 +403,7 @@ class TestEnrichmentAttachment:
 
     def test_max_chars_enforcement(self, tmp_path: Path):
         """Test that max_chars parameter is enforced."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add large enrichment content
         conn = sqlite3.connect(str(db_path))
@@ -414,14 +420,14 @@ class TestEnrichmentAttachment:
 
     def test_no_enrichment_data(self, tmp_path: Path):
         """Test behavior when DB has no enrichment data."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Don't add any data
         # Should handle gracefully - return result unchanged
 
     def test_missing_file_in_enrichment(self, tmp_path: Path):
         """Test enrichment for files not in DB."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add enrichment for different file
         conn = sqlite3.connect(str(db_path))
@@ -473,7 +479,7 @@ class TestEnrichmentAttachment:
 
     def test_enrichment_with_special_characters(self, tmp_path: Path):
         """Test enrichment with special characters in content."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         special_content = "Content with <html> & special chars: \n\t\"'"
         conn = sqlite3.connect(str(db_path))
@@ -579,7 +585,7 @@ class TestEnrichmentMetrics:
 
     def test_metrics_persistence_to_db(self, tmp_path: Path):
         """Test that metrics are persisted to DB."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Record metrics
         conn = sqlite3.connect(str(db_path))
@@ -603,7 +609,7 @@ class TestEnrichmentMetrics:
 
     def test_metrics_aggregation(self, tmp_path: Path):
         """Test aggregation of metrics over time."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         conn = sqlite3.connect(str(db_path))
 
@@ -632,11 +638,12 @@ class TestEnrichmentMetrics:
 
         assert result[2] == 5  # 5 operations
 
+    @pytest.mark.allow_sleep
     def test_metrics_performance_impact(self, tmp_path: Path):
         """Test that metrics tracking doesn't significantly impact performance."""
         import time
 
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Measure time with metrics
         start = time.time()
@@ -684,11 +691,12 @@ class TestEnrichmentEdgeCases:
     def test_enrichment_with_empty_db(self, tmp_path: Path):
         """Test enrichment with completely empty DB."""
         db_path = tmp_path / "empty.db"
-        db_path.touch()  # Create empty file
+        db_path.write_text("garbage")  # Write garbage to ensure it's not a valid DB
 
         # Should handle gracefully
         try:
             conn = sqlite3.connect(str(db_path))
+            conn.execute("SELECT * FROM sqlite_master")
             conn.close()
             assert False, "Should fail to open empty DB as SQLite"
         except sqlite3.DatabaseError:
@@ -696,7 +704,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_with_very_large_result_set(self, tmp_path: Path):
         """Test enrichment with 1000+ search results."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Create large result set
         items = [Mock(file=f"file_{i}.py") for i in range(1000)]
@@ -716,7 +724,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_with_binary_content(self, tmp_path: Path):
         """Test enrichment of binary files."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add binary content
         binary_content = b"\x00\x01\x02\x03\xff\xfe"
@@ -733,7 +741,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_db_backup_before_write(self, tmp_path: Path):
         """Test that DB creates backup before writing."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
         backup_path = tmp_path / "enrichment.db.backup"
 
         # Before write, create backup
@@ -744,7 +752,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_incremental_updates(self, tmp_path: Path):
         """Test that enrichment can be updated incrementally."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add initial data
         conn = sqlite3.connect(str(db_path))
@@ -777,7 +785,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_gc_of_old_data(self, tmp_path: Path):
         """Test garbage collection of old enrichment data."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add old timestamp data
         conn = sqlite3.connect(str(db_path))
@@ -793,7 +801,7 @@ class TestEnrichmentEdgeCases:
 
     def test_enrichment_deduplication(self, tmp_path: Path):
         """Test that duplicate enrichments are handled."""
-        db_path = self.create_test_db(tmp_path)
+        db_path = create_test_db(tmp_path)
 
         # Add same file multiple times
         conn = sqlite3.connect(str(db_path))

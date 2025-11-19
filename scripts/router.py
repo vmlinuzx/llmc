@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Routing helpers for enrichment model selection."""
 
 from __future__ import annotations

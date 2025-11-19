@@ -1,0 +1,192 @@
+{
+  "test_run_metadata": {
+    "timestamp": "2025-11-19T17:45:00Z",
+    "branch": "fix/tests-compat-guardrails-v2",
+    "agent": "ruthless_testing",
+    "python_version": "3.12.3",
+    "pytest_version": "7.4.4"
+  },
+  "summary": {
+    "total_tests_collected": 1202,
+    "graph_rag_tests_failed": 27,
+    "graph_rag_tests_passed": 49,
+    "overall_success_rate_sample": "84.1%",
+    "critical_issues_found": 1,
+    "high_severity_issues": 2,
+    "medium_severity_issues": 5
+  },
+  "critical_failures": {
+    "gateway_import_path_mismatch": {
+      "severity": "CRITICAL",
+      "affected_module": "tools.rag",
+      "correct_module": "tools.rag_nav",
+      "error": "AttributeError: module 'tools.rag' has no attribute 'gateway'",
+      "failed_tests": 22,
+      "passed_tests": 8,
+      "success_rate": "26.7%",
+      "root_cause": "Test mock paths use wrong module path",
+      "file": "tests/test_rag_nav_gateway_critical.py",
+      "fix_required": "Change all mock paths from 'tools.rag.gateway' to 'tools.rag_nav.gateway'",
+      "lines_affected": [251, 266, 280, 294, 305, 319]
+    }
+  },
+  "failure_by_category": {
+    "graph_rag_gateway": {
+      "failed": 22,
+      "passed": 8,
+      "tests": [
+        "TestComputeRoute::test_compute_route_no_status",
+        "TestComputeRoute::test_compute_route_no_status_module",
+        "TestComputeRoute::test_compute_route_stale_index_state",
+        "TestComputeRoute::test_compute_route_fresh_matching_head",
+        "TestComputeRoute::test_compute_route_fresh_mismatched_head_is_stale",
+        "TestComputeRoute::test_compute_route_missing_git_head",
+        "TestComputeRoute::test_compute_route_missing_last_indexed_commit",
+        "TestComputeRoute::test_compute_route_case_insensitive_fresh",
+        "TestComputeRoute::test_compute_route_missing_index_state",
+        "TestComputeRoute::test_compute_route_non_fresh_variations",
+        "TestComputeRoute::test_compute_route_returns_route_decision",
+        "TestDetectGitHead::test_detect_git_head_success",
+        "TestDetectGitHead::test_detect_git_head_with_whitespace",
+        "TestDetectGitHead::test_detect_git_head_empty_output",
+        "TestDetectGitHead::test_detect_git_head_git_error",
+        "TestDetectGitHead::test_detect_git_head_nonzero_exit",
+        "TestDetectGitHead::test_detect_git_head_uses_git_flag",
+        "TestMissingGraphWhenUseRagTrue::test_missing_graph_raises_error_current_policy",
+        "TestMissingGraphWhenUseRagTrue::test_missing_graph_directory",
+        "TestMissingGraphWhenUseRagTrue::test_empty_graph_file",
+        "TestMissingGraphWhenUseRagTrue::test_malformed_graph_json"
+      ]
+    },
+    "graph_building_stitching": {
+      "failed": 6,
+      "passed": 35,
+      "tests": [
+        "test_existing_graph_artifacts",
+        "test_graph_file_permission_error",
+        "test_concurrent_expansion_requests",
+        "test_mix_rag_and_stitched_results",
+        "test_duplicate_files_deduplication",
+        "test_max_results_enforcement"
+      ]
+    },
+    "rag_analytics": {
+      "failed": 20,
+      "passed": 76,
+      "notes": "AssertionError, TypeError in analytics calculations"
+    },
+    "rag_daemon": {
+      "failed": 5,
+      "passed": 56,
+      "tests": [
+        "test_worker_marks_repo_running",
+        "test_worker_success_updates_state",
+        "test_worker_failure_updates_state",
+        "test_worker_max_concurrent_jobs",
+        "test_worker_exponential_backoff"
+      ]
+    },
+    "router": {
+      "failed": 8,
+      "passed": 86,
+      "tests": [
+        "test_check_forced_routing_local",
+        "test_check_forced_routing_premium",
+        "test_decide_tier_bug_hunting_routes_to_mid",
+        "test_cost_estimation_premium_tier",
+        "test_route_with_forced_routing",
+        "test_route_query_auto_detects_repo_root",
+        "test_multiple_forced_routing_matches",
+        "test_demote_policy_consistent_across_failures"
+      ]
+    },
+    "repo_operations": {
+      "failed": 12,
+      "passed": 124,
+      "tests": "All in test_repo_add_idempotency.py"
+    }
+  },
+  "static_analysis": {
+    "lint_violations": 8,
+    "files_affected": [
+      "tests/_plugins/pytest_compat_shims.py",
+      "tests/_plugins/pytest_ruthless.py",
+      "tests/conftest.py"
+    ],
+    "violation_types": [
+      "Multiple imports on one line (E401)",
+      "Unused imports: os, sys, types (F401)",
+      "Missing newline at EOF (W292)"
+    ],
+    "auto_fixable": true
+  },
+  "incomplete_tests": {
+    "count": 31,
+    "categories": [
+      {
+        "name": "Freshness Gateway",
+        "file": "tests/test_freshness_gateway.py",
+        "count": 13,
+        "status": "All skipped - not yet implemented"
+      },
+      {
+        "name": "Enrichment Integration",
+        "file": "tests/test_enrichment_integration.py",
+        "count": 18,
+        "status": "All skipped - not yet implemented"
+      }
+    ]
+  },
+  "recommendations": {
+    "immediate": [
+      {
+        "priority": "CRITICAL",
+        "action": "Fix mock paths in test_rag_nav_gateway_critical.py",
+        "details": "Change 'tools.rag.gateway' to 'tools.rag_nav.gateway' in all @patch decorators",
+        "affected_lines": [251, 266, 280, 294, 305, 319]
+      },
+      {
+        "priority": "HIGH",
+        "action": "Verify other test files for similar import path issues",
+        "details": "Search for 'tools.rag.' references in test files"
+      }
+    ],
+    "short_term": [
+      {
+        "priority": "MEDIUM",
+        "action": "Debug graph building test failures",
+        "details": "Investigate 6 failures in test_graph_building.py and test_graph_stitching_edge_cases.py"
+      },
+      {
+        "priority": "MEDIUM",
+        "action": "Fix RAG analytics assertion failures",
+        "details": "Debug 20 assertion failures in test_rag_analytics.py"
+      },
+      {
+        "priority": "LOW",
+        "action": "Clean lint violations",
+        "details": "Run ruff check --fix on test infrastructure"
+      }
+    ]
+  },
+  "coverage_impact": {
+    "currently_covered": [
+      "Gateway module code exists",
+      "Freshness state logic implemented",
+      "Git HEAD detection logic exists",
+      "Route decision logic exists"
+    ],
+    "not_tested_due_to_failures": [
+      "Gateway routing decisions",
+      "Stale index detection",
+      "Graph file existence validation",
+      "Missing graph error handling"
+    ],
+    "expected_improvement": "After fixing import paths, gateway tests should reach 90%+ success rate"
+  },
+  "validation": {
+    "repro_command": "python3 -m pytest tests/test_rag_nav_gateway_critical.py -v",
+    "expected_after_fix": "22 passed, 0 failed",
+    "validation_method": "Mock path correction verification"
+  }
+}

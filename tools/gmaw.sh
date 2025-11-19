@@ -199,7 +199,7 @@ configure_gemini_env() {
 main() {
   local user_prompt=""
   local explicit_repo=""
-  local -a gemini_extra_args=()
+  local -a gemini_extra_args=("-y")
 
   # Minimal arg parsing:
   #   --repo /path/to/repo   -> override repo root
