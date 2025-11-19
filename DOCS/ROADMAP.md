@@ -274,6 +274,14 @@ This section is a trimmed, de-duplicated version of the prior backlog; items rem
 
 ### RAG & Context Quality
 
+- **Polyglot RAG Support (JS/TS/Go/etc.)**
+  - **Context:** Currently, `tools/rag/schema.py` hardcodes `if lang == "python": ...` and only extracts AST from `.py` files. `tools/rag/indexer.py` supports other languages for raw span chunking, but the **Graph Builder** ignores them, leading to "No source files found" errors and empty graphs for non-Python repos (e.g., `livecaptions_advanced`).
+  - **Goal:** Expand `SchemaExtractor` to support `tree-sitter` (or similar) for JavaScript, TypeScript, Go, and Rust so that the Entity Graph covers the full stack.
+  - **Implementation:**
+    - Integrate `tree-sitter` python bindings.
+    - Implement `JavaScriptSchemaExtractor`, `GoSchemaExtractor`, etc.
+    - Update `build_graph_for_repo` to scan for these extensions.
+
 - Complete schema-enriched/graph-style RAG integration and validation benchmarks.
 - Standardize RAG architecture across wrappers using a shared helper (e.g., `scripts/rag_common.sh`).
 - Harden freshness automation (cron-friendly refresh wrapper + docs/locks/logs).

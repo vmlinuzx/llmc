@@ -371,6 +371,15 @@ class RAGService:
                     )
             except Exception as e:
                 print(f"  ⚠️  Quality check failed: {e}")
+
+        # Step 5: Rebuild RAG Graph (Unified CLI support)
+        try:
+            from tools.rag_nav.tool_handlers import build_graph_for_repo
+            print(f"  📊 Rebuilding RAG Graph...")
+            status = build_graph_for_repo(repo)
+            print(f"  ✅ Graph rebuilt: {status}")
+        except Exception as e:
+            print(f"  ⚠️  Graph build failed: {e}")
         
         print(f"  ✅ {repo.name} processing complete")
     
