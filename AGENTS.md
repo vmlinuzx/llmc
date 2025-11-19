@@ -24,12 +24,29 @@ This file is the primary operational document for all agents. If you only read o
 - Before performing a rollback, enumerate every file that will change and obtain explicit approval.
 - Suggest best practices.
 
+## 3. Engineering Workflow (The "Dave Protocol")
+
+For any task deemed **Significant** (requires design, >1 file change, complex refactor, or touching core pipelines), strictly follow this structured loop:
+
+1.  **Logic Gate:** Determine if the task is "Significant" or "Small" (just do it).
+2.  **Overview:** Provide a high-level summary of the goal to ensure alignment.
+3.  **Imaginative/Research Phase:** Explore creative approaches. Deep-dive into docs/code. *Do not write implementation code yet.*
+4.  **HLD (High Level Design):** Define architecture, data flow, and **Test Strategy**. Get approval.
+5.  **SDD (Software Design Document):** Define specific implementation details (function signatures, schemas) and **Test Cases**. Get approval.
+6.  **Implementation (TDD):**
+    *   Write failing tests (from SDD cases) FIRST.
+    *   Write code to pass tests.
+7.  **Verification:** Run tests to confirm implementation matches design.
+8.  **Documentation:** Finalize docs (`ROADMAP.md`, architecture docs).
+
+*Note: This process ensures predictable, high-quality results and prevents "cowboy coding" chaos.*
+
 ### Context Retrieval Protocol (RAG/MCP)
 
 You are working in a repository that has a RAG (Retrieval-Augmented Generation) system with CLI tools.
 Follow these rules when answering questions or editing code.
 
-## 3. RAG-first contract
+## 4. RAG-first contract
 
 - MANDATORY Default: **use RAG tools first** for any repo/code question.
 - If RAG fails (no results, tool error, or obviously irrelevant results), silently fall back to:

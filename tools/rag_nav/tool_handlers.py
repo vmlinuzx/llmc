@@ -480,27 +480,102 @@ def build_enriched_schema_graph(repo_root: Path) -> any:
 
     # 2. Load all enrichment data
     enrichments_by_span = load_enrichment_data(repo_root)
+    
+    # 3. Build Spatial Index: (normalized_path, start_line) -> EnrichmentRecord
+    # This bridges the gap between AST (Graph) and Content Hash (DB).
+    enrich_by_loc: Dict[Tuple[str, int], any] = {}
+    
+    # load_enrichment_data now returns Dict[span_hash, List[EnrichmentRecord]]
+    # We iterate the lists of records.
+    for records in enrichments_by_span.values():
+        for record in records:
+            if record.file_path and record.start_line is not None:
+                # Normalize path relative to repo_root
+                try:
+                    p = Path(record.file_path)
+                    if p.is_absolute():
+                        norm_p = str(p.relative_to(repo_root))
+                    else:
+                        norm_p = str(p)
+                except ValueError:
+                    norm_p = str(record.file_path)
+                
+                enrich_by_loc[(norm_p, record.start_line)] = record
 
-    # 3. Iterate through graph entities and merge metadata
+    # 4. Iterate through graph entities and merge metadata
+    enriched_count = 0
+    
     if hasattr(base_graph, "entities"):
         for entity in base_graph.entities:
-            # Primary matching key: span_hash
-            if getattr(entity, "span_hash", None) in enrichments_by_span:
-                matched_records = enrichments_by_span[entity.span_hash]
+            if not entity.file_path or entity.start_line is None:
+                continue
 
-                # Conflict Resolution Strategy: For now, merge all, letting later records overwrite earlier ones
-                # for scalar fields.
-                for record in matched_records:
-                    if record.summary:
-                        entity.metadata["summary"] = record.summary
-                    if record.usage_guide:
-                        entity.metadata["usage_guide"] = record.usage_guide
-                    # Future: Add other fields from EnrichmentRecord to metadata
+            # Normalize entity path (AST paths are usually absolute in this pipeline)
+            try:
+                p = Path(entity.file_path)
+                if p.is_absolute():
+                    norm_entity_path = str(p.relative_to(repo_root))
+                else:
+                    norm_entity_path = str(p)
+            except ValueError:
+                norm_entity_path = entity.file_path
+            
+            # Update entity path to be relative in the export
+            entity.file_path = norm_entity_path
+
+            # Match by Location
+            key = (norm_entity_path, entity.start_line)
+            enrich = enrich_by_loc.get(key)
+            
+            if enrich:
+                _attach_enrichment_to_entity(entity, enrich)
+                enriched_count += 1
+
+    print(f"    📊 Enrichment integration: {enriched_count}/{len(base_graph.entities)} entities enriched.")
 
     # 4. Save the enriched graph
     _save_schema_graph(repo_root, base_graph)
     
     return base_graph
+
+
+def _attach_enrichment_to_entity(entity: any, enrich: any) -> None:
+    """Internal helper to attach enrichment fields to entity metadata.
+    
+    Args:
+        entity: Entity to enrich
+        enrich: EnrichmentRecord with metadata
+    """
+    # Parse JSON fields if they're stored as strings
+    import json
+    
+    def safe_json_load(value: Optional[str]) -> Optional[list]:
+        if not value:
+            return None
+        try:
+            return json.loads(value) if isinstance(value, str) else value
+        except (json.JSONDecodeError, TypeError):
+            return None
+    
+    # Attach all enrichment fields
+    if enrich.summary:
+        entity.metadata["summary"] = enrich.summary
+    
+    # Map usage_guide (Record) -> usage_guide (Metadata) or usage_snippet (Metadata)
+    # The Record has 'usage_guide' populated from DB 'usage_snippet'.
+    if enrich.usage_guide:
+        entity.metadata["usage_guide"] = enrich.usage_guide
+        entity.metadata["usage_snippet"] = enrich.usage_guide # redundant but safe
+    
+    # Additional fields (if available in record)
+    # Note: EnrichmentRecord currently only has summary/usage_guide populated by load_enrichment_data
+    # but we should be ready for others if they are added.
+    
+    # Always store symbol/span_hash for downstream tools.
+    if getattr(enrich, "symbol", None):
+        entity.metadata["symbol"] = enrich.symbol
+    if enrich.span_hash:
+        entity.metadata["span_hash"] = enrich.span_hash
 
 
 # --- Fallback helpers (local scan) ---------------------------------------------
