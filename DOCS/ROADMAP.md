@@ -73,6 +73,177 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
 
 ---
 
+## Quality & Hardening Roadmap (P11)
+
+### 0. Definition of “Good Enough for Government Work”
+
+The system is “good enough” when:
+
+- There are no obvious foot-guns around:
+  - Path traversal.
+  - SQL injection.
+  - Subprocess misuse.
+- Core surfaces return a structured error envelope (e.g., RagToolMeta-style).
+- P0 surfaces (security, DB, registry, router/daemon) all have direct tests.
+- `bare except:` and undefined-name issues are cleaned up.
+- CI can run with a single command on a fresh clone with:
+  - A clean run.
+  - No flakiness.
+- Basic runbooks exist for:
+  - “Service won’t start.”
+  - “Index is corrupted.”
+  - “RAG looks wrong.”
+
+The following phases describe how to get there incrementally.
+
+### Phase 1 – Red-Risk Hardening (Security & Data Integrity)
+
+**1.1 Filesystem & path safety**
+
+- Implement a shared `safe_resolve(base, user_path)` helper that:
+  - Resolves and normalizes paths.
+  - Enforces “must stay under base”.
+- Use it everywhere untrusted paths come in (registry, repo roots, workspaces).
+- Replace the current “path traversal vulnerability demo” tests with:
+  - Real “this now fails safely” tests, or
+  - Strict `xfail` markers until fixed.
+
+**1.2 Database & SQL safety**
+
+- Audit all SQL sites; enforce parameterized queries for any user/config text.
+- Centralize DB writes in a small API surface.
+- Add tests that try injection via:
+  - Paths, filenames, languages, descriptions.
+- Assert that:
+  - Schema remains intact.
+  - Malicious strings are stored as data, not executed.
+
+**1.3 Subprocess & command exec safety**
+
+- Inventory all subprocess usage.
+- Enforce rules:
+  - No `shell=True` with untrusted input.
+  - Always pass argument lists, not shell strings.
+- Add tests:
+  - Mock `subprocess` and assert `shell=False` and list args in real code paths.
+
+**1.4 Config & registry validation**
+
+- Define schemas for config/registry files (required keys, types, enums).
+- Implement `validate_config` / `validate_registry_entry`.
+- Add tests for missing keys, wrong types, invalid paths → predictable exceptions / error responses.
+
+### Phase 2 – Structured Error Handling & Recovery
+
+**2.1 Standard error envelope**
+
+- Finalize meta schema (status, `error_code`, `message`, `source`, `freshness_state`).
+- Apply to:
+  - RAG tools (search / where-used / lineage).
+  - CLI/daemon APIs.
+- Tests for forced failures should assert:
+  - `status="ERROR"`.
+  - Stable `error_code`.
+  - Useful, non-leaky `message`.
+
+**2.2 Network & LLM provider failures**
+
+- Map provider failures to internal codes:
+  - Timeouts, connection errors, 429, 4xx auth, 5xx.
+- Implement retry/backoff for transient errors; fast-fail for bad requests.
+- Mock-based tests to verify:
+  - Retry behavior.
+  - Final structured errors.
+
+**2.3 DB corruption & migration**
+
+- On DB open:
+  - Integrity + schema-version checks.
+- On mismatch:
+  - Attempt migration, otherwise return clear error with next steps.
+- Tests with corrupted/old/missing-schema DBs to exercise these paths.
+
+**2.4 Daemon & workers**
+
+- Job-level error containment:
+  - One job failing must not bring down the whole daemon.
+- Tests:
+  - Fake job that always throws → daemon survives, failure visible via status/logs.
+
+### Phase 3 – Test Suite Hygiene & Signal
+
+**3.1 Convert spec-tests into real tests**
+
+- Triage `tests/test_error_handling_comprehensive.py`:
+  - Convert keepers into real tests that call LLMC code.
+  - Mark “known bug / future behavior” with strict `xfail`.
+  - Drop pure stdlib demos from CI.
+- Replace `try: assert True` patterns with:
+  - `pytest.raises(...)`, or
+  - Assertions on results/envelopes.
+
+**3.2 Lint & style as a gate**
+
+- Fix all:
+  - `bare except:` (E722).
+  - Undefined names (F821).
+- Add a minimal Ruff gate in CI for those rules only.
+- Optionally expand lint rules later once red risks are under control.
+
+**3.3 Smoke / regression tests**
+
+- Add “tiny repo” smoke tests:
+  - Index, search, where-used, plan on fixtures.
+- Assert:
+  - Exit code 0.
+  - No tracebacks.
+  - Basic shape of output is correct.
+- Tag slow/perf checks appropriately.
+
+### Phase 4 – Observability & Ops
+
+**4.1 Logging & metrics**
+
+- Standardize error logging fields:
+  - Component, error code, message, context.
+- Tests:
+  - Use `caplog` to assert logs for key failure paths.
+
+**4.2 Operator runbooks**
+
+- Write short runbooks for:
+  - Index corrupted/missing.
+  - Service won’t start.
+  - RAG results stale/wrong.
+- Each runbook should include:
+  - Symptoms.
+  - Log hints.
+  - Diagnostics and safe remediation steps.
+
+**4.3 Security/compliance checklist**
+
+- Simple checklist for releases:
+  - Path traversal protections tested.
+  - DB/subprocess patterns verified safe.
+  - Errors/logs do not leak secrets.
+- Run before major releases; keep in the repo.
+
+### Phase 5 – Stretch / Nice-to-Haves
+
+- Chaos-style tests for indexing/daemon (kills, network flakiness).
+- Automated test-gap reports over time.
+- Optional dependency/security scanners wired into CI.
+
+**Suggested execution order (for Cheap, Lazy, ADHD Dave™):**
+
+1. Phase 1 – Path/DB/subprocess/config hardening (maximum risk reduction per line of code).
+2. Phase 2 – Standard error envelopes + network/DB failure handling.
+3. Phase 3 – Clean test suite + lint gate + smoke tests.
+4. Phase 4 – Logs and runbooks (so Future You doesn’t hate Past You).
+5. Phase 5 – Only if you’re feeling spicy.
+
+---
+
 ## Recently Completed (Highlights)
 
 These are carried forward from the previous roadmap and kept as high-signal accomplishments:
@@ -87,6 +258,11 @@ These are carried forward from the previous roadmap and kept as high-signal acco
 
 - **Architecture investigations**
   - Investigate RAG integration layers, confirm wrapper-owned architecture, and identify duplication (`rag_plan_snippet` variants).
+
+- **RAG Nav P9–P10: search quality & graph indices**
+  - Added configurable reranker weights via `.llmc/rag_nav.ini` and `RAG_RERANK_W_*` env vars, with safe normalization defaults.
+  - Introduced lightweight canary/search evaluation harnesses (`tools.rag.canary_eval`, `tools.rag.eval.search_eval`) and sample canary query sets.
+  - Implemented graph-indexed where-used and lineage over `.llmc/rag_graph.json` (P10a/P10b), wired through the Context Gateway with graceful local fallbacks.
 
 ---
 

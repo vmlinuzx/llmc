@@ -1,0 +1,12 @@
+repos_root: /data/repos
+workspaces_root: /data/workspaces
+
+policy:
+  readonly: false
+  dry_run: false
+  denylist_prefixes:
+    - /etc
+    - /proc
+    - /sys
+    - /dev
+

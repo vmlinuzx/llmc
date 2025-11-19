@@ -1,0 +1,5 @@
+repos:
+  - name: llmc
+    repo_path: ./llmc
+    rag_workspace_path: .llmc/workspace
+

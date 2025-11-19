@@ -1,36 +1,45 @@
-"""Pytest configuration for LLMC tests.
-
-Ensures the repository root is on sys.path so imports like
-`from tools.rag_daemon...` and `from tools.rag_repo...` work regardless
-of how pytest is invoked.
-"""
-
-from __future__ import annotations
-
+import os
 import sys
-import builtins
 from pathlib import Path
 
+import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
-def _ensure_repo_root_on_path() -> None:
-    """Add repo root to sys.path if missing."""
-    repo_root = Path(__file__).resolve().parent.parent
-    repo_str = str(repo_root)
-    if repo_str not in sys.path:
-        sys.path.insert(0, repo_str)
+pytest_plugins = [
+    "tests._plugins.pytest_ruthless",
+    "tests._plugins.pytest_compat_shims",
+]
 
 
-def _inject_registry_adapter_alias() -> None:
-    """Expose RegistryAdapter as a global for tests that assume it."""
+# Ensure repo root is importable as a package root (for `tools.*`).
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _session_env(tmp_path_factory: pytest.TempPathFactory) -> None:
+    """
+    Session-level hermetic env that does not depend on the function-scoped
+    `monkeypatch` fixture (avoids ScopeMismatch).
+    """
+    home = tmp_path_factory.mktemp("home")
+    mp = MonkeyPatch()
+    mp.setenv("HOME", str(home))
+    mp.setenv("PYTHONHASHSEED", "0")
     try:
-        from tools.rag_repo.registry import RegistryAdapter  # type: ignore
-    except Exception:
-        return
-
-    if not hasattr(builtins, "RegistryAdapter"):
-        builtins.RegistryAdapter = RegistryAdapter  # type: ignore[attr-defined]
+        yield
+    finally:
+        mp.undo()
 
 
-_ensure_repo_root_on_path()
-_inject_registry_adapter_alias()
+@pytest.fixture(autouse=True)
+def hermetic_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """
+    Autouse: each test runs in its own tmp cwd, and XDG dirs stay inside tmp.
+    """
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / ".cache"))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
+    return tmp_path
 

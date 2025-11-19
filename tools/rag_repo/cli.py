@@ -8,12 +8,75 @@ from pathlib import Path
 from typing import Optional
 
 from .config import load_tool_config
+from .fs import SafeFS
 from .inspect_repo import inspect_repo
 from .models import RegistryEntry
 from .notifier import notify_refresh
 from .registry import RegistryAdapter
 from .workspace import init_workspace, plan_workspace, validate_workspace
-from .utils import canonical_repo_path, generate_repo_id
+from .utils import PathTraversalError, canonical_repo_path, generate_repo_id, safe_subpath
+
+
+def resolve_workspace_from_cli(
+    repo_root: Path,
+    workspace_arg: str | Path | None = None,
+    default_name: str = ".llmc/workspace",
+) -> Path:
+    """
+    Resolve workspace path from CLI args with path safety enforcement.
+
+    - Normalizes repo_root via canonical_repo_path.
+    - If workspace_arg is None, uses default_name.
+    - Uses safe_subpath to ensure the workspace stays under the repo root.
+    """
+    base = canonical_repo_path(repo_root)
+    name_or_path = workspace_arg if workspace_arg is not None else default_name
+    return safe_subpath(base, name_or_path)
+
+
+def clean_workspace(repo_root: Path, workspace_arg: str | Path | None = None, *, force: bool = False) -> dict:
+    """Remove contents of a workspace safely. Requires force=True."""
+    if not force:
+        raise RuntimeError("Refusing to clean without --force. This operation is destructive.")
+    ws_root = resolve_workspace_from_cli(repo_root, workspace_arg)
+    fs = SafeFS(ws_root)
+    fs.rm_tree(".")
+    return {"workspace_root": ws_root}
+
+
+def resolve_export_dir(
+    repo_root: Path,
+    workspace_arg: str | Path | None = None,
+    export_arg: str | Path | None = None,
+    default_subdir: str = "exports",
+) -> Path:
+    """Ensure export directory is under the workspace root."""
+    ws_root = resolve_workspace_from_cli(repo_root, workspace_arg)
+    candidate = export_arg if export_arg is not None else default_subdir
+    return safe_subpath(ws_root, candidate)
+
+
+def export_bundle(
+    repo_root: Path,
+    workspace_arg: str | Path | None = None,
+    export_arg: str | Path | None = None,
+    *,
+    force: bool = False,
+) -> dict:
+    """
+    Prepare an export directory with overwrite guard.
+
+    This function only handles path safety and overwrite checks; the actual
+    bundle creation is wired elsewhere.
+    """
+    export_dir = resolve_export_dir(repo_root, workspace_arg, export_arg)
+    export_dir.mkdir(parents=True, exist_ok=True)
+    if any(export_dir.iterdir()) and not force:
+        raise RuntimeError(
+            "Export directory is not empty. Re-run with --force to overwrite."
+        )
+    return {"export_dir": export_dir}
+
 
 
 def _print_top_level_help() -> None:
@@ -91,6 +154,16 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     parser.error("Unknown command")
     return 1
+
+
+def cli(argv: Optional[list[str]] = None) -> int:
+    """
+    Legacy-compatible entry point exported as `tools.rag_repo.cli`.
+
+    Thin wrapper around `main` so tests and external tools that imported
+    `cli` continue to work.
+    """
+    return main(argv)
 
 
 def _cmd_add(args, tool_config, registry: Optional[RegistryAdapter]) -> int:

@@ -75,7 +75,9 @@ click
 
 # RAG / LLMC runtime artifacts and reports
 .rag/
-.llmc/
+.llmc/*
+!.llmc/quality/
+!.llmc/quality/ruff_baseline.json
 logs/
 tests/rag_nav_test_report.json
 tests/rag_test_report.json

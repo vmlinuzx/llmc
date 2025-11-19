@@ -71,11 +71,10 @@ class TestFlagExclusivity:
         """Test that nav search works without output flags (text mode)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
             # Mock tool_rag_search to avoid actual execution
-            with patch("tools.rag.cli.tool_rag_search") as mock_search:
+            with patch("tools.rag.tool_rag_search") as mock_search:
                 mock_result = Mock()
                 mock_result.items = []
                 mock_result.source = "test"
@@ -91,10 +90,9 @@ class TestFlagExclusivity:
         """Test that nav search works with just --jsonl."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
-            with patch("tools.rag.cli.tool_rag_search") as mock_search:
+            with patch("tools.rag.tool_rag_search") as mock_search:
                 mock_result = Mock()
                 mock_result.items = []
                 mock_search.return_value = mock_result
@@ -108,18 +106,23 @@ class TestFlagExclusivity:
         """Test that nav search works with just --json."""
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir)
-            repo_root.mkdir()
             (repo_root / ".git").mkdir()
 
-            with patch("tools.rag.cli.tool_rag_search") as mock_search:
-                mock_result = Mock()
-                mock_result.items = []
+            with patch("tools.rag.tool_rag_search") as mock_search:
+                # Create a more complete mock that can be serialized
+                from tools.rag.nav_meta import RagResult, RagToolMeta
+                meta = RagToolMeta(
+                    status="OK",
+                    source="TEST",
+                    freshness_state="FRESH",
+                )
+                mock_result = RagResult(meta=meta, items=[])
                 mock_search.return_value = mock_result
 
                 result = runner.invoke(cli, ["nav", "search", "--json", "test", "--repo", str(repo_root)])
 
                 # Should work with json only
-                assert "--json" in result.output or len(result.output) > 0
+                assert result.exit_code == 0 or len(result.output) > 0
 
 
 class TestJsonlEventOrder:
@@ -300,8 +303,8 @@ class TestJsonlEventOrder:
         assert event["type"] == "error"
         assert "command" in event
         assert event["command"] == "search"
-        assert "error" in event
-        assert "Connection timeout" in event["error"]
+        assert "message" in event
+        assert event["message"] == "Connection timeout"
         assert "ts" in event
 
 
@@ -572,7 +575,7 @@ class TestSchemaConformance:
 
         assert event["type"] == "error"
         assert "command" in event
-        assert "error" in event
+        assert "message" in event
         assert "ts" in event
 
     def test_all_events_are_valid_json(self):
@@ -658,7 +661,7 @@ class TestJsonlOutputEdgeCases:
         output = captured.getvalue()
         event = json.loads(output.strip())
 
-        assert "错误" in event["error"]
+        assert "错误" in event["message"]
 
     def test_jsonl_line_ending(self):
         """Test that JSONL lines end with newline."""

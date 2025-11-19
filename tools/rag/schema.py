@@ -392,10 +392,10 @@ def build_schema_graph(repo_root: Path, file_paths: List[Path]) -> SchemaGraph:
     Returns:
         SchemaGraph with all entities and relations
     """
-    from datetime import datetime
+    from datetime import UTC, datetime
     
     graph = SchemaGraph(
-        indexed_at=datetime.utcnow().isoformat() + "Z",
+        indexed_at=datetime.now(UTC).isoformat(),
         repo=str(repo_root),
     )
     
@@ -687,7 +687,17 @@ def build_graph_for_repo(
             "but 0 entities enriched in graph. Check ID mapping logic."
         )
 
+    # P0: merge enrichment snippets from the DB into entity metadata in a fail-soft way.
+    try:
+        from .graph_enrich import enrich_graph_entities
+
+        enrich_graph_entities(graph, repo_root)
+    except Exception:
+        # Graph enrichment is best-effort; never break graph building.
+        pass
+
     return graph
+
 
 
 def _discover_source_files(repo_root: Path, max_files: int = 10000) -> List[Path]:

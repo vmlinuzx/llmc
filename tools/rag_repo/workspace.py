@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 try:
@@ -11,23 +11,21 @@ try:
 except Exception:  # pragma: no cover - optional
     yaml = None  # type: ignore[assignment]
 
-from .models import (
-    RepoInspection,
-    RegistryEntry,
-    ToolConfig,
-    WorkspacePlan,
-    WorkspaceValidationResult,
-)
-from .utils import canonical_repo_path, generate_repo_id
+from .models import RepoInspection, RegistryEntry, ToolConfig, WorkspacePlan, WorkspaceValidationResult
+from .utils import canonical_repo_path, generate_repo_id, safe_subpath
 
 
 def plan_workspace(
     repo_root: Path, tool_config: ToolConfig, inspection: RepoInspection
 ) -> WorkspacePlan:
-    if inspection.workspace_path is not None:
-        root = inspection.workspace_path
-    else:
-        root = canonical_repo_path(repo_root) / tool_config.default_workspace_folder_name
+    base = canonical_repo_path(repo_root)
+    name_or_path = inspection.workspace_path
+    if name_or_path is None:
+        name_or_path = tool_config.default_workspace_folder_name
+
+    # Route workspace root selection through safe_subpath to prevent
+    # path traversal and ensure the workspace stays under the repo root.
+    root = safe_subpath(base, name_or_path)
 
     config_dir = root / "config"
     indexes_dir = root / "indexes"
@@ -78,7 +76,7 @@ def init_workspace(
     if not plan.version_config_path.exists():
         version_config = {
             "config_version": "v1",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
         with plan.version_config_path.open("w", encoding="utf-8") as f:
             yaml.safe_dump(version_config, f)

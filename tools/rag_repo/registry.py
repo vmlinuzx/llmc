@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import os
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 try:
     import yaml  # type: ignore[import]
@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - optional
     yaml = None  # type: ignore[assignment]
 
 from .models import RegistryEntry, ToolConfig
-from .utils import canonical_repo_path
+from .utils import PathTraversalError, canonical_repo_path, safe_subpath
 
 
 class RegistryAdapter:
@@ -36,20 +36,31 @@ class RegistryAdapter:
 
         entries: Dict[str, RegistryEntry] = {}
         for repo_id, data in raw.items():
+            repo_raw = Path(os.path.expanduser(data["repo_path"]))
+            repo_path = canonical_repo_path(repo_raw)
+
+            raw_workspace = data.get("rag_workspace_path")
+            try:
+                if raw_workspace is None:
+                    workspace_path = safe_subpath(repo_path, ".llmc/rag")
+                else:
+                    workspace_path = safe_subpath(repo_path, raw_workspace)
+            except PathTraversalError:
+                # Skip entries with unsafe workspace paths.
+                continue
+
             entries[repo_id] = RegistryEntry(
                 repo_id=repo_id,
-                repo_path=canonical_repo_path(Path(os.path.expanduser(data["repo_path"]))),
-                rag_workspace_path=canonical_repo_path(
-                    Path(os.path.expanduser(data["rag_workspace_path"]))
-                ),
+                repo_path=repo_path,
+                rag_workspace_path=workspace_path,
                 display_name=data.get("display_name", repo_id),
                 rag_profile=data.get("rag_profile", "default"),
                 tags=list(data.get("tags", [])),
                 created_at=datetime.fromisoformat(
-                    data.get("created_at", datetime.utcnow().isoformat())
+                    data.get("created_at", datetime.now(timezone.utc).isoformat())
                 ),
                 updated_at=datetime.fromisoformat(
-                    data.get("updated_at", datetime.utcnow().isoformat())
+                    data.get("updated_at", datetime.now(timezone.utc).isoformat())
                 ),
                 min_refresh_interval_seconds=data.get("min_refresh_interval_seconds"),
             )
@@ -77,7 +88,7 @@ class RegistryAdapter:
     def register(self, entry: RegistryEntry) -> None:
         entries = self.load_all()
         entries[entry.repo_id] = entry
-        entry.updated_at = datetime.utcnow()
+        entry.updated_at = datetime.now(timezone.utc)
         self.save_all(entries)
 
     def unregister_by_id(self, repo_id: str) -> bool:
@@ -100,3 +111,62 @@ class RegistryAdapter:
 
     def find_by_id(self, repo_id: str) -> Optional[RegistryEntry]:
         return self.load_all().get(repo_id)
+
+
+def _make_registry_entry_from_yaml(data: dict[str, Any]) -> Optional[dict[str, Any]]:
+    """
+    Helper for path-safety tests and future registry loaders.
+
+    Validates the workspace path relative to the repo path using safe_subpath
+    and returns a minimal dict describing the entry, or None if invalid.
+    """
+    raw_repo = data.get("repo_path")
+    if not raw_repo:
+        return None
+
+    repo_path = canonical_repo_path(Path(os.path.expanduser(str(raw_repo))))
+    raw_workspace = data.get("rag_workspace_path")
+
+    try:
+        if raw_workspace is None:
+            workspace_path = safe_subpath(repo_path, ".llmc/workspace")
+        else:
+            workspace_path = safe_subpath(repo_path, raw_workspace)
+    except PathTraversalError:
+        return None
+
+    name = data.get("name") or repo_path.name
+    return {
+        "name": name,
+        "repo_path": repo_path,
+        "rag_workspace_path": workspace_path,
+    }
+
+
+def load_registry_from_yaml(path: Path) -> List[dict[str, Any]]:
+    """
+    Lightweight loader used by path-safety tests.
+
+    Supports the list-based `repos` format and returns only valid entries.
+    """
+    if yaml is None or not path.exists():
+        return []
+
+    with path.open("r", encoding="utf-8") as handle:
+        doc = yaml.safe_load(handle) or {}
+
+    if isinstance(doc, dict) and isinstance(doc.get("repos"), list):
+        items = doc["repos"]
+    elif isinstance(doc, list):
+        items = doc
+    else:
+        items = []
+
+    entries: List[dict[str, Any]] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        entry = _make_registry_entry_from_yaml(item)
+        if entry:
+            entries.append(entry)
+    return entries

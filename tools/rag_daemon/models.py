@@ -24,6 +24,9 @@ class DaemonConfig:
     state_store_path: Path
     log_path: Path
     control_dir: Path
+    # Optional roots to constrain repo/workspace locations when set.
+    repos_root: Optional[Path] = None
+    workspaces_root: Optional[Path] = None
     job_runner_cmd: str = "llmc-rag-job"
     log_level: str = "INFO"
 

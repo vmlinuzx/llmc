@@ -378,7 +378,13 @@ def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> 
     default=False,
     help="Skip appending planner metrics to logs/planner_metrics.jsonl.",
 )
-def plan(query: List[str], limit: int, min_score: float, min_confidence: float, no_log: bool) -> None:
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Emit plan as JSON (default; kept for ergonomics).",
+)
+def plan(query: List[str], limit: int, min_score: float, min_confidence: float, no_log: bool, as_json: bool) -> None:
     """Generate a heuristic retrieval plan for a natural language query."""
     question = " ".join(query).strip()
     if not question:
@@ -399,6 +405,8 @@ def plan(query: List[str], limit: int, min_score: float, min_confidence: float, 
         repo_root=repo_root,
         log=not no_log,
     )
+    # The planner already emits JSON by default; the --json flag exists for
+    # compatibility and ergonomics (e.g., piping into jq).
     click.echo(json.dumps(plan_as_dict(result), indent=2, ensure_ascii=False))
     if result.fallback_recommended:
         click.echo("\n⚠️  Confidence below threshold; include additional context or full-text search.", err=True)
@@ -530,7 +538,8 @@ def _emit_jsonl_line(obj: dict) -> None:
 def _now_iso() -> str:
     import datetime as _dt
 
-    return _dt.datetime.utcnow().isoformat(timespec="milliseconds") + "Z"
+    # Use timezone-aware UTC timestamp to avoid deprecated utcnow.
+    return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def _emit_start_event(command: str, **kw) -> None:

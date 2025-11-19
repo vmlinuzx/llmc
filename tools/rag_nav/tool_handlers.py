@@ -12,6 +12,7 @@ import json
 import os
 from pathlib import Path
 from typing import Optional, Iterable, Dict, Any, List, Set, Tuple
+import logging
 
 from tools.rag_nav.models import (
     Snippet,
@@ -23,6 +24,8 @@ from tools.rag_nav.models import (
     LineageItem,
     LineageResult,
 )
+
+_enrich_log = logging.getLogger("llmc.enrich")
 
 
 _GRAPH_REL_PATH = os.path.join(".llmc", "rag_graph.json")
@@ -435,13 +438,14 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
                 except Exception:
                     pass
 
-            return SearchResult(
+            res = SearchResult(
                 query=query,
                 items=items[:max_results],
                 truncated=truncated if "truncated" in locals() else False,
                 source=source,
                 freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
             )
+            return _maybe_attach_enrichment_search(repo_root, res)
         except (RagDbNotFound, RuntimeError):
             source = "LOCAL_FALLBACK"
 
@@ -458,13 +462,14 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
                 ),
             )
         )
-    return SearchResult(
+    res = SearchResult(
         query=query,
         items=items,
         truncated=False,
         source=source,
         freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
     )
+    return _maybe_attach_enrichment_search(repo_root, res)
 
 
 def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> WhereUsedResult:
@@ -482,13 +487,14 @@ def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> 
                 loc = SnippetLocation(path=path, start_line=1, end_line=1)
                 snippet = Snippet(text="", location=loc)
                 items.append(WhereUsedItem(file=path, snippet=snippet))
-            return WhereUsedResult(
+            res = WhereUsedResult(
                 symbol=symbol,
                 items=items,
                 truncated=len(files) > len(items),
                 source=source,
                 freshness_state=route.freshness_state,
             )
+            return _maybe_attach_enrichment_where_used(repo_root, res)
         except (IndexGraphNotFound, Exception):
             # Any graph loading/indexing issue should route to the local fallback.
             source = "LOCAL_FALLBACK"
@@ -505,13 +511,14 @@ def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> 
         )
         for rel, sl, el, text in grep_hits
     ]
-    return WhereUsedResult(
+    res = WhereUsedResult(
         symbol=symbol,
         items=items,
         truncated=False,
         source=source,
         freshness_state=route.freshness_state,
     )
+    return _maybe_attach_enrichment_where_used(repo_root, res)
 
 
 def tool_rag_lineage(
@@ -541,7 +548,7 @@ def tool_rag_lineage(
                 loc = SnippetLocation(path=path, start_line=1, end_line=1)
                 snippet = Snippet(text="", location=loc)
                 items.append(LineageItem(file=path, snippet=snippet))
-            return LineageResult(
+            res = LineageResult(
                 symbol=symbol,
                 direction=normalized_direction,
                 items=items,
@@ -549,6 +556,7 @@ def tool_rag_lineage(
                 source=source,
                 freshness_state=route.freshness_state,
             )
+            return _maybe_attach_enrichment_lineage(repo_root, res)
         except (IndexGraphNotFound, Exception):
             # Any graph loading/indexing issue should route to the local fallback.
             source = "LOCAL_FALLBACK"
@@ -566,7 +574,7 @@ def tool_rag_lineage(
                 ),
             )
         )
-    return LineageResult(
+    res = LineageResult(
         symbol=symbol,
         direction=normalized_direction,
         items=items,
@@ -574,3 +582,143 @@ def tool_rag_lineage(
         source=source,
         freshness_state=route.freshness_state,
     )
+    return _maybe_attach_enrichment_lineage(repo_root, res)
+
+
+def _enrichment_enabled() -> bool:
+    flag = str(os.getenv("LLMC_ENRICH", "")).lower()
+    attach = str(os.getenv("LLMC_ENRICH_ATTACH", "")).lower()
+    return flag in {"1", "true", "yes", "on"} or attach in {"1", "true", "yes"}
+
+
+def _enrichment_max_chars() -> Optional[int]:
+    raw = os.getenv("LLMC_ENRICH_MAX_CHARS")
+    if raw and raw.isdigit():
+        try:
+            value = int(raw)
+            return value if value > 0 else None
+        except Exception:
+            return None
+    return None
+
+
+def _maybe_attach_enrichment_search(repo_root: str, res: SearchResult) -> SearchResult:
+    if not _enrichment_enabled():
+        return res
+    try:
+        from tools.rag_nav.enrichment import (
+            EnrichStats,
+            SqliteEnrichmentStore,
+            attach_enrichments_to_search_result,
+            discover_enrichment_db,
+        )
+
+        db_env = os.getenv("LLMC_ENRICH_DB")
+        db_path: Optional[Path]
+        if not db_env or not Path(db_env).exists():
+            db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
+        else:
+            db_path = Path(db_env)
+        if not db_path or not db_path.exists():
+            return res
+
+        stats = EnrichStats()
+        store = SqliteEnrichmentStore(db_path)
+        max_chars = _enrichment_max_chars()
+        res = attach_enrichments_to_search_result(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+
+        if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
+            _enrich_log.info(
+                "enrich attach (search): db=%s items=%d attached=%d line=%d path=%d truncated=%d",
+                db_path,
+                len(getattr(res, "items", []) or []),
+                stats.snippets_attached,
+                stats.line_matches,
+                stats.path_matches,
+                stats.fields_truncated,
+            )
+    except Exception:
+        # Enrichment is best-effort; never break core search behavior.
+        return res
+    return res
+
+
+def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) -> WhereUsedResult:
+    if not _enrichment_enabled():
+        return res
+    try:
+        from tools.rag_nav.enrichment import (
+            EnrichStats,
+            SqliteEnrichmentStore,
+            attach_enrichments_to_where_used,
+            discover_enrichment_db,
+        )
+
+        db_env = os.getenv("LLMC_ENRICH_DB")
+        db_path: Optional[Path]
+        if not db_env or not Path(db_env).exists():
+            db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
+        else:
+            db_path = Path(db_env)
+        if not db_path or not db_path.exists():
+            return res
+
+        stats = EnrichStats()
+        store = SqliteEnrichmentStore(db_path)
+        max_chars = _enrichment_max_chars()
+        res = attach_enrichments_to_where_used(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+
+        if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
+            _enrich_log.info(
+                "enrich attach (where-used): db=%s items=%d attached=%d line=%d path=%d truncated=%d",
+                db_path,
+                len(getattr(res, "items", []) or []),
+                stats.snippets_attached,
+                stats.line_matches,
+                stats.path_matches,
+                stats.fields_truncated,
+            )
+    except Exception:
+        return res
+    return res
+
+
+def _maybe_attach_enrichment_lineage(repo_root: str, res: LineageResult) -> LineageResult:
+    if not _enrichment_enabled():
+        return res
+    try:
+        from tools.rag_nav.enrichment import (
+            EnrichStats,
+            SqliteEnrichmentStore,
+            attach_enrichments_to_lineage,
+            discover_enrichment_db,
+        )
+
+        db_env = os.getenv("LLMC_ENRICH_DB")
+        db_path: Optional[Path]
+        items = getattr(res, "items", None)
+        if not db_env or not Path(db_env).exists():
+            db_path = discover_enrichment_db(Path(repo_root), items)
+        else:
+            db_path = Path(db_env)
+        if not db_path or not db_path.exists() or items is None:
+            return res
+
+        stats = EnrichStats()
+        store = SqliteEnrichmentStore(db_path)
+        max_chars = _enrichment_max_chars()
+        res = attach_enrichments_to_lineage(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+
+        if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
+            _enrich_log.info(
+                "enrich attach (lineage): db=%s items=%d attached=%d line=%d path=%d truncated=%d",
+                db_path,
+                len(items or []),
+                stats.snippets_attached,
+                stats.line_matches,
+                stats.path_matches,
+                stats.fields_truncated,
+            )
+    except Exception:
+        return res
+    return res
