@@ -15,6 +15,7 @@ def make_db_with_span(tmp_path: Path) -> tuple[Path, str]:
     db = tmp_path / "enrich_span.db"
     con = sqlite3.connect(db)
     cur = con.cursor()
+    cur.execute("DROP TABLE IF EXISTS enrichments")
     cur.execute(
         "CREATE TABLE enrichments(span_hash TEXT, path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT)"
     )
@@ -46,6 +47,7 @@ def test_fallback_line_then_path(tmp_path):
     db = tmp_path / "enrich_line.db"
     con = sqlite3.connect(db)
     cur = con.cursor()
+    cur.execute("DROP TABLE IF EXISTS enrichments")
     cur.execute(
         "CREATE TABLE enrichments(path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT)"
     )

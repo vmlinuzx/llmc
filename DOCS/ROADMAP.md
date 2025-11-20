@@ -315,6 +315,11 @@ This section is a trimmed, de-duplicated version of the prior backlog; items rem
 
 ### RAG & Context Quality
 
+- **Normalize Stored RAG Scores (P0)**
+  - **Context:** Embedding/retriever scores bottom out around ~70 (not 0), so raw scores are misleading and tightly clustered; downstream UI/analytics misinterpret low-70s as “bad” despite being the floor.
+  - **Goal:** Add a normalized score field (0–100 mapped over raw 70–100 with clamping) everywhere we persist/emit search results, and ensure consumers (CLI/TUI/analytics) prefer normalized scores.
+  - **Notes:** Large, cross-cutting change (DB schema + scoring pipeline + clients) – **requires HLD + SDD before implementation**; must avoid production regressions while migrating existing data. TUI/CLI should add the normalized field once it exists in the API/DB.
+
 - **Polyglot RAG Support (JS/TS/Go/etc.)**
   - **Context:** Currently, `tools/rag/schema.py` hardcodes `if lang == "python": ...` and only extracts AST from `.py` files. `tools/rag/indexer.py` supports other languages for raw span chunking, but the **Graph Builder** ignores them, leading to "No source files found" errors and empty graphs for non-Python repos (e.g., `livecaptions_advanced`).
   - **Goal:** Expand `SchemaExtractor` to support `tree-sitter` (or similar) for JavaScript, TypeScript, Go, and Rust so that the Entity Graph covers the full stack.

@@ -282,14 +282,15 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
 @click.argument("query", nargs=-1)
 @click.option("--limit", default=5, show_default=True, help="Maximum spans to return.")
 @click.option("--json", "as_json", is_flag=True, help="Emit results as JSON.")
-def search(query: List[str], limit: int, as_json: bool) -> None:
+@click.option("--debug", is_flag=True, help="Include debug metadata (graph, enrichment, scores).")
+def search(query: List[str], limit: int, as_json: bool, debug: bool) -> None:
     """Run a cosine-similarity search over the local embedding index."""
     phrase = " ".join(query).strip()
     if not phrase:
         click.echo("Provide a query, e.g. `rag search \"How do we verify JWTs?\"`")
         return
     try:
-        results = search_spans(phrase, limit=limit)
+        results = search_spans(phrase, limit=limit, debug=debug)
     except FileNotFoundError as err:
         click.echo(str(err))
         raise SystemExit(1)
@@ -304,6 +305,7 @@ def search(query: List[str], limit: int, as_json: bool) -> None:
                 "lines": [result.start_line, result.end_line],
                 "score": result.score,
                 "summary": result.summary,
+                "debug": result.debug_info,
             }
             for idx, result in enumerate(results)
         ]
@@ -318,6 +320,9 @@ def search(query: List[str], limit: int, as_json: bool) -> None:
         )
         if result.summary:
             click.echo(f"    summary: {result.summary}")
+        if debug and result.debug_info:
+            # Minimal debug output for text mode, mostly for verification
+            click.echo(f"    [DEBUG] Graph Node: {result.debug_info.get('graph', {}).get('node_id', 'N/A')}")
 
 
 @cli.command()

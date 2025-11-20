@@ -107,7 +107,10 @@ class LLMC_TUI(App):
     
     def on_mount(self) -> None:
         """Initialize the app"""
+        # Start on the monitor screen but keep the menu as the previous page so ESC
+        # returns to navigation instead of quitting immediately.
         self.push_screen(MenuScreen())
+        self.push_screen(MonitorScreen())
 
 
 def main():
