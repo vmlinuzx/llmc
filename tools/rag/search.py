@@ -26,6 +26,34 @@ def _unpack_vector(blob: bytes) -> List[float]:
     return list(struct.unpack(f"<{dim}f", blob))
 
 
+def _safe_load(val: str | None) -> Any:
+    """Safely parse JSON string, returning original value on failure."""
+    if not val:
+        return None
+    try:
+        return json.loads(val)
+    except (ValueError, TypeError):
+        return val
+
+
+def _filename_boost(query: str, path_str: str) -> float:
+    """Calculate score boost for filename matches."""
+    if not query:
+        return 0.0
+    q = query.strip().lower()
+    import os
+    basename = os.path.basename(path_str).lower()
+    stem, _ = os.path.splitext(basename)
+    
+    if q == basename:
+        return 0.20  # Huge boost for exact match
+    if q == stem:
+        return 0.15  # Big boost for stem match
+    if q in basename:
+        return 0.05  # Small boost for partial match
+    return 0.0
+
+
 @dataclass(frozen=True)
 class SpanSearchResult:
     span_hash: str
@@ -43,6 +71,7 @@ def _score_candidates(
     query_vector: Sequence[float],
     query_norm: float,
     rows: Iterable,
+    query_text: str | None = None,
 ) -> List[SpanSearchResult]:
     results: List[SpanSearchResult] = []
     for row in rows:
@@ -51,6 +80,10 @@ def _score_candidates(
         if query_norm == 0.0 or vector_norm == 0.0:
             continue
         similarity = _dot(query_vector, vector) / (query_norm * vector_norm)
+        
+        if query_text:
+            similarity += _filename_boost(query_text, row["file_path"])
+
         results.append(
             SpanSearchResult(
                 span_hash=row["span_hash"],
@@ -93,10 +126,10 @@ def _enrich_debug_info(
                 for row in rows:
                     enrich_map[row["span_hash"]] = {
                         "summary": row["summary"],
-                        "inputs": row["inputs"],
-                        "outputs": row["outputs"],
-                        "side_effects": row["side_effects"],
-                        "pitfalls": row["pitfalls"],
+                        "inputs": _safe_load(row["inputs"]),
+                        "outputs": _safe_load(row["outputs"]),
+                        "side_effects": _safe_load(row["side_effects"]),
+                        "pitfalls": _safe_load(row["pitfalls"]),
                         "evidence_count": len(json.loads(row["evidence"])) if row["evidence"] else 0,
                     }
         except Exception:
@@ -190,6 +223,8 @@ def _enrich_debug_info(
                         source = rel.src
                         if rel.edge == "calls":
                             related_code.append(f"Called by: {source}")
+                        elif rel.edge == "extends":
+                            children.append(f"Subclass: {source}")
                         elif "test" in source.lower() or "test" in rel.edge:
                             related_tests.append(source)
                     
@@ -268,7 +303,7 @@ def search_spans(
 
     db = Database(db_path)
     try:
-        scored = _score_candidates(query_vector, query_norm, db.iter_embeddings())
+        scored = _score_candidates(query_vector, query_norm, db.iter_embeddings(), query_text=query)
     finally:
         db.close()
     

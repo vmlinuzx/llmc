@@ -186,6 +186,7 @@ class PythonSchemaExtractor:
         self.entities: List[Entity] = []
         self.relations: List[Relation] = []
         self.current_scope: List[str] = [self.module_name]
+        self.import_map: Dict[str, str] = {}
     
     def extract(self) -> Tuple[List[Entity], List[Relation]]:
         """Main extraction entry point"""
@@ -199,8 +200,78 @@ class PythonSchemaExtractor:
         
         return self.entities, self.relations
     
+    def _module_stem(self, module: Optional[str]) -> Optional[str]:
+        if not module:
+            return None
+        return module.rsplit(".", 1)[-1]
+
+    def _record_import(self, node: ast.Import) -> None:
+        """Records 'import module [as alias]' statements."""
+        for alias in node.names:
+            module_name = alias.name  # e.g., "scripts.router"
+            local_name = alias.asname or self._module_stem(module_name) or module_name # Use stem for local name if no alias
+            
+            stem = self._module_stem(module_name)
+            if stem:
+                self.import_map[local_name] = stem
+            else:
+                self.import_map[local_name] = module_name # Fallback if no stem (e.g. bare "import module")
+
+    def _record_import_from(self, node: ast.ImportFrom) -> None:
+        """Records 'from module import func [as alias]' statements."""
+        if node.level > 0: # Ignore relative imports for now
+            return
+
+        base = node.module # e.g., "scripts.router"
+        if not base: # This should not happen for level 0 imports
+            return
+
+        base_stem = self._module_stem(base)
+
+        for alias in node.names:
+            if alias.name == "*": # Ignore wildcard imports
+                continue
+
+            symbol = alias.name # e.g., "estimate_tokens_from_text"
+            local_name = alias.asname or symbol
+
+            if base_stem:
+                target = f"{base_stem}.{symbol}" # e.g., "router.estimate_tokens_from_text"
+            else:
+                target = symbol # Fallback if no stem (e.g. from __future__ import annotations)
+            
+            self.import_map[local_name] = target
+
+    def _resolve_callee_symbol(self, callee: str) -> str:
+        """
+        Return a fully qualified symbol name (without 'sym:' prefix)
+        for the given callee, using import_map when possible.
+        Fallback: treat callee as local to this module.
+        """
+        if "." in callee:
+            # Handle cases like 'module.func()' or 'alias.func()'
+            prefix, suffix = callee.split(".", 1)
+            if prefix in self.import_map:
+                resolved_prefix = self.import_map[prefix]
+                return f"{resolved_prefix}.{suffix}"
+        
+        # Handle bare names 'func()' or 'alias()'
+        if callee in self.import_map:
+            return self.import_map[callee]
+        
+        # Fallback: treat callee as local to this module
+        return f"{self.module_name}.{callee}"
+
     def visit_module(self, node: ast.Module):
-        """Visit top-level module"""
+        """Visit top-level module in two passes: first imports, then definitions."""
+        # First pass: collect imports
+        for item in node.body:
+            if isinstance(item, ast.Import):
+                self._record_import(item)
+            elif isinstance(item, ast.ImportFrom):
+                self._record_import_from(item)
+
+        # Second pass: collect entities and relations
         for item in node.body:
             if isinstance(item, ast.FunctionDef):
                 self.visit_function(item)
@@ -299,65 +370,9 @@ class PythonSchemaExtractor:
                 callee_name = node.func.attr
         
         if callee_name:
-            callee_id = f"sym:{self.module_name}.{callee_name}"
-            self.relations.append(
-                Relation(src=caller_id, edge="calls", dst=callee_id)
-            )
-
-
-def extract_schema_from_file(file_path: Path) -> Tuple[List[Entity], List[Relation]]:
-    """
-    Extract entities and relations from a single file.
-    
-    Returns:
-        Tuple of (entities, relations)
-    """
-    lang = language_for_path(file_path)
-    
-    if not lang:
-        return [], []
-        
-        if isinstance(node.func, ast.Name):
-            # Direct function call: foo()
-            callee_name = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            # Method call: obj.method()
-            if isinstance(node.func.value, ast.Name):
-                callee_name = f"{node.func.value.id}.{node.func.attr}"
-            else:
-                callee_name = node.func.attr
-        
-        if callee_name:
-            callee_id = f"sym:{self.module_name}.{callee_name}"
-            self.relations.append(
-                Relation(src=caller_id, edge="calls", dst=callee_id)
-            )
-
-
-def extract_schema_from_file(file_path: Path) -> Tuple[List[Entity], List[Relation]]:
-    """
-    Extract entities and relations from a single file.
-    
-    Returns:
-        Tuple of (entities, relations)
-    """
-    lang = language_for_path(file_path)
-    
-    if not lang:
-        return [], []
-        
-        if isinstance(node.func, ast.Name):
-            # Direct function call: foo()
-            callee_name = node.func.id
-        elif isinstance(node.func, ast.Attribute):
-            # Method call: obj.method()
-            if isinstance(node.func.value, ast.Name):
-                callee_name = f"{node.func.value.id}.{node.func.attr}"
-            else:
-                callee_name = node.func.attr
-        
-        if callee_name:
-            callee_id = f"sym:{self.module_name}.{callee_name}"
+            symbol = self._resolve_callee_symbol(callee_name)
+            
+            callee_id = f"sym:{symbol}"
             self.relations.append(
                 Relation(src=caller_id, edge="calls", dst=callee_id)
             )

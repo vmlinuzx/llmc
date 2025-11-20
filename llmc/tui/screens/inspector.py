@@ -20,6 +20,21 @@ class InspectorScreen(Screen):
     Uses the LLM-optimized 'rag inspect' logic.
     """
     
+    def _format_entity_id(self, entity_id: str) -> str:
+        """Formats internal entity ID to human-readable string, handling prefixes like 'Extends: '."""
+        # Handle "Extends: type:some_id" or "Calls: type:some_id"
+        if ": " in entity_id and entity_id.split(": ", 1)[0] in ("Extends", "Calls"):
+            prefix, actual_id = entity_id.split(": ", 1)
+            return f"{prefix}: {self._format_entity_id(actual_id)}"
+            
+        if ":" in entity_id:
+            kind, name = entity_id.split(":", 1)
+            # For 'type' and 'sym', strip module path
+            if kind in ("type", "sym"):
+                return name.rsplit(".", 1)[-1]
+            return name
+        return entity_id
+    
     CSS = """
     InspectorScreen {
         layout: grid;
@@ -113,7 +128,7 @@ class InspectorScreen(Screen):
                 yield Checkbox("Full Source", id="full-source-check")
                 yield Button("Inspect", id="inspect-btn", variant="primary")
             
-            yield Static("Tips:\n• Enter a file path or a symbol name.\n• Graph & Enrichment data will appear on the right.\n• Fast & Token-optimized.", classes="data-row")
+            yield Static("Tips:\n• Enter a file path or a symbol name.\n• Graph & Enrichment data will appear on the right.\n• Fast & Token-optimized.", classes="data-row", id="tips-box")
 
         # Right Main Content
         with Vertical(id="main-content"):
@@ -186,6 +201,7 @@ class InspectorScreen(Screen):
 
         # Relationships
         self._render_rel_section(container, "Parents", res.parents)
+        self._render_rel_section(container, "Children", res.children)
         self._render_rel_section(container, "Incoming Calls", res.incoming_calls)
         self._render_rel_section(container, "Outgoing Calls", res.outgoing_calls)
         self._render_rel_section(container, "Related Tests", res.related_tests)
@@ -195,6 +211,42 @@ class InspectorScreen(Screen):
         if enrich.get("pitfalls"):
              container.mount(Static("⚠️  Pitfalls:", classes="section-header"))
              container.mount(Static(str(enrich["pitfalls"])), classes="data-row")
+
+        # Update Tips Box with Enrichment
+        enrich_lines = []
+        if enrich.get("summary"):
+            enrich_lines.append(f"[bold]Summary[/bold]: {enrich['summary']}")
+        
+        def _format_list_field(val: Any) -> str | None:
+            if not val:
+                return None
+            if val == "[]":
+                return None
+            
+            generic_placeholders = {"params", "returns", "args", "kwargs", "none"}
+            
+            if isinstance(val, list):
+                filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
+                if not filtered_list:
+                    return None
+                return ", ".join(filtered_list)
+            
+            if isinstance(val, str) and val.lower() in generic_placeholders:
+                return None
+            return str(val)
+
+        for key in ["inputs", "outputs", "side_effects"]:
+            val_str = _format_list_field(enrich.get(key))
+            if val_str:
+                enrich_lines.append(f"[bold]{key.capitalize()}[/bold]: {val_str}")
+
+        if enrich.get("evidence_count"):
+             enrich_lines.append(f"[dim]Evidence spans: {enrich['evidence_count']}[/dim]")
+
+        if enrich_lines:
+            self.query_one("#tips-box", Static).update("\n\n".join(enrich_lines))
+        else:
+            self.query_one("#tips-box", Static).update("No enrichment data available for this entity.")
 
         # Snippet
         container.mount(Static("Source:", classes="section-header"))
@@ -206,7 +258,7 @@ class InspectorScreen(Screen):
             return
         container.mount(Static(f"{title}:", classes="section-header"))
         # Display symbol or path
-        lines = [f"- {x.symbol or x.path}" for x in items]
+        lines = [f"- {self._format_entity_id(x.symbol) or x.path}" for x in items]
         container.mount(Static("\n".join(lines), classes="data-row"))
 
     def _show_error(self, msg: str) -> None:

@@ -72,6 +72,21 @@ class ResultWidget(Static):
 class SearchScreen(Screen):
     """Interactive code search using RAG"""
     
+    def _format_entity_id(self, entity_id: str) -> str:
+        """Formats internal entity ID to human-readable string, handling prefixes like 'Extends: '."""
+        # Handle "Extends: type:some_id" or "Calls: type:some_id"
+        if ": " in entity_id and entity_id.split(": ", 1)[0] in ("Extends", "Calls"):
+            prefix, actual_id = entity_id.split(": ", 1)
+            return f"{prefix}: {self._format_entity_id(actual_id)}"
+            
+        if ":" in entity_id:
+            kind, name = entity_id.split(":", 1)
+            # For 'type' and 'sym', strip module path
+            if kind in ("type", "sym"):
+                return name.rsplit(".", 1)[-1]
+            return name
+        return entity_id
+    
     CSS = """
     SearchScreen {
         layout: vertical;
@@ -363,7 +378,8 @@ class SearchScreen(Screen):
         
         # Header
         parts.append(f"[bold cyan]{path}[/bold cyan]")
-        node_type = debug.get("graph", {}).get("node_type", "unknown")
+        graph_info = debug.get("graph") or {}
+        node_type = graph_info.get("node_type", "unknown")
         line_str = f"{lines[0]}-{lines[1]}" if len(lines) > 1 else str(lines[0]) if lines else "?"
         parts.append(f"Symbol: [magenta]{symbol}[/magenta] ([blue]{node_type}[/blue])  Span: {line_str}")
         parts.append("")
@@ -384,12 +400,12 @@ class SearchScreen(Screen):
             if graph_info.get("parents"):
                 parts.append("  Parents:")
                 for p in graph_info["parents"]:
-                    parts.append(f"    - {p}")
+                    parts.append(f"    - {self._format_entity_id(p)}")
             
             if graph_info.get("children"):
                 parts.append("  Children:")
                 for c in graph_info["children"]:
-                    parts.append(f"    - {c}")
+                    parts.append(f"    - {self._format_entity_id(c)}")
             
             if graph_info.get("related_code"):
                 parts.append("  Related code:")
@@ -407,15 +423,47 @@ class SearchScreen(Screen):
         # Enrichment
         enrich = debug.get("enrichment")
         parts.append("[bold]Enrichment[/bold]")
+        
+        def _format_list_field(val: Any) -> str | None:
+            if not val:
+                return None
+            if val == "[]":
+                return None
+            
+            generic_placeholders = {"params", "returns", "args", "kwargs", "none"}
+            
+            if isinstance(val, list):
+                # Filter out generic placeholders and format
+                filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
+                if not filtered_list:
+                    return None
+                return ", ".join(filtered_list)
+            
+            if isinstance(val, str) and val.lower() in generic_placeholders:
+                return None
+                
+            return str(val)
+
         if enrich:
             if enrich.get("summary"):
                 parts.append(f"  Summary:   [dim]{enrich['summary']}[/dim]")
-            if enrich.get("inputs"):
-                parts.append(f"  Inputs:    {enrich['inputs']}")
-            if enrich.get("outputs"):
-                parts.append(f"  Outputs:   {enrich['outputs']}")
-            if enrich.get("pitfalls"):
-                parts.append(f"  Pitfalls:  {enrich['pitfalls']}")
+            
+            inputs = _format_list_field(enrich.get("inputs"))
+            if inputs:
+                parts.append(f"  Inputs:    {inputs}")
+            
+            outputs = _format_list_field(enrich.get("outputs"))
+            if outputs:
+                parts.append(f"  Outputs:   {outputs}")
+            
+            side_effects = _format_list_field(enrich.get("side_effects"))
+            if side_effects:
+                parts.append(f"  Side Effects: {side_effects}")
+
+            pitfalls = _format_list_field(enrich.get("pitfalls"))
+            if pitfalls:
+                parts.append(f"  Pitfalls:  {pitfalls}")
+                
             parts.append(f"  Evidence:  {enrich.get('evidence_count', 0)} spans")
         else:
              parts.append("  (none)")

@@ -58,7 +58,7 @@ DEFAULT_WEIGHTS: Dict[str, float] = {
     "bm25": 0.60,
     "uni": 0.20,
     "bi": 0.15,
-    "path": 0.03,
+    "path": 0.08,
     "lit": 0.02,
 }
 

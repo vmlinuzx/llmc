@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Literal, Tuple, Any
 from .schema import SchemaGraph
 from .database import Database
 from .utils import find_repo_root
+from .config import index_path_for_read
 
 SourceMode = Literal["symbol", "file"]
 
@@ -149,7 +150,12 @@ def _get_provenance(repo_root: Path, rel_path: Path) -> Dict[str, Any]:
         
     return prov
 
-def _fetch_enrichment(db_path: Path, span_hash: str) -> Dict[str, Any]:
+def _fetch_enrichment(
+    db_path: Path, 
+    span_hash: Optional[str], 
+    symbol: Optional[str] = None, 
+    file_path: Optional[Path] = None
+) -> Dict[str, Any]:
     data = {
         "summary": None, "inputs": None, "outputs": None, 
         "side_effects": None, "pitfalls": None, "evidence_count": None
@@ -159,10 +165,34 @@ def _fetch_enrichment(db_path: Path, span_hash: str) -> Dict[str, Any]:
         
     db = Database(db_path)
     try:
-        row = db.conn.execute(
-            "SELECT summary, inputs, outputs, side_effects, pitfalls, evidence FROM enrichments WHERE span_hash = ?",
-            (span_hash,)
-        ).fetchone()
+        row = None
+        # 1. Try exact hash lookup
+        if span_hash:
+            row = db.conn.execute(
+                "SELECT summary, inputs, outputs, side_effects, pitfalls, evidence FROM enrichments WHERE span_hash = ?",
+                (span_hash,)
+            ).fetchone()
+        
+        # 2. Fallback: Fuzzy match by path and symbol
+        if not row and symbol and file_path:
+            # We need to match file path suffix because DB paths might be relative or absolute
+            # and symbol might be short or fully qualified.
+            
+            # Try to find short symbol name
+            short_sym = symbol.split(".")[-1]
+            path_suffix = f"%{file_path}"
+            
+            query = """
+                SELECT e.summary, e.inputs, e.outputs, e.side_effects, e.pitfalls, e.evidence
+                FROM enrichments e
+                JOIN spans s ON e.span_hash = s.span_hash
+                JOIN files f ON s.file_id = f.id
+                WHERE f.path LIKE ? AND (s.symbol = ? OR s.symbol LIKE ?)
+                LIMIT 1
+            """
+            # Try exact symbol match first, then fuzzy
+            row = db.conn.execute(query, (path_suffix, short_sym, f"%{short_sym}")).fetchone()
+
         if row:
             data["summary"] = row["summary"]
             # Attempt JSON decode for lists
@@ -279,6 +309,7 @@ def inspect_entity(
     out_calls = []
     tests = []
     docs = []
+    file_entities = []
     
     if graph:
         # Check if file is in graph at all
@@ -344,6 +375,8 @@ def inspect_entity(
                     sym, p = resolve_ent(rel.src)
                     if rel.edge == "calls":
                         s_in_calls.add((sym, p))
+                    elif rel.edge == "extends":
+                        s_children.add((sym, p))
                     elif "test" in rel.src.lower() or rel.edge == "tests":
                         s_tests.add((sym, p))
                     elif rel.edge == "documents": # hypothetical
@@ -373,9 +406,40 @@ def inspect_entity(
 
     # 5. Enrichment
     enrichment = {}
-    if target_entity and target_entity.span_hash:
-        db_path = repo_root / ".rag" / "index_v2.db"
-        enrichment = _fetch_enrichment(db_path, target_entity.span_hash)
+    
+    # Identify span_hash to fetch
+    query_hash = None
+    fallback_symbol = None
+    
+    if target_entity:
+        query_hash = target_entity.span_hash
+        # Extract short symbol name for fallback
+        fallback_symbol = target_entity.id.split(":", 1)[-1]
+        
+    elif mode == "file" and file_entities:
+        # Fallback: try to find a representative entity in this file
+        stem = rel_path.stem.lower()
+        for e in file_entities:
+             # e.id is like "type:module.Class"
+             if stem in e.id.lower():
+                 query_hash = e.span_hash
+                 fallback_symbol = e.id.split(":", 1)[-1]
+                 break
+        # 2. Fallback to first entity
+        if not query_hash:
+             query_hash = file_entities[0].span_hash
+             fallback_symbol = file_entities[0].id.split(":", 1)[-1]
+
+    db_path = index_path_for_read(repo_root)
+    enrichment = _fetch_enrichment(
+        db_path, 
+        span_hash=query_hash,
+        symbol=fallback_symbol,
+        file_path=rel_path
+    )
+
+    # 6. Provenance
+    provenance = _get_provenance(repo_root, rel_path)
 
     # 6. Provenance
     provenance = _get_provenance(repo_root, rel_path)
