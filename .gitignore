@@ -86,3 +86,4 @@ TESTING_GAP_ANALYSIS_*.md
 TEST_FIXES_SUMMARY_*.md
 *~
 .venv/
+/legacy/
