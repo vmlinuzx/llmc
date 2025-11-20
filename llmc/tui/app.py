@@ -6,7 +6,7 @@ A cyberpunk-styled terminal UI for LLMC
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Vertical, Horizontal
+from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
 from textual.widgets import Header, Footer, Static, Button
 from textual.screen import Screen
 
@@ -14,6 +14,7 @@ from textual.screen import Screen
 from llmc.tui.screens.monitor import MonitorScreen
 from llmc.tui.screens.search import SearchScreen
 from llmc.tui.screens.inspector import InspectorScreen
+from llmc.tui.screens.config import ConfigScreen
 
 
 class MenuScreen(Screen):
@@ -23,6 +24,7 @@ class MenuScreen(Screen):
         Binding("1", "show_monitor", "Monitor System"),
         Binding("2", "show_search", "Search Code"),
         Binding("3", "show_inspect", "Inspect Entity"),
+        Binding("4", "show_config", "Configuration"),
         Binding("q", "quit", "Quit"),
     ]
     
@@ -62,9 +64,11 @@ class MenuScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="menu-container"):
             yield Static("LLMC v0.5.0 - Cyberpunk Console", id="title")
-            yield Button("[1] Monitor System", id="btn-monitor", classes="menu-item")
-            yield Button("[2] Search Code", id="btn-search", classes="menu-item")
-            yield Button("[3] Inspect Entity", id="btn-inspect", classes="menu-item")
+            with ScrollableContainer(id="menu-scroll"):
+                yield Button("[1] Monitor System", id="btn-monitor", classes="menu-item")
+                yield Button("[2] Search Code", id="btn-search", classes="menu-item")
+                yield Button("[3] Inspect Entity", id="btn-inspect", classes="menu-item")
+                yield Button("[4] Configuration", id="btn-config", classes="menu-item")
             yield Static("\nPress number keys or click buttons to navigate", id="help-text")
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -75,6 +79,8 @@ class MenuScreen(Screen):
             self.action_show_search()
         elif event.button.id == "btn-inspect":
             self.action_show_inspect()
+        elif event.button.id == "btn-config":
+            self.action_show_config()
     
     def action_show_monitor(self) -> None:
         """Switch to monitor screen"""
@@ -87,6 +93,10 @@ class MenuScreen(Screen):
     def action_show_inspect(self) -> None:
         """Switch to inspector screen"""
         self.app.push_screen(InspectorScreen())
+    
+    def action_show_config(self) -> None:
+        """Switch to configuration screen"""
+        self.app.push_screen(ConfigScreen())
     
     def action_quit(self) -> None:
         """Quit the application"""

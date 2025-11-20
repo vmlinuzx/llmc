@@ -107,82 +107,42 @@ The repo includes a RAG system with CLI entrypoints. Use it, but don’t worship
 - **Never** say “this is 80% relevant” based on a raw score.
 - Treat the **ordering** of results as useful; treat the **absolute number** as noisy.
 
+### 4.3 Dependency Analysis Protocol
+
+When you need to understand **file dependencies** (parents/children) and RAG is insufficient:
+
+1.  **Parent Relationships (Who imports X?):**
+    - Use `search_file_content` to find imports of the target module.
+    - **Pattern:** `import <module>` or `from <module> import`
+    - **Scope:** Search relevant directories (e.g., `src/`, `scripts/`, `tests/`) or the whole repo if unsure.
+    - **Example:** `search_file_content --pattern "from scripts.router import" --include "*.py"`
+
+2.  **Child Relationships (Who does X import?):**
+    - Use `read_file` on the target file.
+    - Analyze the `import` and `from ... import` statements at the top of the file.
+
+**Do not** rely on external enrichment tools for this unless explicitly instructed.
+
 ---
 
-## 5. Choosing Between `search` and `plan`
+## 5. RAG Tooling Reference
 
-Both commands live in `tools.rag.cli`.
+**Command Prefix:** `python3 -m tools.rag.cli`
 
-### 5.1 `search` — “Find and Read”
+| Tool | Purpose | When to use | Key Flags |
+| :--- | :--- | :--- | :--- |
+| **`search`** | **Find** concepts/code | "Where is X?", "How does Y work?" | `--limit 20` |
+| **`plan`** | **Target** files for edit | "I need to implement feature Z." | `--limit 50`, `--min-confidence 0.6` |
+| **`inspect`** | **Deep Dive** (Preferred) | "Understand this file/symbol." | `--path`, `--symbol`, `--full` |
+| **`doctor`** | **Diagnose** health | Tools failing? No results? Run this. | `-v` |
+| **`stats`** | **Status** check | Check index size/freshness. | none |
 
-Use `search` when you need to **locate and understand** code, config, or docs.
+### Quick Heuristics
 
-Typical questions:
-
-- “Where is X defined or used?”
-- “What does Y do?”
-- “Which module handles Z?”
-
-Command:
-
-```bash
-python3 -m tools.rag.cli search "query"        # --limit N, --json
-```
-
-Guidelines:
-
-- Start with `--limit 20–30`.
-- Judge hits primarily by:
-  - File path
-  - Symbol name
-  - Short context snippet
-- If top hits are weird:
-  - Rephrase the query more literally (class names, function names, config keys).
-  - Fall back to `rg`, AST tools, or direct file reads.
-
-### 5.2 `plan` — “Where Should I Edit?”
-
-Use `plan` when you’re about to **change code** and want a list of likely targets.
-
-Typical cases:
-
-- Multi-file feature work.
-- Cross-cutting changes (logging, error handling, config).
-- “Wire this new thing through the pipeline.”
-
-Command:
-
-```bash
-python3 -m tools.rag.cli plan "short description of change"  # --limit, --min-score, --min-confidence
-```
-
-Guidelines:
-
-- If the plan looks solid, execute it.
-- If the plan is shaky (low confidence), use `search` to verify specific files.
-- **Always** read the actual file content (via `inspect` or `read_file`) before writing.
-
-### 5.3 `inspect` — “Smart Read” (Preferred)
-
-Use `inspect` instead of `read_file` whenever possible. It provides **instant context** without burning tokens on investigation loops.
-
-**Why?**
-It returns:
-1. **Source Code** (snippet or full).
-2. **Graph Relationships** (callers, callees, parents, tests).
-3. **Enrichment** (summaries, pitfalls, side effects from the DB).
-
-**Command:**
-```bash
-python3 -m tools.rag.cli inspect --path path/to/file.py          # File summary + snippet
-python3 -m tools.rag.cli inspect --path path/to/file.py --full   # Full source + context
-python3 -m tools.rag.cli inspect --symbol MyClass.method         # Symbol-focused view
-```
-
-**Rule:**
-- If you need to "understand" a file, use `inspect`.
-- If you just need raw bytes for a hash check, use `read_file`.
-- This tool **replaces** the need for a separate "Codebase Investigator" agent for file-level tasks.
+- **`inspect` vs `read_file`:** Always prefer `inspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly. Use `read_file` only for raw byte checks.
+- **`search`:** If results are weird, try more literal queries or fallback to `grep`.
+- **`plan`:** Use for multi-file changes. If confidence is low, verify targets with `search` or `inspect`.
+- **`doctor`:** Your first step if the RAG system seems "dumb" or broken.
 
 ---
 

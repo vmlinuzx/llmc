@@ -807,3 +807,66 @@ Research and prototype a "vibrations" engine that builds a **narrative meaning f
 - **Live authoring integration** with sub-100ms reminder queries
 
 This is a **research task**—the goal is exploration and proof-of-concept, not production hardening. See `DOCS/RESEARCH/VIBRATIONS.md` for full technical details and architecture.
+
+## Post-MVP - Symbol Importance Ranking for `rag inspect` & LLM Context
+
+### Title
+Symbol Importance Ranking for `rag inspect` & LLM Context
+
+### Stage
+Post-MVP (P2/P3 – quality + efficiency improvement)
+
+### Problem
+
+Right now, `rag inspect` and related tools can return **all defined symbols** for a file. This is:
+
+- Fine for humans poking around in the TUI.
+- Wasteful and noisy for LLMs:
+  - Large files (many helpers/tests) create long symbol lists.
+  - Those lists consume tokens without materially improving understanding.
+  - LLMs still have to guess which symbol actually matters.
+
+As the codebase and graph grow, this turns into **token bloat** and makes it harder for agents to focus on high-signal entities.
+
+### Goal
+
+Introduce a lightweight **symbol importance ranking** so that:
+
+- LLM-facing tools (`rag inspect`, MCP `inspect_entity`, future planning tools) can:
+  - Return a **small, high-signal subset** of symbols by default.
+  - Keep full symbol lists available when explicitly requested.
+- The TUI can still show “all symbols” when it’s useful, but highlight the ones that matter most.
+
+Net effect: **less token spam, more meaningful context** for remote models.
+
+### High-Level Approach
+
+1. **Compute a simple importance score per symbol** using existing graph + enrichment data:
+   - Exported vs private (e.g. not prefixed with `_`, or present in `__all__`).
+   - Has incoming calls from other files (cross-file usage).
+   - Has related tests.
+   - Has enrichment summary / documentation.
+2. **Store the score in the graph or enrichment metadata** so it’s cheap to read at inspect time.
+3. **Update `inspect_entity` / `rag inspect` to:**
+   - Sort `defined_symbols` by importance score.
+   - Expose:
+     - `top_symbols` (small list, e.g. top 10) for LLM context.
+     - `all_symbols` (optional/full list) for TUI and debug.
+4. **TUI behavior:**
+   - Default: display `top_symbols` prominently.
+   - Optionally offer a toggle / command to show the full symbol list for the file.
+
+### Non-Goals (for this item)
+
+- No heavy ML ranking or learning-to-rank.
+- No changes to embedding or search scoring.
+- No requirement to make the TUI faster; this is primarily about **LLM-facing efficiency**.
+
+### Acceptance Criteria
+
+- `inspect_entity` returns a sorted list of symbols with an importance score or rank.
+- LLM-facing JSON output includes a **bounded** set of symbols (configurable limit).
+- There is a clear separation between:
+  - “Symbols we always send to LLMs by default.”
+  - “Full symbol list for humans / explicit LLM requests.”
+- Token usage for typical `rag inspect` calls against large modules is significantly reduced without sacrificing usefulness.

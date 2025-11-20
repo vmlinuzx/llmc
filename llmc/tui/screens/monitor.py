@@ -6,11 +6,12 @@ from pathlib import Path
 from typing import Dict, Any
 
 from textual.app import ComposeResult
-from textual.containers import Container, Grid, Vertical
-from textual.screen import Screen
 from textual.widgets import Static, Button
+from textual.containers import Container, Grid, Vertical, ScrollableContainer
+from textual.screen import Screen
 
 from tools.rag.analytics import QueryTracker
+from llmc.tui.screens.config import ConfigScreen
 
 
 class MonitorScreen(Screen):
@@ -143,7 +144,7 @@ class MonitorScreen(Screen):
             with Container(id="left-column"):
                 with Container(id="menu-panel", classes="panel"):
                     yield Static("Navigation", classes="panel-title")
-                    with Vertical(id="menu-list"):
+                    with ScrollableContainer(id="menu-list"):
                         for key, label, _ in self.menu_items:
                             yield Button(f"[{key}] {label}", id=f"menu-{key}", classes="menu-btn")
 
@@ -330,7 +331,11 @@ class MonitorScreen(Screen):
             self.add_log(f"Open inspector failed: {exc}", "ERR")
 
     def action_nav_config(self) -> None:
-        self.add_log("Configuration screen not implemented yet", "INF")
+        """Switch to configuration screen."""
+        try:
+            self.app.push_screen(ConfigScreen())
+        except Exception as exc:
+            self.add_log(f"Open config failed: {exc}", "ERR")
 
     def action_nav_doctor(self) -> None:
         self.add_log("System Doctor not implemented yet", "INF")

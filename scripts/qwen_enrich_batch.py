@@ -646,19 +646,30 @@ def build_prompt(item: Dict, repo_root: Path) -> str:
     line_start, line_end = item["lines"]
     snippet = item.get("code_snippet", "")
 
-    prompt = f"""Return ONLY minified JSON in ENGLISH:
-{{"summary_120w":"<what it does>","inputs":["params"],"outputs":["returns"],"side_effects":["mutations"],"pitfalls":["gotchas"],"usage_snippet":"brief example","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
+    prompt = f"""Return ONLY ONE VALID JSON OBJECT in ENGLISH.
+No markdown, no comments, no extra text.
 
-Rules: 
-- ALL text fields MUST be in English
-- summary<=120w
-- evidence for each populated field with lines [{line_start}-{line_end}]
-- [] or null if unsupported
+Output example (structure and keys are FIXED):
+{{"summary_120w":"...","inputs":["..."],"outputs":["..."],
+"side_effects":["..."],"pitfalls":["..."],
+"usage_snippet":"...","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
 
+Rules:
+- summary_120w: <=120 English words describing what the code does.
+- inputs/outputs/side_effects/pitfalls: lists of short phrases; use [] if none.
+- usage_snippet: 1–5 line usage example, or "" if unclear.
+- evidence: list of objects:
+  - "field" is one of:
+    "summary_120w","inputs","outputs","side_effects","pitfalls","usage_snippet"
+  - "lines" MUST be [{line_start},{line_end}] for every entry.
+- Do NOT add or rename keys.
+- Use double quotes, no trailing commas.
+
+Code to analyze:
 {path} L{line_start}-{line_end}:
 {snippet}
 
-JSON only (in English):"""
+JSON ONLY:"""
     return prompt
 
 
