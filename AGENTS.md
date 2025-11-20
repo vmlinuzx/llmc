@@ -158,12 +158,31 @@ python3 -m tools.rag.cli plan "short description of change"  # --limit, --min-sc
 
 Guidelines:
 
-- Treat the plan as a **suggested worklist**, not truth.
-- Always open and inspect files before editing.
-- If the plan looks off (many wrong files):
-  - Tighten the query description.
-  - Reduce `--limit` so you see fewer marginal hits.
-  - If it’s still off, abandon the plan output and switch to manual search + `search`.
+- If the plan looks solid, execute it.
+- If the plan is shaky (low confidence), use `search` to verify specific files.
+- **Always** read the actual file content (via `inspect` or `read_file`) before writing.
+
+### 5.3 `inspect` — “Smart Read” (Preferred)
+
+Use `inspect` instead of `read_file` whenever possible. It provides **instant context** without burning tokens on investigation loops.
+
+**Why?**
+It returns:
+1. **Source Code** (snippet or full).
+2. **Graph Relationships** (callers, callees, parents, tests).
+3. **Enrichment** (summaries, pitfalls, side effects from the DB).
+
+**Command:**
+```bash
+python3 -m tools.rag.cli inspect --path path/to/file.py          # File summary + snippet
+python3 -m tools.rag.cli inspect --path path/to/file.py --full   # Full source + context
+python3 -m tools.rag.cli inspect --symbol MyClass.method         # Symbol-focused view
+```
+
+**Rule:**
+- If you need to "understand" a file, use `inspect`.
+- If you just need raw bytes for a hash check, use `read_file`.
+- This tool **replaces** the need for a separate "Codebase Investigator" agent for file-level tasks.
 
 ---
 

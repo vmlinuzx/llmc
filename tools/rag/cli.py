@@ -449,13 +449,93 @@ def export(output: Optional[str]) -> None:
 
 
 @cli.command()
-@click.option("--days", "-d", type=int, default=7, help="Days to analyze")
-def analytics(days: int) -> None:
-    """View query analytics and search insights."""
-    from .analytics import run_analytics
+@click.option("--path", help="File path to inspect.")
+@click.option("--symbol", help="Symbol name to resolve (e.g. 'tools.rag.search.search_spans').")
+@click.option("--line", type=int, help="Line number to focus on (if path provided).")
+@click.option("--full", "full_source", is_flag=True, help="Include full source code.")
+@click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
+def inspect(path: Optional[str], symbol: Optional[str], line: Optional[int], full_source: bool, as_json: bool) -> None:
+    """Fast inspection of a file or symbol with graph + enrichment context.
     
+    Does NOT load embedding models.
+    """
+    from .inspector import inspect_entity
+    
+    if not path and not symbol:
+        click.echo("Error: Must provide either --path or --symbol", err=True)
+        raise SystemExit(1)
+        
     repo_root = _find_repo_root()
-    run_analytics(repo_root, days=days)
+    
+    try:
+        result = inspect_entity(
+            repo_root,
+            path=path,
+            symbol=symbol,
+            line=line,
+            include_full_source=full_source
+        )
+    except Exception as e:
+        click.echo(f"Error inspecting entity: {e}", err=True)
+        raise SystemExit(1)
+        
+    if as_json:
+        click.echo(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        return
+        
+    # Text Output
+    click.echo(f"# FILE: {result.path}")
+    click.echo(f"# SOURCE_MODE: {result.source_mode}")
+    if symbol:
+        click.echo(f"# SYMBOL: {symbol}")
+    
+    prov_kind = result.provenance.get("kind", "unknown")
+    click.echo(f"# KIND: {prov_kind}")
+    
+    summary = result.file_summary or result.enrichment.get("summary")
+    if summary:
+        click.echo(f"# SUMMARY: {summary}")
+        
+    if result.defined_symbols:
+        click.echo("# DEFINED SYMBOLS:")
+        for sym in result.defined_symbols[:10]:
+            click.echo(f"#   - {sym.name} ({sym.type}, line {sym.line})")
+            
+    click.echo("# RELATIONSHIPS:")
+    
+    def print_rels(label, items):
+        if items:
+            vals = ", ".join(i.symbol or i.path for i in items)
+            click.echo(f"#   - {label}: {vals}")
+
+    print_rels("Parents", result.parents)
+    print_rels("Children", result.children)
+    print_rels("Calls", result.outgoing_calls)
+    print_rels("Called by", result.incoming_calls)
+    print_rels("Tests", result.related_tests)
+    print_rels("Docs", result.related_docs)
+    
+    # Check if graph seems empty/disconnected for this file
+    has_rels = any([result.parents, result.children, result.outgoing_calls, result.incoming_calls, result.related_tests, result.related_docs])
+    if not has_rels:
+        status = result.graph_status
+        if status == "graph_missing":
+            click.echo("# GRAPH STATUS: ⚠️  Graph not found. Run 'rag graph' to build.")
+        elif status == "file_not_indexed":
+            click.echo("# GRAPH STATUS: ⚠️  File not found in graph index.")
+        elif status == "isolated":
+            click.echo("# GRAPH STATUS: ⚠️  File indexed but isolated (no relationships found).")
+    
+    click.echo("")
+    if result.primary_span:
+        click.echo(f"# SNIPPET (lines {result.primary_span[0]}-{result.primary_span[1]}):")
+    else:
+        click.echo("# SNIPPET:")
+    
+    if full_source and result.full_source:
+        click.echo(result.full_source)
+    else:
+        click.echo(result.snippet)
 
 
 @cli.group(

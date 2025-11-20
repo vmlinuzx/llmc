@@ -13,6 +13,7 @@ from textual.screen import Screen
 # Import our custom screens
 from llmc.tui.screens.monitor import MonitorScreen
 from llmc.tui.screens.search import SearchScreen
+from llmc.tui.screens.inspector import InspectorScreen
 
 
 class MenuScreen(Screen):
@@ -21,6 +22,7 @@ class MenuScreen(Screen):
     BINDINGS = [
         Binding("1", "show_monitor", "Monitor System"),
         Binding("2", "show_search", "Search Code"),
+        Binding("3", "show_inspect", "Inspect Entity"),
         Binding("q", "quit", "Quit"),
     ]
     
@@ -62,6 +64,7 @@ class MenuScreen(Screen):
             yield Static("LLMC v0.5.0 - Cyberpunk Console", id="title")
             yield Button("[1] Monitor System", id="btn-monitor", classes="menu-item")
             yield Button("[2] Search Code", id="btn-search", classes="menu-item")
+            yield Button("[3] Inspect Entity", id="btn-inspect", classes="menu-item")
             yield Static("\nPress number keys or click buttons to navigate", id="help-text")
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -70,6 +73,8 @@ class MenuScreen(Screen):
             self.action_show_monitor()
         elif event.button.id == "btn-search":
             self.action_show_search()
+        elif event.button.id == "btn-inspect":
+            self.action_show_inspect()
     
     def action_show_monitor(self) -> None:
         """Switch to monitor screen"""
@@ -78,6 +83,10 @@ class MenuScreen(Screen):
     def action_show_search(self) -> None:
         """Switch to search screen"""
         self.app.push_screen(SearchScreen())
+    
+    def action_show_inspect(self) -> None:
+        """Switch to inspector screen"""
+        self.app.push_screen(InspectorScreen())
     
     def action_quit(self) -> None:
         """Quit the application"""

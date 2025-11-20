@@ -116,9 +116,10 @@ class MonitorScreen(Screen):
         ("escape", "app.pop_screen", "Back"),
         ("1", "nav_monitor", "Monitor"),
         ("2", "nav_search", "Search"),
-        ("3", "nav_config", "Config"),
-        ("4", "nav_doctor", "System Doctor"),
-        ("5", "nav_agents", "Agent Status"),
+        ("3", "nav_inspect", "Inspector"),
+        ("4", "nav_config", "Config"),
+        ("5", "nav_doctor", "System Doctor"),
+        ("6", "nav_agents", "Agent Status"),
     ]
 
     def __init__(self):
@@ -128,9 +129,10 @@ class MonitorScreen(Screen):
         self.menu_items = [
             ("1", "Monitor System", self.action_nav_monitor),
             ("2", "Search Code", self.action_nav_search),
-            ("3", "Configuration", self.action_nav_config),
-            ("4", "System Doctor", self.action_nav_doctor),
-            ("5", "Agent Status", self.action_nav_agents),
+            ("3", "Code Inspector", self.action_nav_inspect),
+            ("4", "Configuration", self.action_nav_config),
+            ("5", "System Doctor", self.action_nav_doctor),
+            ("6", "Agent Status", self.action_nav_agents),
         ]
 
     def compose(self) -> ComposeResult:
@@ -319,6 +321,14 @@ class MonitorScreen(Screen):
         except Exception as exc:
             self.add_log(f"Open search failed: {exc}", "ERR")
 
+    def action_nav_inspect(self) -> None:
+        """Go to inspector screen."""
+        try:
+            from llmc.tui.screens.inspector import InspectorScreen
+            self.app.push_screen(InspectorScreen())
+        except Exception as exc:
+            self.add_log(f"Open inspector failed: {exc}", "ERR")
+
     def action_nav_config(self) -> None:
         self.add_log("Configuration screen not implemented yet", "INF")
 
@@ -334,9 +344,10 @@ class MonitorScreen(Screen):
         mapping = {
             "menu-1": self.action_nav_monitor,
             "menu-2": self.action_nav_search,
-            "menu-3": self.action_nav_config,
-            "menu-4": self.action_nav_doctor,
-            "menu-5": self.action_nav_agents,
+            "menu-3": self.action_nav_inspect,
+            "menu-4": self.action_nav_config,
+            "menu-5": self.action_nav_doctor,
+            "menu-6": self.action_nav_agents,
         }
         handler = mapping.get(btn_id)
         if handler:
