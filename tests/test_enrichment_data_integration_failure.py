@@ -42,9 +42,9 @@ class TestEnrichmentDataIntegrationSuccess:
         with open(self.graph_path) as f:
             graph = json.load(f)
         
-        # Nav Graph structure: { "nodes": [...], "edges": [...] }
-        nodes = graph.get('nodes', [])
-        
+        # Nav Graph structure: { "entities": [...], "relations": [...] }
+        nodes = graph.get('entities', [])
+
         assert len(nodes) > 0, "Graph should have nodes"
         
         # Check for enrichment fields in metadata (or top level if flattened)

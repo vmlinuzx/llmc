@@ -646,15 +646,19 @@ def build_prompt(item: Dict, repo_root: Path) -> str:
     line_start, line_end = item["lines"]
     snippet = item.get("code_snippet", "")
 
-    prompt = f"""Return ONLY minified JSON:
+    prompt = f"""Return ONLY minified JSON in ENGLISH:
 {{"summary_120w":"<what it does>","inputs":["params"],"outputs":["returns"],"side_effects":["mutations"],"pitfalls":["gotchas"],"usage_snippet":"brief example","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
 
-Rules: summary<=120w, evidence for each populated field with lines [{line_start}-{line_end}], [] or null if unsupported.
+Rules: 
+- ALL text fields MUST be in English
+- summary<=120w
+- evidence for each populated field with lines [{line_start}-{line_end}]
+- [] or null if unsupported
 
 {path} L{line_start}-{line_end}:
 {snippet}
 
-JSON only:"""
+JSON only (in English):"""
     return prompt
 
 

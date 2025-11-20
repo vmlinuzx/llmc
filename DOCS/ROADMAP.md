@@ -61,6 +61,47 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
   - Add a debug CLI (counts, sample records) to inspect enrichment coverage, graph attachment rate, and FTS health.
   - Wire the tools into the MCP server and update docs so upstream agents (Desktop Commander, Codex wrappers) can rely on the enriched RAG surface.
 
+- **P0: Critical Code Quality - Duplicate Function Definitions in schema.py**
+  **STATUS**: CRITICAL CODE SMELL - `tools/rag/schema.py` has THREE definitions of `extract_schema_from_file()` at lines 308, 337, and 366
+  **WHY**: Python silently overrides earlier definitions. Only the last one (line 366) is actually used, but this creates maintainability nightmares and suggests copy-paste errors during development.
+  **FIX**: 
+  - Remove duplicate definitions at lines 308 and 337
+  - Verify line 366 implementation is correct and complete
+  - Add linting rules to catch duplicate function definitions
+  - Audit entire codebase for similar issues
+  **IMPACT**: Low runtime impact (last definition wins), but HIGH maintenance risk and code smell
+
+- **P0: Graph Edge Extraction & Call Graph Analysis**
+  **STATUS**: CRITICAL - Currently have 2,394 nodes but 0 edges. Graph traversal is completely non-functional.
+  **WHY**: This is the core differentiator for LLMC - architectural understanding via call graphs. Without edges, we're just doing fancy grep with embeddings.
+- **P0: Graph Edge Extraction & Call Graph Analysis**  
+  **STATUS**: ✅ FIXED (2025-11-19) - Graph has 9,779 edges! Bug was in loader, not extractor.  
+  **ROOT CAUSE**: `tools/rag_nav/tool_handlers._load_graph()` was looking for `data["edges"]` or `data["schema_graph"]["relations"]` but `SchemaGraph.to_dict()` saves as top-level `data["relations"]`  
+  **FIX APPLIED**: Modified `_load_graph()` to check `data.get("relations")` first  
+  **VERIFICATION**: Graph now loads: 2,394 nodes, 9,779 edges (CALLS relationships working!)  
+  **CURRENT LIMITATION**: Only Python files have schema extraction. Other languages return empty ([], []).
+  
+  ### Phase 1 – Enable Graph Traversal Queries (NOW UNBLOCKED - edges working!)
+  - Implement `tool_rag_callers(entity_id)` - reverse call graph lookup using the 9,779 edges
+  - Implement `tool_rag_dependencies(entity_id)` - full dependency tree traversal
+  - Implement `tool_rag_impact_analysis(entity_id)` - "if I change this, what breaks?"
+  - Add graph traversal to TUI for visual exploration
+  - Add edge type extraction for `imports` (currently only have `calls` and `extends`)
+  
+  ### Phase 2 – Multi-Language Support (Python-only currently)
+  - JavaScript/TypeScript: Use tree-sitter or similar AST parser
+  - Java: Import/dependency extraction
+  - Go: Module and package relationships
+  - C/C++: Header includes and linkage
+  - Universal fallback: Regex-based import detection for unsupported languages (Ada, Fortran, COBOL, etc)
+  
+  ### Phase 3 – Advanced Graph Features
+  - Data flow analysis: "how does data move through this system?"
+  - Architectural layers: Detect API → service → data patterns
+  - Cyclic dependency detection and warnings
+  - Dead code identification via graph reachability
+  - Hotspot detection: Most-called/most-depended-on entities
+
 - **P1: RAG Freshness Gate + Safe Local Fallback**
   - Add a freshness gate in front of RAG so tools only use RAG when slice state is known-good, otherwise fall back automatically to local filesystem/AST-based logic.
   - Ensure callers (Codex, Claude, Desktop Commander, future GUIs) never have to care whether RAG is in play; they always get correct results plus metadata about source and freshness.

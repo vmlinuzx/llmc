@@ -156,10 +156,18 @@ def _load_graph(repo_root: str) -> tuple[list[dict], list[dict]]:
             data = json.load(f)
         nodes = data.get("nodes") or data.get("entities") or []
         edges = data.get("edges") or []
+        
         # Allow consuming schema_graph artifacts by projecting relations into edges.
-        if not edges and isinstance(data.get("schema_graph"), dict):
-            rels = data["schema_graph"].get("relations") or []
-            if isinstance(rels, list):
+        # Try three formats:
+        # 1. Top-level "relations" key (SchemaGraph.to_dict() format)
+        # 2. Nested "schema_graph.relations" 
+        # 3. Already have "edges"
+        if not edges:
+            rels = data.get("relations") or []  # Format 1: top-level relations
+            if not rels and isinstance(data.get("schema_graph"), dict):
+                rels = data["schema_graph"].get("relations") or []  # Format 2: nested
+            
+            if isinstance(rels, list) and rels:
                 edges = [
                     {
                         "type": str(r.get("edge") or "").upper(),

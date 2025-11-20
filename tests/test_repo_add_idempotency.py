@@ -24,7 +24,7 @@ def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         # Create tool config
         from tools.rag_repo.config import ToolConfig
@@ -84,7 +84,7 @@ def test_add_existing_repo_is_idempotent(tmp_path: Path) -> None:
         (config_path / "version.yml").write_text("existing: version\n")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -155,7 +155,7 @@ def test_add_repo_preserves_existing_configs(tmp_path: Path) -> None:
         (config_path / "version.yml").write_text(yaml.dump(custom_version_config))
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -193,7 +193,7 @@ def test_add_repo_multiple_times_same_registry(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -235,7 +235,7 @@ def test_add_repo_different_paths_same_repo(tmp_path: Path) -> None:
         symlink_path.symlink_to(repo_root)
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -281,7 +281,7 @@ def test_add_repo_workspace_initialization(tmp_path: Path) -> None:
         (repo_root / "src" / "main.py").write_text("print('hello')")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -334,7 +334,7 @@ def test_add_repo_creates_registry_entry(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -382,7 +382,7 @@ def test_add_with_custom_profile(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -416,7 +416,7 @@ def test_add_repo_json_output(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -460,7 +460,7 @@ def test_add_non_existent_repo_fails(tmp_path: Path) -> None:
         home = Path(home)
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -498,7 +498,7 @@ def test_add_creates_directory_structure(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(
@@ -543,7 +543,7 @@ def test_add_idempotency_with_registry_changes(tmp_path: Path) -> None:
         (repo_root / "README.md").write_text("# Test Repo")
 
         registry_path = home / "registry.yml"
-        registry_path.write_text("repos: []\n")
+        registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
         tool_config = ToolConfig(

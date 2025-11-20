@@ -42,3 +42,17 @@ def hermetic_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
     return tmp_path
 
+
+def pytest_collection_modifyitems(config, items):
+    """Skip standalone test scripts that have their own main() function."""
+    skip_standalone = pytest.mark.skip(reason="Standalone test script - run directly with python")
+    for item in items:
+        # Skip files that have if __name__ == "__main__" in them
+        # BUT only if they DON'T have pytest imports or fixtures
+        if item.fspath and item.fspath.exists():
+            content = item.fspath.read_text(encoding="utf-8")
+            # Skip if it has main AND doesn't have pytest test markers
+            if "if __name__ == \"__main__\":" in content:
+                if "import pytest" not in content and "@pytest" not in content:
+                    item.add_marker(skip_standalone)
+
