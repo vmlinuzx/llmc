@@ -5,11 +5,10 @@ import subprocess
 from functools import lru_cache
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Callable, Iterable, Iterator, List, Optional
+from typing import Generator, Iterable, List, Optional, Set, Tuple
 
+from .config import get_exclude_dirs
 from .lang import is_supported, language_for_path
-
-EXCLUDE_DIRS = {".git", ".rag", "node_modules", "dist", "build", "__pycache__", ".venv"}
 
 
 def find_repo_root(start: Optional[Path] = None) -> Path:
@@ -41,11 +40,12 @@ def iter_source_files(repo_root: Path, include_paths: Optional[Iterable[Path]] =
 
 
 def _iter_directory(repo_root: Path, directory: Path, matcher: Callable[[Path], bool]) -> Iterator[Path]:
+    exclude_dirs = get_exclude_dirs(repo_root)
     for root, dirs, files in os.walk(directory):
         root_path = Path(root)
         pruned_dirs = []
         for name in dirs:
-            if name in EXCLUDE_DIRS:
+            if name in exclude_dirs:
                 continue
             candidate = (root_path / name).relative_to(repo_root)
             if matcher(candidate):

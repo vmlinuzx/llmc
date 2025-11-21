@@ -38,11 +38,11 @@ from router import (
     expected_output_tokens,
 )
 
-from tools.rag.config import index_path_for_write
+from tools.rag.config import index_path_for_write, get_est_tokens_per_span
 from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
 
-EST_TOKENS_PER_SPAN = 350  # keep in sync with tools.rag.cli
+
 GATEWAY_DEFAULT_TIMEOUT = 300.0
 
 _TRUTHY = {"1", "true", "yes", "on"}
@@ -1413,7 +1413,7 @@ def main() -> int:
                     "num_thread": num_thread_value,
                     "num_gpu": num_gpu_value,
                     "attempts": len(attempt_records) or attempt_idx,
-                    "estimated_tokens_per_span": EST_TOKENS_PER_SPAN,
+                    "estimated_tokens_per_span": get_est_tokens_per_span(REPO_ROOT),
                 }
                 for field in policy_log_fields:
                     metrics_summary.setdefault(field, metrics_summary.get(field))
@@ -1462,8 +1462,8 @@ def main() -> int:
                     stats = db.stats()
                     metrics_summary["spans_total"] = stats["spans"]
                     metrics_summary["enrichments_total"] = stats["enrichments"]
-                    metrics_summary["estimated_remote_tokens_saved"] = stats["enrichments"] * EST_TOKENS_PER_SPAN
-                    metrics_summary["estimated_remote_tokens_repo_cap"] = stats["spans"] * EST_TOKENS_PER_SPAN
+                    metrics_summary["estimated_remote_tokens_saved"] = stats["enrichments"] * get_est_tokens_per_span(REPO_ROOT)
+                    metrics_summary["estimated_remote_tokens_repo_cap"] = stats["spans"] * get_est_tokens_per_span(REPO_ROOT)
 
                     processed += 1
 

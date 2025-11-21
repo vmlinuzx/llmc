@@ -24,6 +24,12 @@ import git
 
 from ast_chunker import ASTChunker
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from tools.rag.config import get_exclude_dirs
+
 # Configuration
 def resolve_rag_db_path() -> Path:
     """
@@ -57,12 +63,7 @@ CHROMA_DB_PATH = resolve_rag_db_path()
 COLLECTION_NAME = "workspace_code"
 
 # Exclusions
-EXCLUDE_DIRS = {
-    "node_modules", ".git", "dist", "build", ".next",
-    "__pycache__", "venv", ".venv", "vendor",
-    ".cache", ".pytest_cache", "coverage",
-    ".DS_Store", "Thumbs.db"
-}
+
 
 EXCLUDE_EXTENSIONS = {
     ".pyc", ".pyo", ".so", ".dll", ".dylib",
@@ -129,7 +130,7 @@ class WorkspaceIndexer:
         
         # Check if in excluded directory
         for parent in file_path.parents:
-            if parent.name in EXCLUDE_DIRS:
+            if parent.name in get_exclude_dirs(REPO_ROOT):
                 return False
         
         # Check file size (skip huge files)
@@ -268,7 +269,7 @@ class WorkspaceIndexer:
         files_to_index = []
         for root, dirs, files in os.walk(self.workspace_root):
             # Filter directories
-            dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS]
+            dirs[:] = [d for d in dirs if d not in get_exclude_dirs(REPO_ROOT)]
             
             root_path = Path(root)
             

@@ -145,6 +145,10 @@ class RegistryClient:
                 if not raw_repo_path:
                     continue
 
+                # Security: reject path traversal attempts
+                if ".." in str(raw_repo_path) or (raw_workspace_path and ".." in str(raw_workspace_path)):
+                    continue
+
                 repo_path = Path(str(os.path.expanduser(str(raw_repo_path)))).resolve()
                 workspace_path = (
                     Path(str(os.path.expanduser(str(raw_workspace_path)))).resolve()

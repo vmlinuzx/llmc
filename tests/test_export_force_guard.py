@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo import cli as rcli
+from tools.rag_repo.cli import export_bundle
 
 
 def test_export_force_guard(tmp_path: Path) -> None:
@@ -14,8 +14,8 @@ def test_export_force_guard(tmp_path: Path) -> None:
     (export_dir / "existing.txt").write_text("x")
     # Should fail without force
     with pytest.raises(RuntimeError):
-        rcli.export_bundle(repo, None, "exports", force=False)
+        export_bundle(repo, None, "exports", force=False)
     # Should succeed with force
-    result = rcli.export_bundle(repo, None, "exports", force=True)
+    result = export_bundle(repo, None, "exports", force=True)
     assert "export_dir" in result
 

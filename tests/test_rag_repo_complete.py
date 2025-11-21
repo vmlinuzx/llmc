@@ -340,7 +340,7 @@ def test_workspace_plan_new(tmp_path: Path) -> None:
 
     assert plan.workspace_root == repo_path / ".llmc/rag"
     assert plan.config_dir == repo_path / ".llmc/rag/config"
-    assert plan.indexes_dir == repo_path / ".llmc/rag/indexes"
+    assert plan.index_dir == repo_path / ".llmc/rag/index"
     assert plan.logs_dir == repo_path / ".llmc/rag/logs"
     assert plan.tmp_dir == repo_path / ".llmc/rag/tmp"
     assert plan.rag_config_path == repo_path / ".llmc/rag/config/rag.yml"
@@ -367,7 +367,9 @@ def test_workspace_init_creates_directories(tmp_path: Path) -> None:
     # Check directories were created
     assert plan.workspace_root.exists()
     assert plan.config_dir.exists()
-    assert plan.indexes_dir.exists()
+    assert plan.index_dir.exists()
+    assert plan.enrichments_dir.exists()
+    assert plan.metadata_dir.exists()
     assert plan.logs_dir.exists()
     assert plan.tmp_dir.exists()
 
@@ -378,7 +380,7 @@ def test_workspace_init_creates_directories(tmp_path: Path) -> None:
     # Check gitignore was created
     gitignore = plan.workspace_root / ".gitignore"
     assert gitignore.exists()
-    assert "indexes/" in gitignore.read_text()
+    assert "index/" in gitignore.read_text()
 
 
 def test_workspace_init_idempotent(tmp_path: Path) -> None:

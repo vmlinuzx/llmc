@@ -8,12 +8,63 @@ and reranker weights for RAG Nav search.
 import configparser
 import os
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Set
+import tomllib
+from functools import lru_cache
 
 RAG_DIR_NAME = ".rag"
 DEFAULT_INDEX_NEW = "index_v2.db"
 DEFAULT_INDEX_OLD = "index.db"
 DEFAULT_SPANS_NAME = "spans.jsonl"
+
+def _find_repo_root(start: Optional[Path] = None) -> Path:
+    start = start or Path.cwd()
+    current = start.resolve()
+    for ancestor in [current, *current.parents]:
+        if (ancestor / ".git").exists():
+            return ancestor
+    return start
+
+
+@lru_cache
+def load_config(repo_root: Optional[Path] = None) -> Dict:
+    root = repo_root or _find_repo_root()
+    path = root / "llmc.toml"
+    if not path.exists():
+        return {}
+    try:
+        with open(path, "rb") as f:
+            return tomllib.load(f)
+    except Exception:
+        return {}
+
+
+def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
+    cfg = load_config(repo_root)
+    return cfg.get("enrichment", {}).get("est_tokens_per_span", 350)
+
+
+def get_exclude_dirs(repo_root: Optional[Path] = None) -> Set[str]:
+    cfg = load_config(repo_root)
+    dirs = cfg.get("indexing", {}).get("exclude_dirs")
+    if dirs:
+        return set(dirs)
+    return {
+        ".git",
+        ".rag",
+        "node_modules",
+        "dist",
+        "build",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".next",
+        ".cache",
+        ".pytest_cache",
+        "coverage",
+        ".DS_Store",
+        "Thumbs.db",
+    }
 
 MODEL_PRESETS = {
     # Preferred embedding profile: intfloat/e5-base-v2 with instruct-style prefixes.
@@ -198,7 +249,11 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def embedding_gpu_min_free_mb() -> int:
+def embedding_gpu_min_free_mb(repo_root: Optional[Path] = None) -> int:
+    cfg = load_config(repo_root)
+    val = cfg.get("embeddings", {}).get("gpu_min_free_mb")
+    if val is not None:
+        return int(val)
     return _env_int("EMBEDDINGS_GPU_MIN_FREE_MB", DEFAULT_GPU_MIN_FREE_MB)
 
 

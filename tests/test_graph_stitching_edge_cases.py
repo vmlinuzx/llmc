@@ -315,6 +315,34 @@ class TestOneHopNeighborExpansion:
 class TestGraphStitchFailures:
     """Test graceful handling of graph stitch failures."""
 
+    def create_test_graph(self, tmp_path: Path) -> Path:
+        """Create a test graph for stitching."""
+        repo_root = tmp_path / "test_repo"
+        repo_root.mkdir()
+
+        graph = {
+            "nodes": [
+                {"id": "func_a", "path": "file1.py", "name": "func_a"},
+                {"id": "func_b", "path": "file2.py", "name": "func_b"},
+                {"id": "func_c", "path": "file3.py", "name": "func_c"},
+                {"id": "func_d", "path": "file4.py", "name": "func_d"},
+                {"id": "func_e", "path": "file5.py", "name": "func_e"},
+            ],
+            "edges": [
+                {"type": "CALLS", "source": "func_a", "target": "func_b"},
+                {"type": "CALLS", "source": "func_b", "target": "func_c"},
+                {"type": "CALLS", "source": "func_a", "target": "func_c"},
+                {"type": "CALLS", "source": "func_c", "target": "func_d"},
+                {"type": "CALLS", "source": "func_d", "target": "func_e"},
+            ]
+        }
+
+        graph_path = repo_root / ".llmc" / "rag_graph.json"
+        graph_path.parent.mkdir(parents=True)
+        graph_path.write_text(json.dumps(graph))
+
+        return repo_root
+
     def test_graph_file_corruption(self, tmp_path: Path):
         """Test handling of corrupted graph file."""
         repo_root = tmp_path / "test_repo"
@@ -336,7 +364,14 @@ class TestGraphStitchFailures:
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
         graph_path.parent.mkdir(parents=True)
-        graph_path.write_text('{"nodes": [], "edges": []}')
+
+        # Remove any existing file first
+        if graph_path.exists():
+            graph_path.unlink()
+
+        # Write and then close the file before changing permissions
+        with graph_path.open('w') as f:
+            f.write('{"nodes": [], "edges": []}')
 
         # Make file unreadable
         import stat
@@ -536,6 +571,34 @@ class TestGraphStitchFailures:
 
 class TestMixedRAGStitchedResults:
     """Test combining RAG search results with graph-stitched neighbors."""
+
+    def create_test_graph(self, tmp_path: Path) -> Path:
+        """Create a test graph for stitching."""
+        repo_root = tmp_path / "test_repo"
+        repo_root.mkdir()
+
+        graph = {
+            "nodes": [
+                {"id": "func_a", "path": "file1.py", "name": "func_a"},
+                {"id": "func_b", "path": "file2.py", "name": "func_b"},
+                {"id": "func_c", "path": "file3.py", "name": "func_c"},
+                {"id": "func_d", "path": "file4.py", "name": "func_d"},
+                {"id": "func_e", "path": "file5.py", "name": "func_e"},
+            ],
+            "edges": [
+                {"type": "CALLS", "source": "func_a", "target": "func_b"},
+                {"type": "CALLS", "source": "func_b", "target": "func_c"},
+                {"type": "CALLS", "source": "func_a", "target": "func_c"},
+                {"type": "CALLS", "source": "func_c", "target": "func_d"},
+                {"type": "CALLS", "source": "func_d", "target": "func_e"},
+            ]
+        }
+
+        graph_path = repo_root / ".llmc" / "rag_graph.json"
+        graph_path.parent.mkdir(parents=True)
+        graph_path.write_text(json.dumps(graph))
+
+        return repo_root
 
     def test_mix_rag_and_stitched_results(self, tmp_path: Path):
         """Test combining original RAG results with stitched neighbors."""

@@ -1,6 +1,7 @@
 [embeddings]
 # preset = "e5"  # e5 | e5-large | mini
 # model = "intfloat/e5-base-v2"  # or "hash-emb-v1" for deterministic CPU-only testing
+gpu_min_free_mb = 1536
 
 [storage]
 # index_path = ".rag/index_v2.db"
@@ -9,6 +10,27 @@
 # enabled = false
 # model = "gpt-4o-mini"
 batch_size = 50
+est_tokens_per_span = 350
+
+[indexing]
+exclude_dirs = [
+    ".git",
+    ".rag",
+    "node_modules",
+    "dist",
+    "build",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".next",
+    ".cache",
+    ".pytest_cache",
+    "coverage",
+    ".DS_Store",
+    "Thumbs.db",
+]
+
+
 
 [logging]
 max_file_size_mb = 10

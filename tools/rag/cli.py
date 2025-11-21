@@ -12,6 +12,7 @@ from .config import (
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
+    get_est_tokens_per_span,
 )
 from .database import Database
 from .schema import build_graph_for_repo as schema_build_graph_for_repo
@@ -27,7 +28,7 @@ from .workers import (
     execute_enrichment,
 )
 
-EST_TOKENS_PER_SPAN = 350  # heuristic for remote LLM tokens we avoid per indexed span
+
 
 
 def _db_path(repo_root: Path, *, for_write: bool) -> Path:
@@ -126,12 +127,13 @@ def stats(as_json: bool) -> None:
         info = db.stats()
     finally:
         db.close()
-    estimated_remote_tokens = info["spans"] * EST_TOKENS_PER_SPAN
+    est_tokens = get_est_tokens_per_span(repo_root)
+    estimated_remote_tokens = info["spans"] * est_tokens
     data = {
         **info,
         "estimated_remote_tokens": estimated_remote_tokens,
         "estimated_token_savings": estimated_remote_tokens,
-        "token_savings_basis": f"{EST_TOKENS_PER_SPAN} tokens per span heuristic",
+        "token_savings_basis": f"{est_tokens} tokens per span heuristic",
     }
     if as_json:
         click.echo(json.dumps(data, indent=2))

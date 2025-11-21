@@ -601,6 +601,7 @@ def test_control_best_effort_delete(tmp_path: Path) -> None:
 # 6. Worker Pool & Job Runner Tests
 # ==============================================================================
 
+@pytest.mark.allow_sleep
 def test_worker_marks_repo_running(tmp_path: Path) -> None:
     """Test that worker marks repo as running at job start."""
     cfg = make_test_config(tmp_path)
@@ -629,6 +630,7 @@ def test_worker_marks_repo_running(tmp_path: Path) -> None:
         assert state.last_run_status in ["running", "success"]
 
 
+@pytest.mark.allow_sleep
 def test_worker_success_updates_state(tmp_path: Path) -> None:
     """Test that successful job updates state correctly."""
     cfg = make_test_config(tmp_path)
@@ -657,6 +659,7 @@ def test_worker_success_updates_state(tmp_path: Path) -> None:
         assert state.last_run_finished_at is not None
 
 
+@pytest.mark.allow_sleep
 def test_worker_failure_updates_state(tmp_path: Path) -> None:
     """Test that failed job increments failures and sets backoff."""
     cfg = make_test_config(tmp_path)
@@ -686,6 +689,7 @@ def test_worker_failure_updates_state(tmp_path: Path) -> None:
         assert state.last_error_reason is not None
 
 
+@pytest.mark.allow_sleep
 def test_worker_max_concurrent_jobs(tmp_path: Path) -> None:
     """Test that worker pool can handle multiple jobs."""
     from dataclasses import replace
@@ -721,6 +725,7 @@ def test_worker_max_concurrent_jobs(tmp_path: Path) -> None:
             assert state.last_run_status == "success"
 
 
+@pytest.mark.allow_sleep
 def test_worker_exponential_backoff(tmp_path: Path) -> None:
     """Test that backoff time grows exponentially."""
     from dataclasses import replace

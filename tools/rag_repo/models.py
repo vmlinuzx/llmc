@@ -32,7 +32,9 @@ class RepoInspection:
 class WorkspacePlan:
     workspace_root: Path
     config_dir: Path
-    indexes_dir: Path
+    index_dir: Path
+    enrichments_dir: Path
+    metadata_dir: Path
     logs_dir: Path
     tmp_dir: Path
     rag_config_path: Path

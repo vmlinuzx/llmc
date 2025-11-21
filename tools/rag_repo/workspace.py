@@ -28,14 +28,18 @@ def plan_workspace(
     root = safe_subpath(base, name_or_path)
 
     config_dir = root / "config"
-    indexes_dir = root / "indexes"
+    index_dir = root / "index"
+    enrichments_dir = root / "enrichments"
+    metadata_dir = root / "metadata"
     logs_dir = root / "logs"
     tmp_dir = root / "tmp"
 
     return WorkspacePlan(
         workspace_root=root,
         config_dir=config_dir,
-        indexes_dir=indexes_dir,
+        index_dir=index_dir,
+        enrichments_dir=enrichments_dir,
+        metadata_dir=metadata_dir,
         logs_dir=logs_dir,
         tmp_dir=tmp_dir,
         rag_config_path=config_dir / "rag.yml",
@@ -51,7 +55,9 @@ def init_workspace(
 ) -> None:
     plan.workspace_root.mkdir(parents=True, exist_ok=True)
     plan.config_dir.mkdir(parents=True, exist_ok=True)
-    plan.indexes_dir.mkdir(parents=True, exist_ok=True)
+    plan.index_dir.mkdir(parents=True, exist_ok=True)
+    plan.enrichments_dir.mkdir(parents=True, exist_ok=True)
+    plan.metadata_dir.mkdir(parents=True, exist_ok=True)
     plan.logs_dir.mkdir(parents=True, exist_ok=True)
     plan.tmp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -85,7 +91,7 @@ def init_workspace(
     gitignore = plan.workspace_root / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text(
-            "indexes/\nlogs/\ntmp/\n", encoding="utf-8"
+            "index/\nenrichments/\nmetadata/\nlogs/\ntmp/\n", encoding="utf-8"
         )
 
 
