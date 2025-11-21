@@ -1,5 +1,6 @@
 README.md
 pyproject.toml
+llmcwrapper/__init__.py
 llmcwrapper.egg-info/PKG-INFO
 llmcwrapper.egg-info/SOURCES.txt
 llmcwrapper.egg-info/dependency_links.txt
@@ -16,11 +17,13 @@ tests/test_cli_path_safety.py
 tests/test_context_gateway_edge_cases.py
 tests/test_daemon_purge_guard.py
 tests/test_daemon_submission_path_safety.py
+tests/test_database_bootstrap.py
 tests/test_doctor_paths_cli.py
 tests/test_e2e_cli_workspace_guard.py
 tests/test_e2e_daemon_operation.py
 tests/test_e2e_daemon_registry_constraints.py
 tests/test_e2e_operator_workflows.py
+tests/test_embeddings_unit.py
 tests/test_enrichment_data_integration_failure.py
 tests/test_enrichment_integration.py
 tests/test_enrichment_integration_edge_cases.py
@@ -42,6 +45,7 @@ tests/test_multiple_registry_entries.py
 tests/test_nav_adapter_wraps_models.py
 tests/test_nav_meta.py
 tests/test_nav_meta_envelopes_ok_error.py
+tests/test_nav_tool_handlers_unit.py
 tests/test_nav_tools_integration.py
 tests/test_p0_acceptance.py
 tests/test_path_policy.py
@@ -89,6 +93,7 @@ tests/test_safefs_policy_integration.py
 tests/test_safetmp.py
 tests/test_scheduler_eligibility_comprehensive.py
 tests/test_schema_metadata.py
+tests/test_service_components.py
 tests/test_snapshot_workspace.py
 tests/test_symlink_escape_strict.py
 tests/test_worker_pool_comprehensive.py

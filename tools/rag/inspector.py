@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Literal, Tuple, Any
 
 from .schema import SchemaGraph
-from .database import Database
+from . import database as rag_database
 from .utils import find_repo_root
 from .config import index_path_for_read
 
@@ -162,8 +162,8 @@ def _fetch_enrichment(
     }
     if not db_path.exists():
         return data
-        
-    db = Database(db_path)
+
+    db = rag_database.Database(db_path)
     try:
         row = None
         # 1. Try exact hash lookup

@@ -669,7 +669,7 @@ Code to analyze:
 {path} L{line_start}-{line_end}:
 {snippet}
 
-JSON ONLY:"""
+JSON RESPONSE LATIN-1 CHARACTERS ONLY:"""
     return prompt
 
 

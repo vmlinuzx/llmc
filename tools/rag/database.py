@@ -76,9 +76,7 @@ class Database:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self.path))
-        self._conn.row_factory = sqlite3.Row
-        self._conn.executescript(SCHEMA)
+        self._conn = self._open_and_prepare()
         self._run_migrations()
         self._ensure_fts()
 
@@ -102,6 +100,43 @@ class Database:
 
     def close(self) -> None:
         self._conn.close()
+
+    def _open_and_prepare(self) -> sqlite3.Connection:
+        """Open the sqlite database, quarantining corrupt files if needed."""
+        attempts = 0
+        while True:
+            attempts += 1
+            conn = sqlite3.connect(str(self.path))
+            conn.row_factory = sqlite3.Row
+            try:
+                conn.executescript(SCHEMA)
+            except sqlite3.DatabaseError as exc:
+                conn.close()
+                if not self._should_recover_from(exc) or attempts >= 2:
+                    raise
+                self._quarantine_corrupt_db()
+                continue
+            return conn
+
+    def _should_recover_from(self, exc: sqlite3.DatabaseError) -> bool:
+        message = str(exc).lower()
+        if "file is not a database" in message:
+            return True
+        if "database disk image is malformed" in message:
+            return True
+        return False
+
+    def _quarantine_corrupt_db(self) -> None:
+        if not self.path.exists():
+            return
+        timestamp = int(time.time())
+        suffix = f".corrupt.{timestamp}"
+        quarantine_path = self.path.with_name(f"{self.path.name}{suffix}")
+        try:
+            self.path.replace(quarantine_path)
+        except OSError:
+            # If rename fails we leave the original file in place and re-raise.
+            raise
 
     def upsert_file(self, record: FileRecord) -> int:
         self.conn.execute(

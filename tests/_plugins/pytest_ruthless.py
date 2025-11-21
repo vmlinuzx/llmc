@@ -68,6 +68,10 @@ def pytest_runtest_setup(item):
         pass
 
 
+import pytest
+
+
+@pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item):
     allow_net = item.config.getoption("--allow-network") or bool(item.get_closest_marker("allow_network"))
     allow_sleep = item.config.getoption("--allow-sleep") or bool(item.get_closest_marker("allow_sleep"))
@@ -86,12 +90,10 @@ def pytest_runtest_call(item):
     cm = _patched_sleep() if not allow_sleep else contextlib.nullcontext()
     with cm:
         try:
-            return item.runtest()
+            yield
         finally:
-            # restore
             for name, orig in restores:
                 mod_name, attr = name.rsplit(".", 1)
                 mod = sys.modules.get(mod_name)
                 if mod is not None:
                     setattr(mod, attr, orig)
-

@@ -201,7 +201,7 @@ class TestRagRefreshCron:
     def test_passes_exit_code(self):
         """Test that script propagates exit code from rag_refresh.sh."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
-        with open(script_path) in f:
+        with open(script_path) as f:
             content = f.read()
 
         # Should capture and pass exit code
@@ -466,7 +466,7 @@ class TestRagSync:
     def test_uses_mktemp_for_temp_input(self):
         """Test that script uses mktemp for temporary input."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
-        with open(script_path) in f:
+        with open(script_path) as f:
             content = f.read()
 
         # Should use mktemp for temp file

@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 try:
@@ -11,7 +10,7 @@ try:
 except Exception:  # pragma: no cover - optional
     yaml = None  # type: ignore[assignment]
 
-from .models import RepoInspection, RegistryEntry, ToolConfig, WorkspacePlan, WorkspaceValidationResult
+from .models import RepoInspection, ToolConfig, WorkspacePlan, WorkspaceValidationResult
 from .utils import canonical_repo_path, generate_repo_id, safe_subpath
 
 
@@ -81,8 +80,9 @@ def init_workspace(
     # version.yml
     if not plan.version_config_path.exists():
         version_config = {
+            "version": 1,
             "config_version": "v1",
-            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_at": datetime.now(UTC).isoformat(),
         }
         with plan.version_config_path.open("w", encoding="utf-8") as f:
             yaml.safe_dump(version_config, f)

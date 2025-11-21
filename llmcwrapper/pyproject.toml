@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmcwrapper"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unixy LLM wrapper: shared adapter + dual CLIs for YOLO and RAG modes"
 readme = "README.md"
 requires-python = ">=3.9"

@@ -249,6 +249,14 @@ main() {
 
   cd "$REPO_ROOT"
 
+  if [ -n "${LLMC_WRAPPER_VALIDATE_ONLY:-}" ]; then
+    # Smoke the preamble to ensure context rendering stays healthy, but bail
+    # before invoking the real Claude CLI (helps tests + offline validation).
+    build_preamble >/dev/null 2>&1 || true
+    printf 'cmw.sh validate-only: repo=%s prompt=%s\n' "$REPO_ROOT" "${user_prompt:-}" >&2
+    exit 0
+  fi
+
   configure_minimax_env
 
   local claude_cmd="${CLAUDE_CMD:-claude}"

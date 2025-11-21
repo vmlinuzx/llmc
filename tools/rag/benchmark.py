@@ -8,13 +8,25 @@ from typing import Sequence
 from .embeddings import build_embedding_backend
 
 
+def build_backend():
+    """Backwards compatible alias used by tests/legacy callers."""
+    return build_embedding_backend()
+
+
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    norm_a = math.sqrt(sum(x * x for x in a))
-    norm_b = math.sqrt(sum(y * y for y in b))
+    paired = list(zip(a, b))
+    if not paired:
+        return 0.0
+    dot = sum(x * y for x, y in paired)
+    norm_a = math.sqrt(sum(x * x for x, _ in paired))
+    norm_b = math.sqrt(sum(y * y for _, y in paired))
     if norm_a == 0.0 or norm_b == 0.0:
         return 0.0
     return dot / (norm_a * norm_b)
+
+
+def _dot(a: Sequence[float], b: Sequence[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))
 
 
 @dataclass(frozen=True)
@@ -90,7 +102,7 @@ CASES: tuple[BenchmarkCase, ...] = (
 
 
 def run_embedding_benchmark() -> dict[str, float]:
-    backend = build_embedding_backend()
+    backend = build_backend()
     hit_flags = []
     margins = []
     positive_scores = []
@@ -102,7 +114,7 @@ def run_embedding_benchmark() -> dict[str, float]:
         candidate_labels = [1] * len(case.positives) + [0] * len(case.negatives)
         candidate_vecs = backend.embed_passages(candidate_texts)
 
-        scores = [_cosine(query_vec, vec) for vec in candidate_vecs]
+        scores = [_dot(query_vec, vec) for vec in candidate_vecs]
         best_index = max(range(len(scores)), key=scores.__getitem__)
         hit_flags.append(1 if candidate_labels[best_index] == 1 else 0)
 

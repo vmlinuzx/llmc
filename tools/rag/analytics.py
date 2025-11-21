@@ -136,7 +136,7 @@ class QueryTracker:
             """
             SELECT 
                 COUNT(*) as total,
-                COUNT(DISTINCT query_text) as unique,
+                COUNT(DISTINCT query_text) as unique_queries,
                 AVG(results_count) as avg_results
             FROM query_history
             WHERE timestamp >= ?
@@ -151,7 +151,7 @@ class QueryTracker:
             top_queries=top_queries,
             top_files=top_files,
             total_queries=row["total"],
-            unique_queries=row["unique"],
+            unique_queries=row["unique_queries"],
             avg_results_per_query=round(row["avg_results"] or 0, 1),
             time_range_days=days
         )
@@ -227,11 +227,11 @@ def format_analytics(summary: AnalyticsSummary) -> str:
 def run_analytics(repo_root: Path, days: int = 7):
     """Run analytics and print report."""
     analytics_db = repo_root / ".rag" / "analytics.db"
-    
-    if not analytics_db.exists():
+
+    if not analytics_db.parent.exists():
         print("No query history found. Start searching to build analytics!")
         return
-    
+
     tracker = QueryTracker(analytics_db)
     summary = tracker.get_analytics(days=days)
     

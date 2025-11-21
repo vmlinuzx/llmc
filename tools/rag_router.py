@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import pathlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -105,9 +106,9 @@ class RAGRouter:
             # Task patterns that override RAG analysis
             "forced_routing": {
                 "local": [
-                    "format code",
+                    "format",
                     "add comments",
-                    "fix indentation",
+                    "fix",
                     "rename variable"
                 ],
                 "mid": [
@@ -117,9 +118,9 @@ class RAGRouter:
                     "stress test"
                 ],
                 "premium": [
-                    "design architecture",
+                    "design",
                     "review security",
-                    "validate approach",
+                    "validate",
                     "complex refactor"
                 ]
             }
@@ -280,6 +281,18 @@ class RAGRouter:
         5. Else → mid (cost-effective default)
         """
         rationale = []
+        lower_query = query.lower()
+        testing_keywords = (
+            "test",
+            "bug",
+            "regression",
+            "leak",
+            "crash",
+            "failure",
+            "stress",
+            "fuzz",
+        )
+        is_testing_task = any(keyword in lower_query for keyword in testing_keywords) or analysis.intent in {"test", "debug", "verify"}
         
         # Decision: Premium tier
         if analysis.requires_validation:
@@ -303,7 +316,7 @@ class RAGRouter:
         # Decision: Mid tier (default for most work)
         else:
             tier = "mid"
-            if "test" in query.lower() or "bug" in query.lower():
+            if is_testing_task:
                 rationale.append("Testing/bug hunting - MiniMax excels here")
             else:
                 rationale.append("Standard task - cost-effective tier")
@@ -313,10 +326,11 @@ class RAGRouter:
         
         # Estimate cost
         estimated_input = analysis.estimated_context_tokens + len(query) * 4
-        estimated_output = 2000  # Conservative estimate
+        estimated_output = 5000  # Conservative estimate
+        tokens_per_unit = 1_000_000.0
         cost = (
-            (estimated_input / 1_000_000) * model_info["input_cost"] +
-            (estimated_output / 1_000_000) * model_info["output_cost"]
+            (estimated_input / tokens_per_unit) * model_info["input_cost"] +
+            (estimated_output / tokens_per_unit) * model_info["output_cost"]
         )
         
         # Get RAG context if needed
@@ -354,11 +368,28 @@ def route_query(query: str, repo_root: Optional[Path] = None) -> RoutingDecision
     """
     if repo_root is None:
         # Try to detect repo root
-        repo_root = Path.cwd()
-        while repo_root != repo_root.parent:
-            if (repo_root / ".git").exists():
+        current = Path.cwd()
+        detected_root: Optional[Path] = None
+        current_path: Optional[Path] = None
+        visited = set()
+        while True:
+            marker = current / ".git"
+            marker_parent = getattr(marker, "parent", None)
+            if isinstance(marker_parent, pathlib.Path):
+                current_path = marker_parent
+            try:
+                exists = marker.exists()
+            except Exception:
+                exists = False
+            if exists:
+                detected_root = marker_parent or current_path or pathlib.Path.cwd()
                 break
-            repo_root = repo_root.parent
+            parent = getattr(current, "parent", None)
+            if parent is None or parent == current or id(parent) in visited:
+                break
+            visited.add(id(parent))
+            current = parent
+        repo_root = detected_root or current_path or pathlib.Path.cwd()
     
     router = RAGRouter(repo_root)
     return router.route(query, repo_root)

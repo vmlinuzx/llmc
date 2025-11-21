@@ -148,8 +148,9 @@ def test_registry_invalid_path_expansion(tmp_path: Path) -> None:
 
     client = RegistryClient(path=registry_file)
 
-    with pytest.raises(Exception):  # Should fail on path resolution
-        client.load()
+    # Invalid paths should be gracefully skipped, not crash
+    result = client.load()
+    assert len(result) == 0, "Invalid entries should be skipped, not cause crash"
 
 
 def test_registry_special_characters_in_paths(tmp_path: Path) -> None:

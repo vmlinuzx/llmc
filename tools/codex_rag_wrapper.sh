@@ -163,6 +163,13 @@ EOF
       CODEX_FLAGS="--yolo"
     fi
 
+    if [ -n "${LLMC_WRAPPER_VALIDATE_ONLY:-}" ]; then
+      # Render preamble to ensure context files exist, skip Codex invocation.
+      build_preamble >/dev/null 2>&1 || true
+      printf 'codex wrapper validate-only: repo=%s prompt=%s\n' "$REPO_ROOT" "${USER_PROMPT:-}" >&2
+      exit 0
+    fi
+
     # If no prompt at all, drop into interactive TUI:
     # - We send a preamble with LLMC context and RAG guidance,
     #   then hand full control over to codex.

@@ -6,7 +6,7 @@ import random
 import signal
 import time
 import threading
-from typing import List
+from typing import List, Optional
 
 from .control import read_control_events
 from .logging_utils import get_logger
@@ -23,12 +23,12 @@ class Scheduler:
         self,
         config: DaemonConfig,
         registry: RegistryClient,
-        state_store: StateStore,
+        state_store: Optional[StateStore],
         workers: WorkerPool,
     ) -> None:
         self.config = config
         self.registry = registry
-        self.state_store = state_store
+        self.state_store = state_store or StateStore(config.state_store_path)
         self.workers = workers
         self.logger = get_logger("rag_daemon.scheduler", config)
         self._shutdown_requested = threading.Event()
@@ -116,12 +116,10 @@ class Scheduler:
         now,
         force: bool,
     ) -> bool:
-        from datetime import timedelta
-
         if state is None:
             return True
 
-        if state.last_run_status == "running":
+        if state.last_run_status == "running" and not force:
             return False
 
         if state.consecutive_failures >= self.config.max_consecutive_failures and not force:
@@ -132,6 +130,8 @@ class Scheduler:
 
         if state.last_run_finished_at is None:
             return True
+
+        from datetime import timedelta
 
         min_interval = repo.min_refresh_interval or timedelta(
             seconds=self.config.tick_interval_seconds

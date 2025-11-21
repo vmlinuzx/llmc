@@ -23,19 +23,21 @@ class TestWrapperScripts:
 
         # Note: These scripts don't have --help flag explicitly defined,
         # so we test their behavior without arguments
-        # The script will try to run, which is expected behavior
-        # This test documents current behavior
+        # Use LLMC_WRAPPER_VALIDATE_ONLY to skip actual claude invocation
+        env = os.environ.copy()
+        env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
         result = subprocess.run(
             [str(wrapper_path)],
             capture_output=True,
             text=True,
-            timeout=10
+            timeout=10,
+            env=env
         )
 
-        # Script should fail because ANTHROPIC_AUTH_TOKEN is not set
-        assert result.returncode != 0
-        assert "ANTHROPIC_AUTH_TOKEN is not set" in result.stderr
+        # Script should succeed in validate-only mode
+        assert result.returncode == 0
+        assert "validate-only" in result.stderr
 
     def test_claude_minimax_wrapper_missing_env_vars(self):
         """Test that cmw.sh validates required env vars and exits with error."""
@@ -63,6 +65,7 @@ class TestWrapperScripts:
             # Set up required env var
             env = os.environ.copy()
             env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
+            env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
             # Test with --repo flag pointing to existing directory
             result = subprocess.run(
@@ -76,6 +79,8 @@ class TestWrapperScripts:
             # Script will try to run but may fail on other checks
             # This verifies --repo flag parsing works
             # We don't assert failure because it might succeed in some environments
+            assert result.returncode == 0
+            assert "validate-only" in result.stderr
 
     def test_claude_minimax_wrapper_yolo_flag(self):
         """Test that cmw.sh accepts --yolo flag."""
@@ -84,6 +89,7 @@ class TestWrapperScripts:
         with tempfile.TemporaryDirectory() as tmpdir:
             env = os.environ.copy()
             env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
+            env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
             # Test with --yolo flag
             result = subprocess.run(
@@ -95,6 +101,8 @@ class TestWrapperScripts:
             )
 
             # Verify flag is accepted (won't assert success due to missing CLI)
+            assert result.returncode == 0
+            assert "validate-only" in result.stderr
 
     def test_codex_wrapper_missing_env(self):
         """Test that cw.sh behavior when env vars might be missing."""
@@ -103,15 +111,21 @@ class TestWrapperScripts:
         # Note: codex wrapper doesn't require explicit env check at start
         # It will fail when trying to execute codex command
 
+        env = os.environ.copy()
+        env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
+
         result = subprocess.run(
             [str(wrapper_path), "test prompt"],
             capture_output=True,
             text=True,
+            env=env,
             timeout=10
         )
 
         # May fail because codex CLI is not available
         # This test documents expected behavior
+        assert result.returncode == 0
+        assert "validate-only" in result.stderr
 
     def test_codex_wrapper_repo_flag(self):
         """Test that cw.sh accepts --repo flag."""
@@ -119,15 +133,20 @@ class TestWrapperScripts:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Test with --repo flag
+            env = os.environ.copy()
+            env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, "test prompt"],
                 capture_output=True,
                 text=True,
+                env=env,
                 timeout=10
             )
 
             # Verify repo flag is parsed
             # Actual execution will fail without codex CLI
+            assert result.returncode == 0
+            assert "validate-only" in result.stderr
 
     def test_codex_wrapper_repo_equals_syntax(self):
         """Test that cw.sh accepts --repo=/path syntax."""
@@ -135,14 +154,19 @@ class TestWrapperScripts:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Test with --repo=/path syntax
+            env = os.environ.copy()
+            env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
             result = subprocess.run(
                 [str(wrapper_path), f"--repo={tmpdir}", "test prompt"],
                 capture_output=True,
                 text=True,
+                env=env,
                 timeout=10
             )
 
             # Verify this syntax works
+            assert result.returncode == 0
+            assert "validate-only" in result.stderr
 
     def test_wrapper_script_existence(self):
         """Test that both wrapper scripts exist and are executable."""
@@ -176,6 +200,7 @@ class TestWrapperScripts:
         with tempfile.TemporaryDirectory() as tmpdir:
             env = os.environ.copy()
             env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
+            env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
             # Test with prompt containing spaces and special chars
             test_prompt = 'echo "hello world" && ls -la'
@@ -190,3 +215,5 @@ class TestWrapperScripts:
 
             # The script should accept the prompt with special characters
             # It will fail later due to missing CLI, but parsing should work
+            assert result.returncode == 0
+            assert "validate-only" in result.stderr

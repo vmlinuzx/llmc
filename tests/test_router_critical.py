@@ -301,9 +301,10 @@ class TestDemoteOnTimeoutRespectsPolicy:
         metrics = {}
         settings = RouterSettings()
 
-        # All non-truncation failures from 7b/14b should go to nano
-        # Truncation specifically also goes to nano
-        failure_types = ["timeout", "truncation", "parse", "validation", "unknown"]
+        # Timeouts and unknown errors from 7b/14b should go to nano
+        # Parse/validation errors from 7b promote to 14b (bigger context)
+        # Parse/validation errors from 14b demote to nano
+        failure_types = ["timeout", "truncation", "unknown"]
 
         for failure_type in failure_types:
             next_tier_7b = choose_next_tier_on_failure(
@@ -315,6 +316,28 @@ class TestDemoteOnTimeoutRespectsPolicy:
             )
             assert next_tier_7b == "nano", f"Failure {failure_type} from 7b should demote to nano"
 
+            next_tier_14b = choose_next_tier_on_failure(
+                failure_type=failure_type,
+                current_tier="14b",
+                metrics=metrics,
+                settings=settings,
+                promote_once=True
+            )
+            assert next_tier_14b == "nano", f"Failure {failure_type} from 14b should demote to nano"
+
+        # Parse/validation from 7b should promote to 14b (more context)
+        for failure_type in ["parse", "validation"]:
+            next_tier_7b = choose_next_tier_on_failure(
+                failure_type=failure_type,
+                current_tier="7b",
+                metrics=metrics,
+                settings=settings,
+                promote_once=True
+            )
+            assert next_tier_7b == "14b", f"Failure {failure_type} from 7b should promote to 14b"
+
+        # Parse/validation from 14b should demote to nano
+        for failure_type in ["parse", "validation"]:
             next_tier_14b = choose_next_tier_on_failure(
                 failure_type=failure_type,
                 current_tier="14b",

@@ -319,7 +319,7 @@ def test_scheduler_run_tick_with_mixed_states(tmp_path: Path) -> None:
         "repo-success": RepoState(
             repo_id="repo-success",
             last_run_status="success",
-            last_run_finished_at=now - timedelta(seconds=30),  # Recent
+            last_run_finished_at=now - timedelta(minutes=2),  # Old enough
         ),
         "repo-cooldown": RepoState(
             repo_id="repo-cooldown",

@@ -1,0 +1,168 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-7.4.4, pluggy-1.4.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pytest.ini
+plugins: anyio-4.11.0
+collected 1221 items / 1 skipped
+
+tests/test_ast_chunker.py ....                                           [  0%]
+tests/test_cli_clean_guard.py ..                                         [  0%]
+tests/test_cli_contracts.py ..............................               [  2%]
+tests/test_cli_entry_error_codes.py .                                    [  3%]
+tests/test_cli_entry_json_output.py .                                    [  3%]
+tests/test_cli_path_safety.py ...                                        [  3%]
+tests/test_context_gateway_edge_cases.py ............................... [  5%]
+...................................                                      [  8%]
+tests/test_daemon_purge_guard.py ..                                      [  8%]
+tests/test_daemon_submission_path_safety.py ..                           [  9%]
+tests/test_database_bootstrap.py ..                                      [  9%]
+tests/test_doctor_paths_cli.py .                                         [  9%]
+tests/test_e2e_cli_workspace_guard.py ..                                 [  9%]
+tests/test_e2e_daemon_operation.py .........                             [ 10%]
+tests/test_e2e_daemon_registry_constraints.py ..                         [ 10%]
+tests/test_e2e_operator_workflows.py .........................           [ 12%]
+tests/test_embeddings_unit.py ...                                        [ 12%]
+tests/test_enrichment_data_integration_failure.py ...                    [ 12%]
+tests/test_enrichment_integration.py ssssssssssssssssss                  [ 14%]
+tests/test_enrichment_integration_edge_cases.py ........................ [ 16%]
+...................................................                      [ 20%]
+tests/test_enrichment_spanhash_and_fallbacks.py ..                       [ 20%]
+tests/test_error_handling_comprehensive.py .........ssss................ [ 23%]
+...............                                                          [ 24%]
+tests/test_export_force_guard.py .                                       [ 24%]
+tests/test_export_path_safety.py ..                                      [ 24%]
+tests/test_file_mtime_guard.py ssssssssssss                              [ 25%]
+tests/test_freshness_gateway.py sssssssssssss                            [ 26%]
+tests/test_freshness_index_status.py .....................               [ 28%]
+tests/test_fts_backend_edge_cases.py ................................... [ 31%]
+....................................................                     [ 35%]
+tests/test_fuzzy_linking.py .....                                        [ 35%]
+tests/test_graph_building.py sssss                                       [ 36%]
+tests/test_graph_enrichment_merge.py .....                               [ 36%]
+tests/test_graph_stitching_edge_cases.py ............................... [ 39%]
+                                                                         [ 39%]
+tests/test_index_status.py sssss                                         [ 39%]
+tests/test_log_management_scripts.py ................................... [ 42%]
+                                                                         [ 42%]
+tests/test_multiple_registry_entries.py ..........                       [ 43%]
+tests/test_nav_adapter_wraps_models.py ...                               [ 43%]
+tests/test_nav_meta.py ..............................                    [ 46%]
+tests/test_nav_meta_envelopes_ok_error.py .                              [ 46%]
+tests/test_nav_tool_handlers_unit.py ..                                  [ 46%]
+tests/test_nav_tools_integration.py ...........sssss.....                [ 47%]
+tests/test_p0_acceptance.py ..                                           [ 48%]
+tests/test_path_policy.py ..                                             [ 48%]
+tests/test_path_safety.py .....                                          [ 48%]
+tests/test_phase2_enrichment_integration.py .......                      [ 49%]
+tests/test_policy_logging_and_skip.py .                                  [ 49%]
+tests/test_rag_analytics.py ............................................ [ 52%]
+                                                                         [ 52%]
+tests/test_rag_benchmark.py ............................................ [ 56%]
+........                                                                 [ 57%]
+tests/test_rag_daemon_complete.py ..............................         [ 59%]
+tests/test_rag_daemon_e2e_smoke.py ..                                    [ 59%]
+tests/test_rag_daemon_registry_pathsafety.py ..                          [ 60%]
+tests/test_rag_daemon_scheduler.py .                                     [ 60%]
+tests/test_rag_daemon_scheduler_edge_cases.py .......................... [ 62%]
+.....                                                                    [ 62%]
+tests/test_rag_daemon_state_store.py ..                                  [ 62%]
+tests/test_rag_failures.py ssssss                                        [ 63%]
+tests/test_rag_failures_fixed.py ssssss                                  [ 63%]
+tests/test_rag_inspect_llm_tool.py .......                               [ 64%]
+tests/test_rag_nav_build_graph.py .                                      [ 64%]
+tests/test_rag_nav_enriched_tools.py ...                                 [ 64%]
+tests/test_rag_nav_gateway.py ....                                       [ 65%]
+tests/test_rag_nav_gateway_critical.py .....................             [ 66%]
+tests/test_rag_nav_metadata.py ...                                       [ 66%]
+tests/test_rag_nav_tools.py ...                                          [ 67%]
+tests/test_rag_operation_scripts.py .................................... [ 70%]
+                                                                         [ 70%]
+tests/test_rag_repo_complete.py .......................                  [ 72%]
+tests/test_rag_repo_registry.py .                                        [ 72%]
+tests/test_rag_repo_registry_pathsafety.py .                             [ 72%]
+tests/test_rag_repo_workspace.py .                                       [ 72%]
+tests/test_rag_repo_workspace_pathsafety.py ..                           [ 72%]
+tests/test_rag_router.py ............................................... [ 76%]
+.......                                                                  [ 76%]
+tests/test_refresh_sync_cron_scripts.py ................................ [ 79%]
+...................                                                      [ 81%]
+tests/test_repo_add_idempotency.py ............                          [ 82%]
+tests/test_reranker_edge_cases.py ...................................... [ 85%]
+..............................................                           [ 88%]
+tests/test_resilient_rag.py .                                            [ 89%]
+tests/test_router.py .....................                               [ 90%]
+tests/test_router_critical.py ...................                        [ 92%]
+tests/test_router_logic_bug.py ......                                    [ 92%]
+tests/test_ruthless_edge_cases.py .....................................  [ 95%]
+tests/test_safe_fs.py ..                                                 [ 95%]
+tests/test_safecopy_move_policy.py ..                                    [ 96%]
+tests/test_safefs_policy_integration.py ..                               [ 96%]
+tests/test_safetmp.py ..                                                 [ 96%]
+tests/test_scheduler_eligibility_comprehensive.py ...........            [ 97%]
+tests/test_schema_metadata.py .....                                      [ 97%]
+tests/test_service_components.py ..                                      [ 97%]
+tests/test_snapshot_workspace.py .                                       [ 98%]
+tests/test_symlink_escape_strict.py .                                    [ 98%]
+tests/test_worker_pool_comprehensive.py ............                     [ 99%]
+tests/test_wrapper_scripts.py ..........                                 [ 99%]
+tests/_examples/test_nav_template.py .                                   [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_rag_repo_integration_edge_cases.py:31: Legacy RAG repo integration API not present; skipping edge-case tests
+SKIPPED [1] tests/test_enrichment_integration.py:41: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:96: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:148: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:196: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:233: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:265: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:295: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:332: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:366: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:400: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:444: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:499: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:540: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:586: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:602: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:616: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:656: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_enrichment_integration.py:704: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_error_handling_comprehensive.py:252: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_error_handling_comprehensive.py:267: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_error_handling_comprehensive.py:285: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_error_handling_comprehensive.py:301: Enrichment functions not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:33: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:53: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:73: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:102: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:114: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:127: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:149: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:171: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:194: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:229: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:272: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:283: mtime guard not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:30: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:49: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:77: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:106: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:134: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:169: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:203: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:233: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:238: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:243: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:258: git integration not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:267: git integration not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:276: git integration not yet implemented
+SKIPPED [5] tests/test_graph_building.py: Standalone test script - run directly with python
+SKIPPED [5] tests/test_index_status.py: Standalone test script - run directly with python
+SKIPPED [1] tests/test_nav_tools_integration.py:248: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:285: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:316: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:345: CLI integration not yet implemented
+SKIPPED [1] tests/test_nav_tools_integration.py:364: CLI integration not yet implemented
+SKIPPED [6] tests/test_rag_failures.py: Standalone test script - run directly with python
+SKIPPED [6] tests/test_rag_failures_fixed.py: Standalone test script - run directly with python
+================= 1147 passed, 75 skipped in 92.52s (0:01:32) ==================
