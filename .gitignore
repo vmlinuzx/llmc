@@ -70,6 +70,7 @@ user_input_files/
 sys
 json
 click
+argparse/
 
 # Temporary top-level tests directory (to be removed)
 
