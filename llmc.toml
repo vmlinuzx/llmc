@@ -6,11 +6,48 @@ gpu_min_free_mb = 1536
 [storage]
 # index_path = ".rag/index_v2.db"
 
+
 [enrichment]
-# enabled = false
-# model = "gpt-4o-mini"
+#enabled = true
+#default_chain = "athena"
+
 batch_size = 50
 est_tokens_per_span = 350
+
+[[enrichment.chain]]
+chain = "athena"
+provider = "ollama"
+url = "http://192.168.5.20:11434"
+routing_tier = "7b"
+timeout_seconds = 120
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+[[enrichment.chain]]
+name = "athena-14b"
+chain = "athena"
+provider = "ollama"
+url = "http://192.168.5.20:11434"
+routing_tier = "14b"
+timeout_seconds = 180
+enabled = true
+options = { num_ctx = 12288, temperature = 0.2 }
+
+# [[enrichment.chain]]
+# name = "groq-70b"
+# chain = "groq"
+# provider = "gateway"
+# model = "groq/llama3-70b-8192"
+# routing_tier = "14b"
+# enabled = false
+
+# [[enrichment.chain]]
+# name = "google-flash"
+# chain = "google"
+# provider = "gemini"
+# model = "gemini-1.5-flash"
+# routing_tier = "nano"
+# enabled = false
 
 [indexing]
 exclude_dirs = [
@@ -29,6 +66,8 @@ exclude_dirs = [
     ".DS_Store",
     "Thumbs.db",
 ]
+
+
 
 
 

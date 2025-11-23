@@ -41,6 +41,16 @@ from router import (
 from tools.rag.config import index_path_for_write, get_est_tokens_per_span
 from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
+from tools.rag.enrichment_backends import BackendError, BackendAdapter, BackendCascade, AttemptRecord
+from tools.rag.config_enrichment import (
+    EnrichmentConfig,
+    EnrichmentBackendSpec,
+    EnrichmentConfigError,
+    load_enrichment_config,
+    select_chain,
+    filter_chain_for_tier,
+)
+
 
 
 GATEWAY_DEFAULT_TIMEOUT = 300.0
@@ -631,6 +641,18 @@ def parse_args() -> argparse.Namespace:
         default=int(os.environ.get("ROUTER_MAX_TOKENS_HEADROOM", "4000")),
         help="Reserved headroom below context limit when routing (default: 4000).",
     )
+    parser.add_argument(
+        "--chain-name",
+        type=str,
+        default=None,
+        help="Optional enrichment chain name from llmc.toml [enrichment.chain].",
+    )
+    parser.add_argument(
+        "--chain-config",
+        type=Path,
+        default=None,
+        help="Optional path to a TOML containing [enrichment] config (overrides repo llmc.toml).",
+    )
     return parser.parse_args()
 
 
@@ -902,6 +924,278 @@ def call_qwen(
         raise
 
 
+
+@dataclass
+class _AdapterConfigShim:
+    """Minimal config stand-in for backend adapters.
+
+    This lets adapters always expose a ``.config`` object with the fields
+    we care about (name, provider, model, tier, url, options, keep_alive)
+    without importing the real enrichment config schema into this module.
+    """
+
+    name: str
+    provider: str
+    model: str | None = None
+    tier: str | None = None
+    url: str | None = None
+    options: Dict[str, Any] | None = None
+    keep_alive: str | float | int | None = None
+
+
+class _OllamaBackendAdapter:
+    """BackendAdapter for Ollama backends.
+
+    This adapter is responsible for:
+
+    - Merging preset options from ``PRESET_CACHE`` with any per-backend
+      overrides from configuration.
+    - Invoking :func:`call_qwen` with ``backend="ollama"``.
+    - Running :func:`parse_and_validate` on the raw output.
+    - Mapping any failures to :class:`BackendError`.
+    """
+
+    def __init__(
+        self,
+        *,
+        config: object | None,
+        repo_root: Path,
+        args: argparse.Namespace,
+        host_url: str,
+        host_label: str | None,
+        tier_preset: Dict[str, Any],
+        tier_for_attempt: str,
+    ) -> None:
+        self._repo_root = repo_root
+        self._args = args
+        self._host_url = host_url
+        self._host_label = host_label or host_url
+        self._tier_for_attempt = tier_for_attempt
+        # Shallow copy so downstream tweaks never mutate PRESET_CACHE.
+        self._tier_preset: Dict[str, Any] = dict(tier_preset or {})
+        if config is None:
+            self._config: object = _AdapterConfigShim(
+                name=f"ollama-{tier_for_attempt}",
+                provider="ollama",
+                model=self._tier_preset.get("model"),
+                tier=tier_for_attempt,
+                url=host_url,
+                options=self._tier_preset.get("options"),
+                keep_alive=self._tier_preset.get("keep_alive"),
+            )
+        else:
+            self._config = config
+
+    @property
+    def config(self) -> object:
+        return self._config
+
+    def describe_host(self) -> str | None:
+        return self._host_label or self._host_url
+
+    def _resolve_effective_params(self) -> tuple[Dict[str, Any] | None, str | float | int | None, str | None]:
+        """Merge preset + config-specific overrides.
+
+        Returns ``(options, keep_alive, model_override)``.
+        """
+
+        options = self._tier_preset.get("options")
+        keep_alive = self._tier_preset.get("keep_alive")
+        model_override = self._tier_preset.get("model")
+
+        cfg = self._config
+        cfg_options = getattr(cfg, "options", None)
+        if cfg_options:
+            try:
+                # Take a copy so we never mutate the underlying config.
+                options = dict(cfg_options)
+            except TypeError:
+                options = cfg_options  # Fall back to value as-is.
+
+        cfg_keep_alive = getattr(cfg, "keep_alive", None)
+        if cfg_keep_alive is not None:
+            keep_alive = cfg_keep_alive
+
+        cfg_model = getattr(cfg, "model", None)
+        if isinstance(cfg_model, str) and cfg_model:
+            model_override = cfg_model
+
+        return options, keep_alive, model_override
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        item: Dict[str, Any],
+    ) -> tuple[Dict[str, Any], Dict[str, Any]]:
+        """Execute a single Ollama enrichment attempt."""
+
+        options, keep_alive, model_override = self._resolve_effective_params()
+
+        try:
+            stdout, meta = call_qwen(
+                prompt,
+                self._repo_root,
+                backend="ollama",
+                verbose=self._args.verbose,
+                retries=self._args.retries,
+                retry_wait=self._args.retry_wait,
+                poll_wait=1.5,
+                gateway_path=self._args.gateway_path,
+                gateway_timeout=self._args.gateway_timeout,
+                model_override=model_override,
+                ollama_options=options,
+                keep_alive=keep_alive,
+                ollama_base_url=self._host_url,
+                ollama_host_label=self._host_label,
+            )
+        except RuntimeError as exc:
+            raise BackendError(
+                f"Ollama runtime failure on {self.describe_host()}: {exc}",
+                failure_type="runtime",
+            ) from exc
+
+        result, failure = parse_and_validate(stdout, item, meta)
+        if result is not None:
+            # Ensure meta has useful defaults for downstream metrics.
+            if "model" not in meta and isinstance(model_override, str):
+                meta["model"] = model_override
+            meta.setdefault("backend", "ollama")
+            meta.setdefault("host", self.describe_host())
+            # Config-driven metadata (Phase 5)
+            cfg = self._config
+            backend_name = getattr(cfg, "name", None)
+            chain_name = getattr(cfg, "chain", None)
+            if backend_name and "backend_name" not in meta:
+                meta["backend_name"] = backend_name
+            if chain_name and "chain_name" not in meta:
+                meta["chain_name"] = chain_name
+            return result, meta
+
+        # Any parse/validation/truncation failure is mapped to BackendError.
+        if failure is None:
+            kind = "runtime"
+            detail: object = RuntimeError("unknown failure")
+        else:
+            kind, detail, payload = failure
+        raise BackendError(
+            f"{kind} failure on Ollama backend {self.describe_host()}: {detail}",
+            failure_type=str(kind),
+            failure=failure,
+        )
+
+
+class _GatewayBackendAdapter:
+    """BackendAdapter for gateway / Gemini backends.
+
+    This adapter wraps :func:`call_qwen` with ``backend="gateway"`` and
+    optionally overrides the ``GEMINI_MODEL`` environment variable while
+    the call is in flight. This keeps the actual gateway integration logic
+    localized to :func:`call_qwen`.
+    """
+
+    def __init__(
+        self,
+        *,
+        config: object | None,
+        repo_root: Path,
+        args: argparse.Namespace,
+    ) -> None:
+        self._repo_root = repo_root
+        self._args = args
+        self._config = config or _AdapterConfigShim(
+            name="gateway",
+            provider="gateway",
+            model=None,
+            tier=None,
+            url="gateway",
+        )
+
+    @property
+    def config(self) -> object:
+        return self._config
+
+    def describe_host(self) -> str | None:
+        return "gateway"
+
+    def _resolve_model(self) -> str | None:
+        cfg_model = getattr(self._config, "model", None)
+        if isinstance(cfg_model, str) and cfg_model:
+            return cfg_model
+        return None
+
+    def generate(
+        self,
+        prompt: str,
+        *,
+        item: Dict[str, Any],
+    ) -> tuple[Dict[str, Any], Dict[str, Any]]:
+        """Execute a single gateway enrichment attempt."""
+
+        gateway_model_prev: str | None = None
+        gateway_model_env_changed = False
+        cfg_model = self._resolve_model()
+        if cfg_model:
+            gateway_model_prev = os.environ.get("GEMINI_MODEL")
+            os.environ["GEMINI_MODEL"] = cfg_model
+            gateway_model_env_changed = True
+
+        try:
+            try:
+                stdout, meta = call_qwen(
+                    prompt,
+                    self._repo_root,
+                    backend="gateway",
+                    verbose=self._args.verbose,
+                    retries=self._args.retries,
+                    retry_wait=self._args.retry_wait,
+                    poll_wait=1.5,
+                    gateway_path=self._args.gateway_path,
+                    gateway_timeout=self._args.gateway_timeout,
+                    model_override=None,
+                    ollama_options=None,
+                    keep_alive=None,
+                    ollama_base_url=None,
+                    ollama_host_label=None,
+                )
+            except RuntimeError as exc:
+                raise BackendError(
+                    f"Gateway runtime failure: {exc}",
+                    failure_type="runtime",
+                ) from exc
+
+            result, failure = parse_and_validate(stdout, item, meta)
+            if result is not None:
+                if "model" not in meta and isinstance(cfg_model, str):
+                    meta["model"] = cfg_model
+                meta.setdefault("backend", "gateway")
+                # Config-driven metadata (Phase 5)
+                cfg = self._config
+                backend_name = getattr(cfg, "name", None)
+                chain_name = getattr(cfg, "chain", None)
+                if backend_name and "backend_name" not in meta:
+                    meta["backend_name"] = backend_name
+                if chain_name and "chain_name" not in meta:
+                    meta["chain_name"] = chain_name
+                return result, meta
+
+            if failure is None:
+                kind = "runtime"
+                detail = RuntimeError("unknown failure")
+            else:
+                kind, detail, payload = failure
+            raise BackendError(
+                f"{kind} failure on gateway backend: {detail}",
+                failure_type=str(kind),
+                failure=failure,
+            )
+        finally:
+            if gateway_model_env_changed:
+                if gateway_model_prev is None:
+                    os.environ.pop("GEMINI_MODEL", None)
+                else:
+                    os.environ["GEMINI_MODEL"] = gateway_model_prev
+
 def extract_json(text: str) -> dict:
     start = text.find("{")
     end = text.rfind("}")
@@ -1075,9 +1369,143 @@ def append_ledger_record(log_path: Path, record: dict) -> None:
         handle.write("\n")
 
 
+
+def _build_cascade_for_attempt(
+    *,
+    backend: str,
+    tier_for_attempt: str,
+    repo_root: Path,
+    args: argparse.Namespace,
+    ollama_host_chain: Sequence[Mapping[str, object]],
+    current_host_idx: int,
+    host_chain_count: int,
+    enrichment_config: "EnrichmentConfig | None" = None,
+    selected_chain: "Sequence[EnrichmentBackendSpec] | None" = None,
+) -> tuple[BackendCascade, str, Dict[str, Any], str | None, str | None, str, str | None]:
+    """Build a BackendCascade and preset metadata for a single attempt.
+
+    This mirrors the existing tier/back-end selection logic in ``main`` but
+    can optionally use a config-driven enrichment chain.
+    """
+
+    backend_choice = "gateway" if tier_for_attempt == "nano" else "ollama"
+    selected_backend = backend_choice if backend == "auto" else backend
+    preset_key = "14b" if tier_for_attempt == "14b" else "7b"
+    tier_preset = PRESET_CACHE.get(preset_key, PRESET_CACHE["7b"])
+
+    adapters: List[BackendAdapter] = []
+    host_label: str | None = None
+    host_url: str | None = None
+    chain_name_used: str | None = None
+
+    # Config-driven path: build adapters from EnrichmentConfig if available.
+    if enrichment_config is not None and selected_chain:
+        try:
+            tier_chain = filter_chain_for_tier(list(selected_chain), tier_for_attempt)
+        except Exception:
+            tier_chain = []
+
+        if tier_chain:
+            chain_name_used = tier_chain[0].chain
+            for spec in tier_chain:
+                provider = spec.provider
+                if provider == "ollama":
+                    url = spec.url or os.environ.get("ATHENA_OLLAMA_URL") or "http://localhost:11434"
+                    label = spec.name or url
+                    adapters.append(
+                        _OllamaBackendAdapter(
+                            config=spec,
+                            repo_root=repo_root,
+                            args=args,
+                            host_url=url,
+                            host_label=label,
+                            tier_preset=tier_preset,
+                            tier_for_attempt=tier_for_attempt,
+                        )
+                    )
+                    if host_url is None:
+                        host_url = url
+                        host_label = label
+                elif provider in {"gateway", "gemini"}:
+                    adapters.append(
+                        _GatewayBackendAdapter(
+                            config=spec,
+                            repo_root=repo_root,
+                            args=args,
+                        )
+                    )
+                else:
+                    # Unknown providers should have been rejected by config loader.
+                    continue
+
+            if adapters:
+                if isinstance(adapters[0], _GatewayBackendAdapter):
+                    selected_backend = "gateway"
+                else:
+                    selected_backend = "ollama"
+                cascade = BackendCascade(backends=adapters)
+                return cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name_used
+
+    # Legacy path: mirror existing tier/backend + host-chain behaviour.
+    if selected_backend == "ollama":
+        host_entry: Mapping[str, object] | None = None
+        if ollama_host_chain:
+            host_entry = ollama_host_chain[min(current_host_idx, host_chain_count - 1)]
+            host_label = str(host_entry.get("label") or "")
+            host_url = str(host_entry.get("url") or "")
+        adapters.append(
+            _OllamaBackendAdapter(
+                config=None,
+                repo_root=repo_root,
+                args=args,
+                host_url=host_url or "http://localhost:11434",
+                host_label=host_label,
+                tier_preset=tier_preset,
+                tier_for_attempt=tier_for_attempt,
+            )
+        )
+    elif selected_backend in {"gateway", "nano"}:
+        adapters.append(
+            _GatewayBackendAdapter(
+                config=None,
+                repo_root=repo_root,
+                args=args,
+            )
+        )
+    else:
+        # Fallback to Ollama semantics for unknown backends so behaviour
+        # degrades gracefully even if a future CLI/backend value is passed.
+        adapters.append(
+            _OllamaBackendAdapter(
+                config=None,
+                repo_root=repo_root,
+                args=args,
+                host_url="http://localhost:11434",
+                host_label=None,
+                tier_preset=tier_preset,
+                tier_for_attempt=tier_for_attempt,
+            )
+        )
+        selected_backend = "ollama"
+
+    cascade = BackendCascade(backends=adapters)
+    return cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name_used
+
+
 def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
+    enrichment_config: EnrichmentConfig | None = None
+    selected_chain: Sequence[EnrichmentBackendSpec] | None = None
+    try:
+        enrichment_config = load_enrichment_config(
+            repo_root=repo_root,
+        )
+        selected_chain = select_chain(enrichment_config, args.chain_name)
+    except EnrichmentConfigError as exc:
+        print(f"[enrichment] config error: {exc} – falling back to presets.", file=sys.stderr)
+        enrichment_config = None
+        selected_chain = None
     backend = args.backend
     if args.api:
         backend = "gateway"
@@ -1196,24 +1624,28 @@ def main() -> int:
                 failure_info: Tuple[str, object, object] | None = None
                 attempt_idx = 0
                 current_host_idx = 0
+                chain_name_used: str | None = None
 
                 while attempt_idx < max_attempts:
                     attempt_idx += 1
                     tier_for_attempt = current_tier or start_tier
                     tiers_history.append(tier_for_attempt)
-                    backend_choice = "gateway" if tier_for_attempt == "nano" else "ollama"
-                    selected_backend = backend_choice if backend == "auto" else backend
-                    preset_key = "14b" if tier_for_attempt == "14b" else "7b"
-                    tier_preset = PRESET_CACHE.get(preset_key, PRESET_CACHE["7b"])
+
+                    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name_used = _build_cascade_for_attempt(
+                        backend=backend,
+                        tier_for_attempt=tier_for_attempt,
+                        repo_root=repo_root,
+                        args=args,
+                        ollama_host_chain=ollama_host_chain,
+                        current_host_idx=current_host_idx,
+                        host_chain_count=host_chain_count,
+                        enrichment_config=enrichment_config,
+                        selected_chain=selected_chain,
+                    )
+
                     options = tier_preset.get("options") if selected_backend == "ollama" else None
                     keep_alive = tier_preset.get("keep_alive") if selected_backend == "ollama" else None
                     tier_model_override = tier_preset.get("model") if selected_backend == "ollama" else None
-                    host_label = None
-                    host_url = None
-                    if selected_backend == "ollama" and ollama_host_chain:
-                        host_entry = ollama_host_chain[min(current_host_idx, host_chain_count - 1)]
-                        host_label = host_entry.get("label")
-                        host_url = host_entry.get("url")
 
                     sampler: _GpuSampler | None = None
                     if _should_sample_local_gpu(selected_backend, host_url):
@@ -1221,39 +1653,82 @@ def main() -> int:
                         sampler.start()
                     attempt_start = time.monotonic()
                     try:
-                        stdout, meta = call_qwen(
+                        result, meta, backend_attempts = cascade.generate_for_span(
                             prompt,
-                            repo_root,
-                            backend=selected_backend,
-                            verbose=args.verbose,
-                            retries=args.retries,
-                            retry_wait=args.retry_wait,
-                            poll_wait=1.5,
-                            gateway_path=args.gateway_path,
-                            gateway_timeout=args.gateway_timeout,
-                            model_override=tier_model_override,
-                            ollama_options=options,
-                            keep_alive=keep_alive,
-                            ollama_base_url=host_url,
-                            ollama_host_label=host_label,
+                            item=item,
                         )
-                    except RuntimeError as exc:
-                        failure_info = ("runtime", exc, None)
+                    except BackendError as exc:
                         gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
                         attempt_duration = time.monotonic() - attempt_start
+
+                        # Runtime-equivalent path: underlying call_qwen raised.
+                        if exc.failure is None:
+                            attempt_records.append(
+                                {
+                                    "tier": tier_for_attempt,
+                                    "duration": attempt_duration,
+                                    "gpu": gpu_stats,
+                                    "success": False,
+                                    "failure": "runtime",
+                                    "options": options,
+                                    "model": tier_model_override,
+                                    "host": host_label or host_url,
+                                    "chain_name": chain_name_used,
+                                }
+                            )
+                            if router_enabled and tier_for_attempt != policy_fallback_tier:
+                                current_tier = policy_fallback_tier
+                                continue
+                            if (
+                                selected_backend == "ollama"
+                                and (not router_enabled or tier_for_attempt == policy_fallback_tier)
+                                and current_host_idx + 1 < host_chain_count
+                            ):
+                                current_host_idx += 1
+                                current_tier = start_tier
+                                time.sleep(args.retry_wait)
+                                continue
+                            if attempt_idx < max_attempts:
+                                time.sleep(args.retry_wait)
+                                continue
+                            break
+
+                        # Non-runtime failure (validation/parse/truncation/etc.).
+                        failure_info = exc.failure
+                        failure_type = classify_failure(failure_info)
+                        last_attempt = exc.attempts[-1] if exc.attempts else None
+                        last_model = getattr(last_attempt, "model", None) if last_attempt else None
+                        last_host = getattr(last_attempt, "host", None) if last_attempt else None
                         attempt_records.append(
                             {
                                 "tier": tier_for_attempt,
                                 "duration": attempt_duration,
                                 "gpu": gpu_stats,
                                 "success": False,
-                                "failure": "runtime",
+                                "failure": failure_type,
                                 "options": options,
-                                "model": tier_model_override,
-                                "host": host_label or host_url,
+                                "model": last_model or tier_model_override,
+                                "host": last_host or host_label or host_url,
+                                "chain_name": chain_name_used or (meta.get("chain_name") if isinstance(meta, dict) else None),
                             }
                         )
-                        if router_enabled and tier_for_attempt != policy_fallback_tier:
+                        if failure_type == "validation":
+                            schema_failures += 1
+
+                        # Always allow promotion to fallback tier on repeated validation
+                        # failures, even when router heuristics are disabled.
+                        promote_due_to_schema = (
+                            schema_failures >= policy_schema_threshold and tier_for_attempt != policy_fallback_tier
+                        )
+                        promote_due_to_size = (
+                            router_enabled and line_count >= policy_line_threshold and tier_for_attempt != policy_fallback_tier
+                        )
+                        promote_due_to_failure = (
+                            router_enabled
+                            and failure_type in {"runtime", "parse", "truncation"}
+                            and tier_for_attempt != policy_fallback_tier
+                        )
+                        if promote_due_to_schema or promote_due_to_size or promote_due_to_failure:
                             current_tier = policy_fallback_tier
                             continue
                         if (
@@ -1272,73 +1747,23 @@ def main() -> int:
 
                     gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
                     attempt_duration = time.monotonic() - attempt_start
-                    result, failure = parse_and_validate(stdout, item, meta)
-                    if result is not None:
-                        success = True
-                        final_result = result
-                        final_meta = {**meta, "gpu_stats": gpu_stats, "options": options, "tier_key": preset_key}
-                        attempt_records.append(
-                            {
-                                "tier": tier_for_attempt,
-                                "duration": attempt_duration,
-                                "gpu": gpu_stats,
-                                "success": True,
-                                "failure": None,
-                                "options": options,
-                                "model": meta.get("model"),
-                                "host": meta.get("host", host_label or host_url),
-                            }
-                        )
-                        break
-
-                    failure_info = failure
-                    failure_type = classify_failure(failure)
+                    success = True
+                    final_result = result
+                    final_meta = {**meta, "gpu_stats": gpu_stats, "options": options, "tier_key": preset_key}
                     attempt_records.append(
                         {
                             "tier": tier_for_attempt,
                             "duration": attempt_duration,
                             "gpu": gpu_stats,
-                            "success": False,
-                            "failure": failure_type,
+                            "success": True,
+                            "failure": None,
                             "options": options,
-                            "model": meta.get("model"),
-                            "host": meta.get("host", host_label or host_url),
-                            }
-                        )
-                    if failure_type == "validation":
-                        schema_failures += 1
-
-                    # Always allow promotion to fallback tier on repeated validation failures,
-                    # even when router heuristics are disabled. This preserves the "7B first,
-                    # promote on validation failure" policy documented in preprocessor_flow.md.
-                    promote_due_to_schema = (
-                        schema_failures >= policy_schema_threshold and tier_for_attempt != policy_fallback_tier
-                        )
-                    promote_due_to_size = (
-                        router_enabled and line_count >= policy_line_threshold and tier_for_attempt != policy_fallback_tier
+                            "model": meta.get("model") if isinstance(meta, dict) else None,
+                            "host": meta.get("host", host_label or host_url) if isinstance(meta, dict) else (host_label or host_url),
+                            "chain_name": meta.get("chain_name", chain_name_used) if isinstance(meta, dict) else chain_name_used,
+                        }
                     )
-                    promote_due_to_failure = (
-                        router_enabled
-                        and failure_type in {"runtime", "parse", "truncation"}
-                        and tier_for_attempt != policy_fallback_tier
-                    )
-                    if promote_due_to_schema or promote_due_to_size or promote_due_to_failure:
-                        current_tier = policy_fallback_tier
-                        continue
-                    if (
-                        selected_backend == "ollama"
-                        and (not router_enabled or tier_for_attempt == policy_fallback_tier)
-                        and current_host_idx + 1 < host_chain_count
-                    ):
-                        current_host_idx += 1
-                        current_tier = start_tier
-                        time.sleep(args.retry_wait)
-                        continue
-                    if attempt_idx < max_attempts:
-                        time.sleep(args.retry_wait)
-                        continue
                     break
-
                 router_tier = tiers_history[-1] if tiers_history else start_tier
                 final_tier = infer_effective_tier(final_meta, router_tier) if success else router_tier
                 promo_label = "none"
@@ -1479,9 +1904,10 @@ def main() -> int:
                     router_note = ""
                     if final_tier != router_tier:
                         router_note = f" [router {router_tier}]"
+                    chain_note = f" [{chain_name_used}]" if chain_name_used else ""
                     print(
                         f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                        f"({total_latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
+                        f"({total_latency:.2f}s) via tier {final_tier}{chain_note}{model_note}{router_note}"
                     )
                     if args.sleep:
                         time.sleep(args.sleep)

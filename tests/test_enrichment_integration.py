@@ -34,7 +34,7 @@ except ImportError:
 from tools.rag.types import SpanRecord, EnrichmentRecord, FileRecord
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Phase 0: Core enrichment pipeline not yet implemented (refactor pending)")
 class TestEnrichmentPipelineWithMockLLM:
     """Test enrichment pipeline with mocked LLM API responses."""
 
@@ -325,7 +325,7 @@ class TestEnrichmentPipelineWithMockLLM:
             assert result is not None
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Phase 0: Batch enrichment not yet implemented (refactor pending)")
 class TestEnrichmentBatchProcessing:
     """Test batch enrichment processing."""
 
@@ -437,7 +437,7 @@ class TestEnrichmentBatchProcessing:
             assert mock_llm_api.call_count >= 10
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Phase 0: DB integration not yet implemented (refactor pending)")
 class TestEnrichmentIntegrationWithDatabase:
     """Test enrichment integration with database operations."""
 
@@ -579,7 +579,7 @@ class TestEnrichmentIntegrationWithDatabase:
             assert row[0] == "v2"
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Phase 0: Edge case handling not yet implemented (refactor pending)")
 class TestEnrichmentEdgeCases:
     """Test enrichment edge cases."""
 
@@ -697,7 +697,7 @@ class TestEnrichmentEdgeCases:
             assert results is not None
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Phase 0: Concurrency handling not yet implemented (refactor pending)")
 class TestEnrichmentConcurrency:
     """Test enrichment concurrency handling."""
 
