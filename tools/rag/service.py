@@ -343,8 +343,6 @@ class RAGService:
             print(f"  ✅ Enriched pending spans with real LLM summaries")
         except Exception as e:
             print(f"  ⚠️  Enrichment failed: {e}")
-            import traceback
-            traceback.print_exc()
         
         # Step 3: Generate embeddings for enriched spans
         try:
