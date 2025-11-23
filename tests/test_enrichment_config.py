@@ -119,6 +119,8 @@ def test_select_chain_filters_disabled_entries() -> None:
         default_chain="default",
         concurrency=1,
         cooldown_seconds=0,
+        batch_size=5,
+        max_retries_per_span=3,
         chains={"default": [spec1, spec2]},
     )
     selected = select_chain(config, None)

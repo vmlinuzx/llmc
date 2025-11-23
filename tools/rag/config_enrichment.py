@@ -46,6 +46,8 @@ class EnrichmentConfig:
     default_chain: str
     concurrency: int
     cooldown_seconds: int
+    batch_size: int
+    max_retries_per_span: int
     chains: dict[str, list[EnrichmentBackendSpec]]
 
 
@@ -232,6 +234,8 @@ def load_enrichment_config(
        - ENRICH_CHAIN_JSON
        - ENRICH_CONCURRENCY
        - ENRICH_COOLDOWN_SECONDS
+       - ENRICH_BATCH_SIZE
+       - ENRICH_MAX_RETRIES_PER_SPAN
     3. Hard-coded defaults when TOML is missing.
     """
     if env is None:
@@ -265,6 +269,22 @@ def load_enrichment_config(
         cooldown_seconds = int(cooldown_raw)
     except (TypeError, ValueError):
         cooldown_seconds = 0
+    # Batch size and per-span retry defaults with env overrides.
+    batch_size_raw = env.get("ENRICH_BATCH_SIZE", root_enrichment.get("batch_size", 5))
+    try:
+        batch_size = int(batch_size_raw)
+    except (TypeError, ValueError):
+        batch_size = 5
+
+    max_retries_raw = env.get(
+        "ENRICH_MAX_RETRIES_PER_SPAN",
+        root_enrichment.get("max_retries_per_span", 3),
+    )
+    try:
+        max_retries_per_span = int(max_retries_raw)
+    except (TypeError, ValueError):
+        max_retries_per_span = 3
+
 
     # Chains from TOML.
     chains = _parse_chain_from_toml(data, default_chain=default_chain)
@@ -304,6 +324,8 @@ def load_enrichment_config(
         default_chain=default_chain,
         concurrency=concurrency,
         cooldown_seconds=cooldown_seconds,
+        batch_size=batch_size,
+        max_retries_per_span=max_retries_per_span,
         chains=chains,
     )
 

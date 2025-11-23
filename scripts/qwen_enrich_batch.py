@@ -1506,6 +1506,59 @@ def main() -> int:
         print(f"[enrichment] config error: {exc} – falling back to presets.", file=sys.stderr)
         enrichment_config = None
         selected_chain = None
+    if enrichment_config is not None and not selected_chain:
+        chain_name = args.chain_name or getattr(enrichment_config, "default_chain", "<default>")
+        print(
+            f"[enrichment] config has no enabled backends for chain {chain_name!r} – falling back to presets.",
+            file=sys.stderr,
+        )
+        enrichment_config = None
+        selected_chain = None
+    # Config-driven CLI defaults (Phase 3):
+    # If the user did not override certain args on the CLI (they are still at
+    # their argparse defaults), let the enrichment config fill them in.
+    if enrichment_config is not None:
+        try:
+            # batch_size defaults to 5 in argparse; treat that as 'no override'.
+            if getattr(args, "batch_size", None) == 5:
+                cfg_batch = getattr(enrichment_config, "batch_size", None)
+                if isinstance(cfg_batch, int) and cfg_batch > 0:
+                    if args.verbose:
+                        print(
+                            f"[enrichment] applying config batch_size={cfg_batch} (from llmc.toml)",
+                            file=sys.stderr,
+                        )
+                    args.batch_size = cfg_batch
+
+            # cooldown defaults to 0 seconds; only override when still at default.
+            if getattr(args, "cooldown", None) == 0:
+                cfg_cooldown = getattr(enrichment_config, "cooldown_seconds", None)
+                if isinstance(cfg_cooldown, int) and cfg_cooldown >= 0:
+                    if args.verbose and cfg_cooldown:
+                        print(
+                            f"[enrichment] applying config cooldown_seconds={cfg_cooldown} (from llmc.toml)",
+                            file=sys.stderr,
+                        )
+                    args.cooldown = cfg_cooldown
+
+            # retries default to 3; again, treat that as 'no override'.
+            if getattr(args, "retries", None) == 3:
+                cfg_retries = getattr(enrichment_config, "max_retries_per_span", None)
+                if isinstance(cfg_retries, int) and cfg_retries > 0:
+                    if args.verbose:
+                        print(
+                            f"[enrichment] applying config max_retries_per_span={cfg_retries} (from llmc.toml)",
+                            file=sys.stderr,
+                        )
+                    args.retries = cfg_retries
+        except Exception:
+            # Config is best-effort; if anything goes wrong, keep argparse values.
+            if args.verbose:
+                print(
+                    "[enrichment] failed to apply config-driven CLI defaults; keeping argparse values.",
+                    file=sys.stderr,
+                )
+
     backend = args.backend
     if args.api:
         backend = "gateway"
@@ -1515,6 +1568,12 @@ def main() -> int:
     if args.verbose:
         print(f"Backend selection: {backend}", file=sys.stderr)
 
+    if enrichment_config is not None and selected_chain and getattr(args, "verbose", False):
+        effective_chain = args.chain_name or getattr(enrichment_config, "default_chain", "<default>")
+        print(
+            f"[enrichment] using config-driven pipeline for chain {effective_chain!r}.",
+            file=sys.stderr,
+        )
     if args.cooldown:
         print(f"Cooldown: skipping spans modified within last {args.cooldown}s", file=sys.stderr)
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
@@ -1624,7 +1683,6 @@ def main() -> int:
                 failure_info: Tuple[str, object, object] | None = None
                 attempt_idx = 0
                 current_host_idx = 0
-                chain_name_used: str | None = None
 
                 while attempt_idx < max_attempts:
                     attempt_idx += 1
@@ -1904,10 +1962,9 @@ def main() -> int:
                     router_note = ""
                     if final_tier != router_tier:
                         router_note = f" [router {router_tier}]"
-                    chain_note = f" [{chain_name_used}]" if chain_name_used else ""
                     print(
                         f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                        f"({total_latency:.2f}s) via tier {final_tier}{chain_note}{model_note}{router_note}"
+                        f"({total_latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
                     )
                     if args.sleep:
                         time.sleep(args.sleep)

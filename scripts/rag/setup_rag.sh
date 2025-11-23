@@ -36,8 +36,9 @@ echo "✅ Requirements installed"
 echo ""
 
 # Check if already indexed
-if [ -d "$HOME/.deepseek_rag" ]; then
-    echo "📊 RAG database exists at ~/.deepseek_rag"
+RAG_DB_DIR="${RAG_DB_DIR:-$HOME/.deepseek_rag}"
+if [ -d "$RAG_DB_DIR" ]; then
+    echo "📊 RAG database exists at $RAG_DB_DIR"
     python index_workspace.py --stats
     echo ""
     
@@ -67,7 +68,7 @@ echo "  python query_context.py \"add validation\" --project glideclubs --contex
 echo ""
 echo "  # Start web UI"
 echo "  python rag_server.py"
-echo "  # Visit: http://localhost:8765"
+echo "  # Visit: http://localhost:${RAG_PORT:-8765}"
 echo ""
 echo "  # Start file watcher (auto-reindex)"
 echo "  python watch_workspace.py"

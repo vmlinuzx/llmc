@@ -270,3 +270,141 @@ class HybridRetriever:
                 seen_hashes.add(result.span_hash)
         
         return merged
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 – Enrichment orchestration helpers
+#
+# These helpers provide a small, testable façade over the lower-level
+# enrichment workers. They are intentionally conservative and do **not**
+# change any wire format or backend behavior – they just structure the
+# existing loop into a reusable API that other callers (CLI, daemons, tests)
+# can share.
+# ---------------------------------------------------------------------------
+
+from typing import Callable, Any, Sequence
+import logging
+
+from .database import Database
+from .workers import execute_enrichment, enrichment_plan
+
+
+@dataclass
+class EnrichmentBatchResult:
+    """Summary of a batch enrichment run.
+
+    This is deliberately minimal – it can be extended in later phases once the
+    CLI and integration tests are wired up.
+    """
+
+    total_planned: int
+    attempted: int
+    succeeded: int
+    failed: int
+    errors: list[str]
+
+    def as_dict(self) -> Dict[str, Any]:
+        return {
+            "total_planned": self.total_planned,
+            "attempted": self.attempted,
+            "succeeded": self.succeeded,
+            "failed": self.failed,
+            "errors": list(self.errors),
+        }
+
+
+def enrich_spans(
+    db: Database,
+    repo_root: Path,
+    llm_call: Callable[[Dict[str, Any]], Dict[str, Any]],
+    *,
+    limit: int = 32,
+    model: str = "local-llm",
+    cooldown_seconds: int = 0,
+    logger: logging.Logger | None = None,
+) -> EnrichmentBatchResult:
+    """Enrich pending spans in the database.
+
+    This is a thin, structured wrapper around :func:`execute_enrichment` that:
+
+    - leaves the existing LLM call contract untouched (``llm_call`` takes the
+      legacy prompt-dict used by the worker),
+    - returns a structured :class:`EnrichmentBatchResult` instead of a bare
+      ``(successes, errors)`` tuple.
+
+    Future phases can add chain / tier / backend-cascade selection here
+    without changing callers.
+    """
+    # Discover the current plan size for observability. We intentionally
+    # keep planning and execution loosely coupled in Phase 1 – tighter
+    # integration is handled in a later phase.
+    try:
+        planned = enrichment_plan(db, repo_root, limit=limit, cooldown_seconds=cooldown_seconds)
+        total_planned = len(planned)
+    except Exception:
+        # Planning is best-effort here; we never want it to block execution.
+        total_planned = 0
+
+    successes, errors = execute_enrichment(
+        db=db,
+        repo_root=repo_root,
+        llm_call=llm_call,
+        limit=limit,
+        model=model,
+        cooldown_seconds=cooldown_seconds,
+    )
+    attempted = successes + len(errors)
+
+    if logger:
+        logger.info(
+            "enrich_spans: planned=%d attempted=%d succeeded=%d failed=%d",
+            total_planned,
+            attempted,
+            successes,
+            len(errors),
+        )
+
+    return EnrichmentBatchResult(
+        total_planned=total_planned,
+        attempted=attempted,
+        succeeded=successes,
+        failed=len(errors),
+        errors=errors,
+    )
+
+
+def batch_enrich(
+    db: Database,
+    repo_root: Path,
+    llm_call: Callable[[Dict[str, Any]], Dict[str, Any]],
+    *,
+    batch_size: int = 32,
+    model: str = "local-llm",
+    cooldown_seconds: int = 0,
+    logger: logging.Logger | None = None,
+) -> EnrichmentBatchResult:
+    """High-level batch enrichment entry point.
+
+    This function is a small, DB-backed batch runner that delegates to
+    :func:`enrich_spans`, which in turn relies on the existing
+    `pending_enrichments` / `execute_enrichment` pipeline. In other
+    words: it processes the next N spans that currently have no
+    enrichment rows, using the provided ``llm_call``.
+
+
+    ``batch_enrich`` is intentionally a very small wrapper around
+    :func:`enrich_spans`. In later phases this is where we will introduce
+    configuration-driven chains, tiers, and retry policies.
+
+    For Phase 1 it simply forwards to :func:`enrich_spans` using ``batch_size``
+    as the ``limit``.
+    """
+    return enrich_spans(
+        db=db,
+        repo_root=repo_root,
+        llm_call=llm_call,
+        limit=batch_size,
+        model=model,
+        cooldown_seconds=cooldown_seconds,
+        logger=logger,
+    )

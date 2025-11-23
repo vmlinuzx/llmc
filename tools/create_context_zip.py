@@ -88,7 +88,13 @@ def main() -> int:
     dest_dir = repo_root.parent
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    zip_path = next_available_zip_path(dest_dir, repo_root.name)
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    
+    # New base name includes repo name and timestamp
+    base_zip_name = f"{repo_root.name}-{timestamp}"
+
+    zip_path = next_available_zip_path(dest_dir, base_zip_name)
 
     files = list_included_paths(repo_root)
     if not files:

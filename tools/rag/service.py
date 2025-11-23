@@ -238,8 +238,9 @@ class RAGService:
             return {}
         cfg_path = repo_root / "llmc.toml"
         if not cfg_path.exists():
-            # Fallback to dev repo config if present
-            dev_cfg = Path("/home/vmlinux/src/llmc/llmc.toml")
+            # Fallback to repo root relative to this file
+            # tools/rag/service.py -> ../../llmc.toml
+            dev_cfg = (Path(__file__).resolve().parents[2] / "llmc.toml")
             if dev_cfg.exists():
                 cfg_path = dev_cfg
             else:

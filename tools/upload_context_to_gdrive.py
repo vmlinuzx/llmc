@@ -147,7 +147,14 @@ def list_backups(remote_dir: str = DEFAULT_REMOTE_DIR) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Upload LLMC context ZIPs to Google Drive",
+        description="""
+Upload ZIPPED SNAPSHOTS of the LLMC context to Google Drive (BACKUPS).
+
+Use this script to save point-in-time backups (ZIP files) to the 'llmc_backups/' folder.
+Useful for sharing state or archiving versions.
+
+Use 'sync_to_gdrive.py' if you want a live 1:1 mirror of the codebase instead.
+""",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

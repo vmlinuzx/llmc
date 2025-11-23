@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MCPO_CONFIG="$ROOT/mcp/mcpo.config.json"
-CONFIG_DIR="${HOME}/.claude-server-commander"
+CONFIG_BASE="${XDG_CONFIG_HOME:-$HOME}"
+CONFIG_DIR="${CONFIG_BASE}/.claude-server-commander"
 CONFIG_FILE="${CONFIG_DIR}/config.json"
 
 require_cmd() {

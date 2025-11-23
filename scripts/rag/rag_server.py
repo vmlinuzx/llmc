@@ -304,6 +304,11 @@ async def build_context(request: ContextRequest):
 
 if __name__ == "__main__":
     import uvicorn
+    import os
+    
+    host = os.getenv("RAG_HOST", "0.0.0.0")
+    port = int(os.getenv("RAG_PORT", "8765"))
+    
     print("🚀 Starting RAG server...")
-    print("📍 Visit: http://localhost:8765")
-    uvicorn.run(app, host="0.0.0.0", port=8765)
+    print(f"📍 Visit: http://{host}:{port}")
+    uvicorn.run(app, host=host, port=port)

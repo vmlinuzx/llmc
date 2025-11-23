@@ -15,6 +15,7 @@ Requirements:
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import sys
 from pathlib import Path
@@ -83,6 +84,37 @@ def create_filter_file(repo_root: Path, files: list[str]) -> Path:
     return filter_path
 
 
+def generate_chart(repo_root: Path, files: list[str], chart_path: Path) -> None:
+    """Generate a tree-style repository chart using 'tree'."""
+    print(f"Generating repository chart: {chart_path.name}")
+    
+    # Prepare input for tree --fromfile
+    # tree expects paths relative to CWD
+    input_str = "\n".join(files)
+    
+    # Run tree command
+    # We pipe the file list to stdin
+    proc = subprocess.Popen(
+        ["tree", "--fromfile", "."],
+        cwd=repo_root,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    out, err = proc.communicate(input=input_str)
+    
+    if proc.returncode != 0:
+        print(f"Warning: Failed to generate chart with 'tree': {err}", file=sys.stderr)
+        # Fallback: simple list
+        with open(chart_path, "w") as f:
+            f.write("Repository File List:\n\n")
+            f.write(input_str)
+    else:
+        with open(chart_path, "w") as f:
+            f.write(out)
+
+
 def sync_to_gdrive(repo_root: Path, filter_file: Path) -> None:
     """Sync repo to Google Drive using rclone."""
     remote_path = f"{RCLONE_REMOTE}{REMOTE_DIR}"
@@ -106,6 +138,19 @@ def sync_to_gdrive(repo_root: Path, filter_file: Path) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="""
+Sync LLMC repo to Google Drive (LIVE MIRROR).
+
+Use this script to keep a 1:1 copy of your active codebase in the 'llmc/' folder on Google Drive.
+It respects .gitignore, so it only syncs what you care about.
+
+Use 'upload_context_to_gdrive.py' if you want zipped snapshots/backups instead.
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.parse_args()
+
     # Find repo
     repo_root = find_repo_root()
     print(f"Repository: {repo_root}")
@@ -119,6 +164,13 @@ def main() -> int:
         print("No files to sync!", file=sys.stderr)
         return 1
     
+    # Generate repository chart
+    chart_path = repo_root / "repository_chart.txt"
+    generate_chart(repo_root, files, chart_path)
+    
+    # Add chart to files list so it gets included in filter
+    files.append(chart_path.name)
+
     # Create filter file
     filter_file = create_filter_file(repo_root, files)
     
@@ -126,9 +178,11 @@ def main() -> int:
         # Sync to Google Drive
         sync_to_gdrive(repo_root, filter_file)
     finally:
-        # Clean up filter file
+        # Clean up
         if filter_file.exists():
             filter_file.unlink()
+        if chart_path.exists():
+            chart_path.unlink()
     
     return 0
 
