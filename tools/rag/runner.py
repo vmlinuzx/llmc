@@ -263,6 +263,10 @@ def run_enrich(
         raise RuntimeError(
             f"enrichment subprocess timed out after {timeout_s}s for repo {repo_root}"
         ) from exc
+    except subprocess.CalledProcessError as exc:
+        if exc.returncode == 2:
+            raise RuntimeError("No reachable LLM hosts found. Is Athena (or configured backend) down?") from exc
+        raise
 
 
 def command_detect(args: argparse.Namespace) -> None:
