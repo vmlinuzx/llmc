@@ -1,15 +1,14 @@
 """End-to-end tests for daemon operation with dummy job runner."""
 
 import json
-import subprocess
 import tempfile
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
+from tools.rag_daemon.models import DaemonConfig
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
@@ -338,7 +337,6 @@ exit 0
         first_run = state.last_run_finished_at
 
         # Create control flag to force refresh
-        from tools.rag_daemon.control import read_control_events
         from datetime import datetime, timedelta, timezone
 
         now = datetime.now(timezone.utc)
@@ -697,8 +695,6 @@ if __name__ == "__main__":
     sys.path.insert(0, "/home/vmlinux/src/llmc")
 
     # Import required modules
-    from tools.rag_daemon.registry import RegistryClient
-    from tools.rag_repo.registry import RegistryAdapter
 
     tests = [
         test_e2e_daemon_tick_with_dummy_runner,

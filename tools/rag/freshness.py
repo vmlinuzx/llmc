@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Core freshness types for LLMC RAG.
 
@@ -8,6 +6,8 @@ and freshness state used across RAG components. It intentionally mirrors
 the SDD for RAG Nav metadata without depending on any specific nav
 implementation module layout.
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Literal, Optional

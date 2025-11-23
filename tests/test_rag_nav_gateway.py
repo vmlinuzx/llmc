@@ -50,7 +50,6 @@ def test_compute_route_fresh_with_matching_head(tmp_path: Path, monkeypatch) -> 
     )
     save_status(repo_root, status)
 
-    from tools import rag_nav
     from tools.rag_nav import gateway
 
     monkeypatch.setattr(gateway, "_detect_git_head", lambda _: "abc123")

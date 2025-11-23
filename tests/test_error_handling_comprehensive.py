@@ -9,21 +9,17 @@ Tests cover critical error paths and edge cases across the codebase:
 - Input validation errors (malformed inputs, injection attempts)
 """
 
-import json
 import os
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
 import pytest
 import yaml
 
 from tools.rag.database import Database
 from tools.rag_repo.config import load_tool_config
-from tools.rag_daemon.models import DaemonConfig
 from tools.rag_daemon.registry import RegistryClient
-from tools.rag_repo.models import RegistryEntry
 
 # Import enrichment functions - these may not exist yet
 try:
@@ -711,7 +707,6 @@ class TestCommandInjectionHandling:
         If shell=True or unvalidated user input is passed, command injection is possible.
         """
         import subprocess
-        from pathlib import Path
         import tempfile
 
         with tempfile.TemporaryDirectory() as tmpdir:

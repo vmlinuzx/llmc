@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 from tools.rag_nav.tool_handlers import (
     tool_rag_search,
     tool_rag_where_used,

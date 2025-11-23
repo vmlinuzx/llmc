@@ -10,9 +10,8 @@ Then visit: http://localhost:8765
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional
 from pathlib import Path
 
 from query_context import ContextQuerier, CHROMA_DB_PATH

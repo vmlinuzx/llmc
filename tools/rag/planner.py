@@ -4,7 +4,8 @@ import json
 import re
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Tuple
+from collections.abc import Iterable, Sequence
 
 from .config import index_path_for_read
 from .database import Database

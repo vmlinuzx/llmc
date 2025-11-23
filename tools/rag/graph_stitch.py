@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, List, Set
+from collections.abc import Iterable
 
 
 @dataclass
@@ -102,8 +103,8 @@ def expand_search_items(repo_root: Path, items: List, max_expansion: int = 20, h
     - Returns either just items (unchanged) or a tuple (items, neighbors).
     """
     try:
-        seed = [getattr(it, "file", None) for it in items]
-        seed = [s for s in seed if s]
+        raw_seed = [getattr(it, "file", None) for it in items]
+        seed: List[str] = [str(s) for s in raw_seed if s]
         neighbors = stitch_neighbors(repo_root, seed_paths=seed, limit=max_expansion, hops=hops)
     except Exception:
         return items

@@ -1,9 +1,8 @@
 # llmcwrapper/adapter.py
 from __future__ import annotations
-import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from .config import load_resolved_config, ensure_run_snapshot
-from .rag_client import NullRAG, HttpRAG
+from .rag_client import HttpRAG
 from .providers import get_provider_driver
 from .capabilities import CAPABILITIES
 from .telemetry import log_event, new_corr_id

@@ -15,13 +15,13 @@ import argparse
 import json
 import sqlite3
 import sys
+try:
+    import _setup_path
+except ImportError:
+    pass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
-
-# Add repo to path
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
 
 from tools.rag.config import index_path_for_read
 from tools.rag.quality_check import classify_quality, RULE_VERSION

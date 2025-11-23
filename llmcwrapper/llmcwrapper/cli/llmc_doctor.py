@@ -1,6 +1,6 @@
 # llmcwrapper/cli/llmc_doctor.py
 from __future__ import annotations
-import argparse, os, json, socket, urllib.request
+import argparse, os, urllib.request
 from llmcwrapper.config import load_resolved_config
 from llmcwrapper.util import green, yellow, red, info
 

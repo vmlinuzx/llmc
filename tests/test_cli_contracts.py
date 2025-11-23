@@ -13,10 +13,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
-import yaml
 
 # Import the CLI modules
-from tools.rag.cli import cli, _emit_jsonl_line, _route_to_dict, _emit_start_event, _emit_error_event, _emit_end_event
+from tools.rag.cli import cli, _emit_jsonl_line, _emit_start_event, _emit_error_event, _emit_end_event
 
 
 class TestFlagExclusivity:
@@ -131,7 +130,6 @@ class TestJsonlEventOrder:
     def test_jsonl_event_sequence(self):
         """Test the JSONL event sequence: start → route → item* → end."""
         import io
-        import sys
 
         # Capture stdout
         captured = io.StringIO()

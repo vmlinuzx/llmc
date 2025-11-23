@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 SQLite-backed enrichment attachment helpers for RAG Nav results.
 
@@ -8,9 +6,12 @@ pre-computed enrichment snippets by `(path, line)` and attaches them to
 search / where-used / lineage results.
 """
 
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
+from collections.abc import Iterable
 import hashlib
 import logging
 import os

@@ -4,12 +4,10 @@ Comprehensive stress tests for LLMC RAG Daemon & Repo Tool.
 This script finds failures - green is suspicious!
 """
 
-import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
 
 def run_cmd(cmd, cwd="/home/vmlinux/src/llmc", timeout=5):
     """Run a command and return result."""

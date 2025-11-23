@@ -3,13 +3,14 @@
 
 from __future__ import annotations
 
+try:
+    import _setup_path
+except ImportError:
+    pass
+
 import argparse
 import sys
 from pathlib import Path
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 
 from tools.rag.config import index_path_for_read
 from tools.rag.planner import generate_plan

@@ -7,11 +7,9 @@ Tests cover:
 """
 
 import json
-import tempfile
 import subprocess
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
 
 
 def mock_compute_route(repo_root: Path, status):
@@ -705,7 +703,6 @@ class TestMissingGraphWhenUseRagTrue:
             pass
 
         # Make file unreadable
-        import stat
         graph_file.chmod(0o000)
 
         # Should handle permission error

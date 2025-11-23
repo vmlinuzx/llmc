@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Lightweight graph indices for where-used and lineage queries backed by
 `.llmc/rag_graph.json`.
@@ -14,10 +12,13 @@ Public API:
 - where_used_files(indices, symbol, limit) -> list[str]
 """
 
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set, Iterable
+from typing import Dict, List, Set
+from collections.abc import Iterable
 
 
 ALLOWED_EDGE_TYPES: Set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}

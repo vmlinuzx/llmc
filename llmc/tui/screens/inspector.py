@@ -2,15 +2,12 @@
 """
 Inspector Screen - LLM-Optimized Source Viewer
 """
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
-from textual import events
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
+from textual.containers import Container, Vertical, ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Static, Input, Button, Checkbox, Label
-from textual.message import Message
 
 from tools.rag.inspector import inspect_entity, InspectionResult
 

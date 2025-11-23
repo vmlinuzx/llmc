@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, ScrollableContainer, Grid
+from textual.containers import Container, ScrollableContainer, Grid
 from textual.screen import Screen
 from textual.widgets import Static, Input, Button
 from textual.message import Message

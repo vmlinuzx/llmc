@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Phase 3 — Patch P3: Minimal graph-backed results for RAG Nav tools.
 
@@ -8,10 +6,13 @@ for search/where-used/lineage using lightweight heuristics. No DB writes, no
 advanced scoring — just enough to satisfy tests with deterministic behavior.
 """
 
+from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
-from typing import Optional, Iterable, Dict, Any, List, Set, Tuple
+from typing import Optional, Dict, Any, List, Set, Tuple
+from collections.abc import Iterable
 import logging
 
 from tools.rag_nav.models import (
@@ -24,8 +25,23 @@ from tools.rag_nav.models import (
     LineageItem,
     LineageResult,
     EnrichmentData,
+    SourceTag,
 )
 from tools.rag.locator import identify_symbol_at_line
+
+# --- Context Gateway integration imports ---
+from tools.rag.config import load_rerank_weights
+from tools.rag.graph_index import (
+    GraphNotFound as IndexGraphNotFound,
+    lineage_files as lineage_files_from_index,
+    load_indices as load_graph_indices,
+    where_used_files as where_used_files_from_index,
+)
+from tools.rag_nav.gateway import compute_route as _compute_route
+from tools.rag.db_fts import fts_search, RagDbNotFound
+from tools.rag.rerank import rerank_hits, RerankHit
+from tools.rag.graph_stitch import expand_search_items, Neighbor
+# -------------------------------------------
 
 _enrich_log = logging.getLogger("llmc.enrich")
 
@@ -148,7 +164,7 @@ def _graph_path(repo_root: Path | str) -> Path:
     return _core_graph_path(Path(repo_root))
 
 
-def _load_graph(repo_root: str) -> tuple[list[dict], list[dict]]:
+def _load_graph(repo_root: Path | str) -> tuple[list[dict], list[dict]]:
     """Return (nodes, edges). If missing or invalid, return ([], [])."""
     path = _rag_graph_path(repo_root)
     try:
@@ -282,7 +298,7 @@ def build_graph_for_repo(repo_root: Path | str):
         and projects it into a lightweight nodes/edges structure consumed by
         the search/where-used/lineage helpers in this module.
     """
-    from tools.rag import build_graph_for_repo as _core_build_graph_for_repo, _graph_path as _core_graph_path
+    from tools.rag import build_graph_for_repo as _core_build_graph_for_repo
     from tools.rag.schema import build_graph_for_repo as _schema_build_graph_for_repo
 
     repo_root_path = Path(repo_root)
@@ -451,7 +467,7 @@ def build_graph_for_repo(repo_root: Path | str):
 # Phase 2: Enriched Schema Graph Builder
 # ============================================================================
 
-def _build_base_structural_schema_graph(repo_root: Path) -> any:
+def _build_base_structural_schema_graph(repo_root: Path) -> Any:
     """Loads/builds the purely structural graph from AST analysis.
     
     Internal helper for Phase 2. Reuses existing Phase 2 logic.
@@ -461,7 +477,7 @@ def _build_base_structural_schema_graph(repo_root: Path) -> any:
     return _schema_build_graph_for_repo(repo_root, require_enrichment=False)
 
 
-def _save_schema_graph(repo_root: Path, graph: any):
+def _save_schema_graph(repo_root: Path, graph: Any):
     """Saves the SchemaGraph to disk.
     
     Internal helper for Phase 2.
@@ -476,7 +492,7 @@ def _save_schema_graph(repo_root: Path, graph: any):
             json.dump(graph.to_dict(), f, indent=2)
 
 
-def build_enriched_schema_graph(repo_root: Path) -> any:
+def build_enriched_schema_graph(repo_root: Path) -> Any:
     """
     Builds the SchemaGraph and enriches its entities with data from the
     enrichment database.
@@ -491,7 +507,7 @@ def build_enriched_schema_graph(repo_root: Path) -> any:
     
     # 3. Build Spatial Index: (normalized_path, start_line) -> EnrichmentRecord
     # This bridges the gap between AST (Graph) and Content Hash (DB).
-    enrich_by_loc: Dict[Tuple[str, int], any] = {}
+    enrich_by_loc: Dict[Tuple[str, int], Any] = {}
     
     # load_enrichment_data now returns Dict[span_hash, List[EnrichmentRecord]]
     # We iterate the lists of records.
@@ -547,7 +563,7 @@ def build_enriched_schema_graph(repo_root: Path) -> any:
     return base_graph
 
 
-def _attach_enrichment_to_entity(entity: any, enrich: any) -> None:
+def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
     """Internal helper to attach enrichment fields to entity metadata.
     
     Args:
@@ -621,20 +637,7 @@ def _grep_snippets(repo_root, needle, max_items):
     return items
 
 
-# --- Context Gateway integration ----------------------------------------------
-from pathlib import Path as _Path
 
-from tools.rag.config import load_rerank_weights
-from tools.rag.graph_index import (
-    GraphNotFound as IndexGraphNotFound,
-    lineage_files as lineage_files_from_index,
-    load_indices as load_graph_indices,
-    where_used_files as where_used_files_from_index,
-)
-from tools.rag_nav.gateway import compute_route as _compute_route
-from tools.rag.db_fts import fts_search, RagDbNotFound, FtsHit
-from tools.rag.rerank import rerank_hits, RerankHit
-from tools.rag.graph_stitch import expand_search_items, Neighbor, GraphNotFound
 
 
 def _neighbors_to_items(neigh: List[Neighbor]) -> List[SearchItem]:
@@ -647,10 +650,10 @@ def _neighbors_to_items(neigh: List[Neighbor]) -> List[SearchItem]:
 
 def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
     """Search using DB FTS + reranker + 1-hop graph stitch when route allows RAG."""
-    route = _compute_route(_Path(repo_root))
-    repo_root_path = _Path(repo_root)
+    route = _compute_route(Path(repo_root))
+    repo_root_path = Path(repo_root)
     max_results = _max_n(limit, default=20)
-    source = "RAG_GRAPH" if route.use_rag else "LOCAL_FALLBACK"
+    source: SourceTag = "RAG_GRAPH" if route.use_rag else "LOCAL_FALLBACK"
 
     if route.use_rag:
         try:
@@ -714,9 +717,9 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
 
     # Fallback: local grep over .py files when no RAG route or DB issues.
     grep_hits = _grep_snippets(repo_root, query, max_results)
-    items: List[SearchItem] = []
+    fallback_items: List[SearchItem] = []
     for rel, sl, el, text in grep_hits:
-        items.append(
+        fallback_items.append(
             SearchItem(
                 file=rel,
                 snippet=Snippet(
@@ -727,7 +730,7 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
         )
     res = SearchResult(
         query=query,
-        items=items,
+        items=fallback_items,
         truncated=False,
         source=source,
         freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
@@ -740,13 +743,12 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
 
 def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> WhereUsedResult:
     """Where-used query using graph indices when the Context Gateway allows RAG."""
-    route = _compute_route(_Path(repo_root))
+    route = _compute_route(Path(repo_root))
     max_results = _max_n(limit, default=50)
-    source = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
-
+    source: SourceTag = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
     if getattr(route, "use_rag", False):
         try:
-            indices = load_graph_indices(_Path(repo_root))
+            indices = load_graph_indices(Path(repo_root))
             files = where_used_files_from_index(indices, symbol, limit=max_results)
             items: List[WhereUsedItem] = []
             for path in files[:max_results]:
@@ -796,15 +798,15 @@ def tool_rag_lineage(
     max_results: Optional[int] = None,
 ) -> LineageResult:
     """Lineage query using graph indices when the Context Gateway allows RAG."""
-    route = _compute_route(_Path(repo_root))
+    route = _compute_route(Path(repo_root))
     limit = _max_n(max_results, default=50)
     dir_norm = (direction or "downstream").lower().strip()
     normalized_direction = "upstream" if dir_norm in ("upstream", "callers") else "downstream"
-    source = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
+    source: SourceTag = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
 
     if getattr(route, "use_rag", False):
         try:
-            indices = load_graph_indices(_Path(repo_root))
+            indices = load_graph_indices(Path(repo_root))
             files = lineage_files_from_index(
                 indices,
                 symbol,
@@ -832,9 +834,9 @@ def tool_rag_lineage(
 
     # Fallback: naive grep for callsites "symbol(" as pseudo-lineage.
     grep_hits = _grep_snippets(repo_root, f"{symbol}(", limit)
-    items: List[LineageItem] = []
+    fallback_items: List[LineageItem] = []
     for rel, sl, el, text in grep_hits:
-        items.append(
+        fallback_items.append(
             LineageItem(
                 file=rel,
                 snippet=Snippet(
@@ -846,7 +848,7 @@ def tool_rag_lineage(
     res = LineageResult(
         symbol=symbol,
         direction=normalized_direction,
-        items=items,
+        items=fallback_items,
         truncated=False,
         source=source,
         freshness_state=route.freshness_state,

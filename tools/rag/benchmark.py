@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from statistics import mean
-from typing import Sequence
+from collections.abc import Sequence
 
 from .embeddings import build_embedding_backend
 

@@ -12,10 +12,9 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # tree_sitter import deferred to v2 - not needed for Python AST parsing
 # from tree_sitter import Node
@@ -53,7 +52,7 @@ class Entity:
     end_line: Optional[int] = None
     
     def to_dict(self) -> dict:
-        base = {
+        base: Dict[str, Any] = {
             "id": self.id,
             "kind": self.kind,
             "path": self.path,
@@ -492,7 +491,7 @@ def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List
     
     # Step 3: Build mapping index for fast lookup.
     # Key: (normalized_file_path, symbol) -> EnrichmentRecord
-    enrich_by_symbol: Dict[Tuple[str, str], any] = {}
+    enrich_by_symbol: Dict[Tuple[str, str], Any] = {}
 
     for enrich in enrichments:
         symbol = enrich.symbol
@@ -545,20 +544,20 @@ def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List
         
         # Try to find enrichment by (file_path, symbol).
         key = (norm_entity_path, symbol)
-        enrich = enrich_by_symbol.get(key)
+        found_enrich = enrich_by_symbol.get(key)
 
         # Legacy fallback: older indices may have stored only the short symbol
         # name in spans.symbol (e.g. "build_graph_for_repo"). If the fully-
         # qualified lookup failed, retry using the short name.
-        if enrich is None:
+        if found_enrich is None:
             short_symbol = symbol.split(".")[-1]
             if short_symbol != symbol:
                 fallback_key = (norm_entity_path, short_symbol)
-                enrich = enrich_by_symbol.get(fallback_key)
+                found_enrich = enrich_by_symbol.get(fallback_key)
         
-        if enrich:
+        if found_enrich:
             # Attach enrichment fields to entity metadata
-            _attach_enrichment_to_entity(entity, enrich)
+            _attach_enrichment_to_entity(entity, found_enrich)
             enriched_count += 1
         else:
             # Phase 2 policy: missing/partial enrichment is non-fatal.
@@ -582,7 +581,7 @@ def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List
     return graph
 
 
-def _attach_enrichment_to_entity(entity: Entity, enrich: any) -> None:
+def _attach_enrichment_to_entity(entity: Entity, enrich: Any) -> None:
     """Internal helper to attach enrichment fields to entity metadata.
     
     Args:

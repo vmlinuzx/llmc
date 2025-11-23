@@ -7,7 +7,8 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from typing import Dict, Iterable, Set
+from typing import Dict, Set
+from collections.abc import Iterable
 
 from .logging_utils import get_logger
 from .models import DaemonConfig, Job, JobResult, RepoDescriptor, RepoState, utc_now

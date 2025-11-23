@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Public-facing helpers for daemon job submission and path validation.
 
@@ -8,11 +6,13 @@ to the daemon should be normalized and constrained relative to configured
 roots using safe_subpath.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Optional, Tuple
 
 from tools.rag_repo.fs import SafeFS
-from tools.rag_repo.utils import PathTraversalError, canonical_repo_path, safe_subpath
+from tools.rag_repo.utils import canonical_repo_path, safe_subpath
 
 
 def validate_job_paths(

@@ -6,9 +6,7 @@ used to determine when RAG can be trusted.
 """
 
 import json
-import tempfile
 from pathlib import Path
-from typing import Literal
 
 import pytest
 

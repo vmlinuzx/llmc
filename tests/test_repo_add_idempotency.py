@@ -3,13 +3,11 @@
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 import yaml
 
-import pytest
 
 from tools.rag_repo.cli import _cmd_add
-from tools.rag_repo.models import RegistryEntry
 from tools.rag_repo.registry import RegistryAdapter
 
 

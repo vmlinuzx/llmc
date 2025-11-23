@@ -9,10 +9,6 @@ Uses canonical language-aware classifier (v1-cjk-aware) for consistent results.
 import sys
 from pathlib import Path
 
-# Add repo root to path for imports
-REPO_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(REPO_ROOT))
-
 from tools.rag.config import index_path_for_read
 
 

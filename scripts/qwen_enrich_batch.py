@@ -6,7 +6,6 @@ import _setup_path  # noqa: F401
 import argparse
 import json
 import os
-import resource
 import statistics
 import subprocess
 import threading
@@ -16,7 +15,8 @@ import time
 from urllib.parse import urlparse
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any
+from collections.abc import Mapping, Sequence
 
 from dataclasses import dataclass
 
@@ -37,7 +37,7 @@ from router import (
 from tools.rag.config import index_path_for_write, get_est_tokens_per_span
 from tools.rag.database import Database
 from tools.rag.workers import enrichment_plan, validate_enrichment
-from tools.rag.enrichment_backends import BackendError, BackendAdapter, BackendCascade, AttemptRecord
+from tools.rag.enrichment_backends import BackendError, BackendAdapter, BackendCascade
 from tools.rag.config_enrichment import (
     EnrichmentConfig,
     EnrichmentBackendSpec,
@@ -72,8 +72,8 @@ _LOW_UTIL_STREAK_SECONDS = 0.0
 class HealthResult:
     """Result of probing configured LLM backends."""
 
-    checked_hosts: List[Dict[str, str]]
-    reachable_hosts: List[Dict[str, str]]
+    checked_hosts: list[Dict[str, str]]
+    reachable_hosts: list[Dict[str, str]]
 
 
 def _normalize_ollama_url(value: str) -> str:
@@ -85,9 +85,9 @@ def _normalize_ollama_url(value: str) -> str:
     return trimmed.rstrip("/")
 
 
-def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> List[Dict[str, str]]:
+def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict[str, str]]:
     env = env or os.environ
-    hosts: List[Dict[str, str]] = []
+    hosts: list[Dict[str, str]] = []
 
     def add_host(label: str, url: str) -> None:
         normalized = _normalize_ollama_url(url)
@@ -120,7 +120,7 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> List[Dict
 
 
 def health_check_ollama_hosts(
-    hosts: List[Dict[str, str]],
+    hosts: list[Dict[str, str]],
     env: Mapping[str, str],
 ) -> HealthResult:
     """Probe each Ollama host with a tiny request to detect obvious outages.
@@ -128,8 +128,8 @@ def health_check_ollama_hosts(
     This is intentionally lightweight and best-effort; failures here should
     not crash the caller, but they do inform whether it is safe to proceed.
     """
-    checked: List[Dict[str, str]] = []
-    reachable: List[Dict[str, str]] = []
+    checked: list[Dict[str, str]] = []
+    reachable: list[Dict[str, str]] = []
 
     timeout_env = env.get("ENRICH_HEALTHCHECK_TIMEOUT_SECONDS", "5")
     try:
@@ -164,7 +164,7 @@ def health_check_ollama_hosts(
     return HealthResult(checked_hosts=checked, reachable_hosts=reachable)
 
 
-def _read_yaml(path: Path) -> Dict[str, Any]:
+def _read_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
     if yaml is None:
@@ -471,7 +471,7 @@ def azure_env_available(env: dict[str, str] | None = None) -> bool:
     return all(env.get(key) for key in required)
 
 
-def infer_effective_tier(meta: Dict[str, object], fallback: str) -> str:
+def infer_effective_tier(meta: dict[str, object], fallback: str) -> str:
     """Derive the tier label from backend/meta instead of router guesswork."""
 
     backend = str(meta.get("backend") or "").lower()
@@ -705,14 +705,14 @@ def call_via_ollama(
     retry_wait: float = 2.0,
     poll_wait: float = 1.5,
     model_override: str | None = None,
-    options: Dict[str, Any] | None = None,
+    options: dict[str, Any] | None = None,
     keep_alive: str | float | int | None = None,
     base_url: str | None = None,
     host_label: str | None = None,
-) -> Tuple[str, Dict[str, object]]:
+) -> tuple[str, Dict[str, object]]:
     base_url = (base_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")).rstrip("/")
     model_name = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
-    payload_dict: Dict[str, Any] = {"model": model_name, "prompt": prompt, "stream": False}
+    payload_dict: dict[str, Any] = {"model": model_name, "prompt": prompt, "stream": False}
     if options:
         payload_dict["options"] = options
     if keep_alive is not None:
@@ -803,7 +803,7 @@ def call_via_gateway(
     gateway_path: Path,
     timeout: float = GATEWAY_DEFAULT_TIMEOUT,
     verbose: bool = False,
-) -> Tuple[str, Dict[str, object]]:
+) -> tuple[str, Dict[str, object]]:
     if not gateway_path.exists():
         raise FileNotFoundError(f"llm gateway not found at {gateway_path}")
 
@@ -835,7 +835,7 @@ def call_via_gateway(
     output = proc.stdout.strip()
     if not output:
         raise RuntimeError("llm gateway returned empty output")
-    meta: Dict[str, object] = {
+    meta: dict[str, object] = {
         "backend": "gateway",
     }
     return output, meta
@@ -853,11 +853,11 @@ def call_qwen(
     gateway_path: Path | None = None,
     gateway_timeout: float = GATEWAY_DEFAULT_TIMEOUT,
     model_override: str | None = None,
-    ollama_options: Dict[str, Any] | None = None,
+    ollama_options: dict[str, Any] | None = None,
     keep_alive: str | float | int | None = None,
     ollama_base_url: str | None = None,
     ollama_host_label: str | None = None,
-) -> Tuple[str, Dict[str, object]]:
+) -> tuple[str, Dict[str, object]]:
     backend = backend or "auto"
     backend = backend.lower()
     env = os.environ
@@ -941,7 +941,7 @@ class _AdapterConfigShim:
     model: str | None = None
     tier: str | None = None
     url: str | None = None
-    options: Dict[str, Any] | None = None
+    options: dict[str, Any] | None = None
     keep_alive: str | float | int | None = None
 
 
@@ -965,7 +965,7 @@ class _OllamaBackendAdapter:
         args: argparse.Namespace,
         host_url: str,
         host_label: str | None,
-        tier_preset: Dict[str, Any],
+        tier_preset: dict[str, Any],
         tier_for_attempt: str,
     ) -> None:
         self._repo_root = repo_root
@@ -974,7 +974,7 @@ class _OllamaBackendAdapter:
         self._host_label = host_label or host_url
         self._tier_for_attempt = tier_for_attempt
         # Shallow copy so downstream tweaks never mutate PRESET_CACHE.
-        self._tier_preset: Dict[str, Any] = dict(tier_preset or {})
+        self._tier_preset: dict[str, Any] = dict(tier_preset or {})
         if config is None:
             self._config: object = _AdapterConfigShim(
                 name=f"ollama-{tier_for_attempt}",
@@ -1028,7 +1028,7 @@ class _OllamaBackendAdapter:
         self,
         prompt: str,
         *,
-        item: Dict[str, Any],
+        item: dict[str, Any],
     ) -> tuple[Dict[str, Any], Dict[str, Any]]:
         """Execute a single Ollama enrichment attempt."""
 
@@ -1130,7 +1130,7 @@ class _GatewayBackendAdapter:
         self,
         prompt: str,
         *,
-        item: Dict[str, Any],
+        item: dict[str, Any],
     ) -> tuple[Dict[str, Any], Dict[str, Any]]:
         """Execute a single gateway enrichment attempt."""
 
@@ -1224,7 +1224,7 @@ def normalize_evidence(
     if not isinstance(evidence, list):
         evidence = []
     # Drop entries with unexpected shapes or field values we do not track.
-    filtered: List[dict] = []
+    filtered: list[dict] = []
     for item in evidence:
         if not isinstance(item, dict):
             continue
@@ -1257,11 +1257,11 @@ def normalize_evidence(
     result["evidence"] = evidence
 
 
-def _as_list_of_strings(value: object) -> List[str]:
+def _as_list_of_strings(value: object) -> list[str]:
     if value is None:
         return []
     if isinstance(value, list):
-        items: List[str] = []
+        items: list[str] = []
         for entry in value:
             if isinstance(entry, str):
                 trimmed = entry.strip()
@@ -1304,8 +1304,8 @@ def normalize_schema_fields(result: dict) -> None:
 def parse_and_validate(
     raw: str,
     item: Dict,
-    meta: Dict[str, object],
-) -> Tuple[Dict | None, Tuple[str, object, object] | None]:
+    meta: dict[str, object],
+) -> tuple[Dict | None, Tuple[str, object, object] | None]:
     try:
         result = extract_json(raw)
     except ValueError as exc:
@@ -1328,7 +1328,7 @@ def parse_and_validate(
     return result, None
 
 
-def handle_failure(repo_root: Path, item: Dict, failure: Tuple[str, object, object]) -> None:
+def handle_failure(repo_root: Path, item: Dict, failure: tuple[str, object, object]) -> None:
     kind, detail, payload = failure
     if kind in {"parse", "truncation"}:
         raw = payload if isinstance(payload, str) else ""
@@ -1395,7 +1395,7 @@ def _build_cascade_for_attempt(
     preset_key = "14b" if tier_for_attempt == "14b" else "7b"
     tier_preset = PRESET_CACHE.get(preset_key, PRESET_CACHE["7b"])
 
-    adapters: List[BackendAdapter] = []
+    adapters: list[BackendAdapter] = []
     host_label: str | None = None
     host_url: str | None = None
     chain_name_used: str | None = None
@@ -1684,7 +1684,7 @@ def main() -> int:
                 tokens_in = estimate_tokens_from_text(prompt)
                 tokens_out = expected_output_tokens(item)
 
-                router_metrics: Dict[str, float] = {
+                router_metrics: dict[str, float] = {
                     "line_count": line_count,
                     "nesting_depth": nesting_depth,
                     "node_count": node_count,
@@ -1715,13 +1715,13 @@ def main() -> int:
                 else:
                     max_attempts = base_attempts
                 schema_failures = 0
-                tiers_history: List[str] = []
-                attempt_records: List[Dict[str, Any]] = []
+                tiers_history: list[str] = []
+                attempt_records: list[Dict[str, Any]] = []
                 current_tier = start_tier
                 success = False
-                final_result: Dict[str, object] | None = None
-                final_meta: Dict[str, object] = {}
-                failure_info: Tuple[str, object, object] | None = None
+                final_result: dict[str, object] | None = None
+                final_meta: dict[str, object] = {}
+                failure_info: tuple[str, object, object] | None = None
                 attempt_idx = 0
                 current_host_idx = 0
 
@@ -1872,7 +1872,7 @@ def main() -> int:
                 total_latency = time.monotonic() - wall_start
 
                 last_attempt = attempt_records[-1] if attempt_records else {}
-                gpu_stats_last: Dict[str, float | None] = {}
+                gpu_stats_last: dict[str, float | None] = {}
                 if isinstance(final_meta.get("gpu_stats"), dict):
                     gpu_stats_last = final_meta["gpu_stats"]  # type: ignore[assignment]
                 elif isinstance(last_attempt.get("gpu"), dict):

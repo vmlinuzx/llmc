@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Any
 
-import tempfile
 
 from tools.rag.database import Database
 from tools.rag.enrichment import batch_enrich, EnrichmentBatchResult

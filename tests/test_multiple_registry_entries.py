@@ -5,10 +5,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import pytest
 import yaml
 
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
+from tools.rag_daemon.models import DaemonConfig, RepoState
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.state_store import StateStore

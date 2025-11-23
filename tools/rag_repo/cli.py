@@ -14,7 +14,7 @@ from .models import RegistryEntry
 from .notifier import notify_refresh
 from .registry import RegistryAdapter
 from .workspace import init_workspace, plan_workspace, validate_workspace
-from .utils import PathTraversalError, canonical_repo_path, generate_repo_id, safe_subpath
+from .utils import canonical_repo_path, generate_repo_id, safe_subpath
 
 
 def resolve_workspace_from_cli(

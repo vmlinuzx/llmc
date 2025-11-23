@@ -11,7 +11,7 @@ Tests cover:
 import tempfile
 import json
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import pytest
 
 from tools.rag_nav.gateway import (
@@ -19,7 +19,6 @@ from tools.rag_nav.gateway import (
     _detect_git_head,
     RouteDecision,
 )
-from tools.rag_nav.models import FreshnessState, IndexStatus
 
 
 class TestComputeRoute:

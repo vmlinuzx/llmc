@@ -16,7 +16,7 @@ from tools.rag.nav_meta import (
     fallback_result,
     error_result,
 )
-from tools.rag.freshness import IndexStatus, FreshnessState
+from tools.rag.freshness import IndexStatus
 
 
 @pytest.mark.rag_freshness

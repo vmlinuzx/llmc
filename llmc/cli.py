@@ -4,11 +4,9 @@ LLMC: The Cyberpunk Console - 6 Panel Layout Demo
 """
 import time
 import random
-import json
-import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 # Conditional imports so it doesn't crash if you haven't pip installed yet
 try:

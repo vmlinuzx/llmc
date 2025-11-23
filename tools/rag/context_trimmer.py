@@ -15,10 +15,9 @@ Design philosophy: Local-first, sub-300ms latency, <1GB memory footprint
 from __future__ import annotations
 
 import tiktoken
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict
-import numpy as np
 
 
 @dataclass

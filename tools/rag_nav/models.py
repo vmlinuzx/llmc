@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Core data models for RAG Nav.
 
 This module defines:
@@ -8,8 +6,10 @@ This module defines:
  - Result item / envelope types for search, where-used, and lineage tools.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, asdict
-from typing import List, Literal, Optional, Dict, Any
+from typing import List, Literal, Optional
 
 from tools.rag.freshness import (
     FreshnessState as _FreshnessState,

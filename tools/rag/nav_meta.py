@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
-from typing import Generic, Literal, Optional, Sequence, TypeVar
+from typing import Generic, Literal, Optional, TypeVar
+from collections.abc import Sequence
 
 from .freshness import FreshnessState, IndexStatus
 

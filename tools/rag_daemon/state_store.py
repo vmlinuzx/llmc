@@ -6,7 +6,8 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Dict, Optional
+from collections.abc import Callable
 
 from .models import RepoState
 

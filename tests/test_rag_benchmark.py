@@ -11,8 +11,7 @@ Tests cover:
 
 import math
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Sequence
+from unittest.mock import Mock, patch
 
 from tools.rag.benchmark import (
     _cosine,

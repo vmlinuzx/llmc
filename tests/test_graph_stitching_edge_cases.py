@@ -7,10 +7,8 @@ Tests cover:
 """
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock, patch
 
 
 class TestOneHopNeighborExpansion:
@@ -374,7 +372,6 @@ class TestGraphStitchFailures:
             f.write('{"nodes": [], "edges": []}')
 
         # Make file unreadable
-        import stat
         graph_path.chmod(0o000)
 
         search_items = [Mock(file="file1.py")]

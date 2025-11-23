@@ -7,7 +7,7 @@ import json
 import math
 import os
 from dataclasses import dataclass
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 
 def estimate_tokens_from_text(text: str) -> int:

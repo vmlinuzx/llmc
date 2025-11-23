@@ -1,23 +1,19 @@
 """End-to-end smoke test for LLMC RAG Daemon and Repo Registration Tool."""
 
-import json
 import os
-import tempfile
 import time
 import yaml
-from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 import pytest
 
 from tools.rag_daemon.config import load_config
-from tools.rag_daemon.models import DaemonConfig, RepoState
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.workers import WorkerPool
 from tools.rag_repo.config import load_tool_config
-from tools.rag_repo.models import ToolConfig, RegistryEntry
+from tools.rag_repo.models import RegistryEntry
 from tools.rag_repo.registry import RegistryAdapter
 from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 from tools.rag_repo.inspect_repo import inspect_repo

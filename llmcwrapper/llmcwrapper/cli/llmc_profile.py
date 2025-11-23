@@ -1,7 +1,7 @@
 # llmcwrapper/cli/llmc_profile.py
 from __future__ import annotations
-import argparse, os, json, copy, sys
-from llmcwrapper.config import load_resolved_config, deep_merge, set_dotted
+import argparse, os, json
+from llmcwrapper.config import load_resolved_config
 
 def main():
     ap = argparse.ArgumentParser(description="Show or set active profile.")

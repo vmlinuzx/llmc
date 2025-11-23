@@ -9,9 +9,8 @@ Tests cover:
 
 import os
 import sqlite3
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import pytest
 
 # Import enrichment modules

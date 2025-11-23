@@ -22,13 +22,18 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import git
 
-from ast_chunker import ASTChunker
+try:
+    from ast_chunker import ASTChunker
+    from tools.rag.config import get_exclude_dirs
+except ImportError:
+    # Fallback for direct execution without PYTHONPATH
+    REPO_ROOT = Path(__file__).resolve().parents[2]
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from ast_chunker import ASTChunker
+    from tools.rag.config import get_exclude_dirs
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from tools.rag.config import get_exclude_dirs
 
 # Configuration
 def resolve_rag_db_path() -> Path:

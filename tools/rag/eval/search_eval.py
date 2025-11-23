@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Search evaluation harness for comparing RAG vs. fallback search.
 
@@ -7,6 +5,8 @@ This is a lightweight, file-oriented evaluator used in P9e to sanity-check
 that graph-backed RAG search is at least as good as the local fallback for a
 small set of canary queries.
 """
+
+from __future__ import annotations
 
 import argparse
 import fnmatch

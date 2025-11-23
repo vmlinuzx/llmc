@@ -1,13 +1,9 @@
-from pathlib import Path
 from typing import List, Tuple
 
 import pytest
 
 from tools.rag.schema import (
     build_graph_for_repo,
-    PythonSchemaExtractor,
-    Entity,
-    Relation,
 )
 
 

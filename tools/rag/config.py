@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 """
 Configuration helpers for RAG components: storage paths, embedding presets,
 and reranker weights for RAG Nav search.
 """
+
+from __future__ import annotations
 
 import configparser
 import os

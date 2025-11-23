@@ -4,7 +4,6 @@ Phase 2 Integration Tests: Enriched Schema Graph Building
 Tests that verify enrichment data flows from database to graph entities.
 """
 
-import pytest
 from pathlib import Path
 import json
 import sys

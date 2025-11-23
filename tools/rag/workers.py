@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
+from collections.abc import Callable
 
 from jsonschema import Draft7Validator, ValidationError
 

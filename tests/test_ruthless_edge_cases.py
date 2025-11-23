@@ -1,18 +1,15 @@
 """Ruthless edge case tests for daemon, registry, and router."""
 
-import json
 import os
-import tempfile
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import patch
 import pytest
 import yaml
 
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.control import read_control_events
 from tools.rag_daemon.workers import WorkerPool, make_job_id
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, Job, JobResult, ControlEvents
+from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, Job, ControlEvents
 from tools.rag_daemon.state_store import StateStore
 from scripts.router import RouterSettings, choose_start_tier, choose_next_tier_on_failure, estimate_json_nodes_and_depth
 

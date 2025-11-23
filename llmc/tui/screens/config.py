@@ -1,12 +1,11 @@
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, ScrollableContainer
+from textual.containers import ScrollableContainer
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Button, Label
+from textual.widgets import Footer, Static
 
 import os
 import sys # Import sys module
 from pathlib import Path
-from typing import Dict, Any
 
 # Import RAG configuration tools
 from tools.rag.config import (

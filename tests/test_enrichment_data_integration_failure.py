@@ -12,13 +12,12 @@ import pytest
 from pathlib import Path
 import sys
 import json
-import os
 
 # Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tools.rag.database import Database
-from tools.rag_nav.tool_handlers import tool_rag_search, tool_rag_where_used, tool_rag_lineage, _rag_graph_path
+from tools.rag_nav.tool_handlers import tool_rag_search, tool_rag_where_used
 
 class TestEnrichmentDataIntegrationSuccess:
     """Tests to prove the enrichment data integration is working"""

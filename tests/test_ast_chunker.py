@@ -2,10 +2,6 @@
 RUTHLESS Test Suite for AST Chunker
 Testing language coverage, structural boundaries, and robustness
 """
-import pytest
-from pathlib import Path
-import tempfile
-import os
 
 # Test files with known structure for validation
 PYTHON_TEST_FILE = '''

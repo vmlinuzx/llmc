@@ -5,7 +5,8 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List, Optional
+from collections.abc import Iterable
 
 from .database import Database
 from .config import (

@@ -12,7 +12,6 @@ NOTE: The compute_route function is not yet implemented. These tests serve as:
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 # Placeholder for the actual compute_route implementation
 # from tools.rag.gateway import compute_route

@@ -8,7 +8,6 @@ from typing import Dict, List, Optional, Literal, Tuple, Any
 
 from .schema import SchemaGraph
 from . import database as rag_database
-from .utils import find_repo_root
 from .config import index_path_for_read
 
 SourceMode = Literal["symbol", "file"]

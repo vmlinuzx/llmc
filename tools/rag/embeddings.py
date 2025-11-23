@@ -6,7 +6,8 @@ import logging
 import struct
 import time
 from dataclasses import dataclass
-from typing import Iterable, List, Sequence, Tuple
+from typing import List, Tuple
+from collections.abc import Iterable, Sequence
 
 from .config import (
     embedding_device_preference,

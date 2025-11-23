@@ -3,7 +3,8 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
+from collections.abc import Callable
 
 from tree_sitter import Node, Parser
 from tree_sitter_languages import get_language

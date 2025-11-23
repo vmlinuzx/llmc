@@ -1,6 +1,6 @@
-from __future__ import annotations
-
 """Backend abstraction and cascade helpers for enrichment."""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 import time

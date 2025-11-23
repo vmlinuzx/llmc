@@ -9,9 +9,6 @@ Tests cover:
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch
-from typing import Dict
 
 from scripts.router import (
     RouterSettings,

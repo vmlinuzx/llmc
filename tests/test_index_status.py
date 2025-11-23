@@ -6,7 +6,6 @@ import json
 import tempfile
 import os
 from pathlib import Path
-from datetime import datetime
 
 sys.path.insert(0, '/home/vmlinux/src/llmc')
 

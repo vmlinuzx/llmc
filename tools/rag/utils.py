@@ -5,7 +5,8 @@ import subprocess
 from functools import lru_cache
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Callable, Generator, Iterable, Iterator, List, Optional, Set, Tuple
+from typing import List, Optional
+from collections.abc import Callable, Iterable, Iterator
 
 from .config import get_exclude_dirs
 from .lang import is_supported, language_for_path

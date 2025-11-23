@@ -10,7 +10,7 @@ from tools.rag_nav.models import FreshnessState, IndexStatus
 try:
     from tools.rag_nav.metadata import load_status
 except ImportError:
-    def load_status(*args, **kwargs):
+    def load_status(repo_root: Path) -> Optional[IndexStatus]:
         return None
 
 

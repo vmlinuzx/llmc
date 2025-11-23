@@ -9,7 +9,6 @@ Covers:
 - Phase 2 Entity location fields (file_path, start_line, end_line)
 """
 
-import json
 import sys
 from pathlib import Path
 

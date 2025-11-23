@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List, Optional
+from collections.abc import Iterable
 
 import click
 

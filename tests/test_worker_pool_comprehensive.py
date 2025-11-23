@@ -1,17 +1,15 @@
 """Comprehensive tests for worker pool job execution and state transitions."""
 
-import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
-import tempfile
 
 import pytest
 
 # Mark all tests in this file as allowing sleep (timing-dependent tests)
 pytestmark = pytest.mark.allow_sleep
 
-from tools.rag_daemon.models import DaemonConfig, Job, RepoDescriptor, RepoState
+from tools.rag_daemon.models import DaemonConfig, Job, RepoDescriptor
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool, make_job_id
 

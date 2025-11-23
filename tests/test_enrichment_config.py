@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Mapping
+from collections.abc import Mapping
 
 from tools.rag.config_enrichment import (
     EnrichmentBackendSpec,
     EnrichmentConfig,
-    EnrichmentConfigError,
     load_enrichment_config,
     select_chain,
     filter_chain_for_tier,

@@ -5,7 +5,7 @@ from typing import Any, Dict, Tuple, List
 import pytest
 
 from tools.rag.config_enrichment import BackendConfig
-from tools.rag.enrichment_backends import BackendAdapter, BackendError, BackendCascade
+from tools.rag.enrichment_backends import BackendError, BackendCascade
 
 
 class _FakeBackend:

@@ -1,12 +1,10 @@
 """Comprehensive test suite for LLMC RAG Daemon."""
 
 import json
-import os
-import tempfile
 import yaml
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import Mock, patch, mock_open
+from unittest.mock import Mock, patch
 import pytest
 
 from tools.rag_daemon.config import load_config
@@ -16,7 +14,6 @@ from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.workers import WorkerPool
 from tools.rag_daemon.control import read_control_events
-from tools.rag_daemon.models import ControlEvents
 
 
 # ==============================================================================

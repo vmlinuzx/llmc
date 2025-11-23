@@ -6,9 +6,6 @@ Analyzes test failures across the entire test suite
 
 import subprocess
 import json
-import sys
-from pathlib import Path
-from collections import defaultdict
 
 def run_test_batch(test_pattern, output_file):
     """Run a batch of tests and capture results"""

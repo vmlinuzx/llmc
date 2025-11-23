@@ -8,7 +8,8 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, List
+from collections.abc import Iterable, Sequence
 
 from .config import index_path_for_write
 from .lang import EXTENSION_LANG

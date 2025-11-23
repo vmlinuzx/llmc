@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """
 Minimal canary evaluator for RAG Nav search.
 
 Runs a small set of queries against tool_rag_search and computes a simple
 precision@k metric to compare baseline vs. alternative rerank weights.
 """
+
+from __future__ import annotations
 
 import json
 import os

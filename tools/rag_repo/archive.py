@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import tarfile
-from pathlib import Path
-from typing import Any
 
 from .fs import SafeFS
 from .policy import PathPolicyError

@@ -10,10 +10,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .graph import GraphStore, GraphNeighbor
 from .types import SpanRecord
+
+# Hoisted imports
+from typing import Any
+from collections.abc import Callable
+import logging
+
+from .database import Database
+from .workers import execute_enrichment, enrichment_plan
 
 
 @dataclass
@@ -276,17 +284,6 @@ class HybridRetriever:
 # Phase 1 – Enrichment orchestration helpers
 #
 # These helpers provide a small, testable façade over the lower-level
-# enrichment workers. They are intentionally conservative and do **not**
-# change any wire format or backend behavior – they just structure the
-# existing loop into a reusable API that other callers (CLI, daemons, tests)
-# can share.
-# ---------------------------------------------------------------------------
-
-from typing import Callable, Any, Sequence
-import logging
-
-from .database import Database
-from .workers import execute_enrichment, enrichment_plan
 
 
 @dataclass

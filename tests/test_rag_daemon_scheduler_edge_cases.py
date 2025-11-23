@@ -7,12 +7,11 @@ Tests cover:
 - Control signal handling (shutdown, refresh)
 """
 
-import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock
 import pytest
 
-from tools.rag_daemon.models import DaemonConfig, Job, RepoDescriptor, RepoState, utc_now
+from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState, utc_now
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.state_store import StateStore
@@ -45,7 +44,6 @@ class TestExponentialBackoff:
 
     def test_exponential_backoff_max_cap(self):
         """Verify backoff doesn't exceed max_backoff_seconds."""
-        from datetime import timedelta
 
         config = DaemonConfig(
             tick_interval_seconds=10,
@@ -267,7 +265,6 @@ class TestControlSignalHandling:
         """Verify shutdown flag halts scheduler loop."""
         # Control signal handling is in control.py
         # Scheduler should check this and stop
-        from tools.rag_daemon.control import read_control_events
 
         # Mock control directory with shutdown flag
         # This is tested in control tests
@@ -276,7 +273,6 @@ class TestControlSignalHandling:
     def test_refresh_all_flag_triggers_all_repos(self):
         """Verify refresh_all flag makes all repos eligible."""
         # Even if not due for refresh, refresh_all should override
-        from tools.rag_daemon.control import read_control_events
 
         # Mock control events with refresh_all=True
         # Scheduler should then consider all repos eligible
@@ -286,7 +282,6 @@ class TestControlSignalHandling:
         """Verify specific repo IDs can be refreshed."""
         # refresh_repo_ids should contain specific repo IDs
         # Scheduler should force-refresh only those repos
-        from tools.rag_daemon.control import read_control_events
 
         # Mock: events.refresh_repo_ids = {"repo1", "repo3"}
         # Scheduler should force-refresh only repo1 and repo3
@@ -297,7 +292,6 @@ class TestControlSignalHandling:
         # Should handle: shutdown + refresh_all
         # Should handle: refresh_all + refresh_repo_ids
         # Priority order should be defined
-        from tools.rag_daemon.control import read_control_events
 
         pass
 
@@ -305,7 +299,6 @@ class TestControlSignalHandling:
         """Test behavior when control directory doesn't exist."""
         # Should handle missing directory gracefully
         # Probably creates it or uses defaults
-        from tools.rag_daemon.control import read_control_events
 
         pass
 
@@ -313,7 +306,6 @@ class TestControlSignalHandling:
         """Test handling when control files can't be read."""
         # Should handle permission errors gracefully
         # Best-effort approach expected
-        from tools.rag_daemon.control import read_control_events
 
         pass
 

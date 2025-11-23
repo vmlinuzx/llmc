@@ -11,8 +11,7 @@ mid-tier (MiniMax), and premium (Claude) models. These tests ensure:
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict
+from unittest.mock import Mock, patch
 
 from tools.rag_router import (
     RAGRouter,

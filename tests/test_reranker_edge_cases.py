@@ -8,10 +8,8 @@ Tests cover:
 """
 
 import json
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import Mock
 
 
 def create_test_hits(tmp_path: Path):
@@ -233,7 +231,6 @@ class TestRerankerWeightsConfiguration:
         config_path = self.create_weights_config(tmp_path, {"exact_match": 10.0})
 
         # Make unreadable
-        import stat
         config_path.chmod(0o000)
 
         try:

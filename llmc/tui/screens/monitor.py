@@ -7,7 +7,7 @@ from typing import Dict, Any
 
 from textual.app import ComposeResult
 from textual.widgets import Static, Button
-from textual.containers import Container, Grid, Vertical, ScrollableContainer
+from textual.containers import Container, Grid, ScrollableContainer
 from textual.screen import Screen
 
 from tools.rag.analytics import QueryTracker
@@ -250,7 +250,6 @@ class MonitorScreen(Screen):
         }
 
         try:
-            from tools.rag_nav.metadata import load_status
             from tools.rag_nav.tool_handlers import _load_graph
 
             index_db = repo_root / ".rag" / "index_v2.db"

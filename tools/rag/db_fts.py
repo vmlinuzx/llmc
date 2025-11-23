@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 DEFAULT_DB_CANDIDATES = [".rag/index_v2.db", ".rag/index.db", ".rag/index.db3"]
 

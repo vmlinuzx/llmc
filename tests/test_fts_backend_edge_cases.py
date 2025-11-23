@@ -6,12 +6,9 @@ Tests cover:
 - Various database states
 """
 
-import json
 import sqlite3
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-import pytest
+from unittest.mock import patch
 
 
 def create_test_db(tmp_path: Path, db_name: str = "rag.db") -> Path:

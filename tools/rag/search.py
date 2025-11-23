@@ -5,7 +5,8 @@ import math
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
+from collections.abc import Iterable, Sequence
 
 from .config import index_path_for_read
 from .database import Database

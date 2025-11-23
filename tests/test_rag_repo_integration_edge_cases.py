@@ -7,22 +7,15 @@ Tests cover:
 - Path validation and safety
 """
 
-import json
-import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 import pytest
 import yaml
 
-from tools.rag_repo.cli import cli
 
 # Legacy RAG repo API surface; skip these integration edge-case tests when the
 # older names are not available in the current implementation.
 try:
-    from tools.rag_repo.registry import RegistryClient  # type: ignore[attr-defined]
-    from tools.rag_repo.workspace import WorkspaceManager  # type: ignore[attr-defined]
     from tools.rag_repo.utils import validate_repo_paths, PathTraversalError  # type: ignore[attr-defined]
-    from tools.rag_repo.models import RepoEntry  # type: ignore[attr-defined]
     _LEGACY_REPO_API_AVAILABLE = True
 except Exception:  # pragma: no cover - compatibility guard
     _LEGACY_REPO_API_AVAILABLE = False
@@ -280,7 +273,6 @@ class TestWorkspaceCleanup:
         readonly_file.write_text("read only")
 
         # Test permission handling
-        import os
         import stat
         readonly_file.chmod(stat.S_IRUSR)
 

@@ -5,7 +5,8 @@ import struct
 from contextlib import contextmanager
 import time
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Sequence
+from typing import Optional
+from collections.abc import Iterable, Iterator, Sequence
 
 import json
 
@@ -488,7 +489,7 @@ class Database:
             JOIN spans AS s ON s.span_hash = e.span_hash
             """
         ).fetchall()
-        return [self._row_to_enrichment(row) for row in rows]
+        return [r for r in (self._row_to_enrichment(row) for row in rows) if r is not None]
 
     def fetch_enrichment_by_span_hash(self, span_hash: str) -> Optional[EnrichmentRecord]:
         """Lookup a single enrichment row by span_hash."""
