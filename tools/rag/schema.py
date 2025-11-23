@@ -751,7 +751,7 @@ def _discover_source_files(repo_root: Path, max_files: int = 10000) -> List[Path
         List[Path]: Absolute paths to discovered Python source files.
     """
     files: List[Path] = []
-    exclude_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".pytest_cache"}
+    exclude_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".pytest_cache", "patches"}
     
     for path in repo_root.rglob("*.py"):
         # Skip excluded directories anywhere in the path.
