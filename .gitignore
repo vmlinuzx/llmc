@@ -88,3 +88,4 @@ TEST_FIXES_SUMMARY_*.md
 *~
 .venv/
 /legacy/
+patches/
