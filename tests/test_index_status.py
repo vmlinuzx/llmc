@@ -155,7 +155,7 @@ def test_existing_status_file():
     """Test the actual status file in the repo"""
     print("Test 5: Existing status file")
 
-    status_path = Path("/home/vmlinux/src/llmc/.llmc/rag_index_status.json")
+    status_path = Path("/home/vmlinux/src/llmc/.llmc/rag/index_status.json")
 
     if not status_path.exists():
         print(f"  ⚠ WARNING: {status_path} does not exist")

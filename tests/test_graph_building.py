@@ -189,7 +189,8 @@ def test_graph_corrupt_handling():
     # Test 1: Missing file
     print("Test 1: Missing graph file")
     try:
-        graph_store = GraphStore("/nonexistent/path/graph.json")
+        graph_store = GraphStore()
+        graph_store.load_from_file(Path("/nonexistent/path/graph.json"))
         print("  ✗ Should have raised an error")
     except FileNotFoundError as e:
         print(f"  ✓ Correctly raised FileNotFoundError: {e}")
@@ -204,7 +205,8 @@ def test_graph_corrupt_handling():
     try:
         print("\nTest 2: Corrupt JSON file")
         try:
-            graph_store = GraphStore(corrupt_path)
+            graph_store = GraphStore()
+            graph_store.load_from_file(Path(corrupt_path))
             print("  ✗ Should have raised an error")
         except json.JSONDecodeError as e:
             print(f"  ✓ Correctly raised JSONDecodeError")
@@ -247,13 +249,16 @@ def test_existing_graph_artifacts():
     with open(graph_path, 'r') as f:
         data = json.load(f)
 
-    print(f"  Files indexed: {len(data.get('files', []))}")
-    print(f"  Sample files: {data.get('files', [])[:5]}")
+    # Check for entities (SchemaGraph format) or nodes (Nav graph format)
+    entities = data.get('entities') or data.get('nodes', [])
+    
+    print(f"  Entities indexed: {len(entities)}")
+    print(f"  Sample entities: {entities[:2]}")
 
     # Validate structure
-    assert "files" in data
-    assert isinstance(data["files"], list)
-    assert len(data["files"]) > 0
+    assert entities, "Graph should contain entities or nodes"
+    assert isinstance(entities, list)
+    assert len(entities) > 0
 
     print("✓ Existing graph is valid\n")
 

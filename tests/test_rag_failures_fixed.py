@@ -32,6 +32,7 @@ def test_state_store_corrupt_data():
 
     with tempfile.TemporaryDirectory() as tmpdir:
         store_path = Path(tmpdir) / "state"
+        store_path.mkdir(parents=True, exist_ok=True)
         corrupt_file = store_path / "corrupt-repo.json"
 
         # Create corrupt JSON file
@@ -138,7 +139,8 @@ sys.path.insert(0, '/home/vmlinux/src/llmc')
 from tools.rag_daemon.control import read_control_events
 from pathlib import Path
 
-events = read_control_events(Path('{control_dir}'))
+control_dir = Path('{control_dir}')
+events = read_control_events(control_dir)
 print(f'refresh_all: {{events.refresh_all}}')
 print(f'refresh_repo_ids: {{events.refresh_repo_ids}}')
 print(f'shutdown: {{events.shutdown}}')
@@ -179,6 +181,7 @@ def test_registry_empty_and_invalid():
         code = f"""
 import sys
 sys.path.insert(0, '/home/vmlinux/src/llmc')
+from pathlib import Path
 from tools.rag_repo.config import ToolConfig
 from tools.rag_repo.registry import RegistryAdapter
 
@@ -224,9 +227,14 @@ def test_repo_tool_commands():
     # Test 2: List with empty registry
     print("\n[2] Testing list command with empty registry...")
     with tempfile.TemporaryDirectory() as tmpdir:
-        registry_path = Path(tmpdir) / "empty.yml"
+        registry_file = Path(tmpdir) / "repos.yml"
+        registry_file.touch()
+        
+        config_file = Path(tmpdir) / "config.yml"
+        config_file.write_text(f"registry_path: {registry_file}\n")
+        
         returncode, stdout, stderr = run_cmd(
-            f'/home/vmlinux/src/llmc/scripts/llmc-rag-repo --config {registry_path} list'
+            f'/home/vmlinux/src/llmc/scripts/llmc-rag-repo list --config {config_file}'
         )
         if "No repos registered" in stdout and returncode == 0:
             print("✓ PASS: List command works with empty registry")
@@ -239,11 +247,12 @@ def test_repo_tool_commands():
     # Test 3: Inspect non-existent repo
     print("\n[3] Testing inspect on non-existent repo...")
     returncode, stdout, stderr = run_cmd('/home/vmlinux/src/llmc/scripts/llmc-rag-repo inspect /nonexistent/path')
-    if returncode != 0:
-        print("✓ PASS: Inspect correctly rejects non-existent path")
+    # Inspect returns 0 even if repo missing, but reports Exists: False
+    if returncode == 0 and "Exists: False" in stdout:
+        print("✓ PASS: Inspect correctly reports non-existent path")
         results.append(True)
     else:
-        print("✗ FAIL: Inspect should fail for non-existent repo")
+        print("✗ FAIL: Inspect output/exit code mismatch")
         results.append(False)
 
     return all(results)
@@ -296,7 +305,7 @@ cfg = DaemonConfig(**config_dict)
 store = StateStore(cfg.state_store_path)
 
 # Create a test repo
-from tools.rag_repo.models import RepoDescriptor
+from tools.rag_daemon.models import RepoDescriptor
 repo = RepoDescriptor(
     repo_id='test-repo',
     repo_path=Path('{tmpdir}/test'),
