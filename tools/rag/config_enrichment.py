@@ -49,6 +49,7 @@ class EnrichmentConfig:
     cooldown_seconds: int
     batch_size: int
     max_retries_per_span: int
+    enforce_latin1_enrichment: bool
     chains: dict[str, list[EnrichmentBackendSpec]]
 
 
@@ -286,6 +287,12 @@ def load_enrichment_config(
     except (TypeError, ValueError):
         max_retries_per_span = 3
 
+    enforce_latin1_raw = env.get(
+        "ENRICH_ENFORCE_LATIN1",
+        root_enrichment.get("enforce_latin1_enrichment", False),
+    )
+    enforce_latin1_enrichment = str(enforce_latin1_raw).lower() in ("1", "true", "yes", "on")
+
 
     # Chains from TOML.
     chains = _parse_chain_from_toml(data, default_chain=default_chain)
@@ -327,6 +334,7 @@ def load_enrichment_config(
         cooldown_seconds=cooldown_seconds,
         batch_size=batch_size,
         max_retries_per_span=max_retries_per_span,
+        enforce_latin1_enrichment=enforce_latin1_enrichment,
         chains=chains,
     )
 

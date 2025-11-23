@@ -577,6 +577,11 @@ def parse_args() -> argparse.Namespace:
         help="Enable or disable automatic tier routing (default: on).",
     )
     parser.add_argument(
+        "--enforce-latin1",
+        action="store_true",
+        help="Reject enrichments containing non-Latin-1 characters.",
+    )
+    parser.add_argument(
         "--start-tier",
         choices=["auto", "7b", "14b", "nano"],
         default=os.environ.get("ROUTER_DEFAULT_TIER", "auto"),
@@ -999,13 +1004,16 @@ class _OllamaBackendAdapter:
                 failure_type="runtime",
             ) from exc
 
-        result, failure = parse_and_validate(stdout, item, meta)
+        result, failure = parse_and_validate(
+            stdout, item, meta, enforce_latin1=self._args.enforce_latin1
+        )
         if result is not None:
             # Ensure meta has useful defaults for downstream metrics.
             if "model" not in meta and isinstance(model_override, str):
                 meta["model"] = model_override
             meta.setdefault("backend", "ollama")
             meta.setdefault("host", self.describe_host())
+            meta.setdefault("host_url", self._host_url)
             # Config-driven metadata (Phase 5)
             cfg = self._config
             backend_name = getattr(cfg, "name", None)
@@ -1108,7 +1116,9 @@ class _GatewayBackendAdapter:
                     failure_type="runtime",
                 ) from exc
 
-            result, failure = parse_and_validate(stdout, item, meta)
+            result, failure = parse_and_validate(
+                stdout, item, meta, enforce_latin1=self._args.enforce_latin1
+            )
             if result is not None:
                 if "model" not in meta and isinstance(cfg_model, str):
                     meta["model"] = cfg_model
@@ -1247,6 +1257,7 @@ def parse_and_validate(
     raw: str,
     item: Dict,
     meta: dict[str, object],
+    enforce_latin1: bool = False,
 ) -> tuple[Dict | None, Tuple[str, object, object] | None]:
     try:
         result = extract_json(raw)
@@ -1263,7 +1274,9 @@ def parse_and_validate(
     normalize_schema_fields(result)
     clamp_usage_snippet(result, max_lines=12)
     normalize_evidence(result, item["lines"][0], item["lines"][1])
-    ok, errors = validate_enrichment(result, item["lines"][0], item["lines"][1])
+    ok, errors = validate_enrichment(
+        result, item["lines"][0], item["lines"][1], enforce_latin1=enforce_latin1
+    )
     if not ok:
         return None, ("validation", errors, result)
 
@@ -1508,6 +1521,17 @@ def main() -> int:
                             file=sys.stderr,
                         )
                     args.retries = cfg_retries
+
+            # enforce_latin1 defaults to False; override if config says True
+            if not getattr(args, "enforce_latin1", False):
+                cfg_latin1 = getattr(enrichment_config, "enforce_latin1_enrichment", False)
+                if cfg_latin1:
+                    if args.verbose:
+                        print(
+                            "[enrichment] applying config enforce_latin1=True (from llmc.toml)",
+                            file=sys.stderr,
+                        )
+                    args.enforce_latin1 = True
         except Exception:
             # Config is best-effort; if anything goes wrong, keep argparse values.
             if args.verbose:
@@ -1955,9 +1979,26 @@ def main() -> int:
                     router_note = ""
                     if final_tier != router_tier:
                         router_note = f" [router {router_tier}]"
+                    
+                    # Extract config metadata for logging
+                    chain_name = final_meta.get("chain_name") if isinstance(final_meta, dict) else None
+                    backend_name = final_meta.get("backend_name") if isinstance(final_meta, dict) else None
+                    host_url = final_meta.get("host_url") if isinstance(final_meta, dict) else None
+                    
+                    config_note = ""
+                    if chain_name or backend_name or host_url:
+                        parts = []
+                        if chain_name:
+                            parts.append(f"chain={chain_name}")
+                        if backend_name:
+                            parts.append(f"backend={backend_name}")
+                        if host_url:
+                            parts.append(f"url={host_url}")
+                        config_note = f" [{', '.join(parts)}]"
+                    
                     print(
                         f"Stored enrichment {processed}: {item['path']}:{item['lines'][0]}-{item['lines'][1]} "
-                        f"({total_latency:.2f}s) via tier {final_tier}{model_note}{router_note}"
+                        f"({total_latency:.2f}s) via tier {final_tier}{model_note}{router_note}{config_note}"
                     )
                     if args.sleep:
                         time.sleep(args.sleep)

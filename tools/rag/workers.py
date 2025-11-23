@@ -231,6 +231,15 @@ def default_enrichment_callable(model: str) -> Callable[[Dict[str, Any]], Dict[s
     return _call
 
 
+def _is_latin1_safe(text: str) -> bool:
+    """Return True if text contains only Latin-1 characters."""
+    try:
+        text.encode('latin-1')
+        return True
+    except UnicodeEncodeError:
+        return False
+
+
 def execute_enrichment(
     db: Database,
     repo_root: Path,
@@ -238,6 +247,7 @@ def execute_enrichment(
     limit: int = 10,
     model: str = "local-qwen",
     cooldown_seconds: int = 0,
+    enforce_latin1: bool = False,
 ) -> Tuple[int, List[str]]:
     """Run enrichment over pending spans.
 
@@ -248,6 +258,7 @@ def execute_enrichment(
         limit: Max spans to process.
         model: Model identifier recorded in the DB.
         cooldown_seconds: Skip spans whose source files changed within this window.
+        enforce_latin1: If True, reject enrichments with non-Latin-1 characters.
 
     Returns:
         (success_count, error_messages)
@@ -277,7 +288,9 @@ def execute_enrichment(
                 errors.append(f"{item.span_hash}: LLM call failed - {exc}")
                 continue
 
-            ok, validation_errors = validate_enrichment(response, item.start_line, item.end_line)
+            ok, validation_errors = validate_enrichment(
+                response, item.start_line, item.end_line, enforce_latin1=enforce_latin1
+            )
             if not ok:
                 errors.append(
                     f"{item.span_hash}: validation failed - {', '.join(validation_errors) or 'unknown error'}"
@@ -300,7 +313,12 @@ def _within_range(lines: List[int], start: int, end: int) -> bool:
     return start <= a <= end and start <= b <= end
 
 
-def validate_enrichment(payload: Dict[str, Any], span_start: int, span_end: int) -> Tuple[bool, List[str]]:
+def validate_enrichment(
+    payload: Dict[str, Any], 
+    span_start: int, 
+    span_end: int,
+    enforce_latin1: bool = False,
+) -> Tuple[bool, List[str]]:
     errors: List[str] = []
     try:
         ENRICHMENT_VALIDATOR.validate(payload)
@@ -319,5 +337,20 @@ def validate_enrichment(payload: Dict[str, Any], span_start: int, span_end: int)
     snippet = payload.get("usage_snippet")
     if snippet is not None and len(snippet.splitlines()) > 12:
         errors.append("usage_snippet exceeds 12 lines")
+
+    if enforce_latin1:
+        text_fields = ["summary_120w", "usage_snippet"]
+        for field in text_fields:
+            val = payload.get(field)
+            if isinstance(val, str) and not _is_latin1_safe(val):
+                errors.append(f"{field} contains non-Latin-1 characters")
+
+        list_fields = ["inputs", "outputs", "side_effects", "pitfalls"]
+        for field in list_fields:
+            items = payload.get(field, [])
+            if isinstance(items, list):
+                for i, item in enumerate(items):
+                    if isinstance(item, str) and not _is_latin1_safe(item):
+                        errors.append(f"{field}[{i}] contains non-Latin-1 characters")
 
     return len(errors) == 0, errors
