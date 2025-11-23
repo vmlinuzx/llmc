@@ -18,6 +18,7 @@ est_tokens_per_span = 350
 name = "athena"
 chain = "athena"
 provider = "ollama"
+model = "qwen2.5:7b-instruct"
 url = "http://192.168.5.20:11434"
 routing_tier = "7b"
 timeout_seconds = 120
@@ -28,6 +29,7 @@ options = { num_ctx = 8192, temperature = 0.2 }
 name = "athena-14b"
 chain = "athena"
 provider = "ollama"
+model = "qwen2.5:14b-instruct-q4_K_M"
 url = "http://192.168.5.20:11434"
 routing_tier = "14b"
 timeout_seconds = 180

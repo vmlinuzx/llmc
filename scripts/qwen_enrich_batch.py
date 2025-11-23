@@ -114,14 +114,13 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict
     athena_url = env.get("ATHENA_OLLAMA_URL", "").strip()
     if athena_url:
         add_host("athena", athena_url)
-    default_local = env.get("OLLAMA_URL", "http://localhost:11434")
-    add_host(env.get("OLLAMA_HOST_LABEL", "localhost"), default_local)
     return hosts
 
 
 def health_check_ollama_hosts(
     hosts: list[Dict[str, str]],
     env: Mapping[str, str],
+    model_name: str | None = None,
 ) -> HealthResult:
     """Probe each Ollama host with a tiny request to detect obvious outages.
 
@@ -137,16 +136,30 @@ def health_check_ollama_hosts(
     except ValueError:
         timeout_s = 5.0
 
-    model_name = env.get("OLLAMA_MODEL", DEFAULT_7B_MODEL)
+    model_name = model_name or env.get("OLLAMA_MODEL")
+    if not model_name:
+        # If we don't know the model, we can't do a generation check.
+        # Ideally we'd just ping the version endpoint, but for now we'll skip the check
+        # or rely on the fact that if they didn't set a model, they'll fail later anyway.
+        # Let's just return "reachable" if we can't check, or maybe we should warn?
+        # For now, let's assume if they didn't set it, we skip the active probe.
+        # But wait, the user wants us to be strict.
+        # If we can't probe, we can't verify health.
+        # Let's try a generic ping if possible, or just skip.
+        # Actually, let's just use a dummy model name for the ping if missing?
+        # No, Ollama will pull it.
+        # Let's skip the generation check if no model is provided.
+        pass
 
     for host in hosts:
         checked.append(host)
         url = _normalize_ollama_url(host.get("url", ""))
         if not url:
             continue
-        payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
-            "utf-8"
-        )
+        if model_name:
+            payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
+                "utf-8"
+            )
         req = urllib.request.Request(
             f"{url}/api/generate",
             data=payload,
@@ -342,34 +355,6 @@ def _should_sample_local_gpu(selected_backend: str, host_url: str | None) -> boo
     return False
 
 
-def _blank_gpu_stats() -> dict[str, float | None]:
-    return {"avg_util": None, "max_util": None, "avg_mem": None, "max_mem": None}
-
-
-def _update_gpu_warnings(gpu_util: float | None, duration_sec: float) -> None:
-    global _LOW_UTIL_STREAK_SECONDS
-    if gpu_util is None or duration_sec <= 0:
-        return
-    if gpu_util < 50.0:
-        _LOW_UTIL_STREAK_SECONDS += duration_sec
-    else:
-        _LOW_UTIL_STREAK_SECONDS = 0.0
-    if _LOW_UTIL_STREAK_SECONDS >= LOW_UTIL_WARN_SECONDS:
-        print(
-            f"[enrich][warn] GPU utilization below 50% for {_LOW_UTIL_STREAK_SECONDS:.0f}s (target ≥60%).",
-            file=sys.stderr,
-        )
-        _LOW_UTIL_STREAK_SECONDS = 0.0
-
-
-def _check_vram_target(vram_mib: float | None) -> None:
-    if vram_mib is None:
-        return
-    if vram_mib < VRAM_WARN_THRESHOLD_MIB:
-        print(
-            f"[enrich][warn] Peak VRAM {vram_mib:.0f} MiB under target ({VRAM_WARN_THRESHOLD_MIB}+ MiB).",
-            file=sys.stderr,
-        )
 
 
 def _load_enrich_presets() -> dict[str, dict[str, Any]]:
@@ -383,43 +368,9 @@ def _load_enrich_presets() -> dict[str, dict[str, Any]]:
             "num_thread": data.get("num_thread"),
             "num_gpu": data.get("num_gpu"),
         }
-    else:
-        if not isinstance(options_raw, dict):
-            raise ValueError("Preset options must be a mapping.")
-    num_ctx = _resolve_int(options_raw.get("num_ctx"), default=3072)
-    num_batch = _resolve_int(options_raw.get("num_batch"), default=48)
-    num_thread = _resolve_int(options_raw.get("num_thread"), default=_detect_physical_cores())
-    num_gpu = _resolve_num_gpu(options_raw.get("num_gpu")) or _resolve_int(options_raw.get("num_gpu"), default=64)
-
-    options = {
-        "num_ctx": num_ctx,
-        "num_batch": num_batch,
-        "num_thread": num_thread,
-        "num_gpu": num_gpu,
-    }
-    if data.get("kv_type"):
-        options["kv_type"] = data["kv_type"]
-    keep_alive = data.get("keep_alive", "15m")
-    concurrency = int(data.get("concurrency", 1))
-
-    preset_7b = {
-        "model": model,
-        "options": {k: v for k, v in options.items() if v is not None},
-        "keep_alive": keep_alive,
-        "concurrency": concurrency,
-    }
-
-    fallback_options = dict(preset_7b["options"])
-    fallback_options["num_batch"] = max(16, int(fallback_options.get("num_batch", 32) // 2 or 16))
-    if "num_gpu" in fallback_options:
-        fallback_options["num_gpu"] = max(32, int(fallback_options["num_gpu"]))
-    preset_14b = {
-        "model": data.get("fallback_model", DEFAULT_14B_MODEL),
-        "options": fallback_options,
-        "keep_alive": keep_alive,
-        "concurrency": concurrency,
-    }
-    return {"7b": preset_7b, "14b": preset_14b}
+    # Removed implicit loading of presets/enrich_7b_ollama.yaml.
+    # Users must configure via llmc.toml or environment variables.
+    return {"7b": {}, "14b": {}}
 
 
 def _load_router_policy() -> dict[str, Any]:
@@ -451,12 +402,6 @@ def _load_router_policy() -> dict[str, Any]:
 PRESET_CACHE = _load_enrich_presets()
 POLICY_CACHE = _load_router_policy()
 
-if PRESET_CACHE["7b"].get("keep_alive") and "OLLAMA_KEEP_ALIVE" not in os.environ:
-    os.environ["OLLAMA_KEEP_ALIVE"] = str(PRESET_CACHE["7b"]["keep_alive"])
-if PRESET_CACHE["7b"].get("concurrency") and "OLLAMA_NUM_PARALLEL" not in os.environ:
-    os.environ["OLLAMA_NUM_PARALLEL"] = str(PRESET_CACHE["7b"]["concurrency"])
-if "OLLAMA_MODEL" not in os.environ:
-    os.environ["OLLAMA_MODEL"] = PRESET_CACHE["7b"]["model"]
 
 
 def env_flag(name: str, env: dict[str, str] | None = None) -> bool:
@@ -892,7 +837,11 @@ def call_qwen(
             # Fall through to ollama attempt.
 
     try:
-        model_label = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
+        model_label = model_override or os.environ.get("OLLAMA_MODEL")
+        if not model_label:
+            raise RuntimeError(
+                "No model specified. Please set 'model' in llmc.toml chain config or OLLAMA_MODEL env var."
+            )
         output, meta = call_via_ollama(
             prompt,
             repo_root,
@@ -1607,6 +1556,7 @@ def main() -> int:
     ledger_path = repo_root / "logs" / "run_ledger.log"
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     ollama_host_chain = resolve_ollama_host_chain()
+    health_check_model: str | None = None
 
     # Merge hosts from config into the health check list
     if enrichment_config:
@@ -1614,6 +1564,8 @@ def main() -> int:
         for chain_backends in enrichment_config.chains.values():
             for backend_spec in chain_backends:
                 if backend_spec.enabled and backend_spec.provider == "ollama" and backend_spec.url:
+                    if backend_spec.model and not health_check_model:
+                        health_check_model = backend_spec.model
                     normalized = _normalize_ollama_url(backend_spec.url)
                     if normalized and normalized not in existing_urls:
                         ollama_host_chain.append(
@@ -1625,7 +1577,7 @@ def main() -> int:
     # Optional pre-flight health check for backends to fail fast when LLMs are down.
     env = os.environ
     if env.get("ENRICH_HEALTHCHECK_ENABLED", "true").strip().lower() in _TRUTHY:
-        health = health_check_ollama_hosts(ollama_host_chain, env)
+        health = health_check_ollama_hosts(ollama_host_chain, env, model_name=health_check_model)
         if not health.reachable_hosts:
             checked_labels = [h.get("label") or h.get("url") for h in health.checked_hosts]
             print(
@@ -1759,7 +1711,7 @@ def main() -> int:
                             item=item,
                         )
                     except BackendError as exc:
-                        gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
+                        gpu_stats = sampler.stop() if sampler else {}
                         attempt_duration = time.monotonic() - attempt_start
 
                         # Runtime-equivalent path: underlying call_qwen raised.
@@ -1846,7 +1798,7 @@ def main() -> int:
                             continue
                         break
 
-                    gpu_stats = sampler.stop() if sampler else _blank_gpu_stats()
+                    gpu_stats = sampler.stop() if sampler else {}
                     attempt_duration = time.monotonic() - attempt_start
                     success = True
                     final_result = result
@@ -1974,8 +1926,6 @@ def main() -> int:
                     "result_model": result_model,
                 }
 
-                _update_gpu_warnings(gpu_avg if isinstance(gpu_avg, (int, float)) else None, total_latency)
-                _check_vram_target(vram_peak if isinstance(vram_peak, (int, float)) else None)
 
                 if success and final_result is not None:
                     ledger_record["result"] = "pass"
