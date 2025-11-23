@@ -720,15 +720,8 @@ def call_via_ollama(
     payload = json.dumps(payload_dict).encode("utf-8")
     headers = {"Content-Type": "application/json"}
 
-    def runner_active() -> bool:
-        try:
-            output = subprocess.check_output(["ollama", "ps"], text=True)
-        except Exception:
-            return False
-        return model_name in output
-
-    while runner_active():
-        time.sleep(max(0.5, poll_wait))
+    # Logic to wait for 'runner_active' removed as it blocks on loaded models.
+    # Ollama handles concurrency internally.
 
     attempt = 0
     last_error: Exception | None = None
@@ -1511,13 +1504,10 @@ def main() -> int:
             selected_chain = select_chain(enrichment_config, args.chain_name)
         except EnrichmentConfigError as exc:
             print(
-                f"[enrichment] config error: {exc} – falling back to presets.",
+                f"[enrichment] config error: {exc}",
                 file=sys.stderr,
             )
-            if strict_config:
-                return 2
-            enrichment_config = None
-            selected_chain = None
+            return 1
     else:
         if args.verbose:
             print(
@@ -1527,11 +1517,10 @@ def main() -> int:
     if enrichment_config is not None and not selected_chain:
         chain_name = args.chain_name or getattr(enrichment_config, "default_chain", "<default>")
         print(
-            f"[enrichment] config has no enabled backends for chain {chain_name!r} – falling back to presets.",
+            f"[enrichment] config has no enabled backends for chain {chain_name!r}.",
             file=sys.stderr,
         )
-        enrichment_config = None
-        selected_chain = None
+        return 1
 
     # Config-driven CLI defaults (Phase 3):
     # If the user did not override certain args on the CLI (they are still at
@@ -1618,6 +1607,19 @@ def main() -> int:
     ledger_path = repo_root / "logs" / "run_ledger.log"
     ledger_path.parent.mkdir(parents=True, exist_ok=True)
     ollama_host_chain = resolve_ollama_host_chain()
+
+    # Merge hosts from config into the health check list
+    if enrichment_config:
+        existing_urls = {h["url"] for h in ollama_host_chain}
+        for chain_backends in enrichment_config.chains.values():
+            for backend_spec in chain_backends:
+                if backend_spec.enabled and backend_spec.provider == "ollama" and backend_spec.url:
+                    normalized = _normalize_ollama_url(backend_spec.url)
+                    if normalized and normalized not in existing_urls:
+                        ollama_host_chain.append(
+                            {"label": backend_spec.name or "config-host", "url": normalized}
+                        )
+                        existing_urls.add(normalized)
     host_chain_count = max(1, len(ollama_host_chain))
 
     # Optional pre-flight health check for backends to fail fast when LLMs are down.

@@ -9,7 +9,7 @@ gpu_min_free_mb = 1536
 
 [enrichment]
 #enabled = true
-#default_chain = "athena"
+default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a default_chain defined and at least one llm URL for this to work!
 
 batch_size = 50
 est_tokens_per_span = 350
@@ -36,7 +36,7 @@ options = { num_ctx = 12288, temperature = 0.2 }
 
 # [[enrichment.chain]]
 # name = "groq-70b"
-# chain = "groq"
+# chain = "groqathena"
 # provider = "gateway"
 # model = "groq/llama3-70b-8192"
 # routing_tier = "14b"
