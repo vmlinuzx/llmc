@@ -5,7 +5,7 @@ import struct
 from contextlib import contextmanager
 import time
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Iterable, Iterator, Optional, Sequence
 
 import json
 
@@ -159,7 +159,7 @@ class Database:
             raise RuntimeError(f"Failed to resolve file id for {record.path}")
         return int(row[0])
 
-    def replace_spans(self, file_id: int, spans: Sequence[Span]) -> None:
+    def replace_spans(self, file_id: int, spans: Sequence[SpanRecord]) -> None:
         """Replace spans for a file, preserving unchanged spans and their enrichments.
         
         This is a DIFFERENTIAL update:

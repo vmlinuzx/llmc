@@ -113,32 +113,32 @@ class BackendCascade:
             cfg = getattr(backend, "config", None)
             backend_name = str(getattr(cfg, "name", f"backend-{idx}"))
             provider = str(getattr(cfg, "provider", "") or "")
-            model: Optional[str] = None
+            resolved_model: Optional[str] = None
             meta_model = meta.get("model")
             if isinstance(meta_model, str) and meta_model:
-                model = meta_model
+                resolved_model = meta_model
             else:
                 cfg_model = getattr(cfg, "model", None)
                 if isinstance(cfg_model, str) and cfg_model:
-                    model = cfg_model
-            host: Optional[str] = None
+                    resolved_model = cfg_model
+            resolved_host: Optional[str] = None
             if "host" in meta and isinstance(meta.get("host"), str):
-                host = str(meta["host"])
+                resolved_host = str(meta["host"])
             elif hasattr(backend, "describe_host"):
                 try:
-                    host = backend.describe_host()
+                    resolved_host = backend.describe_host()
                 except Exception:  # pragma: no cover - defensive
-                    host = None
+                    resolved_host = None
             attempts.append(
                 AttemptRecord(
                     backend_name=backend_name,
                     provider=provider,
-                    model=model,
+                    model=resolved_model,
                     duration_sec=duration,
                     success=True,
                     failure_type=None,
                     error_message=None,
-                    host=host,
+                    host=resolved_host,
                     gpu_stats=None,
                 )
             )

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional
 
 from tree_sitter import Node, Parser
 from tree_sitter_languages import get_language
@@ -307,7 +307,7 @@ def _collect_markdown(file_path: Path, source: bytes) -> List[SpanRecord]:
         offset += len(line)
     offsets.append(len(source))
 
-    headings: List[Dict[str, object]] = []
+    headings: List[Dict[str, Any]] = []
     for idx, raw_line in enumerate(lines):
         text = raw_line.decode("utf-8", errors="replace").rstrip("\r\n")
         match = MARKDOWN_HEADING_RE.match(text)

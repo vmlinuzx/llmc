@@ -15,6 +15,7 @@ batch_size = 50
 est_tokens_per_span = 350
 
 [[enrichment.chain]]
+name = "athena"
 chain = "athena"
 provider = "ollama"
 url = "http://192.168.5.20:11434"

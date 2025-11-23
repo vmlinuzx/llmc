@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+import _setup_path  # noqa: F401
+
 
 import argparse
 import json
@@ -18,13 +20,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 from dataclasses import dataclass
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
 
-SCRIPTS_DIR = Path(__file__).resolve().parent
-if str(SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(SCRIPTS_DIR))
 
 from router import (
     RouterSettings,
@@ -62,6 +58,7 @@ try:
 except ImportError:
     yaml = None  # type: ignore
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 PRESET_PATH = REPO_ROOT / "presets" / "enrich_7b_ollama.yaml"
 ROUTER_POLICY_PATH = REPO_ROOT / "router" / "policy.json"
 DEFAULT_7B_MODEL = "qwen2.5:7b-instruct-q4_K_M"
