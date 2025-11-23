@@ -581,6 +581,11 @@ def parse_args() -> argparse.Namespace:
         help="Iterate and report prompts without calling the LLM.",
     )
     parser.add_argument(
+        "--dry-run-plan",
+        action="store_true",
+        help="Show planned spans to enrich and exit without calling the LLM or writing enrichments.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="Print prompts and responses for debugging.",
@@ -1495,17 +1500,33 @@ def _build_cascade_for_attempt(
 def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
+
+    force_legacy = os.environ.get("LLMC_ENRICH_FORCE_LEGACY", "").lower() in _TRUTHY
+    strict_config = os.environ.get("LLMC_ENRICH_STRICT_CONFIG", "").lower() in _TRUTHY
+    summary_json_path = os.environ.get("LLMC_ENRICH_SUMMARY_JSON")
     enrichment_config: EnrichmentConfig | None = None
     selected_chain: Sequence[EnrichmentBackendSpec] | None = None
-    try:
-        enrichment_config = load_enrichment_config(
-            repo_root=repo_root,
-        )
-        selected_chain = select_chain(enrichment_config, args.chain_name)
-    except EnrichmentConfigError as exc:
-        print(f"[enrichment] config error: {exc} – falling back to presets.", file=sys.stderr)
-        enrichment_config = None
-        selected_chain = None
+    if not force_legacy:
+        try:
+            enrichment_config = load_enrichment_config(
+                repo_root=repo_root,
+            )
+            selected_chain = select_chain(enrichment_config, args.chain_name)
+        except EnrichmentConfigError as exc:
+            print(
+                f"[enrichment] config error: {exc} – falling back to presets.",
+                file=sys.stderr,
+            )
+            if strict_config:
+                return 2
+            enrichment_config = None
+            selected_chain = None
+    else:
+        if args.verbose:
+            print(
+                "[enrichment] LLMC_ENRICH_FORCE_LEGACY is set – skipping llmc.toml config.",
+                file=sys.stderr,
+            )
     if enrichment_config is not None and not selected_chain:
         chain_name = args.chain_name or getattr(enrichment_config, "default_chain", "<default>")
         print(
@@ -1514,6 +1535,7 @@ def main() -> int:
         )
         enrichment_config = None
         selected_chain = None
+
     # Config-driven CLI defaults (Phase 3):
     # If the user did not override certain args on the CLI (they are still at
     # their argparse defaults), let the enrichment config fill them in.
@@ -1558,6 +1580,14 @@ def main() -> int:
                     "[enrichment] failed to apply config-driven CLI defaults; keeping argparse values.",
                     file=sys.stderr,
                 )
+
+    pipeline_mode = "config" if enrichment_config is not None and selected_chain else "legacy"
+    effective_chain: str | None = None
+    if enrichment_config is not None:
+        try:
+            effective_chain = args.chain_name or getattr(enrichment_config, "default_chain", None)
+        except Exception:
+            effective_chain = args.chain_name
 
     backend = args.backend
     if args.api:
@@ -1616,6 +1646,8 @@ def main() -> int:
     db_file = index_path_for_write(repo_root)
     db = Database(db_file)
     processed = 0
+    attempted = 0
+    failed = 0
     try:
         while True:
             remaining = args.max_spans - processed if args.max_spans else None
@@ -1627,8 +1659,20 @@ def main() -> int:
                 print("No more spans pending enrichment.")
                 break
 
+            if args.dry_run_plan:
+                print(f"[enrichment] dry-run plan (limit={this_batch}):")
+                for idx, item in enumerate(plan, start=1):
+                    print(
+                        f"  {idx}. span_hash={item['span_hash']} "
+                        f"path={item.get('path', '<unknown>')} "
+                        f"lines={item.get('lines')}",
+                        file=sys.stderr,
+                    )
+                return 0
+
             total_spans = len(plan)
             for idx, item in enumerate(plan, start=1):
+                attempted += 1
                 wall_start = time.monotonic()
                 prompt = build_prompt(item, repo_root)
                 if args.dry_run:
@@ -1970,6 +2014,7 @@ def main() -> int:
                         time.sleep(args.sleep)
                 else:
                     ledger_record["result"] = "fail"
+                    failed += 1
                     failure_reason = failure_info[0] if failure_info else "unknown"
                     ledger_record["reason"] = failure_reason
                     if failure_info is None:
@@ -1980,6 +2025,32 @@ def main() -> int:
                 append_ledger_record(ledger_path, ledger_record)
     finally:
         db.close()
+
+    summary = {
+        "attempted": attempted,
+        "succeeded": processed,
+        "failed": failed,
+        "mode": pipeline_mode,
+        "chain": effective_chain,
+        "backend": backend,
+        "repo_root": str(repo_root),
+    }
+    print(
+        f"[enrichment] run summary: attempted={summary['attempted']} "
+        f"succeeded={summary['succeeded']} failed={summary['failed']} "
+        f"mode={summary['mode']} chain={summary['chain'] or '-'} backend={summary['backend']}",
+        file=sys.stderr,
+    )
+    if summary_json_path:
+        try:
+            with open(summary_json_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, indent=2, sort_keys=True)
+        except OSError as exc:
+            if args.verbose:
+                print(
+                    f"[enrichment] failed to write summary JSON to {summary_json_path}: {exc}",
+                    file=sys.stderr,
+                )
 
     print(f"Completed {processed} enrichments.")
     return 0

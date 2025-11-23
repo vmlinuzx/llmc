@@ -113,13 +113,17 @@ def _fake_llm_call_factory(summary_prefix: str = "Summary") -> callable:
         calls.append(prompt)
         span_hash = prompt.get("span_hash", "unknown")
         return {
-            "summary": f"{summary_prefix} for {span_hash}",
+            "summary_120w": f"{summary_prefix} for {span_hash}",
             "tags": ["test", "integration"],
-            "inputs": "n/a",
-            "outputs": "n/a",
-            "side_effects": "none",
-            "pitfalls": "",
+            "inputs": ["n/a"],
+            "outputs": ["n/a"],
+            "side_effects": ["none"],
+            "pitfalls": [],
             "usage_snippet": f"call_{span_hash}()",
+            "evidence": [
+                {"field": "summary_120w", "lines": [1, 10]},
+                {"field": "inputs", "lines": [1, 10]},
+            ],
             "schema_version": "v1",
         }
 
