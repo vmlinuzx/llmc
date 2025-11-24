@@ -517,22 +517,37 @@ def cmd_start(args, state: ServiceState, tracker: FailureTracker):
     
     # Start via systemd
     success, message = systemd.start()
-    if success:
-        print(f"🚀 {message}")
-        print(f"   Tracking {len(state.state['repos'])} repos")
-        print(f"   Interval: {args.interval}s")
-        print(f"\n📋 View logs: llmc-rag logs -f")
-        return 0
-    else:
+    if not success:
         print(f"❌ Failed to start: {message}")
         return 1
+    
+    # Verify service actually started (give it 2 seconds)
+    import time
+    time.sleep(2)
+    status = systemd.status()
+    
+    if not status["running"]:
+        print(f"❌ Service failed to start")
+        if "status_text" in status:
+            # Show relevant error from systemctl status
+            for line in status["status_text"].split("\n"):
+                if "failed" in line.lower() or "error" in line.lower():
+                    print(f"   {line.strip()}")
+        print(f"\n📋 Check logs: llmc-rag logs")
+        return 1
+    
+    print(f"🚀 Service started (PID {status['pid']})")
+    print(f"   Tracking {len(state.state['repos'])} repos")
+    print(f"   Interval: {args.interval}s")
+    print(f"\n📋 View logs: llmc-rag logs -f")
+    return 0
 
 
 def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker):
     """Fallback: Start the service via fork() when systemd unavailable."""
     if state.is_running():
-        print(f"Service already running (PID {state.state['pid']})")
-        return 1
+        print(f"✅ Service already running (PID {state.state['pid']})")
+        return 0
     
     # Fork to background
     pid = os.fork()
@@ -706,17 +721,62 @@ def cmd_unregister(args, state: ServiceState, tracker: FailureTracker):
         return 1
 
 
-def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
-    """Clear failure cache."""
-    repo = args.repo
-    if repo:
-        repo = str(Path(repo).resolve())
-        tracker.clear_failures(repo)
-        print(f"Cleared failures for: {repo}")
+def cmd_failures(args, state: ServiceState, tracker: FailureTracker):
+    """Manage failure cache - show or clear."""
+    subcommand = getattr(args, 'failures_command', None)
+    
+    if subcommand == 'clear':
+        # Clear failures
+        repo = getattr(args, 'repo', None)
+        if repo:
+            repo = str(Path(repo).resolve())
+            tracker.clear_failures(repo)
+            print(f"✅ Cleared failures for: {repo}")
+        else:
+            tracker.clear_failures()
+            print("✅ Cleared all failures")
+        return 0
+    
     else:
-        tracker.clear_failures()
-        print("Cleared all failures")
-    return 0
+        # Show failures (default)
+        repo = getattr(args, 'repo', None)
+        failures = tracker.get_failures(repo)
+        
+        if not failures:
+            print("✅ No failures recorded")
+            return 0
+        
+        print("Failure Cache")
+        print("=" * 50)
+        
+        by_repo = {}
+        for span_hash, repo_path, fail_count, last_attempted, reason in failures:
+            if repo_path not in by_repo:
+                by_repo[repo_path] = []
+            by_repo[repo_path].append((span_hash, fail_count, last_attempted, reason))
+        
+        for repo_path, repo_failures in by_repo.items():
+            repo_name = Path(repo_path).name
+            print(f"\n📁 {repo_name} ({len(repo_failures)} failures)")
+            for span_hash, fail_count, last_attempted, reason in repo_failures[:5]:  # Show first 5
+                # Extract filename from span_hash if it's a repo-level failure
+                if span_hash.startswith("repo:"):
+                    print(f"   ⚠️  Repository-level failure (x{fail_count})")
+                else:
+                    print(f"   ⚠️  Span {span_hash[:16]}... (x{fail_count})")
+                print(f"      Reason: {reason}")
+            
+            if len(repo_failures) > 5:
+                print(f"   ... and {len(repo_failures) - 5} more")
+        
+        print(f"\nTotal: {len(failures)} failed spans")
+        print(f"\nTo clear: llmc-rag failures clear [--repo <path>]")
+        return 0
+
+
+def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
+    """Clear failure cache - backwards compat wrapper."""
+    return cmd_failures(args, state, tracker)
 
 
 def cmd_restart(args, state: ServiceState, tracker: FailureTracker) -> int:
@@ -1080,7 +1140,7 @@ def main(argv: Optional[list[str]] | None = None):
         "unregister": cmd_unregister,  # Backwards compat
         "health": cmd_health,
         "config": cmd_config,
-        "failures": cmd_clear_failures,  # Handle both show and clear
+        "failures": cmd_failures,
         "clear-failures": cmd_clear_failures,  # Backwards compat
         "interval": cmd_interval,
         "force-cycle": cmd_force_cycle,
