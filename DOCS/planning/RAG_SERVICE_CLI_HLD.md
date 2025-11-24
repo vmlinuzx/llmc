@@ -126,6 +126,7 @@ llmc-rag failures clear [--repo <path>]  # Clear failures
 # Advanced
 llmc-rag interval <seconds> # Change cycle interval
 llmc-rag force-cycle        # Trigger immediate enrichment cycle
+llmc-rag exorcist <path>    # Nuclear option: completely rebuild RAG database
 ```
 
 ### 4.3 Systemd Integration
@@ -161,6 +162,84 @@ WantedBy=default.target
 - ✅ Logs managed by systemd
 - ✅ `systemctl --user enable llmc-rag` for boot persistence
 
+### 4.4 The Exorcist Command (Nuclear Option)
+
+**Purpose:** Complete RAG database rebuild for a repo. Deletes everything and starts fresh.
+
+**Use cases:**
+- Schema changes in RAG system
+- Database corruption
+- Testing with fresh enrichment settings
+- "It's broken and I don't know why"
+
+**Safety Protocol (THE RITUAL):**
+
+```bash
+$ llmc-rag exorcist /home/vmlinux/src/llmc
+
+⚠️  EXORCIST MODE: NUCLEAR OPTION ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This will PERMANENTLY DELETE the RAG database for:
+  📁 /home/vmlinux/src/llmc
+
+What you'll lose:
+  • 1,247 indexed spans
+  • 856 enriched summaries (months of LLM work)
+  • 856 embeddings
+  • All failure tracking
+  • All quality metrics
+
+This cannot be undone. The database will be rebuilt from scratch.
+
+Press Ctrl+C now to abort...
+
+Continuing in 5 seconds... (Ctrl+C to abort)
+4...
+3...
+2...
+1...
+
+Type the repo name to confirm: llmc
+> llmc
+
+✅ Confirmed. Nuking RAG database...
+🗑️  Deleted .rag/rag_index.db (45.2 MB)
+🗑️  Deleted .rag/enrichments.json
+🗑️  Deleted .rag/embeddings.db
+✅ Database exorcised. Run enrichment to rebuild.
+
+Next steps:
+  llmc-rag force-cycle    # Start immediate rebuild
+```
+
+**Implementation safeguards:**
+1. **Stats display** - Show exactly what will be lost (span count, enrichment count, etc.)
+2. **5-second countdown** - Gives user time to panic and Ctrl+C
+3. **Name confirmation** - Must type the repo name (or basename) to proceed
+4. **Dry-run option** - `llmc-rag exorcist --dry-run <path>` shows what would be deleted
+5. **Service check** - Refuses to run if service is currently processing that repo
+
+**What gets deleted:**
+```
+<repo>/.rag/rag_index.db          # Main index
+<repo>/.rag/enrichments.json      # Enrichment metadata
+<repo>/.rag/embeddings.db         # Vector embeddings
+<repo>/.rag/quality_reports/      # Quality check history
+<repo>/.rag/failures.db           # Failure tracking (optional keep?)
+```
+
+**What's preserved:**
+```
+<repo>/.rag/logs/                 # Historical logs (optional)
+<repo>/.rag/config/               # User config (preserved)
+```
+
+**Error conditions:**
+- Service is running and processing this repo → refuse
+- Repo not registered → warn but allow (orphaned database cleanup)
+- Database doesn't exist → inform user "nothing to exorcise"
+
 ---
 
 ## 5. Help Screen Design
@@ -194,6 +273,7 @@ Health & Diagnostics:
 Advanced:
   interval <seconds>   Change enrichment cycle interval
   force-cycle          Trigger immediate enrichment cycle
+  exorcist <path>      Nuclear option: completely rebuild RAG database
 
 Examples:
   llmc-rag repo add /home/you/src/llmc
@@ -220,6 +300,7 @@ For detailed help: llmc-rag help <command>
 - [ ] Implement `logs` command (journalctl wrapper)
 - [ ] Implement `config` command (show env + TOML settings)
 - [ ] Refactor `register/unregister` → `repo add/remove`
+- [ ] Implement `exorcist` command with safety protocol
 
 ### Phase 3: Polish
 - [ ] Beautiful help screen with colors/formatting
@@ -257,6 +338,8 @@ llmc-rag logs -f | grep "Stored enrichment"
 - [ ] Check logs appear correctly
 - [ ] Health command detects Ollama
 - [ ] Systemd service survives reboot
+- [ ] Exorcist command with Ctrl+C abort
+- [ ] Exorcist command with full nuke + rebuild
 
 ---
 
