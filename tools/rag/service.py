@@ -30,6 +30,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from tools.rag.config import load_config
+
 try:  # Python 3.11+
     import tomllib  # type: ignore
 except Exception:
@@ -54,8 +56,12 @@ if _failure_override:
 else:
     FAILURE_DB = Path.home() / ".llmc" / "rag-failures.db"
 
-# Failure policy
-MAX_FAILURES = 3  # 3 strikes and you're out
+SERVICE_UNIT = "llmc-rag.service"
+
+try:
+    MAX_FAILURES = int(os.environ.get("LLMC_RAG_MAX_FAILURES", "3"))
+except ValueError:
+    MAX_FAILURES = 3  # 3 strikes and you're out
 
 
 def print_help():
@@ -171,6 +177,26 @@ class FailureTracker:
         FAILURE_DB.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(FAILURE_DB))
         self._init_db()
+        # Determine failure threshold: env > llmc.toml > default.
+        env_raw = os.environ.get("LLMC_RAG_MAX_FAILURES")
+        max_failures = MAX_FAILURES
+        if env_raw:
+            try:
+                val = int(env_raw)
+                if val > 0:
+                    max_failures = val
+            except ValueError:
+                pass
+        else:
+            try:
+                cfg = load_config()
+                enrichment_cfg = cfg.get("enrichment") or {}
+                val = enrichment_cfg.get("max_failures_per_span")
+                if isinstance(val, int) and val > 0:
+                    max_failures = val
+            except Exception:
+                pass
+        self.max_failures = max_failures
     
     def _init_db(self):
         self.conn.execute("""
@@ -211,7 +237,8 @@ class FailureTracker:
             (span_hash, repo)
         )
         row = cursor.fetchone()
-        if row and row[0] >= MAX_FAILURES:
+        limit = getattr(self, "max_failures", MAX_FAILURES)
+        if row and row[0] >= limit:
             return True
         return False
     
@@ -247,6 +274,75 @@ class FailureTracker:
             "failed_spans": row[0] or 0,
             "total_failures": row[1] or 0
         }
+
+
+def _stream_systemd_logs_follow(lines: int) -> int:
+    """Poll systemd journal to approximate `tail -f` without inotify watches."""
+    cursor: Optional[str] = None
+    # Initial command: tail-style view with cursor
+    cmd: list[str] = [
+        "journalctl",
+        "--user",
+        "-u",
+        SERVICE_UNIT,
+        "-n",
+        str(lines),
+        "--show-cursor",
+        "--no-pager",
+    ]
+    try:
+        while True:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                err = (result.stderr or "").strip() or f"journalctl exited with {result.returncode}"
+                print(f"[logs] journalctl error: {err}", file=sys.stderr)
+                return 1
+
+            output = result.stdout or ""
+            new_cursor: Optional[str] = None
+            if output:
+                out_lines = []
+                for line in output.splitlines():
+                    if line.startswith("-- cursor: "):
+                        new_cursor = line.split(":", 1)[1].strip()
+                    elif line.startswith("-- No entries --"):
+                        # No new logs in this window; stay quiet and keep polling.
+                        continue
+                    else:
+                        out_lines.append(line)
+                if out_lines:
+                    print("\n".join(out_lines))
+
+            if new_cursor:
+                cursor = new_cursor
+
+            if cursor is None:
+                cmd = [
+                    "journalctl",
+                    "--user",
+                    "-u",
+                    SERVICE_UNIT,
+                    "-n",
+                    str(lines),
+                    "--show-cursor",
+                    "--no-pager",
+                ]
+            else:
+                cmd = [
+                    "journalctl",
+                    "--user",
+                    "-u",
+                    SERVICE_UNIT,
+                    "--after-cursor",
+                    cursor,
+                    "--show-cursor",
+                    "--no-pager",
+                ]
+
+            time.sleep(2.0)
+    except KeyboardInterrupt:
+        print()
+        return 0
 
 
 class RAGService:
@@ -808,49 +904,53 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     systemd = SystemdManager(repo_root)
     
-    # Determine which logs to show based on how service was started
     log_file = Path.home() / ".llmc" / "logs" / "rag-daemon" / "rag-service.log"
+
+    # Prefer systemd journal when available and the service is active.
+    if systemd.is_systemd_available():
+        status = systemd.status()
+        if status.get("active") or status.get("running"):
+            print("LLMC RAG Service Logs (systemd journal)")
+            print("========================================")
+            print("Showing recent entries from systemd. For full history, use:")
+            print("  journalctl --user -u llmc-rag.service\n")
+            if args.follow:
+                return _stream_systemd_logs_follow(args.lines)
+            systemd.get_logs(lines=args.lines, follow=False)
+            return 0
     
-    # If service is running with a PID in state, it's fork() mode - use file logs
-    if state.is_running() and state.state.get("pid"):
-        if not log_file.exists():
-            print(f"❌ Log file not found: {log_file}")
-            print(f"   Expected at: {log_file}")
-            return 1
-        
+    # Fallback: file-based logs (fork mode or non-systemd environments).
+    if log_file.exists():
+        stat = log_file.stat()
+        age_seconds = time.time() - stat.st_mtime
+        age_hours = age_seconds / 3600.0
+        print("LLMC RAG Service Logs (file)")
+        print("================================")
+        print(f"File: {log_file}")
+        print(f"Last modified: {time.ctime(stat.st_mtime)} (~{age_hours:.1f}h ago)")
+        print(
+            f"Showing last {args.lines} lines; output may include historical entries "
+            "from previous runs.\n"
+        )
         if args.follow:
             subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)])
         else:
             subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
         return 0
     
-    # If file logs exist and are recent (modified in last hour), prefer them
-    if log_file.exists():
-        import time
-        age = time.time() - log_file.stat().st_mtime
-        if age < 3600:  # Less than 1 hour old
-            if args.follow:
-                subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)])
-            else:
-                subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
-            return 0
-    
-    # Fall back to systemd logs if available
+    # If systemd is available but service is not active, allow journal access anyway.
     if systemd.is_systemd_available():
-        process = systemd.get_logs(lines=args.lines, follow=args.follow)
-        
-        if process and args.follow:
-            try:
-                process.wait()
-            except KeyboardInterrupt:
-                process.terminate()
-                print("\n")
+        print("LLMC RAG Service Logs (systemd journal - inactive service)")
+        print("===========================================================")
+        if args.follow:
+            return _stream_systemd_logs_follow(args.lines)
+        systemd.get_logs(lines=args.lines, follow=False)
         return 0
     
-    # No logs available
-    print(f"❌ No logs available")
-    print(f"   File logs: {log_file} (not found or stale)")
-    print(f"   Systemd: not available")
+    # No logs available via file or systemd.
+    print("❌ No logs available")
+    print(f"   File logs: {log_file} (not found)")
+    print("   Systemd: not available or no journal entries yet")
     return 1
 
 

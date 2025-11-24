@@ -10,10 +10,10 @@ gpu_min_free_mb = 1536
 [enrichment]
 #enabled = true
 default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a default_chain defined and at least one llm URL for this to work!
-
-batch_size = 50
+batch_size = 50 #Number of spans to enrich before doing full enrichment loop.  50 is pretty good on a strix halo using 7b/14b.  If you have slower inference considering lowering this.
 est_tokens_per_span = 350
 enforce_latin1_enrichment = true
+max_failures_per_span = 4 #Stop retrying after this many failures.  Especially important if you are using a paid provider.
 
 [[enrichment.chain]]
 name = "athena"

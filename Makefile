@@ -1,4 +1,4 @@
-.PHONY: lint lint-fix format precommit install-precommit quality-baseline quality-check
+.PHONY: lint lint-fix format precommit install-precommit quality-baseline quality-check test
 
 lint:
 	python -m ruff check .
@@ -21,3 +21,7 @@ quality-baseline:
 quality-check:
 	python tools/dev/quality_baseline.py check
 
+test:
+	python -m ruff check .
+	python -m mypy --ignore-missing-imports scripts/qwen_enrich_batch.py
+	pytest

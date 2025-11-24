@@ -9,11 +9,15 @@ import os
 import json
 
 try:  # Python 3.11+
-    import tomllib as _toml  # type: ignore[import]
+    import tomllib  # type: ignore[import]
+
+    _toml = tomllib  # type: ignore[assignment]
 except Exception:  # pragma: no cover - fallback for older runtimes
     try:
-        import tomli as _toml  # type: ignore[import]
-    except Exception as exc:  # pragma: no cover
+        import tomli  # type: ignore[import]
+
+        _toml = tomli  # type: ignore[assignment]
+    except Exception:  # pragma: no cover
         _toml = None  # type: ignore[assignment]
 
 
@@ -56,16 +60,6 @@ class EnrichmentConfig:
 class EnrichmentConfigError(ValueError):
     """Raised when enrichment configuration is invalid."""
 
-
-BackendConfig = EnrichmentBackendSpec
-
-__all__ = [
-    "EnrichmentBackendSpec",
-    "BackendConfig",
-    "EnrichmentConfig",
-    "EnrichmentConfigError",
-    "load_enrichment_config",
-]
 
 # Backwards-compat alias for older code/tests referencing BackendConfig
 BackendConfig = EnrichmentBackendSpec

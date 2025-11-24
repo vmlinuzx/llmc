@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import _setup_path  # noqa: F401
 
+# ruff: noqa: I001
 
 import argparse
 import json
 import os
 import statistics
 import subprocess
-import threading
-import urllib.request
 import sys
+import threading
 import time
-from urllib.parse import urlparse
-from datetime import datetime, timezone
+import urllib.request
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-from collections.abc import Mapping, Sequence
+from urllib.parse import urlparse
 
-from dataclasses import dataclass
-
-
+import _setup_path  # noqa: F401
 
 from router import (
     RouterSettings,
@@ -33,19 +32,22 @@ from router import (
     estimate_tokens_from_text,
     expected_output_tokens,
 )
-
-from tools.rag.config import index_path_for_write, get_est_tokens_per_span
-from tools.rag.database import Database
-from tools.rag.workers import enrichment_plan, validate_enrichment
-from tools.rag.enrichment_backends import BackendError, BackendAdapter, BackendCascade
+from tools.rag.config import get_est_tokens_per_span, index_path_for_write
 from tools.rag.config_enrichment import (
-    EnrichmentConfig,
     EnrichmentBackendSpec,
+    EnrichmentConfig,
     EnrichmentConfigError,
+    filter_chain_for_tier,
     load_enrichment_config,
     select_chain,
-    filter_chain_for_tier,
 )
+from tools.rag.database import Database
+from tools.rag.enrichment_backends import BackendAdapter, BackendCascade, BackendError
+from tools.rag.workers import enrichment_plan, validate_enrichment
+try:
+    from tools.rag.service import FailureTracker
+except Exception:  # pragma: no cover - failure cache optional
+    FailureTracker = None  # type: ignore[assignment]
 
 
 
@@ -70,8 +72,8 @@ _LOW_UTIL_STREAK_SECONDS = 0.0
 class HealthResult:
     """Result of probing configured LLM backends."""
 
-    checked_hosts: list[Dict[str, str]]
-    reachable_hosts: list[Dict[str, str]]
+    checked_hosts: list[dict[str, str]]
+    reachable_hosts: list[dict[str, str]]
 
 
 def _normalize_ollama_url(value: str) -> str:
@@ -83,9 +85,9 @@ def _normalize_ollama_url(value: str) -> str:
     return trimmed.rstrip("/")
 
 
-def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict[str, str]]:
+def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[dict[str, str]]:
     env = env or os.environ
-    hosts: list[Dict[str, str]] = []
+    hosts: list[dict[str, str]] = []
 
     def add_host(label: str, url: str) -> None:
         normalized = _normalize_ollama_url(url)
@@ -113,7 +115,7 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict
 
 
 def health_check_ollama_hosts(
-    hosts: list[Dict[str, str]],
+    hosts: list[dict[str, str]],
     env: Mapping[str, str],
     model_name: str,
 ) -> HealthResult:
@@ -127,8 +129,8 @@ def health_check_ollama_hosts(
     This is intentionally lightweight and best-effort; failures here should
     not crash the caller, but they do inform whether it is safe to proceed.
     """
-    checked: list[Dict[str, str]] = []
-    reachable: list[Dict[str, str]] = []
+    checked: list[dict[str, str]] = []
+    reachable: list[dict[str, str]] = []
 
     timeout_env = env.get("ENRICH_HEALTHCHECK_TIMEOUT_SECONDS", "5")
     try:
@@ -185,7 +187,7 @@ def _detect_physical_cores() -> int:
 
     physical_map: set[tuple[str, str]] = set()
     try:
-        with open("/proc/cpuinfo", "r", encoding="utf-8") as handle:
+        with open("/proc/cpuinfo", encoding="utf-8") as handle:
             physical_id = ""
             core_id = ""
             for line in handle:
@@ -236,7 +238,7 @@ def _resolve_num_gpu(value: Any) -> int | None:
 
 def _read_rss_mib() -> float | None:
     try:
-        with open("/proc/self/status", "r", encoding="utf-8") as handle:
+        with open("/proc/self/status", encoding="utf-8") as handle:
             for line in handle:
                 if line.startswith("VmRSS:"):
                     parts = line.split()
@@ -258,9 +260,8 @@ def _query_gpu() -> tuple[float | None, float | None]:
     try:
         proc = subprocess.run(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
             text=True,
+            capture_output=True,
             check=True,
         )
     except (FileNotFoundError, subprocess.CalledProcessError):
@@ -383,13 +384,13 @@ POLICY_CACHE = _load_router_policy()
 
 
 
-def env_flag(name: str, env: dict[str, str] | None = None) -> bool:
+def env_flag(name: str, env: Mapping[str, str] | None = None) -> bool:
     env = env or os.environ
     raw = env.get(name, "").strip().lower()
     return raw in _TRUTHY
 
 
-def azure_env_available(env: dict[str, str] | None = None) -> bool:
+def azure_env_available(env: Mapping[str, str] | None = None) -> bool:
     env = env or os.environ
     required = ["AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_KEY", "AZURE_OPENAI_DEPLOYMENT"]
     return all(env.get(key) for key in required)
@@ -594,7 +595,7 @@ def ensure_repo(repo_root: Path) -> Path:
     return repo_root
 
 
-def build_prompt(item: Dict, repo_root: Path) -> str:
+def build_prompt(item: dict[str, Any], repo_root: Path) -> str:
     path = item["path"]
     line_start, line_end = item["lines"]
     snippet = item.get("code_snippet", "")
@@ -638,7 +639,7 @@ def call_via_ollama(
     keep_alive: str | float | int | None = None,
     base_url: str | None = None,
     host_label: str | None = None,
-) -> tuple[str, Dict[str, object]]:
+) -> tuple[str, dict[str, object]]:
     base_url = (base_url or os.environ.get("OLLAMA_URL", "")).rstrip("/")
     if not base_url:
         raise ValueError("Ollama base URL not configured. Set OLLAMA_URL or check chain config.")
@@ -731,7 +732,7 @@ def call_via_gateway(
     gateway_path: Path,
     timeout: float = GATEWAY_DEFAULT_TIMEOUT,
     verbose: bool = False,
-) -> tuple[str, Dict[str, object]]:
+) -> tuple[str, dict[str, object]]:
     if not gateway_path.exists():
         raise FileNotFoundError(f"llm gateway not found at {gateway_path}")
 
@@ -749,11 +750,11 @@ def call_via_gateway(
         args,
         input=prompt,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
         cwd=str(repo_root),
         env=env,
         timeout=timeout,
+        capture_output=True,
+        check=False,
     )
 
     if proc.returncode != 0:
@@ -785,7 +786,7 @@ def call_qwen(
     keep_alive: str | float | int | None = None,
     ollama_base_url: str | None = None,
     ollama_host_label: str | None = None,
-) -> tuple[str, Dict[str, object]]:
+) -> tuple[str, dict[str, object]]:
     backend = backend or "auto"
     backend = backend.lower()
     env = os.environ
@@ -927,7 +928,7 @@ class _OllamaBackendAdapter:
     def describe_host(self) -> str | None:
         return self._host_label or self._host_url
 
-    def _resolve_effective_params(self) -> tuple[Dict[str, Any] | None, str | float | int | None, str | None]:
+    def _resolve_effective_params(self) -> tuple[dict[str, Any] | None, str | float | int | None, str | None]:
         """Merge preset + config-specific overrides.
 
         Returns ``(options, keep_alive, model_override)``.
@@ -961,7 +962,7 @@ class _OllamaBackendAdapter:
         prompt: str,
         *,
         item: dict[str, Any],
-    ) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Execute a single Ollama enrichment attempt."""
 
         options, keep_alive, model_override = self._resolve_effective_params()
@@ -1066,7 +1067,7 @@ class _GatewayBackendAdapter:
         prompt: str,
         *,
         item: dict[str, Any],
-    ) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """Execute a single gateway enrichment attempt."""
 
         gateway_model_prev: str | None = None
@@ -1120,7 +1121,7 @@ class _GatewayBackendAdapter:
 
             if failure is None:
                 kind = "runtime"
-                detail = RuntimeError("unknown failure")
+                detail: object = RuntimeError("unknown failure")
             else:
                 kind, detail, payload = failure
             raise BackendError(
@@ -1240,10 +1241,10 @@ def normalize_schema_fields(result: dict) -> None:
 
 def parse_and_validate(
     raw: str,
-    item: Dict,
+    item: dict[str, Any],
     meta: dict[str, object],
     enforce_latin1: bool = False,
-) -> tuple[Dict | None, Tuple[str, object, object] | None]:
+) -> tuple[dict[str, Any] | None, tuple[str, object, object] | None]:
     try:
         result = extract_json(raw)
     except ValueError as exc:
@@ -1268,13 +1269,13 @@ def parse_and_validate(
     return result, None
 
 
-def handle_failure(repo_root: Path, item: Dict, failure: tuple[str, object, object]) -> None:
+def handle_failure(repo_root: Path, item: dict[str, Any], failure: tuple[str, object, object]) -> None:
     kind, detail, payload = failure
     if kind in {"parse", "truncation"}:
         raw = payload if isinstance(payload, str) else ""
         log_dir = repo_root / "logs" / "failed_enrichments"
         log_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         log_path = log_dir / f"{item['span_hash']}_{timestamp}.json"
         try:
             log_path.write_text(raw, encoding="utf-8")
@@ -1321,9 +1322,9 @@ def _build_cascade_for_attempt(
     ollama_host_chain: Sequence[Mapping[str, object]],
     current_host_idx: int,
     host_chain_count: int,
-    enrichment_config: "EnrichmentConfig | None" = None,
-    selected_chain: "Sequence[EnrichmentBackendSpec] | None" = None,
-) -> tuple[BackendCascade, str, Dict[str, Any], str | None, str | None, str, str | None]:
+    enrichment_config: EnrichmentConfig | None = None,
+    selected_chain: Sequence[EnrichmentBackendSpec] | None = None,
+) -> tuple[BackendCascade, str, dict[str, Any], str | None, str | None, str, str | None]:
     """Build a BackendCascade and preset metadata for a single attempt.
 
     This mirrors the existing tier/back-end selection logic in ``main`` but
@@ -1352,7 +1353,7 @@ def _build_cascade_for_attempt(
             for spec in tier_chain:
                 provider = spec.provider
                 if provider == "ollama":
-                    url = spec.url
+                    url = spec.url or ""
                     label = spec.name or url
                     adapters.append(
                         _OllamaBackendAdapter(
@@ -1438,8 +1439,8 @@ def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
 
-    force_legacy = os.environ.get("LLMC_ENRICH_FORCE_LEGACY", "").lower() in _TRUTHY
-    strict_config = os.environ.get("LLMC_ENRICH_STRICT_CONFIG", "").lower() in _TRUTHY
+    force_legacy = env_flag("LLMC_ENRICH_FORCE_LEGACY")
+    strict_config = env_flag("LLMC_ENRICH_STRICT_CONFIG")
     summary_json_path = os.environ.get("LLMC_ENRICH_SUMMARY_JSON")
     enrichment_config: EnrichmentConfig | None = None
     selected_chain: Sequence[EnrichmentBackendSpec] | None = None
@@ -1447,6 +1448,7 @@ def main() -> int:
         try:
             enrichment_config = load_enrichment_config(
                 repo_root=repo_root,
+                toml_path=args.chain_config,
             )
             selected_chain = select_chain(enrichment_config, args.chain_name)
         except EnrichmentConfigError as exc:
@@ -1454,7 +1456,15 @@ def main() -> int:
                 f"[enrichment] config error: {exc}",
                 file=sys.stderr,
             )
-            return 1
+            if strict_config:
+                return 2
+            enrichment_config = None
+            selected_chain = None
+            if args.verbose:
+                print(
+                    "[enrichment] falling back to presets (legacy mode).",
+                    file=sys.stderr,
+                )
     else:
         if args.verbose:
             print(
@@ -1467,7 +1477,15 @@ def main() -> int:
             f"[enrichment] config has no enabled backends for chain {chain_name!r}.",
             file=sys.stderr,
         )
-        return 1
+        if strict_config:
+            return 2
+        if args.verbose:
+            print(
+                "[enrichment] falling back to presets (legacy mode).",
+                file=sys.stderr,
+            )
+        enrichment_config = None
+        selected_chain = None
 
     # Config-driven CLI defaults (Phase 3):
     # If the user did not override certain args on the CLI (they are still at
@@ -1614,6 +1632,13 @@ def main() -> int:
 
     db_file = index_path_for_write(repo_root)
     db = Database(db_file)
+    failure_tracker = None
+    repo_key = str(repo_root)
+    if FailureTracker is not None:
+        try:
+            failure_tracker = FailureTracker()
+        except Exception:
+            failure_tracker = None
     processed = 0
     attempted = 0
     failed = 0
@@ -1624,6 +1649,18 @@ def main() -> int:
                 break
             this_batch = args.batch_size if remaining is None else min(args.batch_size, remaining)
             plan = enrichment_plan(db, repo_root, limit=this_batch, cooldown_seconds=args.cooldown)
+            if failure_tracker is not None and plan:
+                original_len = len(plan)
+                plan = [
+                    item
+                    for item in plan
+                    if not failure_tracker.is_failed(item["span_hash"], repo_key)
+                ]
+                if args.verbose and original_len and not plan:
+                    print(
+                        "[enrichment] all spans in this batch skipped due to failure limits.",
+                        file=sys.stderr,
+                    )
             if not plan:
                 print("No more spans pending enrichment.")
                 break
@@ -1657,15 +1694,19 @@ def main() -> int:
                 tokens_out = expected_output_tokens(item)
 
                 router_metrics: dict[str, float] = {
-                    "line_count": line_count,
-                    "nesting_depth": nesting_depth,
-                    "node_count": node_count,
-                    "schema_depth": schema_depth,
-                    "tokens_in": tokens_in,
-                    "tokens_out": tokens_out,
-                    "rag_k": item.get("retrieved_count"),
-                    "rag_avg_score": item.get("retrieved_avg_score"),
+                    "line_count": float(line_count),
+                    "nesting_depth": float(nesting_depth),
+                    "node_count": float(node_count),
+                    "schema_depth": float(schema_depth),
+                    "tokens_in": float(tokens_in),
+                    "tokens_out": float(tokens_out),
                 }
+                rag_k_val = item.get("retrieved_count")
+                if isinstance(rag_k_val, (int, float)):
+                    router_metrics["rag_k"] = float(rag_k_val)
+                rag_avg_val = item.get("retrieved_avg_score")
+                if isinstance(rag_avg_val, (int, float)):
+                    router_metrics["rag_avg_score"] = float(rag_avg_val)
 
                 manual_override = (args.start_tier or "auto").lower()
                 if router_enabled:
@@ -1688,7 +1729,7 @@ def main() -> int:
                     max_attempts = base_attempts
                 schema_failures = 0
                 tiers_history: list[str] = []
-                attempt_records: list[Dict[str, Any]] = []
+                attempt_records: list[dict[str, Any]] = []
                 current_tier = start_tier
                 success = False
                 final_result: dict[str, object] | None = None
@@ -1715,7 +1756,6 @@ def main() -> int:
                     )
 
                     options = tier_preset.get("options") if selected_backend == "ollama" else None
-                    keep_alive = tier_preset.get("keep_alive") if selected_backend == "ollama" else None
                     tier_model_override = tier_preset.get("model") if selected_backend == "ollama" else None
 
                     sampler: _GpuSampler | None = None
@@ -1843,16 +1883,30 @@ def main() -> int:
 
                 total_latency = time.monotonic() - wall_start
 
-                last_attempt = attempt_records[-1] if attempt_records else {}
+                if not success and failure_tracker is not None:
+                    # Record span-level failure in shared failure cache so the daemon
+                    # can skip obviously broken spans on future cycles.
+                    try:
+                        failure_reason = failure_info[0] if failure_info else "unknown"
+                        failure_tracker.record_failure(
+                            item["span_hash"],
+                            repo_key,
+                            str(failure_reason),
+                        )
+                    except Exception:
+                        # Failure tracking is best-effort; never crash enrichment on it.
+                        pass
+
+                last_attempt_dict: dict[str, Any] = attempt_records[-1] if attempt_records else {}
                 gpu_stats_last: dict[str, float | None] = {}
                 if isinstance(final_meta.get("gpu_stats"), dict):
                     gpu_stats_last = final_meta["gpu_stats"]  # type: ignore[assignment]
-                elif isinstance(last_attempt.get("gpu"), dict):
-                    gpu_stats_last = last_attempt["gpu"]  # type: ignore[assignment]
+                elif isinstance(last_attempt_dict.get("gpu"), dict):
+                    gpu_stats_last = last_attempt_dict["gpu"]  # type: ignore[assignment]
 
                 tier_options = final_meta.get("options") if isinstance(final_meta, dict) else None
                 if not isinstance(tier_options, dict):
-                    tier_options = last_attempt.get("options")
+                    tier_options = last_attempt_dict.get("options")
                 if not isinstance(tier_options, dict):
                     tier_options = {}
 
@@ -1860,15 +1914,15 @@ def main() -> int:
                 if success:
                     if isinstance(final_meta.get("model"), str):
                         result_model = final_meta["model"]  # type: ignore[index]
-                    elif isinstance(last_attempt.get("model"), str):
-                        result_model = last_attempt["model"]  # type: ignore[assignment]
+                    elif isinstance(last_attempt_dict.get("model"), str):
+                        result_model = last_attempt_dict["model"]  # type: ignore[assignment]
                     elif final_result and isinstance(final_result.get("model"), str):
                         result_model = final_result.get("model")
                     if not result_model:
                         result_model = args.model
                 else:
-                    if isinstance(last_attempt.get("model"), str):
-                        result_model = last_attempt["model"]  # type: ignore[assignment]
+                    if isinstance(last_attempt_dict.get("model"), str):
+                        result_model = last_attempt_dict["model"]  # type: ignore[assignment]
                     else:
                         result_model = args.fallback_model or os.environ.get("OLLAMA_MODEL", policy_default_tier)
 
@@ -1889,7 +1943,7 @@ def main() -> int:
                     tok_s = round(tokens_out / total_latency, 2)
 
                 metrics_summary = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": datetime.now(UTC).isoformat(),
                     "repo_root": str(repo_root),
                     "span_hash": item["span_hash"],
                     "path": item["path"],
@@ -1977,17 +2031,22 @@ def main() -> int:
                     # Extract config metadata for logging
                     chain_name = final_meta.get("chain_name") if isinstance(final_meta, dict) else None
                     backend_name = final_meta.get("backend_name") if isinstance(final_meta, dict) else None
-                    host_url = final_meta.get("host_url") if isinstance(final_meta, dict) else None
+                    host_url_for_log: str | None
+                    if isinstance(final_meta, dict):
+                        raw_host = final_meta.get("host_url")
+                        host_url_for_log = str(raw_host) if isinstance(raw_host, str) else None
+                    else:
+                        host_url_for_log = None
                     
                     config_note = ""
-                    if chain_name or backend_name or host_url:
+                    if chain_name or backend_name or host_url_for_log:
                         parts = []
                         if chain_name:
                             parts.append(f"chain={chain_name}")
                         if backend_name:
                             parts.append(f"backend={backend_name}")
-                        if host_url:
-                            parts.append(f"url={host_url}")
+                        if host_url_for_log:
+                            parts.append(f"url={host_url_for_log}")
                         config_note = f" [{', '.join(parts)}]"
                     
                     print(
