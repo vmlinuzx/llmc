@@ -13,6 +13,7 @@ default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a d
 
 batch_size = 50
 est_tokens_per_span = 350
+enforce_latin1_enrichment = true
 
 [[enrichment.chain]]
 name = "athena"

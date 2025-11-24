@@ -16,6 +16,9 @@ from tools.rag_daemon.workers import WorkerPool
 
 UTC = timezone.utc
 
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_registry_multiple_entries_different_intervals(tmp_path: Path) -> None:
     """Registry with multiple repos respects different min_refresh_interval."""
@@ -747,7 +750,7 @@ def test_registry_force_specific_repo(tmp_path: Path) -> None:
 
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, "/home/vmlinux/src/llmc")
+    sys.path.insert(0, str(REPO_ROOT))
 
     tests = [
         test_registry_multiple_entries_different_intervals,

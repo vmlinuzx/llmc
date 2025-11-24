@@ -14,6 +14,8 @@ from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
 from tools.rag_repo.cli import _cmd_add
 
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.mark.allow_sleep
 def test_e2e_daemon_tick_with_dummy_runner(tmp_path: Path) -> None:
@@ -692,7 +694,7 @@ exit 0
 
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, "/home/vmlinux/src/llmc")
+    sys.path.insert(0, str(REPO_ROOT))
 
     # Import required modules
 

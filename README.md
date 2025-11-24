@@ -15,7 +15,7 @@ All three live under `scripts/` and are thin Python shims into the `tools.*` mod
 - Python 3.12 (or compatible) with a virtualenv:
 
 ```bash
-cd /home/vmlinux/src/llmc
+cd ~/src/llmc
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[rag]"

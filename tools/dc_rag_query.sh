@@ -58,7 +58,7 @@ Environment:
 Examples:
   $0 "JWT validation"
   $0 "schema enrichment" --limit 10
-  $0 "authentication" --repo /home/vmlinux/src/llmc
+  $0 "authentication" --repo ~/src/llmc
 EOF
       exit 0
       ;;

@@ -7,7 +7,7 @@
         "--no-onboarding"
       ],
       "env": {
-        "LLMC_PROJECT_ROOT": "/home/vmlinux/src/llmc"
+        "LLMC_PROJECT_ROOT": "."
       }
     }
   }

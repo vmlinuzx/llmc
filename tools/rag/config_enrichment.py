@@ -289,7 +289,7 @@ def load_enrichment_config(
 
     enforce_latin1_raw = env.get(
         "ENRICH_ENFORCE_LATIN1",
-        root_enrichment.get("enforce_latin1_enrichment", False),
+        root_enrichment.get("enforce_latin1_enrichment", True),
     )
     enforce_latin1_enrichment = str(enforce_latin1_raw).lower() in ("1", "true", "yes", "on")
 

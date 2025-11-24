@@ -4,7 +4,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_MANAGER="$SCRIPT_DIR/llmc_log_manager.py"
-DEFAULT_LOG_DIR="/home/vmlinux/src/LLMC_PROD/logs"
+DEFAULT_LOG_DIR="$SCRIPT_DIR/../logs"
 DEFAULT_MAX_SIZE="10MB"
 
 show_help() {

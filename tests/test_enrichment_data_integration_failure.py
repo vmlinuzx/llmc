@@ -26,7 +26,7 @@ class TestEnrichmentDataIntegrationSuccess:
         """Setup test fixtures"""
         # We use the real repo paths for this integration test, or mocks if we want to be pure.
         # The original test used real paths.
-        self.repo_root = Path("/home/vmlinux/src/llmc")
+        self.repo_root = Path(__file__).parents[1]
         self.db_path = self.repo_root / ".rag" / "index_v2.db"
         self.graph_path = self.repo_root / ".llmc" / "rag_graph.json"
         

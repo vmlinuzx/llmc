@@ -47,7 +47,7 @@ Routing Tiers:
 Examples:
   llmc-route "Write tests for authentication"
   llmc-route "Design the caching architecture" --verbose
-  llmc-route "Format this code" --repo /home/vmlinux/src/llmc
+  llmc-route "Format this code" --repo ~/src/llmc
 
 Output:
   JSON with tier, model, confidence, rationale, and cost estimate

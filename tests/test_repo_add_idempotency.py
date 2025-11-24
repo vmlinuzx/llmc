@@ -10,6 +10,8 @@ import yaml
 from tools.rag_repo.cli import _cmd_add
 from tools.rag_repo.registry import RegistryAdapter
 
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
     """Test that adding a new repo creates the workspace structure."""
@@ -580,7 +582,7 @@ def test_add_idempotency_with_registry_changes(tmp_path: Path) -> None:
 if __name__ == "__main__":
     # Run tests
     import sys
-    sys.path.insert(0, "/home/vmlinux/src/llmc")
+    sys.path.insert(0, str(REPO_ROOT))
 
     tests = [
         test_add_new_repo_creates_workspace,

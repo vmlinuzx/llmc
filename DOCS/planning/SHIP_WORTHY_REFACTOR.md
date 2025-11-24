@@ -6,20 +6,35 @@ Make the LLMC repo portable and "ship worthy" by removing hardcoded paths and im
 ## Tasks
 
 ### 1. The Purge: Remove Hardcoded Paths (/home/vmlinux)
-- **Target**: ~40 occurrences of `/home/vmlinux/src/llmc`.
-- **Strategy**:
-  - **Tests**: Replace `sys.path.insert` with `conftest.py` logic or rely on installed package. Use `pathlib` for relative paths.
-  - **Scripts**: Use `$(dirname "$0")` or python `__file__` relative paths.
-  - **Configs**: Ensure defaults use `~` or relative paths.
-  - **Docs**: Replace with placeholders like `~/src/llmc` or generic instructions.
+- [x] **Tests**: Replace `sys.path.insert` with dynamic `REPO_ROOT` or `conftest.py` logic.
+    - `tests/test_phase2_enrichment_integration.py` (Done)
+    - `tests/test_rag_failures.py` (Done)
+    - `tests/test_ast_chunker.py` (Done)
+    - `tests/test_repo_add_idempotency.py` (Done)
+    - `tests/test_multiple_registry_entries.py` (Done)
+    - `tests/test_e2e_daemon_operation.py` (Done)
+    - `tests/test_index_status.py` (Done)
+    - `tests/test_graph_building.py` (Done)
+    - `tests/test_enrichment_data_integration_failure.py` (Done)
+- [x] **Scripts**: Use `$(dirname "$0")` or python `__file__` relative paths.
+    - `scripts/llmc-route` (Done)
+    - `scripts/llmc-clean-logs.sh` (Done)
+    - `tools/dc_rag_query.sh` (Done)
+- [x] **Docs**: Replace with placeholders like `~/src/llmc` or generic instructions.
+    - `DOCS/ROADMAP.md` (Done)
+    - `DOCS/DESKTOP_COMMANDER_INTEGRATION.md` (Done)
+    - `AGENTS.md` (Done)
+    - `README.md` (Done)
+- [x] **Configs**: Ensure defaults use `~` or relative paths.
+    - `mcp/mcpo.config.json` (Done)
 
-### 2. Test Import Fixes
-- **Target**: `tests/*.py`
-- **Action**: Remove `sys.path.insert(0, ...)` boilerplate. Ensure `conftest.py` sets up the environment correctly or assume `pip install -e .` has been run.
+### 2. Verification
+- [ ] Run `pytest` to ensure no regressions from path changes.
+- [ ] Run `llmc-rag-doctor` or similar check to verify script pathing (if environment allows).
 
-### 3. Documentation Cleanup
-- **Target**: `README.md`, `AGENTS.md`.
-- **Action**: Genericize installation instructions and path references.
+### 3. Test Import Fixes (Broader Scope)
+- [ ] **Target**: Remaining `tests/*.py` files that might still have `sys.path` hacks (if any).
+- [ ] **Action**: Standardize on `conftest.py` fixtures.
 
 ## Workflow
 1. Open file to change.

@@ -114,7 +114,7 @@ This roadmap consolidates the previous `ROADMAP.md`, `Roadmap.md`, and `ROADMAP_
 
 - **P1: RAG Freshness Gate + Safe Local Fallback**
   - Add a freshness gate in front of RAG so tools only use RAG when slice state is known-good, otherwise fall back automatically to local filesystem/AST-based logic.
-  - Ensure callers (Codex, Claude, Desktop Commander, future GUIs) never have to care whether RAG is in play; they always get correct results plus metadata about source and freshness.
+  - Ensure callers (Codex, Claude, Desktop Commander, future GUIs) never have to care whether RAG is in play; they always get correct results plus metadata (`source`, `freshness`).
 
 - **P1: Tool Contract & Self-Describing Tools (Desktop Commander)**
   - Define a single, authoritative manifest of tools LLMC is allowed to use.

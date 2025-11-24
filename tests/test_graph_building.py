@@ -8,7 +8,8 @@ import tempfile
 import os
 from pathlib import Path
 
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_graph_node_coverage():
     """Test that graph includes all indexed files"""
@@ -20,7 +21,7 @@ def test_graph_node_coverage():
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
-            "repo": "/home/vmlinux/src/llmc",
+            "repo": str(REPO_ROOT),
             "entities": [
                 {
                     "id": "file1:function_a",
@@ -69,7 +70,7 @@ def test_graph_edge_construction():
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
-            "repo": "/home/vmlinux/src/llmc",
+            "repo": str(REPO_ROOT),
             "entities": [
                 {
                     "id": "module:func_a",
@@ -136,7 +137,7 @@ def test_graph_self_consistency():
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
-            "repo": "/home/vmlinux/src/llmc",
+            "repo": str(REPO_ROOT),
             "entities": [
                 {
                     "id": "known:entity",
@@ -237,7 +238,7 @@ def test_graph_corrupt_handling():
 
 def test_existing_graph_artifacts():
     """Test the actual graph artifacts in the repo"""
-    graph_path = Path("/home/vmlinux/src/llmc/.llmc/rag_graph.json")
+    graph_path = REPO_ROOT / ".llmc" / "rag_graph.json"
 
     if not graph_path.exists():
         print(f"⚠ WARNING: {graph_path} does not exist")

@@ -61,8 +61,6 @@ except ImportError:
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PRESET_PATH = REPO_ROOT / "presets" / "enrich_7b_ollama.yaml"
 ROUTER_POLICY_PATH = REPO_ROOT / "router" / "policy.json"
-DEFAULT_7B_MODEL = "qwen2.5:7b-instruct-q4_K_M"
-DEFAULT_14B_MODEL = "qwen2.5:14b-instruct-q4_K_M"
 LOW_UTIL_WARN_SECONDS = 300.0
 VRAM_WARN_THRESHOLD_MIB = 6800
 _LOW_UTIL_STREAK_SECONDS = 0.0
@@ -120,9 +118,14 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict
 def health_check_ollama_hosts(
     hosts: list[Dict[str, str]],
     env: Mapping[str, str],
-    model_name: str | None = None,
+    model_name: str,
 ) -> HealthResult:
     """Probe each Ollama host with a tiny request to detect obvious outages.
+
+    Args:
+        hosts: List of host dicts with 'label' and 'url' keys
+        env: Environment variables
+        model_name: Model to use for health check (from enrichment config)
 
     This is intentionally lightweight and best-effort; failures here should
     not crash the caller, but they do inform whether it is safe to proceed.
@@ -136,30 +139,14 @@ def health_check_ollama_hosts(
     except ValueError:
         timeout_s = 5.0
 
-    model_name = model_name or env.get("OLLAMA_MODEL")
-    if not model_name:
-        # If we don't know the model, we can't do a generation check.
-        # Ideally we'd just ping the version endpoint, but for now we'll skip the check
-        # or rely on the fact that if they didn't set a model, they'll fail later anyway.
-        # Let's just return "reachable" if we can't check, or maybe we should warn?
-        # For now, let's assume if they didn't set it, we skip the active probe.
-        # But wait, the user wants us to be strict.
-        # If we can't probe, we can't verify health.
-        # Let's try a generic ping if possible, or just skip.
-        # Actually, let's just use a dummy model name for the ping if missing?
-        # No, Ollama will pull it.
-        # Let's skip the generation check if no model is provided.
-        pass
-
     for host in hosts:
         checked.append(host)
         url = _normalize_ollama_url(host.get("url", ""))
         if not url:
             continue
-        if model_name:
-            payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
-                "utf-8"
-            )
+        payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
+            "utf-8"
+        )
         req = urllib.request.Request(
             f"{url}/api/generate",
             data=payload,
@@ -358,18 +345,11 @@ def _should_sample_local_gpu(selected_backend: str, host_url: str | None) -> boo
 
 
 def _load_enrich_presets() -> dict[str, dict[str, Any]]:
-    data = _read_yaml(PRESET_PATH) if PRESET_PATH.exists() else {}
-    model = str(data.get("model") or DEFAULT_7B_MODEL)
-    options_raw = data.get("options") or {}
-    if not options_raw:
-        options_raw = {
-            "num_ctx": data.get("num_ctx", 3072),
-            "num_batch": data.get("num_batch", 48),
-            "num_thread": data.get("num_thread"),
-            "num_gpu": data.get("num_gpu"),
-        }
-    # Removed implicit loading of presets/enrich_7b_ollama.yaml.
-    # Users must configure via llmc.toml or environment variables.
+    """Legacy preset loader - now returns minimal defaults.
+    
+    Model selection is config-driven via llmc.toml enrichment chains.
+    This function is retained for backward compatibility but returns empty presets.
+    """
     return {"7b": {}, "14b": {}}
 
 
@@ -1601,22 +1581,31 @@ def main() -> int:
     # Optional pre-flight health check for backends to fail fast when LLMs are down.
     env = os.environ
     if env.get("ENRICH_HEALTHCHECK_ENABLED", "true").strip().lower() in _TRUTHY:
-        health = health_check_ollama_hosts(ollama_host_chain, env, model_name=health_check_model)
-        if not health.reachable_hosts:
-            checked_labels = [h.get("label") or h.get("url") for h in health.checked_hosts]
+        if not health_check_model:
             print(
-                f"[rag-enrich] ERROR: No reachable Ollama hosts for repo {repo_root}. "
-                f"Checked: {checked_labels}",
+                "[rag-enrich] WARNING: No model found in enrichment config for health check. "
+                "Skipping health check. Ensure llmc.toml has at least one enabled enrichment chain with a model.",
                 file=sys.stderr,
                 flush=True,
             )
-            return 2
-        else:
-            reachable_labels = [h.get("label") or h.get("url") for h in health.reachable_hosts]
-            print(
-                f"[rag-enrich] Healthcheck OK: reachable Ollama hosts = {reachable_labels}",
-                flush=True,
-            )
+        elif ollama_host_chain:
+            health = health_check_ollama_hosts(ollama_host_chain, env, model_name=health_check_model)
+            if not health.reachable_hosts:
+                checked_labels = [h.get("label") or h.get("url") for h in health.checked_hosts]
+                print(
+                    f"[rag-enrich] ERROR: No reachable Ollama hosts for repo {repo_root}. "
+                    f"Checked: {checked_labels}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                return 2
+            else:
+                reachable_labels = [h.get("label") or h.get("url") for h in health.reachable_hosts]
+                print(
+                    f"[rag-enrich] Healthcheck OK: reachable Ollama hosts = {reachable_labels}",
+                    flush=True,
+                )
+
 
     db_file = index_path_for_write(repo_root)
     db = Database(db_file)

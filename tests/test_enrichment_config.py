@@ -120,6 +120,7 @@ def test_select_chain_filters_disabled_entries() -> None:
         cooldown_seconds=0,
         batch_size=5,
         max_retries_per_span=3,
+        enforce_latin1_enrichment=False,
         chains={"default": [spec1, spec2]},
     )
     selected = select_chain(config, None)

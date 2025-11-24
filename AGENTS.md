@@ -2,7 +2,7 @@
 
 The user is **Dave**.
 
-- **Repo root:** `~/src/llmc` (aka `/home/vmlinux/src/llmc`)
+- **Repo root:** `~/src/llmc` (aka `/path/to/your/llmc/repo`)
 - **Rule:** NO RANDOM CRAP IN THE REPO ROOT.  
   - If you need a scratch script, prefer `./.trash/`.
   - If it belongs in repo root by common best practice (README, pyproject, etc.), that’s fine.

@@ -122,7 +122,7 @@ Claude can call these directly via Desktop Commander:
 You can also use the RAG CLI directly:
 
 ```bash
-cd /home/vmlinux/src/llmc
+cd ~/src/llmc
 source .venv/bin/activate
 
 # Simple search

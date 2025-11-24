@@ -7,7 +7,8 @@ import tempfile
 import os
 from pathlib import Path
 
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Simulated IndexStatus class (from what we see in rag_index_status.json)
 class IndexStatus:
@@ -59,7 +60,7 @@ def test_index_status_round_trip():
     status = IndexStatus(
         index_state="fresh",
         last_indexed_at="2025-11-16T17:09:22.388903+00:00",
-        repo="/home/vmlinux/src/llmc",
+        repo=str(REPO_ROOT),
         schema_version=1,
         last_indexed_commit="29a91d55c6478ebaf7a721eac2c09dbbe4577a0b",
         last_error=None
@@ -155,7 +156,7 @@ def test_existing_status_file():
     """Test the actual status file in the repo"""
     print("Test 5: Existing status file")
 
-    status_path = Path("/home/vmlinux/src/llmc/.llmc/rag/index_status.json")
+    status_path = REPO_ROOT / ".llmc" / "rag" / "index_status.json"
 
     if not status_path.exists():
         print(f"  ⚠ WARNING: {status_path} does not exist")

@@ -89,3 +89,5 @@ TEST_FIXES_SUMMARY_*.md
 .venv/
 /legacy/
 patches/
+# Local backup artefacts for personal tools
+llmc_backups/
