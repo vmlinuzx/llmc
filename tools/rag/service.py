@@ -748,11 +748,14 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
     repo_root = Path(__file__).resolve().parents[2]
     systemd = SystemdManager(repo_root)
     
-    if not systemd.is_systemd_available():
-        # Fallback to file-based logs
-        log_file = Path.home() / ".llmc" / "logs" / "rag-daemon" / "rag-service.log"
+    # Determine which logs to show based on how service was started
+    log_file = Path.home() / ".llmc" / "logs" / "rag-daemon" / "rag-service.log"
+    
+    # If service is running with a PID in state, it's fork() mode - use file logs
+    if state.is_running() and state.state.get("pid"):
         if not log_file.exists():
             print(f"❌ Log file not found: {log_file}")
+            print(f"   Expected at: {log_file}")
             return 1
         
         if args.follow:
@@ -761,17 +764,34 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
             subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
         return 0
     
-    # Use systemd logs
-    process = systemd.get_logs(lines=args.lines, follow=args.follow)
+    # If file logs exist and are recent (modified in last hour), prefer them
+    if log_file.exists():
+        import time
+        age = time.time() - log_file.stat().st_mtime
+        if age < 3600:  # Less than 1 hour old
+            if args.follow:
+                subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)])
+            else:
+                subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
+            return 0
     
-    if process and args.follow:
-        try:
-            process.wait()
-        except KeyboardInterrupt:
-            process.terminate()
-            print("\n")
+    # Fall back to systemd logs if available
+    if systemd.is_systemd_available():
+        process = systemd.get_logs(lines=args.lines, follow=args.follow)
+        
+        if process and args.follow:
+            try:
+                process.wait()
+            except KeyboardInterrupt:
+                process.terminate()
+                print("\n")
+        return 0
     
-    return 0
+    # No logs available
+    print(f"❌ No logs available")
+    print(f"   File logs: {log_file} (not found or stale)")
+    print(f"   Systemd: not available")
+    return 1
 
 
 def cmd_health(args, state: ServiceState, tracker: FailureTracker) -> int:
