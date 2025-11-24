@@ -6,6 +6,8 @@ Analyzes test failures across the entire test suite
 
 import subprocess
 import json
+from pathlib import Path
+import glob
 
 def run_test_batch(test_pattern, output_file):
     """Run a batch of tests and capture results"""
@@ -13,9 +15,20 @@ def run_test_batch(test_pattern, output_file):
     print(f"Testing: {test_pattern}")
     print(f"{'='*80}")
 
+    test_files = glob.glob(test_pattern)
+    if not test_files:
+        print(f"No files found for pattern: {test_pattern}")
+        return {
+            'pattern': test_pattern,
+            'failed': 0,
+            'passed': 0,
+            'failures': [],
+            'error_count': 0
+        }
+
     cmd = [
         "python3", "-m", "pytest",
-        test_pattern,
+        *test_files, # Pass expanded files
         "-v",
         "--tb=line",
         "-q"
@@ -134,10 +147,10 @@ def main():
         'by_category': categories
     }
 
-    with open('/home/vmlinux/src/llmc/tests/ruthless_test_analysis.json', 'w') as f:
+    with open(Path(__file__).parent / 'ruthless_test_analysis.json', 'w') as f:
         json.dump(report, f, indent=2)
 
-    print(f"\n\nDetailed report saved to: /home/vmlinux/src/llmc/tests/ruthless_test_analysis.json")
+    print(f"\n\nDetailed report saved to: {Path(__file__).parent / 'ruthless_test_analysis.json'}")
 
 if __name__ == "__main__":
     main()
