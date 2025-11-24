@@ -1,0 +1,55 @@
+........................................................................ [  5%]
+........................................................................ [ 11%]
+........................................................................ [ 17%]
+........................................................................ [ 23%]
+..................sssssssssssssssssssssssss............................. [ 29%]
+........................................................................ [ 35%]
+............sssss....................................sssss.............. [ 41%]
+........................................................................ [ 46%]
+......sssss............................................................. [ 52%]
+........................................................................ [ 58%]
+.....................................................ssssssssssss....... [ 64%]
+........................................................................ [ 70%]
+........................................................................ [ 76%]
+........................................................................ [ 82%]
+........................................................................ [ 88%]
+........................................................................ [ 93%]
+........................................................................ [ 99%]
+...                                                                      [100%]
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_rag_repo_integration_edge_cases.py:31: Legacy RAG repo integration API not present; skipping edge-case tests
+SKIPPED [1] tests/test_file_mtime_guard.py:33: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:53: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:73: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:102: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:114: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:127: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:149: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:171: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:194: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:229: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:272: mtime guard not yet implemented
+SKIPPED [1] tests/test_file_mtime_guard.py:283: mtime guard not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:30: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:49: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:77: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:106: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:134: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:169: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:203: compute_route not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:233: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:238: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:243: Route dataclass not yet defined
+SKIPPED [1] tests/test_freshness_gateway.py:258: git integration not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:267: git integration not yet implemented
+SKIPPED [1] tests/test_freshness_gateway.py:276: git integration not yet implemented
+SKIPPED [5] tests/test_graph_building.py: Standalone test script - run directly with python
+SKIPPED [5] tests/test_index_status.py: Standalone test script - run directly with python
+SKIPPED [1] tests/test_nav_tools_integration.py:248: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:285: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:316: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tests/test_nav_tools_integration.py:345: CLI integration not yet implemented
+SKIPPED [1] tests/test_nav_tools_integration.py:364: CLI integration not yet implemented
+SKIPPED [6] tests/test_rag_failures.py: Standalone test script - run directly with python
+SKIPPED [6] tests/test_rag_failures_fixed.py: Standalone test script - run directly with python
+1175 passed, 53 skipped in 95.08s (0:01:35)

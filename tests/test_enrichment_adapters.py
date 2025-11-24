@@ -18,6 +18,7 @@ def _make_args() -> SimpleNamespace:
         retry_wait=0.1,
         gateway_path=None,
         gateway_timeout=qeb.GATEWAY_DEFAULT_TIMEOUT,
+        enforce_latin1=False,
     )
 
 
@@ -31,7 +32,7 @@ def test_ollama_adapter_success(monkeypatch: pytest.MonkeyPatch) -> None:
         calls["ollama_host_label"] = kwargs.get("ollama_host_label")
         return "RAW", {"backend": "ollama", "model": "env-model"}
 
-    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any]):
+    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any], **kwargs: Any):
         assert raw == "RAW"
         assert meta["backend"] == "ollama"
         return {"ok": True}, None
@@ -75,7 +76,7 @@ def test_ollama_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> N
 
     failure_tuple = ("validation", ValueError("oops"), {"foo": "bar"})
 
-    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any]):
+    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any], **kwargs: Any):
         return None, failure_tuple
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)
@@ -107,7 +108,7 @@ def test_gateway_adapter_success_respects_model_and_restores_env(monkeypatch: py
         assert os.environ.get("GEMINI_MODEL") == "gemini-2.5-flash"
         return "RAW", {}
 
-    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any]):
+    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any], **kwargs: Any):
         return {"ok": True}, None
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)
@@ -140,7 +141,7 @@ def test_gateway_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> 
     def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
         return "RAW", {}
 
-    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any]):
+    def fake_parse_and_validate(raw: str, item: Dict[str, Any], meta: Dict[str, Any], **kwargs: Any):
         return None, failure_tuple
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)
