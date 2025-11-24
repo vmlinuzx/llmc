@@ -22,13 +22,18 @@ class SystemdManager:
         self.service_file = SYSTEMD_USER_DIR / SERVICE_NAME
     
     def is_systemd_available(self) -> bool:
-        """Check if systemd is available on this system."""
+        """Check if systemd user session is actually accessible."""
         try:
+            # Check if we can list services (requires working D-Bus connection)
             result = subprocess.run(
-                ["systemctl", "--user", "--version"],
+                ["systemctl", "--user", "list-units", "--type=service", "--no-pager"],
                 capture_output=True,
-                timeout=5
+                timeout=5,
+                text=True
             )
+            # If we get "Failed to connect to bus" or similar, systemd isn't usable
+            if "Failed to connect to bus" in result.stderr:
+                return False
             return result.returncode == 0
         except Exception:
             return False
