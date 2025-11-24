@@ -1,7 +1,7 @@
 # LLMC RAG Service CLI - High Level Design
 **Author:** DC & Claude (Otto)  
 **Date:** 2024-11-24  
-**Status:** DRAFT - AWAITING DC APPROVAL  
+**Status:** ✅ APPROVED BY DC - READY FOR IMPLEMENTATION  
 **Branch:** CoupDeGras
 
 ---
@@ -177,40 +177,47 @@ WantedBy=default.target
 ```bash
 $ llmc-rag exorcist /home/vmlinux/src/llmc
 
-⚠️  EXORCIST MODE: NUCLEAR OPTION ⚠️
+🔥 EXORCIST MODE 🔥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-This will PERMANENTLY DELETE the RAG database for:
+Hey. We need to talk about what you're about to do.
+
+You're about to nuke the RAG database for:
   📁 /home/vmlinux/src/llmc
 
-What you'll lose:
-  • 1,247 indexed spans
-  • 856 enriched summaries (months of LLM work)
-  • 856 embeddings
-  • All failure tracking
-  • All quality metrics
+Here's what that means:
+  • 1,247 indexed code spans - gone
+  • 856 enriched summaries - months of LLM work, vaporized  
+  • 856 embeddings - all that vector magic, deleted
+  • Every quality metric, every failure you've tracked - wiped
 
-This cannot be undone. The database will be rebuilt from scratch.
+This is the nuclear option. There's no undo button.
 
-Press Ctrl+C now to abort...
+I get it - sometimes you need to burn it down and start fresh.
+If there's a spider in there or something, I understand.
+Sometimes nukes from orbit are the only way to be sure.
 
-Continuing in 5 seconds... (Ctrl+C to abort)
+But I care about you not shooting yourself in the foot here.
+
+You've got 5 seconds to hit Ctrl+C and walk away.
+After that, it's gone for good.
+
+Starting in 5...
 4...
 3...
 2...
 1...
 
-Type the repo name to confirm: llmc
+Alright. Type the repo name to prove you mean it: llmc
 > llmc
 
-✅ Confirmed. Nuking RAG database...
+✅ Confirmed. Nuking from orbit...
 🗑️  Deleted .rag/rag_index.db (45.2 MB)
-🗑️  Deleted .rag/enrichments.json
+🗑️  Deleted .rag/enrichments.json  
 🗑️  Deleted .rag/embeddings.db
-✅ Database exorcised. Run enrichment to rebuild.
+✅ Database exorcised. She's clean.
 
-Next steps:
-  llmc-rag force-cycle    # Start immediate rebuild
+Want to rebuild? Run: llmc-rag force-cycle
 ```
 
 **Implementation safeguards:**
