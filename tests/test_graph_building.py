@@ -2,7 +2,6 @@
 Test 5: Graph Building - Node Coverage and Edge Construction
 Test 6: Graph Building - Corrupt Graph Handling
 """
-import sys
 import json
 import tempfile
 import os
@@ -262,23 +261,3 @@ def test_existing_graph_artifacts():
     assert len(entities) > 0
 
     print("✓ Existing graph is valid\n")
-
-if __name__ == "__main__":
-    print("=== GRAPH BUILDING TESTS ===\n")
-
-    print("Test 1: Node coverage...")
-    test_graph_node_coverage()
-
-    print("Test 2: Edge construction...")
-    test_graph_edge_construction()
-
-    print("Test 3: Self-consistency...")
-    test_graph_self_consistency()
-
-    print("Test 4: Corrupt graph handling...")
-    test_graph_corrupt_handling()
-
-    print("Test 5: Existing graph artifacts...")
-    test_existing_graph_artifacts()
-
-    print("=== ALL TESTS COMPLETE ===")

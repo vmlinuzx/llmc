@@ -120,33 +120,7 @@ def function_one(
 
     chunker = ASTChunker()
 
-    try:
-        chunks = chunker.chunk_text(bad_python, "bad.py")
-        print(f"Bad syntax chunks: {len(chunks)}")
-        # Should not crash, might still produce chunks or fallback
-        assert chunks is not None, "Chunker should not crash on syntax error"
-    except Exception as e:
-        print(f"Exception on bad syntax: {e}")
-        # This might be acceptable if properly logged
-        assert False, f"Chunker crashed on syntax error: {e}"
-
-if __name__ == "__main__":
-    print("=== RUTHLESS AST CHUNKER TESTS ===\n")
-
-    print("Test 1: Python file chunking...")
-    test_ast_chunker_python()
-    print("✓ PASSED\n")
-
-    print("Test 2: Shell script chunking...")
-    test_ast_chunker_shell()
-    print("✓ PASSED\n")
-
-    print("Test 3: Markdown chunking...")
-    test_ast_chunker_markdown()
-    print("✓ PASSED\n")
-
-    print("Test 4: Syntax error robustness...")
-    test_ast_chunker_syntax_error_robustness()
-    print("✓ PASSED\n")
-
-    print("=== ALL TESTS COMPLETE ===")
+    chunks = chunker.chunk_text(bad_python, "bad.py")
+    print(f"Bad syntax chunks: {len(chunks)}")
+    # Should not crash, might still produce chunks or fallback
+    assert chunks is not None, "Chunker should not crash on syntax error"

@@ -1,7 +1,6 @@
 """
 Test 11: Index Status Metadata - Round-trip and Corruption Handling
 """
-import sys
 import json
 import tempfile
 import os
@@ -180,14 +179,3 @@ def test_existing_status_file():
     assert status.schema_version is not None
 
     print("  ✓ Existing status file is valid\n")
-
-if __name__ == "__main__":
-    print("=== INDEX STATUS METADATA TESTS ===\n")
-
-    test_index_status_round_trip()
-    test_index_status_missing_file()
-    test_index_status_corrupt_json()
-    test_index_status_missing_fields()
-    test_existing_status_file()
-
-    print("=== ALL TESTS COMPLETE ===")
