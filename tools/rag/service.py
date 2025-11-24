@@ -58,6 +58,50 @@ else:
 MAX_FAILURES = 3  # 3 strikes and you're out
 
 
+def print_help():
+    """Print beautiful help screen."""
+    print("""
+LLMC RAG Service
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The intelligent RAG enrichment daemon for LLMC
+
+Usage:
+  llmc-rag <command> [options]
+
+Service Management:
+  start                Start the RAG service (systemd daemon)
+  stop                 Stop the RAG service
+  restart              Restart the RAG service
+  status               Show service status and repo details
+  logs [-f] [-n N]     View service logs (use -f to follow)
+
+Repository Management:
+  repo add <path>      Register a repository for enrichment
+  repo remove <path>   Unregister a repository
+  repo list            List all registered repositories
+
+Health & Diagnostics:
+  health               Check Ollama endpoint availability
+  config               Show current service configuration
+  failures             Show failure cache
+  failures clear       Clear failure cache (optionally per repo)
+
+Advanced:
+  interval <seconds>   Change enrichment cycle interval
+  force-cycle          Trigger immediate enrichment cycle
+  exorcist <path>      Nuclear option: completely rebuild RAG database
+
+Examples:
+  llmc-rag repo add /home/you/src/llmc
+  llmc-rag start
+  llmc-rag logs -f
+  llmc-rag health
+  llmc-rag status
+
+For detailed help: llmc-rag help <command>
+""")
+
+
 class ServiceState:
     """Manage service state persistence."""
     
@@ -446,37 +490,74 @@ class RAGService:
 
 
 def cmd_start(args, state: ServiceState, tracker: FailureTracker):
-    """Start the service."""
+    """Start the service via systemd."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not state.state["repos"]:
+        print("❌ No repos registered. Use 'llmc-rag repo add' first.")
+        return 1
+    
+    # Check if systemd is available
+    if not systemd.is_systemd_available():
+        print("⚠️  Systemd not available - using fallback fork() mode")
+        return cmd_start_fork(args, state, tracker)
+    
+    # Check if already running
+    status = systemd.status()
+    if status["running"]:
+        print(f"✅ Service already running (PID {status['pid']})")
+        return 0
+    
+    # Update state with interval
+    state.state["interval"] = args.interval
+    state.save()
+    
+    # Start via systemd
+    success, message = systemd.start()
+    if success:
+        print(f"🚀 {message}")
+        print(f"   Tracking {len(state.state['repos'])} repos")
+        print(f"   Interval: {args.interval}s")
+        print(f"\n📋 View logs: llmc-rag logs -f")
+        return 0
+    else:
+        print(f"❌ Failed to start: {message}")
+        return 1
+
+
+def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker):
+    """Fallback: Start the service via fork() when systemd unavailable."""
     if state.is_running():
         print(f"Service already running (PID {state.state['pid']})")
         return 1
     
-    if not state.state["repos"]:
-        print("No repos registered. Use 'register' command first.")
-        return 1
+    # Fork to background
+    pid = os.fork()
+    if pid > 0:
+        # Parent process
+        print(f"🚀 Started RAG service in background (PID {pid})")
+        print(f"   Tracking {len(state.state['repos'])} repos")
+        print(f"   Interval: {args.interval}s")
+        return 0
     
-    # Fork to background if --daemon
-    if args.daemon:
-        pid = os.fork()
-        if pid > 0:
-            # Parent process
-            print(f"Started RAG service in background (PID {pid})")
-            return 0
-        # Child process continues
-        os.setsid()
-        sys.stdin.close()
-        # Write daemon logs to a stable location instead of /dev/null
-        log_dir = Path(os.path.expanduser("~/.llmc/logs/rag-daemon")).resolve()
-        try:
-            log_dir.mkdir(parents=True, exist_ok=True)
-            log_path = log_dir / "rag-service.log"
-            log_file = open(log_path, "a", buffering=1, encoding="utf-8")
-            sys.stdout = log_file
-            sys.stderr = log_file
-        except OSError:
-            # Fall back to discarding output if logging cannot be configured
-            sys.stdout = open(os.devnull, "w")
-            sys.stderr = open(os.devnull, "w")
+    # Child process continues
+    os.setsid()
+    sys.stdin.close()
+    
+    # Write daemon logs to a stable location
+    log_dir = Path(os.path.expanduser("~/.llmc/logs/rag-daemon")).resolve()
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = log_dir / "rag-service.log"
+        log_file = open(log_path, "a", buffering=1, encoding="utf-8")
+        sys.stdout = log_file
+        sys.stderr = log_file
+    except OSError:
+        sys.stdout = open(os.devnull, "w")
+        sys.stderr = open(os.devnull, "w")
     
     service = RAGService(state, tracker)
     service.run_loop(args.interval)
@@ -484,7 +565,32 @@ def cmd_start(args, state: ServiceState, tracker: FailureTracker):
 
 
 def cmd_stop(args, state: ServiceState, tracker: FailureTracker):
-    """Stop the service."""
+    """Stop the service via systemd."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not systemd.is_systemd_available():
+        # Fall back to PID-based stop
+        return cmd_stop_fork(args, state, tracker)
+    
+    status = systemd.status()
+    if not status["running"]:
+        print("Service is not running")
+        return 1
+    
+    success, message = systemd.stop()
+    if success:
+        print(f"✅ {message}")
+        return 0
+    else:
+        print(f"❌ Failed to stop: {message}")
+        return 1
+
+
+def cmd_stop_fork(args, state: ServiceState, tracker: FailureTracker):
+    """Fallback: Stop the service via PID when systemd unavailable."""
     if not state.is_running():
         print("Service is not running")
         return 1
@@ -498,12 +604,12 @@ def cmd_stop(args, state: ServiceState, tracker: FailureTracker):
         for _ in range(10):
             time.sleep(0.5)
             if not state.is_running():
-                print("Service stopped")
+                print("✅ Service stopped")
                 return 0
         # Force kill if still running
         os.kill(pid, signal.SIGKILL)
         state.set_stopped()
-        print("Service force-stopped")
+        print("✅ Service force-stopped")
         return 0
     except ProcessLookupError:
         state.set_stopped()
@@ -613,56 +719,319 @@ def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
     return 0
 
 
+def cmd_restart(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Restart the service via systemd."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not systemd.is_systemd_available():
+        print("❌ Systemd not available - restart via stop+start")
+        cmd_stop(args, state, tracker)
+        time.sleep(2)
+        return cmd_start(args, state, tracker)
+    
+    success, message = systemd.restart()
+    if success:
+        print(f"🔄 {message}")
+        return 0
+    else:
+        print(f"❌ Failed to restart: {message}")
+        return 1
+
+
+def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """View service logs."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not systemd.is_systemd_available():
+        # Fallback to file-based logs
+        log_file = Path.home() / ".llmc" / "logs" / "rag-daemon" / "rag-service.log"
+        if not log_file.exists():
+            print(f"❌ Log file not found: {log_file}")
+            return 1
+        
+        if args.follow:
+            subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)])
+        else:
+            subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
+        return 0
+    
+    # Use systemd logs
+    process = systemd.get_logs(lines=args.lines, follow=args.follow)
+    
+    if process and args.follow:
+        try:
+            process.wait()
+        except KeyboardInterrupt:
+            process.terminate()
+            print("\n")
+    
+    return 0
+
+
+def cmd_health(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Check Ollama endpoint health."""
+    from .service_health import (
+        HealthChecker,
+        parse_ollama_hosts_from_env
+    )
+    
+    endpoints = parse_ollama_hosts_from_env()
+    
+    if not endpoints:
+        print("❌ No Ollama endpoints configured")
+        print("\nSet ENRICH_OLLAMA_HOSTS environment variable:")
+        print("  export ENRICH_OLLAMA_HOSTS='athena=http://192.168.5.20:11434'")
+        return 1
+    
+    checker = HealthChecker(timeout=5.0)
+    results = checker.check_all(endpoints)
+    
+    print(checker.format_results(results))
+    
+    # Return error if any endpoints are down
+    unreachable = [r for r in results if not r.reachable]
+    return 1 if unreachable else 0
+
+
+def cmd_config(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Show current service configuration."""
+    print("LLMC RAG Service Configuration")
+    print("=" * 50)
+    print()
+    
+    # State file
+    print(f"State File: {STATE_FILE}")
+    print(f"Failure DB: {FAILURE_DB}")
+    print()
+    
+    # Service state
+    print("Service State:")
+    print(f"  Status: {state.state['status']}")
+    print(f"  Interval: {state.state['interval']}s")
+    print(f"  Registered Repos: {len(state.state['repos'])}")
+    if state.state['last_cycle']:
+        print(f"  Last Cycle: {state.state['last_cycle']}")
+    print()
+    
+    # Environment
+    print("Environment:")
+    env_vars = [
+        "ENRICH_BACKEND",
+        "ENRICH_ROUTER",
+        "ENRICH_START_TIER",
+        "ENRICH_BATCH_SIZE",
+        "ENRICH_MAX_SPANS",
+        "ENRICH_COOLDOWN",
+        "ENRICH_OLLAMA_HOSTS",
+        "ENRICH_QUALITY_CHECK",
+    ]
+    for var in env_vars:
+        value = os.getenv(var, "(not set)")
+        print(f"  {var}: {value}")
+    
+    return 0
+
+
+def cmd_exorcist(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Nuclear option: rebuild RAG database."""
+    from .service_exorcist import Exorcist
+    
+    repo = Path(args.path).resolve()
+    
+    if not repo.exists():
+        print(f"❌ Repo not found: {repo}")
+        return 1
+    
+    # Check if service is running and processing this repo
+    if state.is_running() and str(repo) in state.state["repos"]:
+        print("❌ Service is currently running and tracking this repo")
+        print("\nStop the service first:")
+        print("  llmc-rag stop")
+        print("\nOr remove this repo temporarily:")
+        print(f"  llmc-rag repo remove {repo}")
+        return 1
+    
+    exorcist = Exorcist(repo)
+    return exorcist.execute(dry_run=args.dry_run)
+
+
+def cmd_interval(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Change enrichment cycle interval."""
+    new_interval = args.seconds
+    
+    if new_interval < 60:
+        print("❌ Interval must be at least 60 seconds")
+        return 1
+    
+    state.state["interval"] = new_interval
+    state.save()
+    
+    print(f"✅ Interval set to {new_interval}s")
+    
+    if state.is_running():
+        print("\n⚠️  Service is running. Restart for changes to take effect:")
+        print("  llmc-rag restart")
+    
+    return 0
+
+
+def cmd_force_cycle(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Trigger immediate enrichment cycle."""
+    if not state.is_running():
+        print("❌ Service is not running")
+        print("\nStart the service first:")
+        print("  llmc-rag start")
+        return 1
+    
+    print("⚠️  Force cycle not yet implemented")
+    print("    (Would send signal to running service to trigger immediate cycle)")
+    return 1
+
+
+def cmd_repo(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Handle repo subcommands."""
+    if args.repo_command == "add":
+        return cmd_register(args, state, tracker)
+    elif args.repo_command == "remove":
+        return cmd_unregister(args, state, tracker)
+    elif args.repo_command == "list":
+        print("Registered Repositories:")
+        if not state.state["repos"]:
+            print("  (none)")
+            return 0
+        for repo in state.state["repos"]:
+            print(f"  📁 {repo}")
+        return 0
+    return 1
+
+
+def cmd_enable(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Enable service to start on boot."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not systemd.is_systemd_available():
+        print("❌ Systemd not available on this system")
+        return 1
+    
+    success, message = systemd.enable()
+    if success:
+        print(f"✅ {message}")
+        return 0
+    else:
+        print(f"❌ Failed to enable: {message}")
+        return 1
+
+
+def cmd_disable(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Disable service from starting on boot."""
+    from .service_daemon import SystemdManager
+    
+    repo_root = Path(__file__).resolve().parents[2]
+    systemd = SystemdManager(repo_root)
+    
+    if not systemd.is_systemd_available():
+        print("❌ Systemd not available on this system")
+        return 1
+    
+    success, message = systemd.disable()
+    if success:
+        print(f"✅ {message}")
+        return 0
+    else:
+        print(f"❌ Failed to disable: {message}")
+        return 1
+
+
+def cmd_daemon_loop(args, state: ServiceState, tracker: FailureTracker) -> int:
+    """Internal command for systemd to run the daemon loop."""
+    service = RAGService(state, tracker)
+    service.run_loop(args.interval)
+    return 0
+
+
 def main(argv: Optional[list[str]] | None = None):
     if argv is None:
         argv = sys.argv[1:]
 
-    # Friendly top-level help for `llmc-rag-service` with no args or --help.
+    # Friendly top-level help for `llmc-rag` with no args or --help.
     if not argv or argv[0] in ("-h", "--help"):
-        print(
-            "LLMC RAG Service\n\n"
-            "High-level manager for the LLMC RAG background service.\n\n"
-            "Usage:\n"
-            "  llmc-rag-service <command> [options]\n\n"
-            "Commands:\n"
-            "  register       Add a repo to the service\n"
-            "  unregister     Remove a repo from the service\n"
-            "  start          Start the background RAG service\n"
-            "  stop           Stop the background RAG service\n"
-            "  status         Show service + repo status\n"
-            "  clear-failures Clear recorded failures (globally or per repo)\n\n"
-            "Examples:\n"
-            "  llmc-rag-service register /home/you/src/llmc\n"
-            "  llmc-rag-service start --interval 300\n"
-            "  llmc-rag-service status\n"
-        )
+        print_help()
         return 0
 
-    parser = argparse.ArgumentParser(description="LLMC RAG Service")
+    parser = argparse.ArgumentParser(description="LLMC RAG Service", add_help=False)
     subparsers = parser.add_subparsers(dest="command", required=True)
     
-    # start command
+    # Service management
     start_p = subparsers.add_parser("start", help="Start the service")
     start_p.add_argument("--interval", type=int, default=180, help="Loop interval in seconds")
-    start_p.add_argument("--daemon", action="store_true", help="Run in background")
+    start_p.add_argument("--daemon", action="store_true", help="Run in background (deprecated, uses systemd)")
     
-    # stop command
-    subparsers.add_parser("stop", help="Stop the service")
+    stop_p = subparsers.add_parser("stop", help="Stop the service")
+    restart_p = subparsers.add_parser("restart", help="Restart the service")
+    status_p = subparsers.add_parser("status", help="Show service status")
     
-    # status command
-    subparsers.add_parser("status", help="Show service status")
+    logs_p = subparsers.add_parser("logs", help="View service logs")
+    logs_p.add_argument("-f", "--follow", action="store_true", help="Follow log output")
+    logs_p.add_argument("-n", "--lines", type=int, default=50, help="Number of lines to show")
     
-    # register command
-    reg_p = subparsers.add_parser("register", help="Register a repo")
+    # Repo management (NEW: subcommand style)
+    repo_p = subparsers.add_parser("repo", help="Manage repositories")
+    repo_sub = repo_p.add_subparsers(dest="repo_command", required=True)
+    
+    add_p = repo_sub.add_parser("add", help="Add a repository")
+    add_p.add_argument("repo_path", help="Path to repository")
+    
+    remove_p = repo_sub.add_parser("remove", help="Remove a repository")
+    remove_p.add_argument("repo_path", help="Path to repository")
+    
+    list_p = repo_sub.add_parser("list", help="List registered repositories")
+    
+    # Backwards compatibility - keep old commands
+    reg_p = subparsers.add_parser("register", help="Register a repo (deprecated, use 'repo add')")
     reg_p.add_argument("repo_path", help="Path to repository")
     
-    # unregister command
-    unreg_p = subparsers.add_parser("unregister", help="Unregister a repo")
+    unreg_p = subparsers.add_parser("unregister", help="Unregister a repo (deprecated, use 'repo remove')")
     unreg_p.add_argument("repo_path", help="Path to repository")
     
-    # clear-failures command
-    clear_p = subparsers.add_parser("clear-failures", help="Clear failure cache")
+    # Health & diagnostics
+    health_p = subparsers.add_parser("health", help="Check Ollama endpoint health")
+    config_p = subparsers.add_parser("config", help="Show current configuration")
+    
+    failures_p = subparsers.add_parser("failures", help="Manage failure cache")
+    failures_sub = failures_p.add_subparsers(dest="failures_command")
+    failures_show_p = failures_sub.add_parser("show", help="Show failures (default)")
+    clear_fail_p = failures_sub.add_parser("clear", help="Clear failures")
+    clear_fail_p.add_argument("--repo", help="Clear failures for specific repo only")
+    
+    # Backwards compat
+    clear_p = subparsers.add_parser("clear-failures", help="Clear failure cache (deprecated)")
     clear_p.add_argument("--repo", help="Clear failures for specific repo only")
+    
+    # Advanced
+    interval_p = subparsers.add_parser("interval", help="Change enrichment cycle interval")
+    interval_p.add_argument("seconds", type=int, help="Interval in seconds")
+    
+    force_p = subparsers.add_parser("force-cycle", help="Trigger immediate enrichment cycle")
+    
+    exorcist_p = subparsers.add_parser("exorcist", help="Nuclear option: rebuild RAG database")
+    exorcist_p.add_argument("path", help="Path to repository")
+    exorcist_p.add_argument("--dry-run", action="store_true", help="Show what would be deleted")
+    
+    enable_p = subparsers.add_parser("enable", help="Enable service to start on boot")
+    disable_p = subparsers.add_parser("disable", help="Disable service from starting on boot")
+    
+    # Hidden internal command for systemd
+    daemon_p = subparsers.add_parser("_daemon_loop", help=argparse.SUPPRESS)
+    daemon_p.add_argument("--interval", type=int, default=180)
     
     args = parser.parse_args(argv)
     
@@ -683,10 +1052,22 @@ def main(argv: Optional[list[str]] | None = None):
     commands = {
         "start": cmd_start,
         "stop": cmd_stop,
+        "restart": cmd_restart,
         "status": cmd_status,
-        "register": cmd_register,
-        "unregister": cmd_unregister,
-        "clear-failures": cmd_clear_failures,
+        "logs": cmd_logs,
+        "repo": cmd_repo,
+        "register": cmd_register,  # Backwards compat
+        "unregister": cmd_unregister,  # Backwards compat
+        "health": cmd_health,
+        "config": cmd_config,
+        "failures": cmd_clear_failures,  # Handle both show and clear
+        "clear-failures": cmd_clear_failures,  # Backwards compat
+        "interval": cmd_interval,
+        "force-cycle": cmd_force_cycle,
+        "exorcist": cmd_exorcist,
+        "enable": cmd_enable,
+        "disable": cmd_disable,
+        "_daemon_loop": cmd_daemon_loop,
     }
     
     return commands[args.command](args, state, tracker)
