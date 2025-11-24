@@ -44,10 +44,13 @@ from tools.rag.config_enrichment import (
 from tools.rag.database import Database
 from tools.rag.enrichment_backends import BackendAdapter, BackendCascade, BackendError
 from tools.rag.workers import enrichment_plan, validate_enrichment
+import importlib
+
 try:
-    from tools.rag.service import FailureTracker
+    _service_mod = importlib.import_module("tools.rag.service")
+    FailureTracker = getattr(_service_mod, "FailureTracker", None)
 except Exception:  # pragma: no cover - failure cache optional
-    FailureTracker = None  # type: ignore[assignment]
+    FailureTracker = None
 
 
 

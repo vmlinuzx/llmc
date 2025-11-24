@@ -295,6 +295,23 @@ The following phases describe how to get there incrementally.
 4. Phase 4 – Logs and runbooks (so Future You doesn’t hate Past You).
 5. Phase 5 – Only if you’re feeling spicy.
 
+### Testing Hardening – Additional Test Remediations
+
+This sub-roadmap tracks the focused work from the `RUTHLESS_TESTING_GAP_ANALYSIS` report and the `AdditionalTestRemediations` branch.
+
+- **Phase 1 – Static Safety Gate (mypy clean):**
+  - Fix all current mypy errors called out by `test_qwen_enrich_batch_static.py::test_qwen_enrich_batch_mypy_clean` (e.g., `service_exorcist.py`, `quality.py`, `service_health.py`, `service.py`, `llmc_log_manager.py`, `qwen_enrich_batch.py`).
+  - Ensure the static test passes and treat mypy as a hard gate for those modules.
+- **Phase 2 – Nuclear Tools & Indexer Tests:**
+  - Add pytest coverage for `tools/rag/service_exorcist.py` and `tools/rag/indexer.py`, including database deletion flows, permission failures, partial failures, and verification that indices are correct after runs.
+- **Phase 3 – Core DB & RAG Pipeline Coverage:**
+  - Add tests for `tools/rag/database.py`, `tools/rag/db_fts.py`, `tools/rag/runner.py`, `tools/rag/planner.py`, and related service modules to cover critical happy paths and basic failure handling.
+- **Phase 4 – Standalone/Skipped Tests Into CI:**
+  - Convert “standalone script” tests (e.g., `test_ast_chunker.py`, `test_graph_building.py`, `test_index_status.py`, `test_multiple_registry_entries.py`) into normal pytest suites.
+  - Triage skipped tests (mtime guard, nav tools integration, legacy APIs) and either implement and unskip or clearly mark as experimental/legacy in docs and markers.
+- **Phase 5 – Edge Cases, CLIs, and Coverage Target:**
+  - Add edge-case tests for network failures, DB corruption, resource exhaustion, invalid inputs, and CLI entry points, and drive overall coverage for RAG + scripts toward ~90% on critical paths.
+
 ---
 
 ## Recently Completed (Highlights)

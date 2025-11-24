@@ -62,7 +62,7 @@ class LLMCLogManager:
             return []
         
         patterns = ["*.log", "*.log.*", "*.jsonl"]
-        files = []
+        files: List[Path] = []
         for pattern in patterns:
             files.extend(log_dir.glob(pattern))
         return sorted(files)

@@ -845,7 +845,7 @@ def cmd_failures(args, state: ServiceState, tracker: FailureTracker):
         print("Failure Cache")
         print("=" * 50)
         
-        by_repo = {}
+        by_repo: dict[str, list[tuple[str, int, object, str]]] = {}
         for span_hash, repo_path, fail_count, last_attempted, reason in failures:
             if repo_path not in by_repo:
                 by_repo[repo_path] = []

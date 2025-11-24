@@ -10,7 +10,25 @@ import shutil
 import sqlite3
 import time
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List, TypedDict
+
+
+class FileStat(TypedDict):
+    """Metadata about a single file slated for deletion."""
+
+    path: str
+    size_bytes: int
+
+
+class ExorcistSummary(TypedDict):
+    """Structured view of what the exorcist will touch."""
+
+    exists: bool
+    files: List[FileStat]
+    total_size_bytes: int
+    span_count: int
+    enrichment_count: int
+    embedding_count: int
 
 
 class ExorcistStats:
@@ -26,9 +44,9 @@ class ExorcistStats:
         self.quality_dir = self.rag_dir / "quality_reports"
         self.failures_db = self.rag_dir / "failures.db"
     
-    def gather(self) -> Dict:
-        """Gather statistics about what exists."""
-        stats = {
+    def gather(self) -> ExorcistSummary:
+        """Gather statistics about what exists in the repo's RAG area."""
+        stats: ExorcistSummary = {
             "exists": self.rag_dir.exists(),
             "files": [],
             "total_size_bytes": 0,

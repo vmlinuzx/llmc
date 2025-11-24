@@ -86,15 +86,15 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
         cursor.execute("SELECT span_hash, summary FROM enrichments")
 
         for row in cursor.fetchall():
-            result = classify_quality(row['summary'])
+            quality_result = classify_quality(row['summary'])
 
-            if result.classification == 'PLACEHOLDER':
+            if quality_result.classification == 'PLACEHOLDER':
                 placeholder_count += 1
-            elif result.classification == 'EMPTY':
+            elif quality_result.classification == 'EMPTY':
                 empty_count += 1
-            elif result.classification == 'SHORT':
+            elif quality_result.classification == 'SHORT':
                 short_count += 1
-            elif result.classification == 'OK':
+            elif quality_result.classification == 'OK':
                 ok_count += 1
 
         # Calculate quality score (OK / total)

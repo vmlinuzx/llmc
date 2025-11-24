@@ -109,7 +109,7 @@ def parse_ollama_hosts_from_env() -> List[OllamaEndpoint]:
     if not raw:
         return []
     
-    endpoints = []
+    endpoints: List[OllamaEndpoint] = []
     model = os.getenv("ENRICH_MODEL", "qwen2.5:7b-instruct")
     
     for chunk in raw.split(","):
