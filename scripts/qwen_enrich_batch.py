@@ -109,9 +109,6 @@ def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[Dict
     if hosts:
         return hosts
 
-    athena_url = env.get("ATHENA_OLLAMA_URL", "").strip()
-    if athena_url:
-        add_host("athena", athena_url)
     return hosts
 
 
@@ -330,7 +327,9 @@ _LOCAL_HOSTNAMES = {"", "localhost", "127.0.0.1", "::1"}
 def _should_sample_local_gpu(selected_backend: str, host_url: str | None) -> bool:
     if selected_backend != "ollama":
         return False
-    resolved_url = host_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    resolved_url = host_url or os.environ.get("OLLAMA_URL")
+    if not resolved_url:
+        return False
     try:
         hostname = (urlparse(resolved_url).hostname or "").lower()
     except ValueError:
@@ -640,8 +639,14 @@ def call_via_ollama(
     base_url: str | None = None,
     host_label: str | None = None,
 ) -> tuple[str, Dict[str, object]]:
-    base_url = (base_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")).rstrip("/")
-    model_name = model_override or os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct-q4_K_M")
+    base_url = (base_url or os.environ.get("OLLAMA_URL", "")).rstrip("/")
+    if not base_url:
+        raise ValueError("Ollama base URL not configured. Set OLLAMA_URL or check chain config.")
+
+    model_name = model_override or os.environ.get("OLLAMA_MODEL", "")
+    if not model_name:
+        raise ValueError("Ollama model not configured. Set OLLAMA_MODEL or check chain config.")
+
     payload_dict: dict[str, Any] = {"model": model_name, "prompt": prompt, "stream": False}
     if options:
         payload_dict["options"] = options
@@ -1347,7 +1352,7 @@ def _build_cascade_for_attempt(
             for spec in tier_chain:
                 provider = spec.provider
                 if provider == "ollama":
-                    url = spec.url or os.environ.get("ATHENA_OLLAMA_URL") or "http://localhost:11434"
+                    url = spec.url
                     label = spec.name or url
                     adapters.append(
                         _OllamaBackendAdapter(
@@ -1395,7 +1400,7 @@ def _build_cascade_for_attempt(
                 config=None,
                 repo_root=repo_root,
                 args=args,
-                host_url=host_url or "http://localhost:11434",
+                host_url=host_url or "",
                 host_label=host_label,
                 tier_preset=tier_preset,
                 tier_for_attempt=tier_for_attempt,
@@ -1417,7 +1422,7 @@ def _build_cascade_for_attempt(
                 config=None,
                 repo_root=repo_root,
                 args=args,
-                host_url="http://localhost:11434",
+                host_url="",
                 host_label=None,
                 tier_preset=tier_preset,
                 tier_for_attempt=tier_for_attempt,
