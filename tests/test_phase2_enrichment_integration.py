@@ -8,8 +8,6 @@ from pathlib import Path
 import json
 import sys
 
-sys.path.insert(0, '/home/vmlinux/src/llmc')
-
 from tools.rag.schema import build_enriched_schema_graph, build_graph_for_repo
 from tools.rag.database import Database
 
@@ -19,7 +17,7 @@ class TestPhase2EnrichmentIntegration:
     
     def setup_method(self):
         """Setup test fixtures"""
-        self.repo_root = Path("/home/vmlinux/src/llmc")
+        self.repo_root = Path(__file__).resolve().parents[1]
         self.db_path = self.repo_root / ".rag" / "index_v2.db"
         self.graph_output_path = self.repo_root / ".llmc" / "rag_graph_phase2_test.json"
     

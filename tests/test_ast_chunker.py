@@ -67,8 +67,6 @@ Even more content.
 
 def test_ast_chunker_python():
     """Test AST chunker with Python file"""
-    import sys
-    sys.path.insert(0, '/home/vmlinux/src/llmc')
     from scripts.rag.ast_chunker import ASTChunker
 
     chunker = ASTChunker()
@@ -84,8 +82,6 @@ def test_ast_chunker_python():
 
 def test_ast_chunker_shell():
     """Test AST chunker with shell script"""
-    import sys
-    sys.path.insert(0, '/home/vmlinux/src/llmc')
     from scripts.rag.ast_chunker import ASTChunker
 
     chunker = ASTChunker()
@@ -99,8 +95,6 @@ def test_ast_chunker_shell():
 
 def test_ast_chunker_markdown():
     """Test AST chunker with markdown file"""
-    import sys
-    sys.path.insert(0, '/home/vmlinux/src/llmc')
     from scripts.rag.ast_chunker import ASTChunker
 
     chunker = ASTChunker()
@@ -115,8 +109,6 @@ def test_ast_chunker_markdown():
 
 def test_ast_chunker_syntax_error_robustness():
     """Test AST chunker handles syntax errors gracefully"""
-    import sys
-    sys.path.insert(0, '/home/vmlinux/src/llmc')
     from scripts.rag.ast_chunker import ASTChunker
 
     bad_python = '''

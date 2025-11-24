@@ -9,7 +9,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-def run_cmd(cmd, cwd="/home/vmlinux/src/llmc", timeout=5):
+# Calculate REPO_ROOT dynamically
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+def run_cmd(cmd, cwd=str(REPO_ROOT), timeout=5):
     """Run a command and return result."""
     try:
         result = subprocess.run(
@@ -41,7 +44,7 @@ def test_state_store_corrupt_data():
         # Try to load - should not crash
         code = f"""
 import sys
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, '{str(REPO_ROOT)}')
 from tools.rag_daemon.state_store import StateStore
 from pathlib import Path
 
@@ -50,7 +53,7 @@ states = store.load_all()
 print(f'Loaded {{len(states)}} states (corrupt file ignored)')
 print(f'SUCCESS: Corrupt JSON was ignored without crashing')
 """
-        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}"')
+        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}" ')
 
         print(f"Return code: {returncode}")
         print(f"Output: {stdout}")
@@ -87,7 +90,7 @@ def test_scheduler_consecutive_failures():
         # Test backoff calculation
         code = f"""
 import sys
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, '{str(REPO_ROOT)}')
 from datetime import datetime, timedelta, timezone
 from tools.rag_daemon.models import RepoState
 
@@ -110,7 +113,7 @@ else:
     print('✗ FAIL: Incorrect backoff calculation')
     sys.exit(1)
 """
-        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}"')
+        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}" ')
 
         print(stdout)
         if stderr:
@@ -135,7 +138,7 @@ def test_control_surface():
 
         code = f"""
 import sys
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, '{str(REPO_ROOT)}')
 from tools.rag_daemon.control import read_control_events
 from pathlib import Path
 
@@ -160,7 +163,7 @@ else:
     print(f'✗ FAIL: {{len(remaining)}} flags not cleaned up')
     sys.exit(1)
 """
-        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}"')
+        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}" ')
 
         print(stdout)
         if stderr:
@@ -180,7 +183,7 @@ def test_registry_empty_and_invalid():
         # Test empty registry
         code = f"""
 import sys
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, '{str(REPO_ROOT)}')
 from pathlib import Path
 from tools.rag_repo.config import ToolConfig
 from tools.rag_repo.registry import RegistryAdapter
@@ -198,7 +201,7 @@ else:
     print('✗ FAIL: Empty registry returned unexpected data')
     sys.exit(1)
 """
-        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}"')
+        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}" ')
 
         print(stdout)
         if stderr:
@@ -216,7 +219,7 @@ def test_repo_tool_commands():
 
     # Test 1: Help command
     print("\n[1] Testing help command...")
-    returncode, stdout, stderr = run_cmd('/home/vmlinux/src/llmc/scripts/llmc-rag-repo help')
+    returncode, stdout, stderr = run_cmd(f'{str(REPO_ROOT)}/scripts/llmc-rag-repo help')
     if "LLMC RAG Repo Tool" in stdout and returncode == 0:
         print("✓ PASS: Help command works")
         results.append(True)
@@ -234,7 +237,7 @@ def test_repo_tool_commands():
         config_file.write_text(f"registry_path: {registry_file}\n")
         
         returncode, stdout, stderr = run_cmd(
-            f'/home/vmlinux/src/llmc/scripts/llmc-rag-repo list --config {config_file}'
+            f'{str(REPO_ROOT)}/scripts/llmc-rag-repo list --config {config_file}'
         )
         if "No repos registered" in stdout and returncode == 0:
             print("✓ PASS: List command works with empty registry")
@@ -246,7 +249,7 @@ def test_repo_tool_commands():
 
     # Test 3: Inspect non-existent repo
     print("\n[3] Testing inspect on non-existent repo...")
-    returncode, stdout, stderr = run_cmd('/home/vmlinux/src/llmc/scripts/llmc-rag-repo inspect /nonexistent/path')
+    returncode, stdout, stderr = run_cmd(f'{str(REPO_ROOT)}/scripts/llmc-rag-repo inspect /nonexistent/path')
     # Inspect returns 0 even if repo missing, but reports Exists: False
     if returncode == 0 and "Exists: False" in stdout:
         print("✓ PASS: Inspect correctly reports non-existent path")
@@ -285,7 +288,7 @@ def test_worker_pool_failure():
         # Test worker failure handling
         code = f"""
 import sys
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, '{str(REPO_ROOT)}')
 from tools.rag_daemon.models import RepoDescriptor, Job
 from tools.rag_daemon.workers import WorkerPool, make_job_id
 from tools.rag_daemon.state_store import StateStore
@@ -336,7 +339,7 @@ else:
     print('✗ FAIL: Worker did not handle failure correctly')
     sys.exit(1)
 """
-        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}"', timeout=10)
+        returncode, stdout, stderr = run_cmd(f'python3 -c "{code}" ', timeout=10)
 
         print(stdout)
         if stderr:
