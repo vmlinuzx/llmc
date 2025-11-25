@@ -43,12 +43,14 @@ echo "How do we handle authentication?" | ./scripts/llm_gateway.sh --local
 #   🤖 DeepSeek response using YOUR files
 ```
 
-### 5. Test Web UI (Optional)
+### 5. Test Web UI (Optional, deprecated)
 ```bash
 cd ~/src/glideclubs/scripts/rag
 python rag_server.py
 
 # Visit: http://localhost:8765
+# NOTE: This legacy web UI is deprecated / unsupported and may not work
+# on current LLMC setups. Prefer CLI-based RAG flows instead.
 # NOT localhost:3000 (that's your Next.js app!)
 ```
 
@@ -90,10 +92,10 @@ cd ~/src/glideclubs
 echo "What is this project?" | ./scripts/llm_gateway.sh --local
 # Look for: "✅ RAG context loaded"
 
-# Test 4: Web UI
+# Test 4: Web UI (deprecated / best-effort only)
 cd ~/src/glideclubs/scripts/rag
 python rag_server.py
-# Visit http://localhost:8765
+# Visit http://localhost:8765 (may be broken)
 ```
 
 ## Automated Test:

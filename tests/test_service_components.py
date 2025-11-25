@@ -45,3 +45,29 @@ def test_failure_tracker_threshold(service_mod, tmp_path):
     assert tracker.is_failed(span, repo) is True
 
     tracker.conn.close()
+
+
+def test_update_cycle_preserves_repos_added_by_other_instance(service_mod, tmp_path):
+    """
+    Regression: daemon update_cycle must not clobber repos added by a
+    separate short-lived CLI process that also writes to the state file.
+    """
+    # Simulate a long-lived daemon instance.
+    daemon_state = service_mod.ServiceState()
+    repo1 = tmp_path / "repo1"
+    repo1.mkdir()
+    assert daemon_state.add_repo(str(repo1))
+
+    # Simulate a separate CLI process that adds another repo later.
+    cli_state = service_mod.ServiceState()
+    repo2 = tmp_path / "repo2"
+    repo2.mkdir()
+    assert cli_state.add_repo(str(repo2))
+
+    # Old bug: this would drop repo2 because daemon_state held a stale
+    # in-memory copy of repos and overwrote the state file.
+    daemon_state.update_cycle()
+
+    persisted = json.loads(service_mod.STATE_FILE.read_text())
+    assert repo1.resolve().as_posix() in persisted["repos"]
+    assert repo2.resolve().as_posix() in persisted["repos"]

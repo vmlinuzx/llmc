@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import random
 import signal
 import time
 import threading
+from datetime import timedelta
+from pathlib import Path
 from typing import List, Optional
 
 from .control import read_control_events
@@ -32,6 +35,7 @@ class Scheduler:
         self.workers = workers
         self.logger = get_logger("rag_daemon.scheduler", config)
         self._shutdown_requested = threading.Event()
+        self._last_cache_cleanup = 0.0  # Track last cleanup time
 
     def run_forever(self) -> None:
         self._install_signal_handlers()
@@ -71,7 +75,71 @@ class Scheduler:
         signal.signal(signal.SIGINT, handler)
         signal.signal(signal.SIGTERM, handler)
 
+    def _cleanup_pycache_if_needed(self) -> None:
+        """Clean up old Python bytecode cache files periodically.
+        
+        Enterprise daemon behavior: prevent unbounded file accumulation
+        from long-running processes by removing .pyc files older than
+        the configured threshold.
+        """
+        # Load config from llmc.toml to get cleanup setting
+        try:
+            import tomli
+            from pathlib import Path
+            
+            # Find repo root by walking up from this file
+            repo_root = Path(__file__).parent.parent.parent.resolve()
+            config_path = repo_root / "llmc.toml"
+            
+            if not config_path.exists():
+                return  # No config, skip cleanup
+                
+            with open(config_path, "rb") as f:
+                config = tomli.load(f)
+            
+            cleanup_days = config.get("daemon", {}).get("pycache_cleanup_days", 7)
+            
+            if cleanup_days <= 0:
+                return  # Cleanup disabled
+            
+            # Only run cleanup once per day to avoid overhead
+            now = time.time()
+            if now - self._last_cache_cleanup < 86400:  # 24 hours
+                return
+            
+            pycache_dir = repo_root / ".llmc" / "pycache"
+            if not pycache_dir.exists():
+                return
+            
+            cutoff_time = now - (cleanup_days * 86400)
+            deleted_count = 0
+            
+            for root, dirs, files in os.walk(pycache_dir):
+                for filename in files:
+                    filepath = Path(root) / filename
+                    try:
+                        if filepath.stat().st_mtime < cutoff_time:
+                            filepath.unlink()
+                            deleted_count += 1
+                    except (OSError, FileNotFoundError):
+                        continue  # File already gone or inaccessible
+            
+            if deleted_count > 0:
+                self.logger.info(
+                    "Cleaned up %d .pyc files older than %d days from cache",
+                    deleted_count, cleanup_days
+                )
+            
+            self._last_cache_cleanup = now
+            
+        except Exception as exc:
+            # Never let cleanup crash the daemon
+            self.logger.warning("Failed to clean pycache: %s", exc)
+
     def _run_tick(self) -> None:
+        # Enterprise daemon hygiene: clean up old cache files periodically
+        self._cleanup_pycache_if_needed()
+        
         now = utc_now()
         events = read_control_events(self.config.control_dir)
         if events.shutdown:

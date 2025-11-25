@@ -112,14 +112,17 @@ python query_context.py "api routes" --project glideclubs --limit 5
 python query_context.py "refactor auth" --project glideclubs --context > context.txt
 ```
 
-### Web UI
+### Web UI (deprecated / unsupported)
 
 ```bash
-# Start web interface
+# NOTE: This old FastAPI web UI is deprecated, not supported,
+# and likely no longer works on current LLMC setups.
+# It is kept only for historical reference.
+# Start web interface (legacy / best-effort only)
 python rag_server.py
 
 # Visit: http://localhost:8765
-# Beautiful UI to search and browse your code
+# Legacy UI to search and browse your code (may be broken)
 ```
 
 ### File Watcher (Auto-reindex on changes)
@@ -225,9 +228,9 @@ python query_context.py "search term"
 python query_context.py "search term" --project glideclubs
 python query_context.py "search term" --context
 
-# Web UI
-python rag_server.py
-# Visit http://localhost:8765
+# Web UI (deprecated / unsupported)
+python rag_server.py   # legacy, may be broken
+# Visit http://localhost:8765 (legacy UI)
 
 # File watcher
 python watch_workspace.py
@@ -312,7 +315,7 @@ scripts/rag/
 ├── index_workspace.py ............. Index ~/src/ into ChromaDB
 ├── query_context.py ............... Query and build context
 ├── watch_workspace.py ............. Auto-reindex on file changes
-└── rag_server.py .................. Web UI (FastAPI)
+└── rag_server.py .................. Deprecated legacy Web UI (FastAPI; not supported)
 
 scripts/
 └── llm_gateway.js ................. Updated with RAG integration

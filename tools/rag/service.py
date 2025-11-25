@@ -80,6 +80,8 @@ Service Management:
   restart              Restart the RAG service
   status               Show service status and repo details
   logs [-f] [-n N]     View service logs (use -f to follow)
+  enable               Enable service to start on user login
+  disable              Disable service auto-start on user login
 
 Repository Management:
   repo add <path>      Register a repository for enrichment
@@ -103,6 +105,8 @@ Examples:
   llmc-rag logs -f
   llmc-rag health
   llmc-rag status
+  llmc-rag enable
+  llmc-rag disable
 
 For detailed help: llmc-rag help <command>
 """)
@@ -125,6 +129,27 @@ class ServiceState:
             "last_cycle": None,
             "interval": 180
         }
+
+    def _refresh_from_disk(self) -> None:
+        """
+        Refresh selected fields from the persisted state file.
+
+        This is used by the long-running daemon before it writes any updates,
+        so that repo add/remove operations performed by short-lived CLI
+        processes are not accidentally clobbered by a stale in-memory copy.
+        """
+        if not STATE_FILE.exists():
+            return
+        try:
+            data = json.loads(STATE_FILE.read_text())
+        except Exception:
+            # On any parse error, keep existing in-memory state.
+            return
+        if not isinstance(data, dict):
+            return
+        for key in ("repos", "interval"):
+            if key in data:
+                self.state[key] = data[key]
     
     def save(self):
         STATE_FILE.write_text(json.dumps(self.state, indent=2))
@@ -146,16 +171,25 @@ class ServiceState:
         return False
     
     def set_running(self, pid: int):
+        # Always refresh repos/interval from disk before updating runtime fields
+        # so we do not overwrite CLI-driven changes from a long-lived daemon.
+        self._refresh_from_disk()
         self.state["pid"] = pid
         self.state["status"] = "running"
         self.save()
     
     def set_stopped(self):
+        # Same reasoning as set_running: avoid clobbering repo/interval changes
+        # made by other processes that share the state file.
+        self._refresh_from_disk()
         self.state["pid"] = None
         self.state["status"] = "stopped"
         self.save()
     
     def update_cycle(self):
+        # Before recording the latest cycle timestamp, pull any updated repos
+        # and interval from disk so daemon loops honor external CLI changes.
+        self._refresh_from_disk()
         self.state["last_cycle"] = datetime.now(timezone.utc).isoformat()
         self.save()
     

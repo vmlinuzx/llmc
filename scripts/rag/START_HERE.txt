@@ -27,7 +27,7 @@
    - RAG system indexing all ~/src/ projects
    - Vector search across your entire codebase  
    - Auto-context for DeepSeek
-   - Web UI at http://localhost:8765
+   - (Legacy) Web UI at http://localhost:8765  [deprecated / unsupported]
 
 ═══════════════════════════════════════════════════════════════
 
@@ -40,7 +40,7 @@
    index_workspace.py ....... Index your ~/src/ workspace
    query_context.py ......... Query the RAG system
    watch_workspace.py ....... Auto-reindex file changes
-   rag_server.py ............ Web UI server
+   rag_server.py ............ Deprecated legacy Web UI server (not supported)
 
 ═══════════════════════════════════════════════════════════════
 
@@ -70,7 +70,8 @@
    1. Read README.md for full details
    2. Run ./setup_rag.sh to index workspace
    3. Test with: python query_context.py "test query"
-   4. Start web UI: python rag_server.py
+   4. (Legacy) Start web UI: python rag_server.py
+      NOTE: This web UI is deprecated / unsupported and may not work.
    5. Use normally with: ../llm_gateway.sh --local "task"
 
 ═══════════════════════════════════════════════════════════════

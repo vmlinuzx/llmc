@@ -15,7 +15,7 @@ cat << 'EOF'
    ├── index_workspace.py ........... Index your workspace
    ├── query_context.py ............. Query the RAG system
    ├── watch_workspace.py ........... Auto-reindex file changes
-   └── rag_server.py ................ Web UI server
+   └── rag_server.py ................ Deprecated legacy Web UI server (not supported)
 
 📚 Documentation:
    ~/src/glideclubs/scripts/rag/README.md ......... Complete guide
@@ -29,7 +29,7 @@ cat << 'EOF'
 
 💾 After Setup:
    Database location: ~/.deepseek_rag/
-   Web UI: http://localhost:8765
+   (Legacy) Web UI: http://localhost:8765  [deprecated / unsupported; may not work]
 
 📖 Quick Commands Reference:
    
@@ -39,8 +39,8 @@ cat << 'EOF'
    # Query your code
    python query_context.py "search term"
    
-   # Start web UI
-   python rag_server.py
+   # Start web UI (legacy; deprecated / unsupported)
+   python rag_server.py   # may be broken on current LLMC
    
    # Start file watcher
    python watch_workspace.py

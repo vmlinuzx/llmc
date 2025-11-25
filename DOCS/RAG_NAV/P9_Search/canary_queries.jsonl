@@ -1,3 +1,0 @@
-{"q": "jwt verify", "relevant": ["jwt", "verify", "auth"]}
-{"q": "sqlite fts search", "relevant": ["fts", "sqlite", "db"]}
-{"q": "graph neighbors", "relevant": ["graph", "edge", "calls", "imports"]}

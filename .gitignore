@@ -4,6 +4,7 @@ node_modules
 supabase/.temp
 dist
 DOCS/RESEARCH/
+DOCS/legacy/
 .backup*/
 *.trash*
 
@@ -20,7 +21,9 @@ scripts/rag/.venv/
 .venv/
 venv/
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
 
 # Contracts sidecar artifacts
 contracts.min.json
@@ -47,6 +50,7 @@ logs/*
 .llmc/locks/
 .llmc/worktrees/
 .llmc/logs/
+.llmc/pycache/
 
 # Codex TUI artifacts (API tokens, sessions, etc.)
 .codex/

@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Monitor Screen - real-time system dashboard with analytics."""
+import os
 import random
+import subprocess
+import sys
+import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict, Optional
 
 from textual.app import ComposeResult
-from textual.widgets import Static, Button
+from textual.widgets import Button, Static
 from textual.containers import Container, Grid, ScrollableContainer
 from textual.screen import Screen
 
@@ -126,6 +130,10 @@ class MonitorScreen(Screen):
     def __init__(self):
         super().__init__()
         self.logs = []
+        self._log_proc: Optional[subprocess.Popen] = None
+        self._log_thread: Optional[threading.Thread] = None
+        self._log_stream_error: bool = False
+        self._max_log_lines: int = 200
         self.start_time = datetime.now()
         self.menu_items = [
             ("1", "Monitor System", self.action_nav_monitor),
@@ -168,6 +176,8 @@ class MonitorScreen(Screen):
         self.query_one("#header", Static).update(
             f"LLMC Monitor :: repo {self.app.repo_root}"
         )
+        # Start log streaming from the RAG service (falls back to simulation if unavailable).
+        self._start_log_stream()
         self.update_menu()
         self.update_stats()
         self.update_logs(force=True)
@@ -176,6 +186,87 @@ class MonitorScreen(Screen):
         self.set_interval(2.0, self.update_stats)
         self.set_interval(0.7, self.update_logs)
         self.set_interval(5.0, self.update_context)
+
+    def on_unmount(self) -> None:
+        """Clean up any background log processes."""
+        self._stop_log_stream()
+
+    def _start_log_stream(self) -> None:
+        """Start background process to stream `llmc-rag-service logs -f` output."""
+        if self._log_proc is not None or self._log_stream_error:
+            return
+
+        # Resolve the llmc repo root from this file location.
+        repo_root = Path(__file__).resolve().parents[3]
+        script_path = repo_root / "scripts" / "llmc-rag-service"
+
+        try:
+            if script_path.is_file() and os.access(script_path, os.X_OK):
+                base_cmd = [str(script_path)]
+            else:
+                # Fallback to module invocation; behaviour should match the script wrapper.
+                base_cmd = [sys.executable, "-m", "tools.rag.service"]
+
+            cmd = base_cmd + ["logs", "-f", "-n", str(self._max_log_lines)]
+            self._log_proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+        except Exception as exc:
+            self._log_stream_error = True
+            # Fall back to simulated logs but surface the error in the log panel.
+            self.add_log(f"Error starting enrichment log stream: {exc}", "ERR")
+            return
+
+        if self._log_proc.stdout is None:
+            self._log_stream_error = True
+            self.add_log(
+                "Enrichment log stream has no stdout; using simulated logs.",
+                "ERR",
+            )
+            return
+
+        def _reader() -> None:
+            """Background reader that mirrors `llmc-rag-service logs -f` output."""
+            try:
+                for raw_line in self._log_proc.stdout:  # type: ignore[union-attr]
+                    line = raw_line.rstrip("\n")
+                    if not line:
+                        continue
+                    self.logs.append(line)
+                    if len(self.logs) > self._max_log_lines * 4:
+                        self.logs = self.logs[-self._max_log_lines * 4 :]
+            except Exception:
+                self._log_stream_error = True
+            finally:
+                if self._log_proc is not None:
+                    try:
+                        self._log_proc.terminate()
+                    except Exception:
+                        try:
+                            self._log_proc.kill()
+                        except Exception:
+                            pass
+                    self._log_proc = None
+
+        self._log_thread = threading.Thread(target=_reader, daemon=True)
+        self._log_thread.start()
+
+    def _stop_log_stream(self) -> None:
+        """Stop background log process if running."""
+        proc = self._log_proc
+        self._log_proc = None
+        if proc is not None:
+            try:
+                proc.terminate()
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
 
     def update_menu(self) -> None:
         """Render the navigation menu block."""
@@ -204,7 +295,25 @@ class MonitorScreen(Screen):
             self.add_log(f"Error updating stats: {exc}", "ERR")
 
     def update_logs(self, force: bool = False) -> None:
-        """Simulate or refresh log output."""
+        """Refresh log output, preferring real RAG service logs."""
+        # Try to start the real log stream lazily if it is not already active.
+        if self._log_proc is None and not self._log_stream_error:
+            self._start_log_stream()
+
+        # If we have no logs yet and the stream is healthy, just show a placeholder.
+        if not self.logs and not self._log_stream_error:
+            self.query_one("#log-output", Static).update("Awaiting logs...")
+            return
+
+        # Fallback: if streaming failed entirely, reuse the old simulated behaviour.
+        if self._log_stream_error and not self.logs:
+            self._simulate_logs(force=force)
+
+        log_text = "\n".join(self.logs[-self._max_log_lines :])
+        self.query_one("#log-output", Static).update(log_text or "Awaiting logs...")
+
+    def _simulate_logs(self, force: bool = False) -> None:
+        """Simulate enrichment logs when real logs are unavailable."""
         if random.random() < 0.25 or force:
             files = ["auth.py", "user.py", "db.py", "graph.py", "utils.py"]
             filename = random.choice(files)
@@ -212,9 +321,6 @@ class MonitorScreen(Screen):
 
         if random.random() < 0.12 or force:
             self.add_log("Graph sync complete.", "OK")
-
-        log_text = "\n".join(self.logs[-20:])
-        self.query_one("#log-output", Static).update(log_text or "Awaiting logs...")
 
     def update_context(self) -> None:
         """Refresh context/help plus analytics summary."""

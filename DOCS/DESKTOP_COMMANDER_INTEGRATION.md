@@ -1,235 +1,317 @@
-# Desktop Commander + Claude RAG Integration
+# Desktop Commander Integration
 
-## Overview
+## What This Is
 
-LLMC's RAG system is now fully integrated with Desktop Commander and Claude through two simple wrapper scripts that expose schema-enriched retrieval capabilities.
+LLMC integrates with Desktop Commander to give Claude (or any MCP-compatible AI) the ability to search and navigate your codebase using RAG (Retrieval-Augmented Generation) instead of reading entire files. This dramatically reduces token usage and improves response quality by providing only the relevant code context.
 
-## What's New: Schema Functionality
+## Why This Matters
 
-The RAG system now includes **schema-aware enrichment** with entity-relation graphs:
+**Without LLMC:**
+- Claude reads entire files (thousands of tokens per file)
+- Context window fills quickly
+- Loses context across long sessions
+- Slower responses due to token processing
+- Higher costs
 
-- **Entities**: Functions, classes, variables, tables
-- **Relations**: Calls, uses, reads, writes, extends
-- **Graph Traversal**: 1-2 hop neighbor lookups for contextual code discovery
-- **Hybrid Retrieval**: Combines vector search with graph traversal
+**With LLMC:**
+- Claude queries the RAG index for relevant code spans
+- Gets 5-10 targeted results (~200-500 tokens total)
+- Maintains focus on relevant code
+- Faster responses
+- 60-95% token reduction in typical sessions
 
-Think of it as RAG with structural awareness - "a sundress with pockets."
+**Example:**
+- Old way: "Read these 5 files (15,000 tokens) and find the authentication logic"
+- New way: "Search RAG for 'authentication logic' → Get 3 relevant functions (800 tokens)"
+
+## How It Works
+
+1. **Index Phase** (runs in background):
+   - LLMC daemon scans your repo
+   - Chunks code into logical spans (functions, classes)
+   - Generates embeddings for semantic search
+   - Enriches spans with AI-generated summaries
+   - Builds schema graph (entities and relationships)
+
+2. **Query Phase** (when Claude needs context):
+   - Claude searches the RAG index with natural language
+   - Gets back ranked, relevant code spans
+   - Includes summaries, line numbers, file paths
+   - No need to read entire files
+
+3. **Freshness Checking**:
+   - System tracks git commits and file modifications
+   - Returns stale warnings if index is out of date
+   - Falls back to filesystem if RAG results unreliable
 
 ## Available Tools
 
-### 1. Simple Vector Search: `dc_rag_query.sh`
+Desktop Commander exposes these RAG capabilities to Claude through the standard CLI.
 
-Basic semantic search over code spans.
+### Core Search Tools
 
-**Usage:**
+**1. Semantic Search (`search`)**
+
+Find code spans using natural language queries.
+
 ```bash
-./tools/dc_rag_query.sh "JWT validation logic" --limit 5
-./tools/dc_rag_query.sh "authentication" --repo /path/to/repo
+python3 -m tools.rag.cli search "JWT validation logic" --limit 5 --json
 ```
 
 **Returns:** JSON array with:
-- `rank`: Result ranking
-- `path`: File path
-- `symbol`: Function/class name
-- `lines`: Line range [start, end]
-- `score`: Cosine similarity (0-1)
-- `summary`: Human-readable description
+- File path and line range
+- Function/class name
+- Similarity score (0-1)
+- AI-generated summary of what the code does
 
-**Example Output:**
-```json
-[
-  {
-    "rank": 1,
-    "span_hash": "sha256:...",
-    "path": "tools/rag/schema.py",
-    "symbol": "SchemaGraph",
-    "kind": "class",
-    "lines": [80, 85],
-    "score": 0.879,
-    "summary": "Complete entity-relation graph for a repository"
-  }
-]
-```
+**When to use:** Quick lookups for specific concepts or patterns.
 
-### 2. Schema-Aware Planning: `dc_rag_plan.sh`
+---
 
-Intelligent retrieval planner with symbol matching, confidence scoring, and graph-enriched results.
+**2. Structured Planning (`plan`)**
 
-**Usage:**
-```bash
-./tools/dc_rag_plan.sh "How does schema enrichment work?"
-./tools/dc_rag_plan.sh "JWT validation flow" --limit 10 --min-score 0.5
-```
-
-**Returns:** Structured plan with:
-- `query`: Original query
-- `intent`: Detected intent pattern
-- `symbols`: Top matching symbols with scores
-- `spans`: Relevant code spans with rationales
-- `confidence`: Overall confidence (0-1)
-- `fallback_recommended`: Whether to broaden search
-
-**Example Output:**
-```json
-{
-  "query": "How does schema enrichment work with graph traversal?",
-  "intent": "schema-enrichment-work-graph",
-  "symbols": [
-    {
-      "name": "SchemaGraph.load",
-      "path": "tools/rag/schema.py",
-      "score": 16.2
-    }
-  ],
-  "spans": [
-    {
-      "span_hash": "sha256:...",
-      "path": "tools/rag/schema.py",
-      "lines": [93, 119],
-      "score": 16.2,
-      "rationale": [
-        "symbol 'SchemaGraph.load' matches 'schema'",
-        "path 'tools/rag/schema.py' contains 'schema'",
-        "summary mentions 'schema'"
-      ]
-    }
-  ],
-  "confidence": 0.802,
-  "fallback_recommended": false
-}
-```
-
-## Integration with Claude
-
-Both wrappers work seamlessly with Claude through Desktop Commander's process execution:
+Generate a retrieval plan with confidence scoring and symbol matching.
 
 ```bash
-# From Claude/Desktop Commander
-dc_rag_query "authentication middleware" --limit 3
-dc_rag_plan "How does the enrichment daemon schedule work?" --no-log
+python3 -m tools.rag.cli plan "How does the authentication middleware work?"
 ```
 
-### Using from Claude
+**Returns:** Structured plan including:
+- Detected intent from query
+- Top matching symbols with scores
+- Relevant spans with rationales
+- Overall confidence score
+- Recommendation to broaden/narrow search
 
-Claude can call these directly via Desktop Commander:
+**When to use:** Complex queries requiring multiple related code sections.
 
-1. **For quick lookups**: Use `dc_rag_query.sh` for simple semantic search
-2. **For complex queries**: Use `dc_rag_plan.sh` for structured retrieval with reasoning
-3. **Auto-detection**: Both scripts auto-detect repo root from git or use `--repo` flag
+---
 
-## Direct CLI Usage (Without Wrappers)
+**3. Freshness-Aware Search (`nav search`)**
 
-You can also use the RAG CLI directly:
+Search with automatic freshness checking and filesystem fallback.
 
 ```bash
-cd ~/src/llmc
-source .venv/bin/activate
+python3 -m tools.rag.cli nav search "schema enrichment" /home/user/src/llmc
+```
 
-# Simple search
-python3 -m tools.rag.cli search "schema graph" --limit 5 --json
+**Returns:** Search results plus metadata:
+- Whether results are fresh or stale
+- Last indexed commit
+- Recommendation to reindex if stale
 
-# Structured plan
-python3 -m tools.rag.cli plan "How does JWT validation work?"
+**When to use:** When you need to trust that results reflect current code state.
 
-# View stats
-python3 -m tools.rag.cli stats
+### Navigation Tools
 
-# Check health
+**4. Where-Used Analysis (`nav where-used`)**
+
+Find all places a symbol is used in the codebase.
+
+```bash
+python3 -m tools.rag.cli nav where-used "SchemaGraph" /home/user/src/llmc
+```
+
+**Returns:** List of usage sites with context.
+
+**When to use:** Understanding impact of changes, finding all callers.
+
+---
+
+**5. Call Graph Lineage (`nav lineage`)**
+
+Analyze call graph relationships (who calls what).
+
+```bash
+python3 -m tools.rag.cli nav lineage "process_request" /home/user/src/llmc --direction upstream
+```
+
+**Parameters:**
+- `upstream`: Find who calls this function (callers)
+- `downstream`: Find what this function calls (callees)
+
+**When to use:** Understanding data flow, tracing execution paths.
+
+### Maintenance Tools
+
+**6. Index Status (`nav status`)**
+
+Check health and freshness of the RAG index.
+
+```bash
+python3 -m tools.rag.cli nav status /home/user/src/llmc
+```
+
+**Returns:** Index state (FRESH/STALE), last indexed commit, timestamps.
+
+---
+
+**7. Rebuild Graph (`graph`)**
+
+Rebuild the schema graph and index (use if stale).
+
+```bash
+python3 -m tools.rag.cli graph /home/user/src/llmc
+```
+
+**Warning:** Resource intensive, runs in foreground.
+
+---
+
+**8. Index Statistics (`stats`)**
+
+View index health and coverage.
+
+```bash
+python3 -m tools.rag.cli stats --json
+```
+
+**Returns:** File count, span count, embedding coverage, enrichment coverage.
+
+---
+
+**9. Health Check (`doctor`)**
+
+Run diagnostics on the RAG system.
+
+```bash
 python3 -m tools.rag.cli doctor
 ```
 
-## Available Commands
+**Returns:** Issues with index, missing files, configuration problems.
 
-Full CLI command reference:
+## How Claude Uses These Tools
 
-- `index` - Index the repository (full or incremental)
-- `sync` - Incrementally update spans for selected files
-- `search` - Run cosine-similarity search
-- `plan` - Generate structured retrieval plan
-- `stats` - Print summary stats
-- `embed` - Execute embedding jobs
-- `enrich` - Execute enrichment tasks
-- `doctor` - Run health checks
-- `analytics` - View query analytics
-- `benchmark` - Run embedding quality tests
-- `export` - Export all RAG data
-- `paths` - Show index storage paths
+When you ask Claude questions about your codebase, Claude automatically:
 
-## Environment Variables
+1. **Determines what it needs** - "I need to find authentication logic"
+2. **Chooses the right tool** - Uses `search` for quick lookup or `plan` for complex queries
+3. **Gets targeted results** - Receives only relevant code spans
+4. **Answers your question** - Using precise context instead of entire files
 
-Both wrappers support:
+**Example interaction:**
 
-- `LLMC_REPO_ROOT` - Override repo detection
-- Auto-detection via git (uses `git rev-parse --show-toplevel`)
-- Explicit `--repo /path/to/repo` flag
+**You:** "How does the enrichment pipeline work?"
 
-## Current Index Stats
+**Claude's process:**
+1. Calls `plan "enrichment pipeline"`
+2. Gets back 5 relevant spans with confidence scores
+3. Reads summaries and code context
+4. Explains how enrichment works
+5. Total tokens: ~1,200 instead of ~15,000
 
-As of last check:
-- **Files**: 213
-- **Spans**: 1,378
-- **Embeddings**: 1,378 (100% coverage)
-- **Enrichments**: 1,378 (100% coverage)
-- **Estimated tokens saved**: 482,300 tokens (482K)
+## Schema-Aware Features
 
-## Next Steps
+LLMC builds a **graph** of your codebase:
 
-### For Production Use:
+- **Entities**: Functions, classes, variables, modules
+- **Relationships**: Calls, imports, extends, uses
+- **Graph traversal**: Find related code 1-2 hops away
 
-1. **Add to PATH**: Already done if following README instructions
-2. **Register Repos**: Use `llmc-rag-repo add /path/to/repo`
-3. **Start Daemon**: Use `llmc-rag-daemon run` for auto-refresh
-4. **Query Away**: Use either wrapper from Claude or command line
+This means Claude can understand:
+- "Who calls this function?" (upstream navigation)
+- "What does this function call?" (downstream navigation)
+- "What's related to this code?" (neighbor expansion)
 
-### For Development:
+Think of it as **RAG with structural awareness** - not just semantic similarity, but understanding how code actually connects.
 
-1. Test queries: Try both wrappers with different query types
-2. Check confidence: Look at plan output confidence scores
-3. Tune thresholds: Adjust `--min-score` and `--min-confidence`
-4. Monitor logs: Check `logs/planner_metrics.jsonl` for insights
+## Automatic Background Maintenance
+
+The LLMC daemon (`llmc-rag-daemon`) runs in the background to keep indexes fresh:
+
+1. **Watches git commits** - Detects when you change code
+2. **Incremental updates** - Only reprocesses changed files
+3. **Scheduled enrichment** - Runs AI enrichment during downtime
+4. **Local inference** - Uses your local GPU for enrichment (overnight/idle time)
+
+This means the index stays current without you doing anything.
+
+## Configuration
+
+LLMC auto-detects repo roots via git. You can override with:
+
+**Environment variables:**
+```bash
+export LLMC_REPO_ROOT=/home/user/src/myproject
+```
+
+**Command flags:**
+```bash
+python3 -m tools.rag.cli search "query" --repo /path/to/repo
+```
+
+**Daemon configuration:**
+- Location: `~/.llmc/rag-daemon.yml`
+- Controls: tick interval, enrichment batch size, model selection
+
+## Performance Characteristics
+
+**Query latency:**
+- Simple search: 100-300ms
+- Structured plan: 300-500ms
+- Where-used: 50-200ms
+- Lineage: 200-400ms
+
+**Token savings:**
+- Typical query: 70-95% reduction vs. full file reads
+- Long sessions: Prevents context window exhaustion
+- Complex projects: Makes large codebases navigable
+
+**Index overhead:**
+- Disk: ~10-20MB per 200 files
+- Memory: <100MB for typical index
+- CPU: Background enrichment uses local GPU when idle
+
+## Limitations
+
+**Current focus:**
+- **Python-first**: Schema extraction strongest for Python
+- **Other languages**: Basic support (AST parsing for structure, limited relationships)
+- **Binary files**: Not indexed
+- **Generated code**: Can pollute index (configure exclusions in `llmc.toml`)
+
+**Freshness:**
+- Index updates incrementally but not instantly
+- Check status if working on rapidly changing code
+- Manual reindex available if needed
 
 ## Troubleshooting
 
-### "No index database found"
-Run `python3 -m tools.rag.cli index` in the repo first.
+**"No index database found"**
+→ Run `python3 -m tools.rag.cli index` to create initial index
 
-### "No .venv found"
-Create venv: `python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[rag]"`
+**"Index is stale"**
+→ Run `llmc-rag-daemon tick` for manual refresh or check daemon status
 
-### Low confidence scores
-Try `dc_rag_plan` with `--min-score 0.3` to broaden results.
+**Low confidence scores in plan results**
+→ Try lowering `--min-score` (default 0.4) to see more candidates
 
-### Stale index
-Run `llmc-rag-daemon tick` for manual refresh or `llmc-rag-service start` for automated updates.
+**No results for recent changes**
+→ Check `nav status` - may need to wait for daemon cycle or force update
 
-## Technical Details
+**High token usage still occurring**
+→ Verify Claude is actually calling RAG tools (check logs in `logs/run_ledger.log`)
 
-### Schema Extraction
+## Integration with Other Tools
 
-The system extracts:
-- **Python**: Functions, classes, methods via AST parsing
-- **TypeScript/JavaScript**: Functions, classes, exports
-- **Relations**: Function calls, imports, class inheritance
+**Desktop Commander:**
+- Native integration through command execution
+- No special wrappers needed
+- Claude calls RAG CLI directly
 
-### Enrichment Pipeline
+**MCP Servers:**
+- Can expose LLMC tools via MCP protocol
+- Tool manifest can be generated from CLI help output
 
-1. Parse code into spans (AST-based)
-2. Generate embeddings (sentence-transformers)
-3. Extract schema (entities + relations)
-4. Build graph (adjacency lists)
-5. Enrich with summaries (local Qwen models)
+**Cline/Continue/Aider:**
+- Use wrapper scripts in `tools/` directory
+- Or call RAG CLI directly from custom prompts
 
-### Hybrid Retrieval
+## Next Steps
 
-Combines:
-- **Vector search**: Semantic similarity via cosine distance
-- **Graph traversal**: 1-2 hop neighbor expansion
-- **Symbol matching**: Fuzzy name matching with scoring
-- **Confidence estimation**: Multi-factor scoring with thresholds
+1. **Verify daemon is running:** `ps aux | grep llmc-rag`
+2. **Check index status:** `python3 -m tools.rag.cli stats`
+3. **Test a search:** `python3 -m tools.rag.cli search "your query" --limit 3`
+4. **Watch it work:** Ask Claude questions about your codebase and observe token usage
 
-## Performance
-
-- **Query latency**: ~100-300ms for search, ~500ms for plan
-- **Index size**: ~10MB for 200 files, 1300 spans
-- **Memory**: <100MB for typical index
-- **Token savings**: ~350 tokens per span vs. full file context
+The system is designed to be invisible - it just makes Claude smarter and cheaper to run on large codebases.

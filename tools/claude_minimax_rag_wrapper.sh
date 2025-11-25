@@ -51,6 +51,57 @@ have_cmd() {
   command -v "$1" >/dev/null 2>&1
 }
 
+run_claude_with_preamble() {
+  # Args:
+  #   $1: mode = "interactive" | "oneshot"
+  #   $2: claude_cmd
+  #   $3...: extra args for Claude
+  local mode="$1"
+  shift
+  local claude_cmd="$1"
+  shift
+
+  local tmp_stderr
+  tmp_stderr="$(mktemp -t cmw_claude_stderr.XXXXXX)"
+
+  # Temporarily relax -e/pipefail so we can inspect failures and
+  # gracefully fall back on EMFILE instead of bailing the whole script.
+  set +e
+  set +o pipefail 2>/dev/null || true
+
+  if [ "$mode" = "interactive" ]; then
+    build_preamble | "$claude_cmd" "$@" 2>"$tmp_stderr"
+  else
+    {
+      build_preamble
+      printf '\n\n[USER REQUEST]\n%s\n' "$user_prompt"
+    } | "$claude_cmd" "$@" 2>"$tmp_stderr"
+  fi
+  local rc=$?
+
+  # Restore strict mode.
+  set -e
+  set -o pipefail 2>/dev/null || true
+
+  # Detect EMFILE (inotify/open-file exhaustion) and fall back to a bare
+  # Claude invocation without the injected preamble. This mirrors the
+  # behavior of running `claude` directly, which often survives EMFILE.
+  if [ "$rc" -ne 0 ] && grep -q "EMFILE: too many open files" "$tmp_stderr"; then
+    err "Detected EMFILE from Claude (too many open files / watchers)."
+    err "Falling back to bare Claude CLI without injected preamble."
+    rm -f "$tmp_stderr"
+    "$claude_cmd" "$@"
+    return $?
+  fi
+
+  # Forward any stderr output we captured for non-EMFILE failures.
+  if [ -s "$tmp_stderr" ]; then
+    cat "$tmp_stderr" >&2
+  fi
+  rm -f "$tmp_stderr"
+  return "$rc"
+}
+
 ###############################################################################
 # Repo resolution
 ###############################################################################
@@ -183,18 +234,20 @@ configure_minimax_env() {
   : "${API_TIMEOUT_MS:=3000000}"
   : "${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:=1}"
 
-  if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
-    err "ANTHROPIC_AUTH_TOKEN is not set (MiniMax API key)."
-    err "Example:"
-    err "  export ANTHROPIC_AUTH_TOKEN='sk-your-minimax-key'"
-    exit 1
+  # Prefer existing Anthropic auth env; do not force a specific token.
+  # If ANTHROPIC_API_KEY is set but ANTHROPIC_AUTH_TOKEN is not, mirror it.
+  if [ -z "${ANTHROPIC_AUTH_TOKEN:-}" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    export ANTHROPIC_AUTH_TOKEN="$ANTHROPIC_API_KEY"
   fi
 
   export ANTHROPIC_BASE_URL \
-         ANTHROPIC_AUTH_TOKEN \
          ANTHROPIC_MODEL \
          API_TIMEOUT_MS \
          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+
+  if [ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]; then
+    export ANTHROPIC_AUTH_TOKEN
+  fi
 }
 
 ###############################################################################
@@ -247,7 +300,25 @@ main() {
     exit 1
   fi
 
-  cd "$REPO_ROOT"
+  # Workspace root for Claude:
+  # - Default: use a narrower subtree (llmc/) to avoid watching .venv and other heavy dirs.
+  # - Override via LLMC_WORKSPACE_ROOT when callers want a custom workspace.
+  local workspace_root="${LLMC_WORKSPACE_ROOT:-}"
+  if [ -n "$workspace_root" ]; then
+    workspace_root="$(realpath "$workspace_root")"
+  else
+    workspace_root="$REPO_ROOT"
+    if [ -d "$REPO_ROOT/llmc" ]; then
+      workspace_root="$REPO_ROOT/llmc"
+    fi
+  fi
+
+  if [ ! -d "$workspace_root" ]; then
+    err "Resolved workspace root does not exist: $workspace_root"
+    exit 1
+  fi
+
+  cd "$workspace_root"
 
   if [ -n "${LLMC_WRAPPER_VALIDATE_ONLY:-}" ]; then
     # Smoke the preamble to ensure context rendering stays healthy, but bail
@@ -261,6 +332,12 @@ main() {
 
   local claude_cmd="${CLAUDE_CMD:-claude}"
 
+  # Force Claude to avoid loading user-level settings, which can trigger
+  # additional file watchers on ~/.claude/settings.json and hit EMFILE on
+  # systems with tight inotify limits. Project/local settings are sufficient
+  # for this wrapper's use-case.
+  claude_extra_args+=("--setting-sources" "project,local")
+
   if ! have_cmd "$claude_cmd"; then
     err "Claude CLI not found: $claude_cmd"
     err "Set CLAUDE_CMD to your CLI binary, e.g.:"
@@ -270,15 +347,12 @@ main() {
 
   # Interactive mode: no explicit user prompt → just preamble + live chat.
   if [ -z "$user_prompt" ]; then
-    build_preamble | "$claude_cmd" "${claude_extra_args[@]}"
+    run_claude_with_preamble "interactive" "$claude_cmd" "${claude_extra_args[@]}"
     exit $?
   fi
 
   # One-shot mode: preamble + explicit user request.
-  {
-    build_preamble
-    printf '\n\n[USER REQUEST]\n%s\n' "$user_prompt"
-  } | "$claude_cmd" "${claude_extra_args[@]}"
+  run_claude_with_preamble "oneshot" "$claude_cmd" "${claude_extra_args[@]}"
 }
 
 main "$@"

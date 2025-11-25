@@ -6,6 +6,11 @@ gpu_min_free_mb = 1536
 [storage]
 # index_path = ".rag/index_v2.db"
 
+[daemon]
+# Automatic cleanup of Python bytecode cache (.llmc/pycache/)
+# Prevents unbounded file accumulation from long-running daemon processes
+pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
+
 
 [enrichment]
 #enabled = true

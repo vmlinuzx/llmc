@@ -1,5 +1,7 @@
+import shutil
 import sys
 from pathlib import Path
+from typing import Iterable
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -43,6 +45,36 @@ def hermetic_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _cleanup_repo_caches(request: pytest.FixtureRequest) -> None:
+    """
+    Session teardown hook: remove static analysis caches in the repo root.
+
+    This keeps `.mypy_cache` (and similar) from growing unbounded when tests
+    invoke tools like mypy against the real repository tree.
+    """
+
+    def _remove_paths(paths: Iterable[Path]) -> None:
+        for path in paths:
+            try:
+                if path.is_dir():
+                    shutil.rmtree(path)
+                elif path.is_file():
+                    path.unlink()
+            except Exception:
+                # Best-effort cleanup only; never fail the test run because of cache removal.
+                continue
+
+    def _finalizer() -> None:
+        cache_paths = [
+            ROOT / ".mypy_cache",
+            ROOT / ".pytest_cache",
+        ]
+        _remove_paths(cache_paths)
+
+    request.addfinalizer(_finalizer)
+
+
 def pytest_collection_modifyitems(config, items):
     """Skip standalone test scripts that have their own main() function."""
     skip_standalone = pytest.mark.skip(reason="Standalone test script - run directly with python")
@@ -55,4 +87,3 @@ def pytest_collection_modifyitems(config, items):
             if "if __name__ == \"__main__\":" in content:
                 if "import pytest" not in content and "@pytest" not in content:
                     item.add_marker(skip_standalone)
-

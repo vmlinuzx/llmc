@@ -19,6 +19,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+# ENTERPRISE FIX: Centralize Python cache before any imports
+_repo_root = Path(__file__).parent.parent.resolve()
+_pycache_dir = _repo_root / ".llmc" / "pycache"
+_pycache_dir.mkdir(parents=True, exist_ok=True)
+os.environ["PYTHONPYCACHEPREFIX"] = str(_pycache_dir)
+
 import _setup_path  # noqa: F401
 
 from router import (
