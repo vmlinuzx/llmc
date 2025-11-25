@@ -1,0 +1,21 @@
+requests>=2.31
+
+[:python_version < "3.11"]
+tomli
+
+[rag]
+setuptools>=68.0.0
+tree_sitter==0.20.1
+tree_sitter_languages==1.9.1
+click>=8.1.7
+jsonschema>=4.23.0
+sentence-transformers>=3.0.0
+chromadb>=0.4.22
+langchain>=0.1.0
+watchdog>=3.0.0
+gitpython>=3.1.40
+pyyaml>=6.0.1
+tqdm>=4.66.1
+fastapi>=0.109.0
+uvicorn>=0.27.0
+python-multipart>=0.0.6

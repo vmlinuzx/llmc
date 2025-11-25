@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+#
+# llmc-route - Smart RAG-powered LLM routing
+#
+# Uses RAG to analyze queries and route to optimal tier:
+#   - Local (Qwen):      Simple tasks, formatting, known patterns
+#   - Mid (MiniMax):     Volume work, testing, bug hunting  
+#   - Premium (Claude):  Architecture, validation, complex reasoning
+#
+# Usage:
+#   llmc-route "Write tests for JWT validation"
+#   llmc-route "How does the authentication flow work?" --repo /path/to/repo
+#   llmc-route "Format this file" --verbose
+
+set -euo pipefail
+
+REPO_ROOT=""
+VERBOSE=false
+QUERY=""
+
+# Parse args
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --repo)
+      shift
+      REPO_ROOT="${1:-}"
+      ;;
+    --verbose|-v)
+      VERBOSE=true
+      ;;
+    --help|-h)
+      cat <<EOF
+Usage: llmc-route "your query" [OPTIONS]
+
+Smart RAG-powered LLM routing. Analyzes query and selects optimal tier.
+
+Options:
+  --repo /path       Override repo root detection
+  --verbose, -v      Show detailed analysis
+  --help, -h         Show this help
+
+Routing Tiers:
+  local      - Qwen 7B (free, fast, simple tasks)
+  mid        - MiniMax ($1-2/M, volume work, testing)
+  premium    - Claude ($3-15/M, architecture, validation)
+
+Examples:
+  llmc-route "Write tests for authentication"
+  llmc-route "Design the caching architecture" --verbose
+  llmc-route "Format this code" --repo ~/src/llmc
+
+Output:
+  JSON with tier, model, confidence, rationale, and cost estimate
+EOF
+      exit 0
+      ;;
+    *)
+      if [ -z "$QUERY" ]; then
+        QUERY="$1"
+      else
+        QUERY="$QUERY $1"
+      fi
+      ;;
+  esac
+  shift || break
+done
+
+# Validate query
+if [ -z "$QUERY" ]; then
+  echo "Error: No query provided" >&2
+  echo "Usage: llmc-route \"your query\"" >&2
+  exit 1
+fi
+
+# Detect repo root if not provided
+if [ -z "$REPO_ROOT" ]; then
+  if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    REPO_ROOT="$(git rev-parse --show-toplevel)"
+  else
+    REPO_ROOT="$(pwd)"
+  fi
+fi
+
+# Find LLMC root (where this script lives)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LLMC_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Activate venv if it exists
+if [ -d "$LLMC_ROOT/.venv" ]; then
+  source "$LLMC_ROOT/.venv/bin/activate"
+fi
+
+# Run router
+cd "$LLMC_ROOT"
+
+if [ "$VERBOSE" = true ]; then
+  python3 -c "
+import sys
+sys.path.insert(0, '$LLMC_ROOT')
+from tools.rag_router import route_query
+from pathlib import Path
+import json
+
+decision = route_query('$QUERY', Path('$REPO_ROOT'))
+
+print('='*70)
+print('RAG-Powered Routing Decision')
+print('='*70)
+print(f'Query: $QUERY')
+print(f'Repo: $REPO_ROOT')
+print()
+print(f'🎯 Route to: {decision.tier.upper()} tier')
+print(f'   Model: {decision.model}')
+print(f'   Confidence: {decision.confidence:.2%}')
+print(f'   Estimated cost: \${decision.cost_estimate:.4f}')
+print(f'   Context needed: {decision.context_needed}')
+print(f'   Estimated tokens: {decision.estimated_tokens:,}')
+print()
+print('Rationale:')
+for reason in decision.rationale:
+    print(f'  • {reason}')
+print('='*70)
+"
+else
+  python3 -c "
+import sys
+sys.path.insert(0, '$LLMC_ROOT')
+from tools.rag_router import route_query
+from pathlib import Path
+import json
+
+decision = route_query('$QUERY', Path('$REPO_ROOT'))
+
+print(json.dumps({
+    'tier': decision.tier,
+    'model': decision.model,
+    'confidence': decision.confidence,
+    'rationale': decision.rationale,
+    'context_needed': decision.context_needed,
+    'estimated_tokens': decision.estimated_tokens,
+    'cost_estimate': decision.cost_estimate,
+}, indent=2))
+"
+fi

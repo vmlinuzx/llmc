@@ -1,0 +1,101 @@
+node_modules
+.next
+.env*
+supabase/.temp
+dist
+DOCS/RESEARCH/
+DOCS/legacy/
+.backup*/
+*.trash*
+
+# OS/installer packages
+*.deb
+
+# Internal development folders
+.github/
+.claude/
+
+# Archived files
+.old/
+.cache/
+.tmp/
+
+# Python virtual environments
+scripts/rag/.venv/
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Contracts sidecar artifacts
+contracts.min.json
+contracts.sidecar.sha256
+# Any stray checksum files should never be tracked
+*.sha256
+.llmc/logs/contracts_*.jsonl
+.rag/*.db
+.rag/*.db-*
+.rag/*.jsonl
+.rag/*.lock
+.contract/
+
+node_modules/
+*.zip
+.DS_Store
+*.png
+*.jpg
+logs/*
+!logs/
+!logs/run_ledger.sample
+
+# LLMC concurrency runtime artifacts
+.llmc/locks/
+.llmc/worktrees/
+.llmc/logs/
+.llmc/pycache/
+
+# Codex TUI artifacts (API tokens, sessions, etc.)
+.codex/
+
+# Aider (AI pair programming tool) artifacts
+.aider.chat.history.md
+.aider.input.history
+.aider.tags.cache.v4/
+
+# Build artifacts and logs
+.artifacts/
+
+.gemini/
+gha-creds-*.json
+
+# User input/test data (never commit test files)
+user_input_files/
+
+
+# Binary garbage that keeps appearing
+sys
+json
+click
+argparse/
+
+# Temporary top-level tests directory (to be removed)
+
+# RAG / LLMC runtime artifacts and reports
+.rag/
+.llmc/*
+!.llmc/quality/
+!.llmc/quality/ruff_baseline.json
+logs/
+tests/rag_nav_test_report.json
+tests/rag_test_report.json
+RUTHLESS_TESTING_REPORT_*.md
+TESTING_GAP_ANALYSIS_*.md
+TEST_FIXES_SUMMARY_*.md
+*~
+.venv/
+/legacy/
+patches/
+# Local backup artefacts for personal tools
+llmc_backups/

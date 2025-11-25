@@ -1,0 +1,105 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmcwrapper"
+version = "0.5.0"
+description = "LLM cost compression through intelligent RAG and multi-tier routing"
+authors = [{name="LLMC Core"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests>=2.31", "tomli; python_version<'3.11'"]
+
+[project.optional-dependencies]
+rag = [
+  "setuptools>=68.0.0",
+  "tree_sitter==0.20.1",
+  "tree_sitter_languages==1.9.1",
+  "click>=8.1.7",
+  "jsonschema>=4.23.0",
+  "sentence-transformers>=3.0.0",
+  "chromadb>=0.4.22",
+  "langchain>=0.1.0",
+  "watchdog>=3.0.0",
+  "gitpython>=3.1.40",
+  "pyyaml>=6.0.1",
+  "tqdm>=4.66.1",
+  "fastapi>=0.109.0",
+  "uvicorn>=0.27.0",
+  "python-multipart>=0.0.6",
+]
+tui = [
+  "typer>=0.9.0",
+  "rich>=13.0.0",
+  "textual>=0.41.0",
+]
+
+[tool.setuptools]
+# Explicitly declare which top-level packages are part of the install.
+# This avoids setuptools' flat-layout safety check on unrelated dirs
+# like DOCS/, logs/, and legacy/.
+packages = ["llmcwrapper", "tools", "mcp"]
+
+[project.scripts]
+llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
+llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
+llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
+llmc-profile = "llmcwrapper.cli.llmc_profile:main"
+
+[tool.pytest.ini_options]
+addopts = ["-q", "-ra"]
+xfail_strict = true
+filterwarnings = [
+    "error::DeprecationWarning",
+    "ignore::ResourceWarning",
+]
+pythonpath = ["."]
+markers = [
+    "rag_freshness: tests for RAG freshness, envelopes, and routing",
+    "examples: Example or doc-style tests",
+    "integration: Integration tests (slower)",
+]
+
+[tool.ruff]
+# Use Ruff for both lint + format to keep it simple and fast.
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  ".llmc",
+  "build",
+  "dist",
+  ".trash",
+]
+
+[tool.ruff.lint]
+# Core rule sets: pyflakes/pycodestyle, isort, pyupgrade, flake-bugbear (subset), etc.
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort imports
+  "UP",  # pyupgrade
+  "B",   # bugbear (subset; runtime-safety)
+  "PLW", # pylint style: warnings likely to catch bugs
+]
+
+# Temporary ignores allowed during migration (trim over time).
+ignore = [
+  # allow long lines while we migrate off Black or wrap later
+  "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S301", "S311", "E402"]
+"tools/**/tests/**" = ["S101", "S301", "S311", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["tools", "llmcwrapper", "mcp"]

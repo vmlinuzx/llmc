@@ -1,0 +1,88 @@
+[embeddings]
+# preset = "e5"  # e5 | e5-large | mini
+# model = "intfloat/e5-base-v2"  # or "hash-emb-v1" for deterministic CPU-only testing
+gpu_min_free_mb = 1536
+
+[storage]
+# index_path = ".rag/index_v2.db"
+
+[daemon]
+# Automatic cleanup of Python bytecode cache (.llmc/pycache/)
+# Prevents unbounded file accumulation from long-running daemon processes
+pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
+
+
+[enrichment]
+#enabled = true
+default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a default_chain defined and at least one llm URL for this to work!
+batch_size = 50 #Number of spans to enrich before doing full enrichment loop.  50 is pretty good on a strix halo using 7b/14b.  If you have slower inference considering lowering this.
+est_tokens_per_span = 350
+enforce_latin1_enrichment = true
+max_failures_per_span = 4 #Stop retrying after this many failures.  Especially important if you are using a paid provider.
+
+[[enrichment.chain]]
+name = "athena"
+chain = "athena"
+provider = "ollama"
+model = "qwen2.5:7b-instruct"
+url = "http://192.168.5.20:11434"
+routing_tier = "7b"
+timeout_seconds = 120
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+[[enrichment.chain]]
+name = "athena-14b"
+chain = "athena"
+provider = "ollama"
+model = "qwen2.5:14b-instruct-q4_K_M"
+url = "http://192.168.5.20:11434"
+routing_tier = "14b"
+timeout_seconds = 180
+enabled = true
+options = { num_ctx = 12288, temperature = 0.2 }
+
+# [[enrichment.chain]]
+# name = "groq-70b"
+# chain = "groqathena"
+# provider = "gateway"
+# model = "groq/llama3-70b-8192"
+# routing_tier = "14b"
+# enabled = false
+
+# [[enrichment.chain]]
+# name = "google-flash"
+# chain = "google"
+# provider = "gemini"
+# model = "gemini-1.5-flash"
+# routing_tier = "nano"
+# enabled = false
+
+[indexing]
+exclude_dirs = [
+    ".git",
+    ".rag",
+    "node_modules",
+    "dist",
+    "build",
+    "__pycache__",
+    ".venv",
+    "venv",
+    ".next",
+    ".cache",
+    ".pytest_cache",
+    "coverage",
+    ".DS_Store",
+    "Thumbs.db",
+]
+
+
+
+
+
+[logging]
+max_file_size_mb = 10
+keep_jsonl_lines = 1000
+enable_rotation = true
+log_directory = "logs"
+auto_rotation_interval = 0

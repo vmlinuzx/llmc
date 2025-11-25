@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Set
+from collections.abc import Iterable
+
+
+@dataclass
+class Neighbor:
+    """Neighbor file in the schema graph, used to stitch context."""
+
+    path: str
+    weight: float = 1.0
+    reason: str = "edge"
+
+
+class GraphNotFound(FileNotFoundError):
+    """Raised when .llmc/rag_graph.json is missing."""
+
+
+def _read_json(p: Path) -> dict:
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def _normalize_path(p: str) -> str:
+    return str(Path(p).as_posix())
+
+
+def _index_edges(graph: dict) -> Dict[str, Set[str]]:
+    """Heuristic neighbor index from a generic node/edge JSON graph."""
+    nodes = graph.get("nodes") or graph.get("vertices") or []
+    id_to_path: Dict[str, str] = {}
+    for n in nodes:
+        nid = str(n.get("id") or n.get("nid") or n.get("name") or "")
+        p = n.get("path") or n.get("file") or n.get("filepath") or ""
+        if nid and p:
+            id_to_path[nid] = _normalize_path(p)
+
+    neighbors: Dict[str, Set[str]] = {}
+    edges = graph.get("edges") or graph.get("links") or []
+    for e in edges:
+        et = (e.get("type") or e.get("label") or "").upper()
+        if et not in {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}:
+            continue
+        src = e.get("src") or e.get("source")
+        dst = e.get("dst") or e.get("target")
+
+        src_path = id_to_path.get(str(src), None) if src is not None else None
+        dst_path = id_to_path.get(str(dst), None) if dst is not None else None
+
+        if src_path is None and isinstance(src, str) and ("/" in src or src.endswith(".py")):
+            src_path = _normalize_path(src)
+        if dst_path is None and isinstance(dst, str) and ("/" in dst or dst.endswith(".py")):
+            dst_path = _normalize_path(dst)
+
+        if not src_path or not dst_path or src_path == dst_path:
+            continue
+
+        neighbors.setdefault(src_path, set()).add(dst_path)
+        neighbors.setdefault(dst_path, set()).add(src_path)
+
+    return neighbors
+
+
+def load_neighbor_index(repo_root: Path) -> Dict[str, Set[str]]:
+    graph_path = repo_root / ".llmc" / "rag_graph.json"
+    if not graph_path.exists():
+        raise GraphNotFound(str(graph_path))
+    graph = _read_json(graph_path)
+    return _index_edges(graph)
+
+
+def stitch_neighbors(repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1) -> List[Neighbor]:
+    """Return neighbor file paths (1..hops) for given seed paths, unique and capped."""
+    idx = load_neighbor_index(repo_root)
+    seen: Set[str] = set(seed_paths)
+    frontier: Set[str] = set(seed_paths)
+    out: List[Neighbor] = []
+
+    for _ in range(max(1, hops)):
+        next_frontier: Set[str] = set()
+        for p in list(frontier):
+            for n in idx.get(p, ()):
+                if n in seen:
+                    continue
+                seen.add(n)
+                next_frontier.add(n)
+                out.append(Neighbor(path=n, weight=1.0, reason="neighbor"))
+                if len(out) >= limit:
+                    return out
+        frontier = next_frontier
+        if not frontier:
+            break
+    return out
+
+
+def expand_search_items(repo_root: Path, items: List, max_expansion: int = 20, hops: int = 1):
+    """Expand search results with neighbor files from the graph.
+
+    - If the graph is missing/unreadable, returns the original items.
+    - Returns either just items (unchanged) or a tuple (items, neighbors).
+    """
+    try:
+        raw_seed = [getattr(it, "file", None) for it in items]
+        seed: List[str] = [str(s) for s in raw_seed if s]
+        neighbors = stitch_neighbors(repo_root, seed_paths=seed, limit=max_expansion, hops=hops)
+    except Exception:
+        return items
+
+    return items, neighbors
+

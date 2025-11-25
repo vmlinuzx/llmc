@@ -1,0 +1,31 @@
+# Heavy directories that cause EMFILE issues
+.venv/
+.rag/
+node_modules/
+.git/
+.ruff_cache/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.cache/
+.llmc/pycache/
+.backup*/
+*.trash*
+.old/
+.tmp/
+legacy/
+patches/
+tmp/
+DOCS/legacy/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+logs/

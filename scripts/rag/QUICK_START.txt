@@ -1,0 +1,51 @@
+# Quick reference card for RAG system locations
+
+cat << 'EOF'
+╔════════════════════════════════════════════════════════════════╗
+║  DEEPSEEK RAG SYSTEM - FILE LOCATIONS                          ║
+╚════════════════════════════════════════════════════════════════╝
+
+📂 Main Directory:
+   ~/src/glideclubs/scripts/rag/
+
+📄 Files in that directory:
+   ├── README.md .................... FULL DOCUMENTATION (start here!)
+   ├── setup_rag.sh ................. ONE-COMMAND SETUP SCRIPT
+   ├── requirements.txt ............. Python dependencies
+   ├── index_workspace.py ........... Index your workspace
+   ├── query_context.py ............. Query the RAG system
+   ├── watch_workspace.py ........... Auto-reindex file changes
+   └── rag_server.py ................ Deprecated legacy Web UI server (not supported)
+
+📚 Documentation:
+   ~/src/glideclubs/scripts/rag/README.md ......... Complete guide
+   ~/src/glideclubs/RAG_SYSTEM_SUMMARY.md ......... Executive summary
+
+🚀 To Get Started:
+   cd ~/src/glideclubs/scripts/rag
+   cat README.md                    # Read the docs
+   chmod +x setup_rag.sh
+   ./setup_rag.sh                   # Run setup (10 min)
+
+💾 After Setup:
+   Database location: ~/.deepseek_rag/
+   (Legacy) Web UI: http://localhost:8765  [deprecated / unsupported; may not work]
+
+📖 Quick Commands Reference:
+   
+   # Index workspace (first time)
+   python index_workspace.py
+   
+   # Query your code
+   python query_context.py "search term"
+   
+   # Start web UI (legacy; deprecated / unsupported)
+   python rag_server.py   # may be broken on current LLMC
+   
+   # Start file watcher
+   python watch_workspace.py
+   
+   # Get stats
+   python index_workspace.py --stats
+
+EOF
