@@ -2,6 +2,12 @@ THE LARGE LANGUAGE MODEL COMPRESSOR
 
 **Current Release:** v0.5.0 "Token Umami"
 
+For the impatient quick start:
+pip install -e ".[rag]"
+llmc-rag-repo add /path/to/repo
+llmc-rag-service register /path/to/repo
+llmc-rag-service start --interval 300 --daemon
+
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage.  This is it.
 
 This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander.  Then I thought.. I can do better, so I started reading research papers, and things just got out of hand.  The system is built to create massive token, context, and inference savings while working with an LLM in a repo.  Right now it's geared toward a python repo, but works with some limitations for just about anything.  You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC.  I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
