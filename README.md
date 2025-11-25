@@ -3,10 +3,10 @@ THE LARGE LANGUAGE MODEL COMPRESSOR
 **Current Release:** v0.5.0 "Token Umami"
 
 For the impatient quick start:
-pip install -e ".[rag]"
-llmc-rag-repo add /path/to/repo
-llmc-rag-service register /path/to/repo
-llmc-rag-service start --interval 300 --daemon
+    pip install -e ".[rag]" 
+    llmc-rag-repo add /path/to/repo 
+    llmc-rag-service register /path/to/repo 
+    llmc-rag-service start --interval 300 --daemon 
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage.  This is it.
 
