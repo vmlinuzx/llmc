@@ -4,7 +4,7 @@ THE LARGE LANGUAGE MODEL COMPRESSOR
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage.  This is it.
 
-This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander.  Then I thought.. I can do better, so I started reading research papers, and things just got out of hand.  The system is built to create massive token, context, and inference savings while working with an LLM in a repo.  Right now it's geared toward a python repo, but works with some limitations for just about anything.  You shoudl see between 70 and 95 pecent reduction in token usage in a long session by using the LLMC.  I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
+This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander.  Then I thought.. I can do better, so I started reading research papers, and things just got out of hand.  The system is built to create massive token, context, and inference savings while working with an LLM in a repo.  Right now it's geared toward a python repo, but works with some limitations for just about anything.  You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC.  I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
 
 
 Brief what this repo does: A small set of CLIs and services that keep the users different project repos indexed, enriched, and queryable via RAG designed to utilize local smaller agents to drive down LLM usage costs, and make big LLM's "smarter".
@@ -92,7 +92,7 @@ Limitations:
 - Narrow RAG Nav surface: RAG Nav focuses on metadata and file level search today; deeper symbol aware where used is still being expanded.
 - Work in progress TUI: The TUI is functional but still under heavy iteration on layout and polish.
 - Power user MCP integration: Desktop Commander tooling is usable but assumes someone who is comfortable wiring their own agent configs.
-- There is a little logic to not enrich the same chunk, but the line numbers change everything after that line nubmer is re-enriched.  I have the solution for that, but haven't implemneted it yet.
+- There is a little logic to not enrich the same chunk, but the line numbers change everything after that line nubmer is re-enriched.  I have the solution for that, but haven't implemented it yet.
 - MOSTLY configurable.  This was a personal tool
 
 
