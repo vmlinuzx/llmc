@@ -86,3 +86,39 @@ keep_jsonl_lines = 1000
 enable_rotation = true
 log_directory = "logs"
 auto_rotation_interval = 0
+
+
+# ==============================================================================
+# Tool Envelope (TE) - Shell middleware for intelligent output handling
+# ==============================================================================
+# TE intercepts standard commands and returns enriched, ranked,
+# progressively-disclosed output. The response stream IS the teaching.
+# Philosophy: LLMs are alien intelligences that already know Unix.
+
+[tool_envelope]
+enabled = true
+
+[tool_envelope.workspace]
+root = "/home/vmlinux/src/llmc"
+respect_gitignore = true
+allow_outside_root = false
+
+[tool_envelope.telemetry]
+enabled = true
+path = ".llmc/te_telemetry.jsonl"
+
+[tool_envelope.grep]
+preview_matches = 10
+max_output_chars = 20000
+timeout_ms = 5000
+
+[tool_envelope.cat]
+preview_lines = 50
+max_output_chars = 30000
+
+[tool_envelope.agent_budgets]
+gemini-shell = 900000
+claude-dc = 180000
+qwen-local = 28000
+human-cli = 50000
+default = 16000
