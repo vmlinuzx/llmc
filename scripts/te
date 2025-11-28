@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""
+Tool Envelope CLI wrapper.
+
+Usage:
+    te grep "pattern" [path]
+    te -i grep "pattern"          # raw bypass
+    te --handle res_01H...        # retrieve stored result
+"""
+import sys
+from pathlib import Path
+
+# Add repo root to path
+repo_root = Path(__file__).parent.parent
+sys.path.insert(0, str(repo_root))
+
+from llmc.te.cli import main
+
+if __name__ == "__main__":
+    sys.exit(main())

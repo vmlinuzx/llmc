@@ -1,0 +1,322 @@
+#!/usr/bin/env python3
+"""
+TE Analytics - Analyze Tool Envelope telemetry data.
+
+Separate from te CLI to keep te lightweight.
+"""
+
+from __future__ import annotations
+
+import argparse
+import sqlite3
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+
+def _find_repo_root() -> Path:
+    """Find the git repository root."""
+    current = Path.cwd().resolve()
+    for ancestor in [current, *current.parents]:
+        if (ancestor / ".git").exists():
+            return ancestor
+    return current
+
+
+def _get_db_path() -> Path:
+    """Get telemetry database path."""
+    return _find_repo_root() / ".llmc" / "te_telemetry.db"
+
+
+def cmd_summary(args: argparse.Namespace) -> int:
+    """Show summary statistics."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        # Date filter
+        where_clause = ""
+        if args.days:
+            cutoff = (datetime.now() - timedelta(days=args.days)).isoformat()
+            where_clause = f"WHERE timestamp >= '{cutoff}'"
+        
+        # Overall stats
+        cursor = conn.execute(f"""
+            SELECT 
+                COUNT(*) as total_calls,
+                COUNT(DISTINCT cmd) as unique_cmds,
+                COUNT(DISTINCT agent_id) as unique_agents,
+                AVG(latency_ms) as avg_latency,
+                SUM(output_size) as total_output_bytes,
+                SUM(CASE WHEN mode = 'passthrough' THEN 1 ELSE 0 END) as passthrough_count,
+                SUM(CASE WHEN mode = 'enriched' THEN 1 ELSE 0 END) as enriched_count
+            FROM telemetry_events
+            {where_clause}
+        """)
+        
+        row = cursor.fetchone()
+        total, unique_cmds, unique_agents, avg_lat, total_out, passthrough, enriched = row
+        
+        print(f"[te-analyze] Summary{f' (last {args.days} days)' if args.days else ''}")
+        print(f"  Total calls: {total}")
+        print(f"  Unique commands: {unique_cmds}")
+        print(f"  Unique agents: {unique_agents}")
+        print(f"  Pass-through: {passthrough} ({passthrough/total*100:.1f}%)")
+        print(f"  Enriched: {enriched} ({enriched/total*100:.1f}%)")
+        print(f"  Avg latency: {avg_lat:.1f}ms")
+        print(f"  Total output: {total_out / 1024:.1f} KB")
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def cmd_by_command(args: argparse.Namespace) -> int:
+    """Show breakdown by command."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        where_clause = ""
+        if args.days:
+            cutoff = (datetime.now() - timedelta(days=args.days)).isoformat()
+            where_clause = f"WHERE timestamp >= '{cutoff}'"
+        
+        print(f"[te-analyze] By Command{f' (last {args.days} days)' if args.days else ''}")
+        print(f"{'Command':<15} {'Mode':<12} {'Count':>6} {'Avg Latency':>12} {'Total Output':>14}")
+        print("-" * 70)
+        
+        cursor = conn.execute(f"""
+            SELECT 
+                cmd,
+                mode,
+                COUNT(*) as count,
+                AVG(latency_ms) as avg_latency,
+                SUM(output_size) as total_bytes
+            FROM telemetry_events 
+            {where_clause}
+            GROUP BY cmd, mode 
+            ORDER BY count DESC
+            LIMIT {args.limit}
+        """)
+        
+        for cmd, mode, count, avg_lat, total_bytes in cursor.fetchall():
+            print(f"{cmd:<15} {mode:<12} {count:>6} {avg_lat:>11.1f}ms {total_bytes/1024:>12.1f}KB")
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def cmd_by_agent(args: argparse.Namespace) -> int:
+    """Show breakdown by agent."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        where_clause = ""
+        if args.days:
+            cutoff = (datetime.now() - timedelta(days=args.days)).isoformat()
+            where_clause = f"WHERE timestamp >= '{cutoff}'"
+        
+        print(f"[te-analyze] By Agent{f' (last {args.days} days)' if args.days else ''}")
+        print(f"{'Agent':<20} {'Calls':>8} {'Avg Latency':>12} {'Total Output':>14}")
+        print("-" * 60)
+        
+        cursor = conn.execute(f"""
+            SELECT 
+                agent_id,
+                COUNT(*) as count,
+                AVG(latency_ms) as avg_latency,
+                SUM(output_size) as total_bytes
+            FROM telemetry_events 
+            {where_clause}
+            GROUP BY agent_id 
+            ORDER BY count DESC
+        """)
+        
+        for agent, count, avg_lat, total_bytes in cursor.fetchall():
+            print(f"{agent:<20} {count:>8} {avg_lat:>11.1f}ms {total_bytes/1024:>12.1f}KB")
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def cmd_candidates(args: argparse.Namespace) -> int:
+    """Show commands that would benefit most from enrichment."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        where_clause = ""
+        if args.days:
+            cutoff = (datetime.now() - timedelta(days=args.days)).isoformat()
+            where_clause = f"WHERE timestamp >= '{cutoff}'"
+        
+        print(f"[te-analyze] Enrichment Candidates{f' (last {args.days} days)' if args.days else ''}")
+        print("Commands currently using pass-through that might benefit from enrichment:")
+        print(f"{'Command':<15} {'Calls':>8} {'Avg Output':>12} {'Total Output':>14}")
+        print("-" * 55)
+        
+        cursor = conn.execute(f"""
+            SELECT 
+                cmd,
+                COUNT(*) as count,
+                AVG(output_size) as avg_output,
+                SUM(output_size) as total_output
+            FROM telemetry_events 
+            {where_clause}
+            WHERE mode = 'passthrough'
+            GROUP BY cmd 
+            ORDER BY total_output DESC
+            LIMIT {args.limit}
+        """)
+        
+        for cmd, count, avg_out, total_out in cursor.fetchall():
+            print(f"{cmd:<15} {count:>8} {avg_out/1024:>10.1f}KB {total_out/1024:>12.1f}KB")
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def cmd_slow(args: argparse.Namespace) -> int:
+    """Show slowest commands."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        where_clause = ""
+        if args.days:
+            cutoff = (datetime.now() - timedelta(days=args.days)).isoformat()
+            where_clause = f"WHERE timestamp >= '{cutoff}'"
+        
+        print(f"[te-analyze] Slowest Commands{f' (last {args.days} days)' if args.days else ''}")
+        print(f"{'Command':<15} {'Mode':<12} {'Calls':>6} {'Avg Latency':>12} {'Max Latency':>12}")
+        print("-" * 65)
+        
+        cursor = conn.execute(f"""
+            SELECT 
+                cmd,
+                mode,
+                COUNT(*) as count,
+                AVG(latency_ms) as avg_latency,
+                MAX(latency_ms) as max_latency
+            FROM telemetry_events 
+            {where_clause}
+            GROUP BY cmd, mode 
+            ORDER BY avg_latency DESC
+            LIMIT {args.limit}
+        """)
+        
+        for cmd, mode, count, avg_lat, max_lat in cursor.fetchall():
+            print(f"{cmd:<15} {mode:<12} {count:>6} {avg_lat:>11.1f}ms {max_lat:>11}ms")
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def cmd_query(args: argparse.Namespace) -> int:
+    """Execute raw SQL query."""
+    db_path = _get_db_path()
+    if not db_path.exists():
+        print("[te-analyze] No telemetry data yet")
+        return 1
+    
+    conn = sqlite3.connect(db_path)
+    try:
+        cursor = conn.execute(args.sql)
+        
+        # Print column names
+        if cursor.description:
+            cols = [desc[0] for desc in cursor.description]
+            print(" | ".join(cols))
+            print("-" * (sum(len(c) for c in cols) + len(cols) * 3))
+        
+        # Print rows
+        for row in cursor.fetchall():
+            print(" | ".join(str(val) for val in row))
+        
+    finally:
+        conn.close()
+    
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="te-analyze",
+        description="Analyze Tool Envelope telemetry data",
+    )
+    
+    subparsers = parser.add_subparsers(dest="command", help="Analysis command")
+    
+    # Summary
+    p_summary = subparsers.add_parser("summary", help="Show summary statistics")
+    p_summary.add_argument("--days", type=int, help="Limit to last N days")
+    
+    # By command
+    p_cmd = subparsers.add_parser("by-command", help="Breakdown by command")
+    p_cmd.add_argument("--days", type=int, help="Limit to last N days")
+    p_cmd.add_argument("--limit", type=int, default=20, help="Limit results")
+    
+    # By agent
+    p_agent = subparsers.add_parser("by-agent", help="Breakdown by agent")
+    p_agent.add_argument("--days", type=int, help="Limit to last N days")
+    
+    # Candidates
+    p_cand = subparsers.add_parser("candidates", help="Commands needing enrichment")
+    p_cand.add_argument("--days", type=int, help="Limit to last N days")
+    p_cand.add_argument("--limit", type=int, default=10, help="Limit results")
+    
+    # Slow
+    p_slow = subparsers.add_parser("slow", help="Slowest commands")
+    p_slow.add_argument("--days", type=int, help="Limit to last N days")
+    p_slow.add_argument("--limit", type=int, default=10, help="Limit results")
+    
+    # Query
+    p_query = subparsers.add_parser("query", help="Execute raw SQL")
+    p_query.add_argument("sql", help="SQL query to execute")
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        return 1
+    
+    commands = {
+        "summary": cmd_summary,
+        "by-command": cmd_by_command,
+        "by-agent": cmd_by_agent,
+        "candidates": cmd_candidates,
+        "slow": cmd_slow,
+        "query": cmd_query,
+    }
+    
+    return commands[args.command](args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
