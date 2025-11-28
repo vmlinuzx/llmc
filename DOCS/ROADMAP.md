@@ -55,10 +55,6 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
 
 **Goal:** Reduce confusion and maintenance by cutting old interfaces.
 
-- Remove or archive the experimental FastAPI RAG web server:
-  - Move it under `archive/` or delete entirely.
-  - Strip it from docs, scripts, and any CLI help text.
-  - Remove now‑unused web server dependencies from `requirements.txt` (or move them to an optional extra).
 - Tighten the README and top‑level docs:
   - Clearly state the supported entrypoints:
     - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.

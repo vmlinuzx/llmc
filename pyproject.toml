@@ -25,9 +25,6 @@ rag = [
   "gitpython>=3.1.40",
   "pyyaml>=6.0.1",
   "tqdm>=4.66.1",
-  "fastapi>=0.109.0",
-  "uvicorn>=0.27.0",
-  "python-multipart>=0.0.6",
 ]
 tui = [
   "typer>=0.9.0",
@@ -39,13 +36,14 @@ tui = [
 # Explicitly declare which top-level packages are part of the install.
 # This avoids setuptools' flat-layout safety check on unrelated dirs
 # like DOCS/, logs/, and legacy/.
-packages = ["llmcwrapper", "tools", "mcp"]
+packages = ["llmcwrapper", "tools", "mcp", "llmc", "llmc.te", "llmc.te.handlers"]
 
 [project.scripts]
 llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
 llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
 llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
 llmc-profile = "llmcwrapper.cli.llmc_profile:main"
+te = "llmc.te.cli:main"
 
 [tool.pytest.ini_options]
 addopts = ["-q", "-ra"]
@@ -70,6 +68,8 @@ extend-exclude = [
   "build",
   "dist",
   ".trash",
+  # Personal wrapper scripts (not part of production code)
+  "tools/*.sh",
 ]
 
 [tool.ruff.lint]

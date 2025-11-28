@@ -71,6 +71,10 @@ It is not an exhaustive changelog; it is a brag sheet and a memory aid.
   - Capturing workspace snapshots.
   - Cleaning local RAG state safely.
 
+### 2.5 Clean Public Story
+
+- Removed the experimental FastAPI RAG web server, its dependencies, and references from docs and scripts.
+
 ---
 
 ## 3. Desktop Commander / Tools Surface
