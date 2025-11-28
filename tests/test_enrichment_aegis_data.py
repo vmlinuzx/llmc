@@ -86,6 +86,11 @@ def test_enrich_aegis_repository_basic(tmp_path: Path) -> None:
     print(f"\n[*] Copying AEGIS repository to {test_repo}...")
     shutil.copytree(AEGIS_REPO_PATH, test_repo)
 
+    # Ensure a fresh RAG workspace so index_repo performs real work.
+    rag_dir = test_repo / ".rag"
+    if rag_dir.exists():
+        shutil.rmtree(rag_dir)
+
     # Note: index_repo uses find_repo_root() to detect the repo, so we need to run it from the test repo
     import os
     original_cwd = os.getcwd()
@@ -229,6 +234,11 @@ def test_enrich_aegis_specific_modules(tmp_path: Path) -> None:
     print(f"\n[*] Setting up test repository at {test_repo}...")
     shutil.copytree(AEGIS_REPO_PATH, test_repo)
 
+    # Ensure a fresh RAG workspace to avoid reusing stale indexes.
+    rag_dir = test_repo / ".rag"
+    if rag_dir.exists():
+        shutil.rmtree(rag_dir)
+
     # Note: index_repo uses find_repo_root() to detect the repo, so we need to run it from the test repo
     import os
     original_cwd = os.getcwd()
@@ -329,6 +339,11 @@ def test_enrich_aegis_data_integrity(tmp_path: Path) -> None:
 
     test_repo = tmp_path / "aegis_integrity"
     shutil.copytree(AEGIS_REPO_PATH, test_repo)
+
+    # Ensure a clean workspace for integrity checks.
+    rag_dir = test_repo / ".rag"
+    if rag_dir.exists():
+        shutil.rmtree(rag_dir)
 
     # Note: index_repo uses find_repo_root() to detect the repo, so we need to run it from the test repo
     import os

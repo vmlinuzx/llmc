@@ -4,6 +4,7 @@ from __future__ import annotations
 # ruff: noqa: I001
 
 import argparse
+import importlib
 import json
 import os
 import statistics
@@ -16,41 +17,65 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-# ENTERPRISE FIX: Centralize Python cache before any imports
+# ENTERPRISE FIX: Centralize Python cache before heavy imports.
 _repo_root = Path(__file__).parent.parent.resolve()
 _pycache_dir = _repo_root / ".llmc" / "pycache"
 _pycache_dir.mkdir(parents=True, exist_ok=True)
 os.environ["PYTHONPYCACHEPREFIX"] = str(_pycache_dir)
 
-import _setup_path  # noqa: F401
+# Local module wiring via dynamic imports (avoids E402 while keeping pycache prefix active).
+importlib.import_module("_setup_path")
 
-from router import (
-    RouterSettings,
-    clamp_usage_snippet,
-    classify_failure,
-    choose_start_tier,
-    detect_truncation,
-    estimate_json_nodes_and_depth,
-    estimate_nesting_depth,
-    estimate_tokens_from_text,
-    expected_output_tokens,
-)
-from tools.rag.config import get_est_tokens_per_span, index_path_for_write
-from tools.rag.config_enrichment import (
-    EnrichmentBackendSpec,
-    EnrichmentConfig,
-    EnrichmentConfigError,
-    filter_chain_for_tier,
-    load_enrichment_config,
-    select_chain,
-)
-from tools.rag.database import Database
-from tools.rag.enrichment_backends import BackendAdapter, BackendCascade, BackendError
-from tools.rag.workers import enrichment_plan, validate_enrichment
-import importlib
+_router_mod = importlib.import_module("router")
+RouterSettings = _router_mod.RouterSettings
+clamp_usage_snippet = _router_mod.clamp_usage_snippet
+classify_failure = _router_mod.classify_failure
+choose_start_tier = _router_mod.choose_start_tier
+detect_truncation = _router_mod.detect_truncation
+estimate_json_nodes_and_depth = _router_mod.estimate_json_nodes_and_depth
+estimate_nesting_depth = _router_mod.estimate_nesting_depth
+estimate_tokens_from_text = _router_mod.estimate_tokens_from_text
+expected_output_tokens = _router_mod.expected_output_tokens
+
+_cfg_mod = importlib.import_module("tools.rag.config")
+get_est_tokens_per_span = _cfg_mod.get_est_tokens_per_span
+index_path_for_write = _cfg_mod.index_path_for_write
+
+if TYPE_CHECKING:
+    from tools.rag.config_enrichment import (
+        EnrichmentBackendSpec as EnrichmentBackendSpecT,
+        EnrichmentConfig as EnrichmentConfigT,
+        filter_chain_for_tier,
+        load_enrichment_config,
+        select_chain,
+    )
+    from tools.rag.enrichment_backends import (
+        BackendAdapter as BackendAdapterT,
+        BackendCascade as BackendCascadeT,
+    )
+else:
+    _cfg_enrich_mod = importlib.import_module("tools.rag.config_enrichment")
+    EnrichmentBackendSpec = _cfg_enrich_mod.EnrichmentBackendSpec
+    EnrichmentConfig = _cfg_enrich_mod.EnrichmentConfig
+    EnrichmentConfigError = _cfg_enrich_mod.EnrichmentConfigError
+    filter_chain_for_tier = _cfg_enrich_mod.filter_chain_for_tier
+    load_enrichment_config = _cfg_enrich_mod.load_enrichment_config
+    select_chain = _cfg_enrich_mod.select_chain
+
+_db_mod = importlib.import_module("tools.rag.database")
+Database = _db_mod.Database
+
+_backends_mod = importlib.import_module("tools.rag.enrichment_backends")
+BackendAdapter = _backends_mod.BackendAdapter
+BackendCascade = _backends_mod.BackendCascade
+BackendError = _backends_mod.BackendError
+
+_workers_mod = importlib.import_module("tools.rag.workers")
+enrichment_plan = _workers_mod.enrichment_plan
+validate_enrichment = _workers_mod.validate_enrichment
 
 try:
     _service_mod = importlib.import_module("tools.rag.service")
@@ -1331,9 +1356,9 @@ def _build_cascade_for_attempt(
     ollama_host_chain: Sequence[Mapping[str, object]],
     current_host_idx: int,
     host_chain_count: int,
-    enrichment_config: EnrichmentConfig | None = None,
-    selected_chain: Sequence[EnrichmentBackendSpec] | None = None,
-) -> tuple[BackendCascade, str, dict[str, Any], str | None, str | None, str, str | None]:
+    enrichment_config: EnrichmentConfigT | None = None,
+    selected_chain: Sequence[EnrichmentBackendSpecT] | None = None,
+) -> tuple[BackendCascadeT, str, dict[str, Any], str | None, str | None, str, str | None]:
     """Build a BackendCascade and preset metadata for a single attempt.
 
     This mirrors the existing tier/back-end selection logic in ``main`` but
@@ -1345,7 +1370,7 @@ def _build_cascade_for_attempt(
     preset_key = "14b" if tier_for_attempt == "14b" else "7b"
     tier_preset = PRESET_CACHE.get(preset_key, PRESET_CACHE["7b"])
 
-    adapters: list[BackendAdapter] = []
+    adapters: list[BackendAdapterT] = []
     host_label: str | None = None
     host_url: str | None = None
     chain_name_used: str | None = None
@@ -1451,8 +1476,8 @@ def main() -> int:
     force_legacy = env_flag("LLMC_ENRICH_FORCE_LEGACY")
     strict_config = env_flag("LLMC_ENRICH_STRICT_CONFIG")
     summary_json_path = os.environ.get("LLMC_ENRICH_SUMMARY_JSON")
-    enrichment_config: EnrichmentConfig | None = None
-    selected_chain: Sequence[EnrichmentBackendSpec] | None = None
+    enrichment_config: EnrichmentConfigT | None = None
+    selected_chain: Sequence[EnrichmentBackendSpecT] | None = None
     if not force_legacy:
         try:
             enrichment_config = load_enrichment_config(
@@ -1460,7 +1485,7 @@ def main() -> int:
                 toml_path=args.chain_config,
             )
             selected_chain = select_chain(enrichment_config, args.chain_name)
-        except EnrichmentConfigError as exc:
+        except EnrichmentConfigError as exc:  # type: ignore[name-defined]
             print(
                 f"[enrichment] config error: {exc}",
                 file=sys.stderr,

@@ -123,8 +123,7 @@ class MonitorScreen(Screen):
         ("2", "nav_search", "Search"),
         ("3", "nav_inspect", "Inspector"),
         ("4", "nav_config", "Config"),
-        ("5", "nav_doctor", "System Doctor"),
-        ("6", "nav_agents", "Agent Status"),
+        ("5", "nav_analytics", "Analytics"),
     ]
 
     def __init__(self):
@@ -140,8 +139,7 @@ class MonitorScreen(Screen):
             ("2", "Search Code", self.action_nav_search),
             ("3", "Code Inspector", self.action_nav_inspect),
             ("4", "Configuration", self.action_nav_config),
-            ("5", "System Doctor", self.action_nav_doctor),
-            ("6", "Agent Status", self.action_nav_agents),
+            ("5", "TE Analytics", self.action_nav_analytics),
         ]
 
     def compose(self) -> ComposeResult:
@@ -167,7 +165,7 @@ class MonitorScreen(Screen):
 
                 with Container(id="log-panel", classes="panel"):
                     yield Static("Enrichment Log", classes="panel-title")
-                    yield Static(id="log-output")
+                    yield Static(id="log-output", markup=False)
 
         yield Static("[q] Quit   [r] Refresh   [esc] Back", id="footer")
 
@@ -311,6 +309,7 @@ class MonitorScreen(Screen):
 
         log_text = "\n".join(self.logs[-self._max_log_lines :])
         self.query_one("#log-output", Static).update(log_text or "Awaiting logs...")
+        self.query_one("#log-output", Static).markup = False
 
     def _simulate_logs(self, force: bool = False) -> None:
         """Simulate enrichment logs when real logs are unavailable."""
@@ -442,11 +441,13 @@ class MonitorScreen(Screen):
         except Exception as exc:
             self.add_log(f"Open config failed: {exc}", "ERR")
 
-    def action_nav_doctor(self) -> None:
-        self.add_log("System Doctor not implemented yet", "INF")
-
-    def action_nav_agents(self) -> None:
-        self.add_log("Agent Status not implemented yet", "INF")
+    def action_nav_analytics(self) -> None:
+        """Switch to analytics dashboard."""
+        try:
+            from llmc.tui.screens.analytics import AnalyticsScreen
+            self.app.push_screen(AnalyticsScreen())
+        except Exception as exc:
+            self.add_log(f"Open analytics failed: {exc}", "ERR")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle menu clicks."""
@@ -456,8 +457,7 @@ class MonitorScreen(Screen):
             "menu-2": self.action_nav_search,
             "menu-3": self.action_nav_inspect,
             "menu-4": self.action_nav_config,
-            "menu-5": self.action_nav_doctor,
-            "menu-6": self.action_nav_agents,
+            "menu-5": self.action_nav_analytics,
         }
         handler = mapping.get(btn_id)
         if handler:

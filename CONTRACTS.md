@@ -20,6 +20,114 @@ CONTEXT CONTRACT
 ---
 
 ## 2. Tools
+# CONTRACTS.md – Tool Envelope (TE) & Desktop Commander Contract Block
+
+> Drop this into `CONTRACTS.md` near the tools / MCP section (e.g. after “Localhost / MCP Notes”).  
+> Adjust heading numbers as needed. This text assumes the rest of CONTRACTS already defines repo root, roles, and test policy.
+
+---
+
+## X. Tool Envelope (TE) Telemetry Contract
+
+This repo ships with a **Tool Envelope (TE)** wrapper and telemetry system:
+
+- Wrapper script: `./scripts/te`
+- Analyzer: `./scripts/te-analyze`
+- Telemetry store: `.llmc/te_telemetry.db` (local SQLite, no network exfil)
+
+TE is the default way **agents** should run shell commands while working in this repo.
+
+### X.1 When TE MUST be used
+
+Agents (Claude Desktop Commander, Codex, CLI tools, etc.) **MUST** run shell commands through TE when:
+
+- Touching this repo’s code (lint, tests, RAG CLI, formatting, refactors).
+- Doing file-level inspection at scale (`grep`, `find`, `rg`, etc.).
+- Running LLMC/RAG utilities under `scripts/` or `tools/`.
+- Performing any work that Dave expects to see in TE analytics.
+
+Allowed pattern (Claude DC example):
+
+```bash
+cd /home/vmlinux/src/llmc   && export TE_AGENT_ID="claude-dc"   && ./scripts/te <command> [args...]
+```
+
+### X.2 TE_AGENT_ID rules
+
+- `TE_AGENT_ID` **must** be set for all agent calls.
+- Use a short, stable slug per orchestrator:
+  - `claude-dc`   – Claude Desktop Commander
+  - `codex-cli`   – Codex / VSCode / CLI agent
+  - `minimax-cli` – Minimax CLI agent
+  - `manual-dave` – reserved for Dave’s own TE runs (when he wants activity in the dashboards)
+
+If `TE_AGENT_ID` is missing, TE will still run but telemetry will be anonymous; agents should treat that as a bug and fix it on the next command.
+
+### X.3 Bypassing TE
+
+Bypassing TE is **exception-only** behavior.
+
+Agents may bypass TE **only if all of the following are true**:
+
+1. `./scripts/te` is clearly broken or missing, **and**
+2. The agent has reported a `BLOCKED_BY_TE` condition in its response, **and**
+3. Dave explicitly authorizes a temporary bypass (e.g. “it’s fine to run that one without TE”).
+
+Bypass options:
+
+- `./scripts/te -i <command> ...` → raw pass-through, recorded minimally.
+- Direct shell command (no TE) → only after explicit approval **and** with a note in the response explaining that TE was bypassed.
+
+### X.4 RAG + TE integration
+
+For code understanding and navigation, agents should:
+
+- Prefer RAG-based tools **over** naive, full-file reads.
+- Invoke RAG through TE so we get telemetry:
+
+```bash
+# Semantic search
+./scripts/te python3 -m tools.rag.cli search "JWT validation logic" --limit 5 --json
+
+# Retrieval plan
+./scripts/te python3 -m tools.rag.cli plan "How does the authentication middleware work?"
+
+# Freshness-aware navigation
+./scripts/te python3 -m tools.rag.cli nav search "schema enrichment" /home/vmlinux/src/llmc
+```
+
+Full-file reads are allowed **only** when:
+
+- RAG fails to surface what’s needed, or
+- Dave explicitly asks for a full-file review.
+
+In both cases, agents should mention in their response that they had to fall back to direct file reads.
+
+### X.5 Desktop Commander specifics
+
+When the orchestrator is **Claude Desktop Commander**:
+
+- Treat `/home/vmlinux/src/llmc` as the canonical repo root unless Dave says otherwise.
+- All shell commands the tool executes **inside this repo** should follow the TE pattern with `TE_AGENT_ID="claude-dc"`.
+- Desktop Commander may:
+  - Use TE for RAG calls, tests, and exploratory commands.
+  - Use TE’s `grep`/`cat` enrichment for quick code peeks instead of reading entire large files directly.
+- Long-lived daemons / tmux sessions:
+  - Respect any tmux/job policies already in CONTRACTS.
+  - Prefer single-shot TE commands over spawning new long-running background processes unless Dave explicitly requests a service.
+
+If Desktop Commander cannot reach `./scripts/te` (pathing, permissions, etc.), it must report the problem instead of silently ignoring TE.
+
+### X.6 Analytics & privacy notes
+
+- TE telemetry is **local-only** by default and stored in `.llmc/te_telemetry.db`.
+- It captures **command, timing, and high-level metadata**, not full code contents.
+- The analytics TUI (if running) may visualize this, but it does not change the behavior contract above.
+
+The goal is to **dogfood TE in real workflows** so Dave can see how agents actually interact with the repo.
+
+
+
 All operational tools (CLI inventory, MCP servers, and callable LLM helpers) are defined in `.codex/tools.json`. Reference that manifest for canonical schemas and availability; this contract only records the pointer.
 
 ### contracts_sidecar_refresh

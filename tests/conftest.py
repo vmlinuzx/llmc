@@ -78,6 +78,10 @@ def _cleanup_repo_caches(request: pytest.FixtureRequest) -> None:
 def pytest_collection_modifyitems(config, items):
     """Skip standalone test scripts that have their own main() function."""
     skip_standalone = pytest.mark.skip(reason="Standalone test script - run directly with python")
+    skip_wrapper_scripts = pytest.mark.skip(
+        reason="Personal wrapper scripts - not part of production code"
+    )
+
     for item in items:
         # Skip files that have if __name__ == "__main__" in them
         # BUT only if they DON'T have pytest imports or fixtures
@@ -87,3 +91,7 @@ def pytest_collection_modifyitems(config, items):
             if "if __name__ == \"__main__\":" in content:
                 if "import pytest" not in content and "@pytest" not in content:
                     item.add_marker(skip_standalone)
+
+            # Skip wrapper script tests (personal tools, not production)
+            if "test_wrapper_scripts.py" in str(item.fspath):
+                item.add_marker(skip_wrapper_scripts)

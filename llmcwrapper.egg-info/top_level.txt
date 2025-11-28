@@ -1,3 +1,4 @@
+llmc
 llmcwrapper
 mcp
 tools

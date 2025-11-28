@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: llmcwrapper
-Version: 0.1.0
+Version: 0.1.1
 Summary: Unixy LLM wrapper: shared adapter + dual CLIs for YOLO and RAG modes
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
