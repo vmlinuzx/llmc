@@ -152,47 +152,65 @@ def _handle_stats(repo_root: Path) -> int:
                 SUM(output_size) as total_output_bytes
             FROM telemetry_events
         """)
-        total_calls, unique_cmds, avg_latency, total_output = cursor.fetchone()
+        row = cursor.fetchone()
+        total_calls = row[0] or 0
+        unique_cmds = row[1] or 0
+        avg_latency = row[2] or 0.0
+        total_output = row[3] or 0
         
-        print(f"[TE] Telemetry Summary")
-        print(f"  Total calls: {total_calls}")
-        print(f"  Unique commands: {unique_cmds}")
-        print(f"  Avg latency: {avg_latency:.1f}ms")
-        print(f"  Total output: {total_output / 1024:.1f} KB")
+        print("┌─ [TE] Telemetry Summary ──────────────────────────────┐")
+        print(f"│ Total calls:     {total_calls:<37}│")
+        print(f"│ Unique commands: {unique_cmds:<37}│")
+        print(f"│ Avg latency:     {avg_latency:.1f}ms{' '*(35 - len(f'{avg_latency:.1f}'))}│")
+        val_str = f"{total_output / 1024:.1f} KB"
+        print(f"│ Total output:    {val_str:<37}│")
+        print("└───────────────────────────────────────────────────────┘")
         print()
         
-        # By command and mode
-        print("[TE] Command Usage:")
+        # Top 5 Unenriched (mode != 'enriched')
+        print("┌─ Top 5 Unenriched Calls ──────────────────────────────┐")
         cursor = conn.execute("""
             SELECT 
                 cmd,
-                mode,
                 COUNT(*) as count,
-                AVG(latency_ms) as avg_latency,
-                SUM(output_size) as total_bytes
+                AVG(latency_ms) as avg_latency
             FROM telemetry_events 
-            GROUP BY cmd, mode 
+            WHERE mode != 'enriched'
+            GROUP BY cmd
             ORDER BY count DESC
-            LIMIT 20
+            LIMIT 5
         """)
         
-        for cmd, mode, count, avg_lat, total_bytes in cursor.fetchall():
-            print(f"  {cmd:15} {mode:12} {count:4}x  {avg_lat:5.1f}ms  {total_bytes/1024:7.1f}KB")
-        
-        # Recent activity
+        rows = cursor.fetchall()
+        if not rows:
+             print("│ (no data)                                             │")
+        for cmd, count, avg_lat in rows:
+            line = f"{cmd} ({count}x) - {avg_lat:.1f}ms"
+            print(f"│ {line:<54}│")
+        print("└───────────────────────────────────────────────────────┘")
         print()
-        print("[TE] Recent Activity (last 10):")
+
+        # Top 5 Enriched (mode == 'enriched')
+        print("┌─ Top 5 Enriched Calls ────────────────────────────────┐")
         cursor = conn.execute("""
-            SELECT timestamp, cmd, mode, latency_ms
+            SELECT 
+                cmd,
+                COUNT(*) as count,
+                AVG(latency_ms) as avg_latency
             FROM telemetry_events 
-            ORDER BY id DESC 
-            LIMIT 10
+            WHERE mode = 'enriched'
+            GROUP BY cmd
+            ORDER BY count DESC
+            LIMIT 5
         """)
         
-        for ts, cmd, mode, lat in cursor.fetchall():
-            # Strip timezone for readability
-            ts_short = ts.replace("T", " ").split(".")[0]
-            print(f"  {ts_short}  {cmd:12} {mode:12} {lat:4}ms")
+        rows = cursor.fetchall()
+        if not rows:
+             print("│ (no data)                                             │")
+        for cmd, count, avg_lat in rows:
+            line = f"{cmd} ({count}x) - {avg_lat:.1f}ms"
+            print(f"│ {line:<54}│")
+        print("└───────────────────────────────────────────────────────┘")
         
     finally:
         conn.close()
@@ -209,6 +227,9 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path) -> int:
     pattern = args[0]
     path = args[1] if len(args) > 1 else None
     agent_id = os.getenv("TE_AGENT_ID")
+    
+    # Build full command string for telemetry
+    full_cmd = "grep " + " ".join(args)
 
     with TeTimer() as timer:
         result = handle_grep(
@@ -229,13 +250,14 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path) -> int:
     handle_created = '"handle":' in meta
 
     log_event(
-        cmd="grep",
+        cmd=full_cmd,
         mode="raw" if raw else "enriched",
         input_size=len(result.content),
         output_size=len(output),
         truncated=truncated,
         handle_created=handle_created,
         latency_ms=timer.elapsed_ms,
+        output_text=output,
         repo_root=repo_root,
     )
 
@@ -270,32 +292,36 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path) -> int:
                 print(result.stderr, end="", file=sys.stderr)
             
             output_size = len(result.stdout) + len(result.stderr)
+            output_content = result.stdout + result.stderr  # Capture for telemetry
             exit_code = result.returncode
             error = None
             
         except subprocess.TimeoutExpired:
             print(f"[TE] command timed out after 30s: {full_cmd}", file=sys.stderr)
             output_size = 0
+            output_content = ""
             exit_code = 124  # timeout exit code
             error = "timeout"
             
         except Exception as e:
             print(f"[TE] execution failed: {e}", file=sys.stderr)
             output_size = 0
+            output_content = ""
             exit_code = 1
             error = str(e)
     
     # Log telemetry for pass-through command
     log_event(
-        cmd=command,
+        cmd=full_cmd,
         mode="passthrough",
         input_size=len(full_cmd),
         output_size=output_size,
         truncated=False,
         handle_created=False,
         latency_ms=timer.elapsed_ms,
-        repo_root=repo_root,
         error=error,
+        output_text=output_content,
+        repo_root=repo_root,
     )
     
     return exit_code
@@ -346,8 +372,17 @@ def main() -> int:
     # Check if this is a known enriched command
     is_enriched = command in ENRICHED_COMMANDS
     
-    # If -i/--raw is set, OR command is unknown, do pass-through
-    if args.raw or not is_enriched:
+    # Check tool-specific enabled flags
+    tool_enabled = True
+    if command == "grep":
+        tool_enabled = cfg.grep_enabled
+    elif command == "cat":
+        tool_enabled = cfg.cat_enabled
+    elif command == "find":
+        tool_enabled = cfg.find_enabled
+    
+    # If -i/--raw is set, OR command is unknown, OR tool is disabled → passthrough
+    if args.raw or not is_enriched or not tool_enabled:
         return _handle_passthrough(command, cmd_args, repo_root)
     
     # Dispatch to enriched handler

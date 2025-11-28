@@ -61,6 +61,13 @@ class TeConfig:
     # Telemetry
     telemetry_enabled: bool = True
     telemetry_path: str = ".llmc/te_telemetry.jsonl"
+    capture_output: bool = False  # Store actual command output (privacy/storage tradeoff)
+    output_max_bytes: int = 8192  # Max bytes to capture per command when capture_output=True
+
+    # Tool-specific enabled flags (False = passthrough with logging)
+    grep_enabled: bool = True
+    cat_enabled: bool = True
+    find_enabled: bool = True
 
     # Grep defaults
     grep_preview_matches: int = 10
@@ -96,6 +103,11 @@ def get_te_config(repo_root: Path | None = None) -> TeConfig:
         allow_outside_root=workspace.get("allow_outside_root", False),
         telemetry_enabled=telemetry.get("enabled", True),
         telemetry_path=telemetry.get("path", ".llmc/te_telemetry.jsonl"),
+        capture_output=telemetry.get("capture_output", False),
+        output_max_bytes=telemetry.get("output_max_bytes", 8192),
+        grep_enabled=grep.get("enabled", True),
+        cat_enabled=cat.get("enabled", True),
+        find_enabled=te_cfg.get("find", {}).get("enabled", True),
         grep_preview_matches=grep.get("preview_matches", 10),
         grep_max_output_chars=grep.get("max_output_chars", 20_000),
         grep_timeout_ms=grep.get("timeout_ms", 5_000),

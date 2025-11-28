@@ -124,6 +124,7 @@ class MonitorScreen(Screen):
         ("3", "nav_inspect", "Inspector"),
         ("4", "nav_config", "Config"),
         ("5", "nav_analytics", "Analytics"),
+        ("6", "nav_live_monitor", "TE Live"),
     ]
 
     def __init__(self):
@@ -140,6 +141,7 @@ class MonitorScreen(Screen):
             ("3", "Code Inspector", self.action_nav_inspect),
             ("4", "Configuration", self.action_nav_config),
             ("5", "TE Analytics", self.action_nav_analytics),
+            ("6", "TE Live Monitor", self.action_nav_live_monitor),
         ]
 
     def compose(self) -> ComposeResult:
@@ -449,6 +451,14 @@ class MonitorScreen(Screen):
         except Exception as exc:
             self.add_log(f"Open analytics failed: {exc}", "ERR")
 
+    def action_nav_live_monitor(self) -> None:
+        """Switch to live TE monitor."""
+        try:
+            from llmc.tui.screens.live_monitor import LiveMonitorScreen
+            self.app.push_screen(LiveMonitorScreen())
+        except Exception as exc:
+            self.add_log(f"Open live monitor failed: {exc}", "ERR")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle menu clicks."""
         btn_id = event.button.id or ""
@@ -458,6 +468,7 @@ class MonitorScreen(Screen):
             "menu-3": self.action_nav_inspect,
             "menu-4": self.action_nav_config,
             "menu-5": self.action_nav_analytics,
+            "menu-6": self.action_nav_live_monitor,
         }
         handler = mapping.get(btn_id)
         if handler:

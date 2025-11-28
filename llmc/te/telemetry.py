@@ -32,6 +32,7 @@ class TeEvent:
     handle_created: bool
     latency_ms: int
     error: str | None = None
+    output_text: str | None = None  # Actual output (only captured when enabled)
 
 
 def _now_iso() -> str:
@@ -65,7 +66,8 @@ def _init_telemetry_db(db_path: Path) -> None:
                 truncated INTEGER NOT NULL,
                 handle_created INTEGER NOT NULL,
                 latency_ms INTEGER NOT NULL,
-                error TEXT
+                error TEXT,
+                output_text TEXT
             )
         """)
         
@@ -85,6 +87,12 @@ def _init_telemetry_db(db_path: Path) -> None:
             ON telemetry_events(mode)
         """)
         
+        # Migration: add output_text column to existing DBs
+        try:
+            conn.execute("ALTER TABLE telemetry_events ADD COLUMN output_text TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        
         conn.commit()
     finally:
         conn.close()
@@ -99,12 +107,18 @@ def log_event(
     handle_created: bool,
     latency_ms: int,
     error: str | None = None,
+    output_text: str | None = None,
     repo_root: Path | None = None,
 ) -> None:
     """Log a telemetry event to SQLite database."""
     cfg = get_te_config(repo_root)
     if not cfg.telemetry_enabled:
         return
+
+    # Only capture output if enabled in config, and cap at max bytes
+    captured_output = None
+    if cfg.capture_output and output_text:
+        captured_output = output_text[:cfg.output_max_bytes]
 
     event = TeEvent(
         timestamp=_now_iso(),
@@ -118,6 +132,7 @@ def log_event(
         handle_created=handle_created,
         latency_ms=latency_ms,
         error=error,
+        output_text=captured_output,
     )
 
     db_path = _get_telemetry_db_path(repo_root)
@@ -130,8 +145,8 @@ def log_event(
                 INSERT INTO telemetry_events (
                     timestamp, agent_id, session_id, cmd, mode,
                     input_size, output_size, truncated, handle_created,
-                    latency_ms, error
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    latency_ms, error, output_text
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 event.timestamp,
                 event.agent_id,
@@ -144,6 +159,7 @@ def log_event(
                 1 if event.handle_created else 0,
                 event.latency_ms,
                 event.error,
+                event.output_text,
             ))
             conn.commit()
         finally:
