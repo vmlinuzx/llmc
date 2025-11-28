@@ -104,8 +104,10 @@ class AnalyticsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         """Create the analytics layout."""
-        yield Static("TE Analytics Dashboard", id="header")
         
+        
+        yield Static("TE Analytics Dashboard", id="header")
+
         with Grid(id="dashboard-grid"):
             # Row 1: Summary Stats (spans both columns)
             with Container(id="summary-panel", classes="panel"):

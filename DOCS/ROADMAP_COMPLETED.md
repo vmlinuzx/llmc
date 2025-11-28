@@ -71,9 +71,10 @@ It is not an exhaustive changelog; it is a brag sheet and a memory aid.
   - Capturing workspace snapshots.
   - Cleaning local RAG state safely.
 
-### 2.5 Clean Public Story
+### 2.5 Enrichment hardening and operator docs
 
-- Removed the experimental FastAPI RAG web server, its dependencies, and references from docs and scripts.
+- Documented `DOCS/RAG_Enrichment_Hardening.md` covering config, `enforce_latin1_enrichment` behavior, retries, timeouts, and backend fallbacks.
+- Added a structured triage checklist for common enrichment issues (stuck jobs, backend flapping, DB pollution).
 
 ---
 
@@ -137,13 +138,20 @@ Carried from prior roadmap “Recently Completed (Highlights)”:
 
 ---
 
-## 6. Template, TUI, and UX Wins
+### 6. Template, TUI, and UX Wins
 
 - Piped RAG planner output into wrappers so Codex/Claude/Gemini can consume indexed spans automatically.
 - Locked an MVP stack and scope for the template‑builder UX.
 - Built and wired the LLMC TUI:
   - Monitor, search, inspector, and config screens.
   - Basic keyboard navigation and layout.
+- Implemented comprehensive TE Analytics TUI enhancements:
+  - Top bar with time range selector and enriched vs. pass-through ratio gauge.
+  - Enhanced Unenriched Candidates panel with sorting, new columns (total size, avg latency, est. tokens).
+  - Enhanced Enriched Actions panel with savings metrics, latency impact, and status indicators.
+  - Recent Activity Stream with real-time command activity.
+  - Persistent bottom status bar with key metrics.
+  - Optional command category breakdown.
 
 ---
 

@@ -63,8 +63,6 @@ cd /home/vmlinux/src/llmc   && export TE_AGENT_ID="<your-agent-id>"   && ./scrip
 
 ## 4. Tool Envelope (TE) – Command Execution Contract
 
-This repo is wired to **dogfood the Tool Envelope (TE)** system.
-
 ### 4.1 Required TE usage
 
 If you are an agent (Claude DC, VS Code, Codex, Minimax, etc.), then:
@@ -106,6 +104,7 @@ Bypassing TE is **exception-only**:
 1. `./scripts/te` is clearly broken or missing, **and**
 2. You have called out a `BLOCKED_BY_TE` condition in your response, **and**
 3. Dave explicitly authorizes a temporary bypass.
+4. Interactive applications.  
 
 If bypassing TE:
 
@@ -166,7 +165,7 @@ When making changes in this repo, follow this workflow unless Dave explicitly sa
 ### 6.1 Classify the change
 
 - **Trivial** (typo, log message, comment tweak, very small refactor with no behavioral change):
-  - You may skip a formal SDD but still briefly state the intent and affected files.
+  - You may skip a formal SDD but still briefly state the intent and affected files, and get permission to continue.
 - **Non-trivial** (new behavior, touching core RAG/TE logic, changes that affect indexing, enrichment, routing, or telemetry):
   - You should produce a **small SDD or change sketch** before editing code.
 

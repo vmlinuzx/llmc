@@ -71,10 +71,11 @@ When set to `true`, LLMC validates that the output from the LLM is valid Latin-1
 **When to disable it?**
 Set it to `false` if you are documenting code with non-Latin comments (Chinese, Japanese, etc.) or if your project uses emojis heavily in documentation.
 
-## Troubleshooting & Triage
+## Triage Checklist
 
 ### 1. "Enrichment is stuck / 0% progress"
 *   **Check connections**: Can you `curl` your Ollama instance?
+*   **Check daemon status**: Run `llmc-rag-service status` (or `llmc service status` if `llmc` has a top-level service command) to ensure the daemon is running and healthy.
 *   **Check `batch_size`**: If set too high (e.g., 100+) on a small GPU, the model might be timing out processing the batch prompt. Lower it to 10 or 5.
 *   **Check logs**: Look for `ReadTimeout` or `ConnectionRefusedError`.
 

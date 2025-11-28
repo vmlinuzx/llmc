@@ -14,19 +14,7 @@ Think of this as:
 
 These are the things that make the current LLMC stack feel solid and intentional for you and for any future users.
 
-### 1.1 Enrichment hardening and operator docs
 
-**Goal:** Make enrichment failures boring and easy to reason about.
-
-- Write `DOCS/RAG_Enrichment_Hardening.md`:
-  - How enrichment chains are configured in `llmc.toml`.
-  - What `enforce_latin1_enrichment` does and when to use it.
-  - How retries, timeouts, and backend fallbacks behave in practice.
-  - Where to look in logs when a backend is sick or slow.
-- Add a short “triage checklist”:
-  - Enrichment jobs stuck or slow.
-  - A backend flapping.
-  - DB getting polluted with garbage spans or partial enrichments.
 
 ### 1.2 Enrichment pipeline tidy‑up
 
@@ -100,17 +88,7 @@ These are things that make LLMC nicer to live with once the core system is “go
   - How normalization works.
   - That normalized scores are comparable across queries.
 
-### 2.4 TUI polish and UX
 
-**Goal:** Make the TUI feel like a stable, daily‑driver cockpit.
-
-- Smooth out rough edges in the current screens:
-  - Make sure each panel handles “no data yet” states gracefully.
-  - Ensure error messages are readable and non‑tracebacky.
-- Add small quality‑of‑life features:
-  - Jump from a search result to inspector.
-  - Basic keyboard shortcuts cheat‑sheet pane.
-- Keep styling changes minimal so they do not churn snapshots or docs.
 
 ---
 
@@ -147,15 +125,7 @@ These are the “this would be awesome” items that are worth doing, but not at
 - Align router docs with reality:
   - Keep the “*removed for now*” note until there is a stable CLI or policy file.
 
-### 3.4 Observability and dashboards
 
-**Goal:** Make it easy to see “is LLMC healthy?” at a glance.
-
-- Decide on a minimal metrics story:
-  - Basic counters for index jobs, enrichment successes/failures, daemon health.
-- Provide either:
-  - A simple text‑based status report (CLI + TUI).
-  - Or a small optional dashboard that reads from existing logs/metrics.
 
 ---
 
