@@ -99,3 +99,4 @@ TEST_FIXES_SUMMARY_*.md
 patches/
 # Local backup artefacts for personal tools
 llmc_backups/
+llmc/.llmc/
