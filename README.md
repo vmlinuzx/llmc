@@ -1,6 +1,6 @@
 THE LARGE LANGUAGE MODEL COMPRESSOR
 
-**Current Release:** v0.6.0 "Modular Mojo"
+**Current Release:** v0.5.5 "Modular Mojo"
 
 For the impatient quick start:
 

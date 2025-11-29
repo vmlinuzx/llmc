@@ -2,7 +2,7 @@
 
 All notable changes to LLMC will be documented in this file.
 
-## [0.6.0] - "Modular Mojo" - 2025-11-28
+## [0.5.5] - "Modular Mojo" - 2025-11-28
 
 ### Blue Flavor: **Modular Mojo**
 
