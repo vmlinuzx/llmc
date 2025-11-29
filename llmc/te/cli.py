@@ -104,8 +104,6 @@ def _handle_retrieve(handle: str, chunk: int = 0) -> int:
         print(f"[TE] handle not found: {handle}", file=sys.stderr)
         return 1
 
-    entry = get_entry(handle)
-
     # For now, just dump the data. Future: chunk-based pagination
     if isinstance(data, str):
         print(data)
@@ -283,6 +281,7 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path) -> int:
                 capture_output=True,
                 text=True,
                 timeout=30,  # TODO: make configurable
+                check=False,
             )
             
             # Output stdout/stderr as-is

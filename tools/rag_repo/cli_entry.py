@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
-from typing import Any, Dict, List
+import sys
+from typing import Any
 
 from .archive import create_snapshot_tar
 from .cli import clean_workspace, resolve_export_dir, resolve_workspace_from_cli
 from .doctor import doctor_paths
+from .fs import SafeFS
 
 
-def doctor_paths_cmd(repo_root: Path, workspace: str | None, export: str | None) -> Dict[str, Any]:
+def doctor_paths_cmd(repo_root: Path, workspace: str | None, export: str | None) -> dict[str, Any]:
     return doctor_paths(repo_root, workspace, export)
 
 
@@ -22,7 +23,7 @@ def snapshot_workspace_cmd(
     name: str | None,
     include_hidden: bool,
     force: bool,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     ws_root = resolve_workspace_from_cli(repo_root, workspace)
     export_dir = resolve_export_dir(repo_root, workspace, export or "exports")
     export_dir.mkdir(parents=True, exist_ok=True)
@@ -36,7 +37,7 @@ def snapshot_workspace_cmd(
     return {"snapshot": tar_path}
 
 
-def clean_workspace_cmd(repo_root: Path, workspace: str | None = None, force: bool = False) -> Dict[str, Any]:
+def clean_workspace_cmd(repo_root: Path, workspace: str | None = None, force: bool = False) -> dict[str, Any]:
     return clean_workspace(repo_root, workspace, force=force)
 
 
@@ -50,7 +51,7 @@ def _coerce(obj: Any) -> Any:
     return obj
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="llmc-cli")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

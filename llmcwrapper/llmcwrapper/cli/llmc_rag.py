@@ -20,16 +20,18 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--model", default=None)
-    ap.add_argument(
-        "--shadow-profile",
+    ap.add_argument("--shadow-profile",
         default=None,
         help="Run a parallel dry-run under another profile and log telemetry",
     )
+    ap.add_argument("query", nargs="*", help="User query string (optional, defaults to 'ping')")
     args = ap.parse_args()
+
+    user_query = " ".join(args.query) if args.query else "ping"
 
     try:
         out = send(
-            messages=[{"role": "user", "content": "ping"}],
+            messages=[{"role": "user", "content": user_query}],
             tools=[{"type": "rag", "name": "default"}],
             model=args.model,
             mode="rag",

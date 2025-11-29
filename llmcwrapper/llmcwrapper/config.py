@@ -1,7 +1,10 @@
 # llmcwrapper/config.py
 from __future__ import annotations
-import os, json, copy
-from typing import Any, Dict, List, Tuple
+
+import copy
+import json
+import os
+from typing import Any
 
 try:
     import tomllib  # 3.11+
@@ -12,7 +15,7 @@ try:
 except ModuleNotFoundError:
     tomli = None
 
-DICT = Dict[str, Any]
+DICT = dict[str, Any]
 
 DEFAULTS = {
     "defaults": {"profile": "daily", "mode": "yolo"},
@@ -97,7 +100,7 @@ def _env_set_list() -> list:
     if not s: return []
     return [p.strip() for p in s.split(",") if p.strip()]
 
-def apply_sets_unsets(cfg: DICT, sets: List[str], unsets: List[str]) -> DICT:
+def apply_sets_unsets(cfg: DICT, sets: list[str], unsets: list[str]) -> DICT:
     out = copy.deepcopy(cfg)
     for item in sets or []:
         if "=" not in item: continue
@@ -107,12 +110,12 @@ def apply_sets_unsets(cfg: DICT, sets: List[str], unsets: List[str]) -> DICT:
         unset_dotted(out, k)
     return out
 
-def _read_user_and_project() -> Tuple[DICT, DICT]:
+def _read_user_and_project() -> tuple[DICT, DICT]:
     user_cfg = os.path.expanduser("~/.config/llmc/config.toml")
     proj_cfg = os.path.join(os.getcwd(), ".llmc", "config.toml")
     return _read_toml(user_cfg), _read_toml(proj_cfg)
 
-def apply_overlays(base: DICT, overlay_paths: List[str]) -> DICT:
+def apply_overlays(base: DICT, overlay_paths: list[str]) -> DICT:
     cur = copy.deepcopy(base)
     for p in overlay_paths or []:
         cur = deep_merge(cur, _read_toml(p))
