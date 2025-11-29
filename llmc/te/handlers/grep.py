@@ -126,15 +126,16 @@ def _run_rg(
             text=True,
             timeout=timeout_ms / 1000,
             cwd=workspace,
+            check=False,
         )
         output = result.stdout
-        # rg returns 1 for no matches, 2 for errors
-        if result.returncode == 2:
+        # rg returns 0 for matches, 1 for no matches, 2 for errors
+        if result.returncode == 2 or result.returncode < 0:
             return GrepResult(
                 matches=[],
                 total_count=0,
                 raw_output="",
-                error=result.stderr.strip() or "ripgrep error",
+                error=result.stderr.strip() or f"ripgrep error (code {result.returncode})",
             )
         matches = _parse_rg_output(output)
         return GrepResult(

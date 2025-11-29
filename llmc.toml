@@ -1,6 +1,37 @@
 [embeddings]
-# preset = "e5"  # e5 | e5-large | mini
-# model = "intfloat/e5-base-v2"  # or "hash-emb-v1" for deterministic CPU-only testing
+default_profile = "docs"
+
+[embeddings.profiles.docs]
+provider = "ollama"
+model = "nomic-embed-text"
+dimension = 768
+
+[embeddings.profiles.docs.ollama]
+api_base = "http://192.168.5.20:11434"
+timeout = 60
+
+[embeddings.profiles.code]
+provider = "ollama"
+model = "nomic-embed-text"
+dimension = 768
+
+[embeddings.profiles.code.ollama]
+api_base = "http://192.168.5.20:11434"
+timeout = 60
+
+[embeddings.profiles.cheap]
+provider = "ollama"
+model = "all-minilm"
+dimension = 384
+
+[embeddings.profiles.cheap.ollama]
+api_base = "http://192.168.5.20:11434"
+timeout = 60
+
+[embeddings.profiles.test]
+provider = "hash"
+dimension = 64
+
 gpu_min_free_mb = 1536
 
 [storage]
