@@ -13,8 +13,12 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .config import _find_repo_root, get_te_config
+
+if TYPE_CHECKING:
+    from .config import TeConfig
 
 
 @dataclass
@@ -40,11 +44,10 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def _get_telemetry_db_path(repo_root: Path | None = None) -> Path:
-    """Get telemetry database path, creating parent dirs if needed."""
+def _get_telemetry_db_path(cfg: "TeConfig", repo_root: Path | None = None) -> Path:
+    """Get telemetry database path from config, creating parent dirs if needed."""
     root = repo_root or _find_repo_root()
-    # Store in .llmc/te_telemetry.db instead of JSONL
-    path = root / ".llmc" / "te_telemetry.db"
+    path = root / cfg.telemetry_path
     path.parent.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -135,7 +138,7 @@ def log_event(
         output_text=captured_output,
     )
 
-    db_path = _get_telemetry_db_path(repo_root)
+    db_path = _get_telemetry_db_path(cfg, repo_root)
     
     try:
         _init_telemetry_db(db_path)

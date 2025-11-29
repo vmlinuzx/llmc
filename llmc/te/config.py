@@ -60,7 +60,7 @@ class TeConfig:
 
     # Telemetry
     telemetry_enabled: bool = True
-    telemetry_path: str = ".llmc/te_telemetry.jsonl"
+    telemetry_path: str = ".llmc/te_telemetry.db"
     capture_output: bool = False  # Store actual command output (privacy/storage tradeoff)
     output_max_bytes: int = 8192  # Max bytes to capture per command when capture_output=True
 
@@ -102,7 +102,7 @@ def get_te_config(repo_root: Path | None = None) -> TeConfig:
         respect_gitignore=workspace.get("respect_gitignore", True),
         allow_outside_root=workspace.get("allow_outside_root", False),
         telemetry_enabled=telemetry.get("enabled", True),
-        telemetry_path=telemetry.get("path", ".llmc/te_telemetry.jsonl"),
+        telemetry_path=telemetry.get("path", ".llmc/te_telemetry.db"),
         capture_output=telemetry.get("capture_output", False),
         output_max_bytes=telemetry.get("output_max_bytes", 8192),
         grep_enabled=grep.get("enabled", True),

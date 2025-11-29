@@ -136,7 +136,7 @@ allow_outside_root = false
 
 [tool_envelope.telemetry]
 enabled = true
-path = ".llmc/te_telemetry.jsonl"
+path = ".llmc/te_telemetry.db"
 capture_output = true  # Store actual command output for review (privacy/storage tradeoff)
 output_max_bytes = 8192  # Max bytes to capture per command
 
