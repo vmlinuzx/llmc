@@ -31,7 +31,7 @@ This release introduces a major architectural upgrade to the embedding system, m
 
 ## [0.5.0] - "Token Umami" - 2025-11-25
 
-### Purple Flavor: **Token Umami**
+### Purple Flavor: **Breakfast in Bed**
 
 Initial public release of LLMC. This is a working, tested system that achieves 60-95% token cost reduction through intelligent routing, RAG-first workflows, and local model optimization.
 
