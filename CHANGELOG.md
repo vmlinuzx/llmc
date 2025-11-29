@@ -2,6 +2,33 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.0] - "Modular Mojo" - 2025-11-28
+
+### Blue Flavor: **Modular Mojo**
+
+This release introduces a major architectural upgrade to the embedding system, making LLMC more flexible and configurable than ever. It also includes significant hardening of the CLI tools and telemetry system.
+
+### Added
+- **Modular Embeddings Architecture:**
+    - **Profiles:** Define multiple embedding profiles (e.g., `code` using local SentenceTransformers, `docs` using remote Ollama) in `llmc.toml`.
+    - **Provider Abstraction:** Clean separation between `Hash`, `SentenceTransformer`, and `Ollama` providers.
+    - **Configuration:** New `[embeddings.profiles.*]` section in `llmc.toml` allows granular control over models, dimensions, and provider-specific settings.
+    - **Migration:** Automatic database schema migration to support profile-aware embedding storage.
+- **Live Integration Tests:** Added `tests/test_ollama_live.py` to verify real-world connectivity and data fidelity with Ollama endpoints.
+- **Data Integrity Tests:** Added `tests/test_te_enrichment_manual.py` to ensure binary storage of vectors is bit-perfect and profiles are correctly isolated.
+
+### Changed
+- **Telemetry Hardening:** The Tool Envelope (TE) telemetry now consistently uses `.llmc/te_telemetry.db` (SQLite) instead of a mix of JSONL and DB, preventing data loss and configuration confusion.
+- **CLI Improvements:**
+    - `llmc-rag` now accepts user queries directly as arguments (e.g., `llmc-rag "how does X work?"`) instead of defaulting to "ping".
+    - `llmc-rag-repo snapshot` no longer crashes due to missing imports.
+- **Code Quality:** Massive linting cleanup (1000+ issues fixed) across `llmcwrapper`, `llmc/te`, and core tools.
+
+### Fixed
+- Critical crash in `llmc-rag-repo snapshot` caused by undefined `SafeFS`.
+- `llmc-rag` CLI ignoring user input.
+- Telemetry configuration mismatch between `llmc.toml` and internal code.
+
 ## [0.5.0] - "Token Umami" - 2025-11-25
 
 ### Purple Flavor: **Token Umami**
@@ -45,4 +72,3 @@ Initial public release of LLMC. This is a working, tested system that achieves 6
 ## Unreleased
 
 - Working on tool result compression feature (Anthropic whitepaper implementation)
-

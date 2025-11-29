@@ -1,6 +1,6 @@
 THE LARGE LANGUAGE MODEL COMPRESSOR
 
-**Current Release:** v0.5.0 "Token Umami"
+**Current Release:** v0.6.0 "Modular Mojo"
 
 For the impatient quick start:
 
@@ -10,6 +10,12 @@ llmc-rag-repo add /path/to/repo
 llmc-rag-service register /path/to/repo
 llmc-rag-service start --interval 300 --daemon
 ```
+
+### What's New in v0.6.0 "Modular Mojo"
+- **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
+- **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.
+- **Better Telemetry:** Unified SQLite-backed telemetry for the Tool Envelope.
+- **Quality:** Massive codebase cleanup and new live integration tests.
 
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.
