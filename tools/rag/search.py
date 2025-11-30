@@ -435,6 +435,13 @@ def search_spans(
             if route_decision:
                 search_info["routing"] = route_decision
                 search_info["multi_route_fanout"] = routes_to_query if len(routes_to_query) > 1 else None
+                # Add target_index based on primary route if not multi-route
+                if not (len(routes_to_query) > 1): # If single route
+                    try:
+                        _, primary_index_name = resolve_route(primary_route, "query", repo)
+                        search_info["target_index"] = primary_index_name
+                    except ConfigError:
+                        logger.warning(f"Could not resolve primary route index for debug info: {primary_route}")
             
             new_results.append(
                 SpanSearchResult(

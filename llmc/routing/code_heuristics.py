@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from .common import RouteSignal
 
-FENCE_OPEN_RE = re.compile(r'(^|\n)```[\w-]*\s*\n', re.MULTILINE)
+FENCE_OPEN_RE = re.compile(r'(^|[\s:,\(\)\{\}\[\]])```[\w-]*\s*\n', re.MULTILINE)
 
 def count_fenced_code_blocks(text: str) -> int:
     count = 0
