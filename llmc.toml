@@ -105,6 +105,7 @@ exclude_dirs = [
     "coverage",
     ".DS_Store",
     "Thumbs.db",
+    "tools/rag/quality_check",
 ]
 
 
