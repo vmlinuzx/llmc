@@ -1134,5 +1134,39 @@ def nav_lineage(
         click.echo(click.style("(no results)", fg="bright_black") if color else "(no results)")
 
 
+@cli.group()
+def routing() -> None:
+    """Routing tools and evaluation."""
+    pass
+
+@routing.command()
+@click.option("--dataset", type=click.Path(exists=True), required=True, help="Path to JSONL dataset")
+@click.option("--top-k", default=10, help="Number of results to retrieve")
+@click.option("--json", "as_json", is_flag=True, help="Output results as JSON")
+def eval(dataset: str, top_k: int, as_json: bool) -> None:
+    """Evaluate routing and retrieval quality."""
+    from tools.rag.eval.routing_eval import evaluate_routing
+    
+    try:
+        metrics = evaluate_routing(Path(dataset), top_k=top_k)
+        
+        if as_json:
+            click.echo(json.dumps(metrics, indent=2))
+        else:
+            click.echo("=== Routing Evaluation Results ===")
+            click.echo(f"Total Examples:     {metrics.get('total_examples', 0)}")
+            if 'error' in metrics:
+                click.echo(f"Error: {metrics['error']}")
+                return
+                
+            click.echo(f"Routing Accuracy:   {metrics['routing_accuracy']:.2%}")
+            click.echo(f"Retrieval Hit@{top_k}:    {metrics['retrieval_hit_at_k']:.2%}")
+            click.echo(f"Retrieval MRR:      {metrics['retrieval_mrr']:.4f}")
+            
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()

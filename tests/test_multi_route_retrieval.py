@@ -10,7 +10,7 @@ def mock_dependencies():
          patch("tools.rag.search.Database") as mock_db_cls, \
          patch("tools.rag.search.build_embedding_backend") as mock_backend_cls, \
          patch("tools.rag.search.load_config") as mock_load_config, \
-         patch("tools.rag.search.classify_query") as mock_classify, \
+         patch("tools.rag.search.create_router") as mock_create_router, \
          patch("tools.rag.search.resolve_route") as mock_resolve, \
          patch("tools.rag.search.get_multi_route_config") as mock_get_multi, \
          patch("tools.rag.search.is_query_routing_enabled", return_value=True) as mock_routing_enabled:
@@ -51,8 +51,10 @@ def mock_dependencies():
         mock_backend_cls.return_value = mock_backend
         mock_backend.embed_queries.return_value = [[1.0]] # matching vec dim
         
-        # Classify Mock
-        mock_classify.return_value = {
+        # Router Mock
+        mock_router = MagicMock()
+        mock_create_router.return_value = mock_router
+        mock_router.decide_route.return_value = {
             "route_name": "route_a", 
             "confidence": 0.9, 
             "reasons": ["mock"]
@@ -62,7 +64,7 @@ def mock_dependencies():
             "root": mock_root,
             "db": mock_db,
             "load_config": mock_load_config,
-            "classify": mock_classify,
+            "router": mock_router,
             "resolve": mock_resolve,
             "get_multi": mock_get_multi,
         }
@@ -83,7 +85,7 @@ def test_search_single_route(mock_dependencies):
     assert results[0].path == Path("file_a.py")
     
     # Verify calls
-    mocks["classify"].assert_called_once()
+    mocks["router"].decide_route.assert_called_once()
     mocks["get_multi"].assert_called_with("route_a", mocks["root"].return_value)
     mocks["resolve"].assert_called_with("route_a", "query", mocks["root"].return_value)
     mocks["db"].iter_embeddings.assert_called_once_with(table_name="index_a")

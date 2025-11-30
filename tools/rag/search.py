@@ -23,7 +23,7 @@ from llmc.te.telemetry import log_routing_event
 from .database import Database
 from .embeddings import build_embedding_backend, HASH_MODELS
 from .utils import find_repo_root
-from llmc.routing.query_type import classify_query
+from llmc.routing.router import create_router
 import logging
 from tools.rag.config import ConfigError # Added import
 
@@ -320,7 +320,9 @@ def search_spans(
     route_decision = None
 
     if is_query_routing_enabled(repo):
-        classification = classify_query(query, tool_context=tool_context)
+        config = load_config(repo)
+        router = create_router(config)
+        classification = router.decide_route(query, tool_context=tool_context)
         primary_route = classification["route_name"]
         route_decision = classification
         
