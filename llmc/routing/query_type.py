@@ -157,11 +157,44 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
             "reasons": ["default=docs"]
         }
     
-    # Tie-breaking: Code > ERP if scores are equal
-    best_signal = max(signals, key=lambda x: (x.score, 1 if x.route == "code" else 0))
+    # Phase 3: Conflict Resolution with Configurable Policy
+    # Default config: Prefer Code if score is within margin of ERP
+    PREFER_CODE = True
+    CONFLICT_MARGIN = 0.1
+
+    code_signals = [s for s in signals if s.route == "code"]
+    erp_signals = [s for s in signals if s.route == "erp"]
     
+    best_code = max(code_signals, key=lambda x: x.score) if code_signals else None
+    best_erp = max(erp_signals, key=lambda x: x.score) if erp_signals else None
+    
+    selected_signal = signals[0] # Default fallback (should be overwritten)
+    
+    if best_code and not best_erp:
+        selected_signal = best_code
+    elif best_erp and not best_code:
+        selected_signal = best_erp
+    elif best_code and best_erp:
+        # Conflict detected
+        if PREFER_CODE:
+            # If Code score is high enough relative to ERP (within margin), prefer Code.
+            # e.g. Code=0.8, ERP=0.9, Margin=0.1 -> 0.8 >= 0.8 -> Code wins.
+            if best_code.score >= (best_erp.score - CONFLICT_MARGIN):
+                selected_signal = best_code
+            else:
+                selected_signal = best_erp
+        else:
+            # Strict score comparison
+            if best_code.score >= best_erp.score:
+                selected_signal = best_code
+            else:
+                selected_signal = best_erp
+    else:
+        # Should be unreachable if signals is not empty
+        selected_signal = max(signals, key=lambda x: x.score)
+
     return {
-        "route_name": best_signal.route,
-        "confidence": best_signal.score,
+        "route_name": selected_signal.route,
+        "confidence": selected_signal.score,
         "reasons": [s.reason for s in signals]
     }
