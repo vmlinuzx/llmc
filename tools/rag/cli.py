@@ -1,26 +1,25 @@
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
-from typing import List, Optional
 from collections.abc import Iterable
+import json
+from pathlib import Path
+import sys
+import time
 
 import click
 
+from .benchmark import run_embedding_benchmark
 from .config import (
+    get_est_tokens_per_span,
     index_path_for_read,
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
-    get_est_tokens_per_span,
 )
 from .database import Database
-from .schema import build_graph_for_repo as schema_build_graph_for_repo
 from .planner import generate_plan, plan_as_dict
+from .schema import build_graph_for_repo as schema_build_graph_for_repo
 from .search import search_spans
-from .benchmark import run_embedding_benchmark
-import time
 from .workers import (
     default_enrichment_callable,
     embedding_plan,
@@ -28,8 +27,6 @@ from .workers import (
     execute_embeddings,
     execute_enrichment,
 )
-
-
 
 
 def _db_path(repo_root: Path, *, for_write: bool) -> Path:
@@ -46,7 +43,7 @@ def _spans_export_path(repo_root: Path) -> Path:
     return resolve_spans_export_path(repo_root)
 
 
-def _find_repo_root(start: Optional[Path] = None) -> Path:
+def _find_repo_root(start: Path | None = None) -> Path:
     start = start or Path.cwd()
     current = start.resolve()
     for ancestor in [current, *current.parents]:
@@ -64,7 +61,7 @@ def cli() -> None:
 @cli.command()
 @click.option("--since", metavar="SHA", help="Only parse files changed since the given commit")
 @click.option("--no-export", is_flag=True, default=False, help="Skip JSONL span export")
-def index(since: Optional[str], no_export: bool) -> None:
+def index(since: str | None, no_export: bool) -> None:
     """Index the repository (full or incremental)."""
     from .indexer import index_repo
 
@@ -75,8 +72,8 @@ def index(since: Optional[str], no_export: bool) -> None:
     )
 
 
-def _collect_paths(paths: Iterable[str], use_stdin: bool) -> List[Path]:
-    collected: List[Path] = []
+def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
+    collected: list[Path] = []
     if paths:
         collected.extend(Path(p) for p in paths)
     if use_stdin:
@@ -91,13 +88,13 @@ def _collect_paths(paths: Iterable[str], use_stdin: bool) -> List[Path]:
 @click.option("--path", "paths", multiple=True, type=click.Path(), help="Specific file or directory paths to sync")
 @click.option("--since", metavar="SHA", help="Sync files changed since commit")
 @click.option("--stdin", "use_stdin", is_flag=True, default=False, help="Read newline-delimited paths from stdin")
-def sync(paths: Iterable[str], since: Optional[str], use_stdin: bool) -> None:
+def sync(paths: Iterable[str], since: str | None, use_stdin: bool) -> None:
     """Incrementally update spans for selected files."""
     from .indexer import sync_paths
     from .utils import git_changed_paths
 
     repo_root = _find_repo_root()
-    path_list: List[Path]
+    path_list: list[Path]
     if since:
         path_list = git_changed_paths(repo_root, since)
     else:
@@ -286,7 +283,7 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
 @click.option("--limit", default=5, show_default=True, help="Maximum spans to return.")
 @click.option("--json", "as_json", is_flag=True, help="Emit results as JSON.")
 @click.option("--debug", is_flag=True, help="Include debug metadata (graph, enrichment, scores).")
-def search(query: List[str], limit: int, as_json: bool, debug: bool) -> None:
+def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
     """Run a cosine-similarity search over the local embedding index."""
     phrase = " ".join(query).strip()
     if not phrase:
@@ -392,7 +389,7 @@ def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> 
     is_flag=True,
     help="Emit plan as JSON (default; kept for ergonomics).",
 )
-def plan(query: List[str], limit: int, min_score: float, min_confidence: float, no_log: bool, as_json: bool) -> None:
+def plan(query: list[str], limit: int, min_score: float, min_confidence: float, no_log: bool, as_json: bool) -> None:
     """Generate a heuristic retrieval plan for a natural language query."""
     question = " ".join(query).strip()
     if not question:
@@ -421,28 +418,34 @@ def plan(query: List[str], limit: int, min_score: float, min_confidence: float, 
 
 
 @cli.command()
-@click.option("--verbose", "-v", is_flag=True, help="Show all checks including passed")
-def doctor(verbose: bool) -> None:
-    """Run health checks and system diagnostics."""
-    try:
-        from ..diagnostics.health_check import run_health_check  # type: ignore[import]
-    except ImportError:
-        # Diagnostics module not present in this build; report gracefully
-        click.echo(
-            "Health checks are not available in this build "
-            "(missing tools.diagnostics.health_check).",
-            err=True,
-        )
-        raise SystemExit(1)
+@click.option("--json", "as_json", is_flag=True, help="Emit doctor report as JSON.")
+@click.option("--verbose", "-v", is_flag=True, help="Include extra checks in output.")
+def doctor(as_json: bool, verbose: bool) -> None:
+    """Run RAG database health checks and diagnostics."""
+    from .doctor import format_rag_doctor_summary, run_rag_doctor
 
     repo_root = _find_repo_root()
-    exit_code = run_health_check(repo_root=repo_root, verbose=verbose)
+    result = run_rag_doctor(repo_root, verbose=verbose)
+
+    if as_json:
+        click.echo(json.dumps(result, indent=2, ensure_ascii=False))
+    else:
+        click.echo(format_rag_doctor_summary(result, repo_root.name))
+        if verbose and result.get("top_pending_files"):
+            click.echo("  Top files with pending enrichments:")
+            for item in result["top_pending_files"]:
+                click.echo(f"    - {item['path']} ({item['pending_spans']} spans)")
+
+    status = result.get("status", "OK")
+    exit_code = 0
+    if status not in ("OK", "EMPTY"):
+        exit_code = 1
     sys.exit(exit_code)
 
 
 @cli.command()
 @click.option("--output", "-o", type=click.Path(), help="Output archive path")
-def export(output: Optional[str]) -> None:
+def export(output: str | None) -> None:
     """Export all RAG data to tar.gz archive."""
     from .export_data import run_export
     
@@ -457,7 +460,7 @@ def export(output: Optional[str]) -> None:
 @click.option("--line", type=int, help="Line number to focus on (if path provided).")
 @click.option("--full", "full_source", is_flag=True, help="Include full source code.")
 @click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
-def inspect(path: Optional[str], symbol: Optional[str], line: Optional[int], full_source: bool, as_json: bool) -> None:
+def inspect(path: str | None, symbol: str | None, line: int | None, full_source: bool, as_json: bool) -> None:
     """Fast inspection of a file or symbol with graph + enrichment context.
     
     Does NOT load embedding models.
@@ -618,6 +621,7 @@ def _colorize_header(route_info: dict, items_len: int, use_color: bool) -> str:
 
 def _emit_jsonl_line(obj: dict) -> None:
     import json as _json
+
     import click as _click
 
     _click.echo(_json.dumps(obj, ensure_ascii=False))
@@ -627,7 +631,7 @@ def _now_iso() -> str:
     import datetime as _dt
 
     # Use timezone-aware UTC timestamp to avoid deprecated utcnow.
-    return _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return _dt.datetime.now(_dt.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def _emit_start_event(command: str, **kw) -> None:
@@ -661,7 +665,7 @@ def _schema_paths(repo_root: Path) -> dict:
     }
 
 
-def _read_json_file(path: Path) -> Optional[dict]:
+def _read_json_file(path: Path) -> dict | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -740,8 +744,8 @@ def nav_print_schema() -> None:
 @click.option("--width", "-w", default=96, show_default=True, help="Max preview width in characters.")
 @click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
 def nav_search(
-    query: List[str],
-    repo: Optional[str],
+    query: list[str],
+    repo: str | None,
     limit: int,
     as_json: bool,
     as_jsonl: bool,
@@ -882,7 +886,7 @@ def nav_search(
 @click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
 def nav_where_used(
     symbol: str,
-    repo: Optional[str],
+    repo: str | None,
     limit: int,
     as_json: bool,
     as_jsonl: bool,
@@ -1023,7 +1027,7 @@ def nav_where_used(
 def nav_lineage(
     symbol: str,
     direction: str,
-    repo: Optional[str],
+    repo: str | None,
     max_results: int,
     as_json: bool,
     as_jsonl: bool,

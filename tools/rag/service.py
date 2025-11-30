@@ -19,16 +19,15 @@ Usage:
 """
 
 import argparse
+from datetime import UTC, datetime
 import json
 import os
+from pathlib import Path
 import signal
 import sqlite3
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Optional
 
 from tools.rag.config import load_config
 
@@ -190,7 +189,7 @@ class ServiceState:
         # Before recording the latest cycle timestamp, pull any updated repos
         # and interval from disk so daemon loops honor external CLI changes.
         self._refresh_from_disk()
-        self.state["last_cycle"] = datetime.now(timezone.utc).isoformat()
+        self.state["last_cycle"] = datetime.now(UTC).isoformat()
         self.save()
     
     def is_running(self) -> bool:
@@ -247,7 +246,7 @@ class FailureTracker:
     
     def record_failure(self, span_hash: str, repo: str, reason: str):
         """Record a span-level failure, increment count."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         self.conn.execute("""
             INSERT INTO failures (span_hash, repo, failure_count, last_attempted, reason)
             VALUES (?, ?, 1, ?, ?)
@@ -276,7 +275,7 @@ class FailureTracker:
             return True
         return False
     
-    def get_failures(self, repo: Optional[str] = None) -> list:
+    def get_failures(self, repo: str | None = None) -> list:
         """Get all failures, optionally filtered by repo."""
         if repo:
             cursor = self.conn.execute(
@@ -289,7 +288,7 @@ class FailureTracker:
             )
         return cursor.fetchall()
     
-    def clear_failures(self, repo: Optional[str] = None):
+    def clear_failures(self, repo: str | None = None):
         """Clear all failures, optionally for specific repo."""
         if repo:
             self.conn.execute("DELETE FROM failures WHERE repo = ?", (repo,))
@@ -312,7 +311,7 @@ class FailureTracker:
 
 def _stream_systemd_logs_follow(lines: int) -> int:
     """Poll systemd journal to approximate `tail -f` without inotify watches."""
-    cursor: Optional[str] = None
+    cursor: str | None = None
     # Initial command: tail-style view with cursor
     cmd: list[str] = [
         "journalctl",
@@ -326,14 +325,14 @@ def _stream_systemd_logs_follow(lines: int) -> int:
     ]
     try:
         while True:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if result.returncode != 0:
                 err = (result.stderr or "").strip() or f"journalctl exited with {result.returncode}"
                 print(f"[logs] journalctl error: {err}", file=sys.stderr)
                 return 1
 
             output = result.stdout or ""
-            new_cursor: Optional[str] = None
+            new_cursor: str | None = None
             if output:
                 out_lines = []
                 for line in output.splitlines():
@@ -446,7 +445,7 @@ class RAGService:
         try:
             result = subprocess.run(
                 ["python3", "-m", "tools.rag.cli"] + command,  # Fixed: python -> python3
-                cwd=repo,
+                check=False, cwd=repo,
                 capture_output=True,
                 text=True,
                 timeout=300  # 5 min timeout per operation
@@ -472,8 +471,8 @@ class RAGService:
             sys.path.insert(0, str(repo))
         
         try:
-            from tools.rag.runner import run_enrich, run_sync, run_embed, detect_changes
             from tools.rag.config import index_path_for_write
+            from tools.rag.runner import detect_changes, run_embed, run_enrich, run_sync
         except ImportError as e:
             print(f"  ⚠️  Failed to import RAG runner: {e}")
             return
@@ -486,7 +485,7 @@ class RAGService:
                 run_sync(repo, changes)
                 print(f"  ✅ Synced {len(changes)} changed files")
             else:
-                print(f"  ℹ️  No file changes detected")
+                print("  ℹ️  No file changes detected")
         except Exception as e:
             print(f"  ⚠️  Sync failed: {e}")
             # Continue anyway - enrichment might still work
@@ -514,9 +513,17 @@ class RAGService:
                 max_spans=max_spans,
                 cooldown=cooldown
             )
-            print(f"  ✅ Enriched pending spans with real LLM summaries")
+            print("  ✅ Enriched pending spans with real LLM summaries")
         except Exception as e:
             print(f"  ⚠️  Enrichment failed: {e}")
+        
+        # RAG doctor: quick index/enrichment health snapshot
+        try:
+            from tools.rag.doctor import format_rag_doctor_summary, run_rag_doctor
+            doctor_result = run_rag_doctor(repo)
+            print(format_rag_doctor_summary(doctor_result, repo.name))
+        except Exception as e:
+            print(f"  ⚠️  RAG doctor failed: {e}")
         
         # Step 3: Generate embeddings for enriched spans
         try:
@@ -529,7 +536,7 @@ class RAGService:
         # Step 4: Quality check (if enabled)
         if os.getenv("ENRICH_QUALITY_CHECK", "on").lower() == "on":
             try:
-                from tools.rag.quality import run_quality_check, format_quality_summary
+                from tools.rag.quality import format_quality_summary, run_quality_check
                 result = run_quality_check(repo)
                 print(format_quality_summary(result, repo.name))
                 
@@ -548,7 +555,7 @@ class RAGService:
         # Step 5: Rebuild RAG Graph (Unified CLI support)
         try:
             from tools.rag_nav.tool_handlers import build_graph_for_repo
-            print(f"  📊 Rebuilding RAG Graph...")
+            print("  📊 Rebuilding RAG Graph...")
             status = build_graph_for_repo(repo)
             print(f"  ✅ Graph rebuilt: {status}")
         except Exception as e:
@@ -657,19 +664,19 @@ def cmd_start(args, state: ServiceState, tracker: FailureTracker):
     status = systemd.status()
     
     if not status["running"]:
-        print(f"❌ Service failed to start")
+        print("❌ Service failed to start")
         if "status_text" in status:
             # Show relevant error from systemctl status
             for line in status["status_text"].split("\n"):
                 if "failed" in line.lower() or "error" in line.lower():
                     print(f"   {line.strip()}")
-        print(f"\n📋 Check logs: llmc-rag logs")
+        print("\n📋 Check logs: llmc-rag logs")
         return 1
     
     print(f"🚀 Service started (PID {status['pid']})")
     print(f"   Tracking {len(state.state['repos'])} repos")
     print(f"   Interval: {args.interval}s")
-    print(f"\n📋 View logs: llmc-rag logs -f")
+    print("\n📋 View logs: llmc-rag logs -f")
     return 0
 
 
@@ -791,7 +798,7 @@ def cmd_status(args, state: ServiceState, tracker: FailureTracker):
     
     if state.state["last_cycle"]:
         last = datetime.fromisoformat(state.state["last_cycle"])
-        ago = (datetime.now(timezone.utc) - last).total_seconds()
+        ago = (datetime.now(UTC) - last).total_seconds()
         print(f"\nLast cycle: {int(ago)}s ago")
     
     return 0
@@ -815,7 +822,7 @@ def cmd_register(args, state: ServiceState, tracker: FailureTracker):
         errors.append("Directory is not accessible (execute permission missing)")
     # Git check: warn if not a git repo (we can still operate via os.walk fallback)
     try:
-        rc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=repo_path, capture_output=True)
+        rc = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], check=False, cwd=repo_path, capture_output=True)
         if rc.returncode != 0:
             warnings.append("Not a git repository; falling back to filesystem scan")
     except Exception:
@@ -900,7 +907,7 @@ def cmd_failures(args, state: ServiceState, tracker: FailureTracker):
                 print(f"   ... and {len(repo_failures) - 5} more")
         
         print(f"\nTotal: {len(failures)} failed spans")
-        print(f"\nTo clear: llmc-rag failures clear [--repo <path>]")
+        print("\nTo clear: llmc-rag failures clear [--repo <path>]")
         return 0
 
 
@@ -967,9 +974,9 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
             "from previous runs.\n"
         )
         if args.follow:
-            subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)])
+            subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)], check=False)
         else:
-            subprocess.run(["tail", "-n", str(args.lines), str(log_file)])
+            subprocess.run(["tail", "-n", str(args.lines), str(log_file)], check=False)
         return 0
     
     # If systemd is available but service is not active, allow journal access anyway.
@@ -990,10 +997,7 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
 
 def cmd_health(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Check Ollama endpoint health."""
-    from .service_health import (
-        HealthChecker,
-        parse_ollama_hosts_from_env
-    )
+    from .service_health import HealthChecker, parse_ollama_hosts_from_env
     
     endpoints = parse_ollama_hosts_from_env()
     
@@ -1172,7 +1176,7 @@ def cmd_daemon_loop(args, state: ServiceState, tracker: FailureTracker) -> int:
     return 0
 
 
-def main(argv: Optional[list[str]] | None = None):
+def main(argv: list[str] | None | None = None):
     if argv is None:
         argv = sys.argv[1:]
 

@@ -1,0 +1,74 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pyproject.toml
+plugins: langsmith-0.4.46, anyio-4.11.0, cov-7.0.0
+collected 118 items
+
+tools/rag/tests/test_build_graph_for_repo.py ....                        [  3%]
+tools/rag/tests/test_cli_graph_command.py ...                            [  5%]
+tools/rag/tests/test_enrichment_db_helpers.py ..                         [  7%]
+tools/rag/tests/test_file_mtime_guard.py ssssssssssss                    [ 17%]
+tools/rag/tests/test_freshness_gateway.py sssssssssssss                  [ 28%]
+tools/rag/tests/test_freshness_index_status.py .....................     [ 46%]
+tools/rag/tests/test_graph_json_sanity.py ..                             [ 48%]
+tools/rag/tests/test_nav_meta.py ..............................          [ 73%]
+tools/rag/tests/test_nav_tools_integration.py ...........sssss.....      [ 91%]
+tools/rag/tests/test_python_import_resolution.py .......                 [ 97%]
+tools/rag/tests/test_schema_enriched_graph.py ..                         [ 99%]
+tools/rag/tests/test_search_eval_canary.py F                             [100%]
+
+=================================== FAILURES ===================================
+________________ test_search_eval_harness_runs_and_prefers_rag _________________
+tools/rag/tests/test_search_eval_canary.py:17: in test_search_eval_harness_runs_and_prefers_rag
+    result = run(repo, QUERIES, OUTDIR, k=5, mode="both")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tools/rag/eval/search_eval.py:120: in run
+    rows = load_queries(queries_path)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+tools/rag/eval/search_eval.py:27: in load_queries
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/pathlib.py:1015: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: 'DOCS/RAG_NAV/P9_Search/canary_queries.jsonl'
+=============================== warnings summary ===============================
+tools/rag/tests/test_search_eval_canary.py:14
+  /home/vmlinux/src/llmc/tools/rag/tests/test_search_eval_canary.py:14: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:33: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:53: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:73: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:102: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:114: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:127: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:149: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:171: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:194: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:229: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:272: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_file_mtime_guard.py:283: mtime guard not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:29: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:48: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:76: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:105: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:133: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:168: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:202: compute_route not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:232: Route dataclass not yet defined
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:237: Route dataclass not yet defined
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:242: Route dataclass not yet defined
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:257: git integration not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:266: git integration not yet implemented
+SKIPPED [1] tools/rag/tests/test_freshness_gateway.py:275: git integration not yet implemented
+SKIPPED [1] tools/rag/tests/test_nav_tools_integration.py:246: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tools/rag/tests/test_nav_tools_integration.py:283: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tools/rag/tests/test_nav_tools_integration.py:314: Navigation tools not yet integrated with RagResult
+SKIPPED [1] tools/rag/tests/test_nav_tools_integration.py:343: CLI integration not yet implemented
+SKIPPED [1] tools/rag/tests/test_nav_tools_integration.py:362: CLI integration not yet implemented
+FAILED tools/rag/tests/test_search_eval_canary.py::test_search_eval_harness_runs_and_prefers_rag
+============= 1 failed, 87 passed, 30 skipped, 1 warning in 2.96s ==============

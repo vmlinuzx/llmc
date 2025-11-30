@@ -190,9 +190,25 @@ def run_embed(repo_root: Path, limit: int) -> str:
         py_paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(py_paths)
     result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, env=env)
-    print(result.stdout.strip())
+
+    stdout = (result.stdout or "").strip()
+    stderr = (result.stderr or "").strip()
+
+    if stdout:
+        # Preserve the original embed CLI output in service logs.
+        print(stdout)
+    if stderr:
+        # Surface embedding errors that would otherwise be hidden when run via the daemon.
+        print(stderr, file=sys.stderr)
+
     if result.returncode != 0:
-        raise subprocess.CalledProcessError(result.returncode, cmd)
+        # Propagate a rich error object while keeping existing caller behavior.
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            cmd,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
     return result.stdout
 
 

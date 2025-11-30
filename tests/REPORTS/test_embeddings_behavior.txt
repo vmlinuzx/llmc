@@ -1,0 +1,10 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pyproject.toml
+plugins: langsmith-0.4.46, anyio-4.11.0, cov-7.0.0
+collected 4 items
+
+tests/test_embeddings_behavior.py ....                                   [100%]
+
+============================== 4 passed in 0.03s ===============================
