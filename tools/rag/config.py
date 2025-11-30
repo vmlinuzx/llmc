@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import warnings
+import os
 from typing import Any, Dict, Optional, Set, Tuple
 import tomllib
 from functools import lru_cache
@@ -479,6 +480,53 @@ def is_query_routing_enabled(repo_root: Optional[Path] = None) -> bool:
     cfg = load_config(repo_root)
     # Default to False if the flag is omitted (backwards-compatible behavior)
     return cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
+
+
+def is_multi_route_enabled(repo_root: Optional[Path] = None) -> bool:
+    cfg = load_config(repo_root)
+    return cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False)
+
+
+def get_multi_route_config(primary_route: str, repo_root: Optional[Path] = None) -> list[tuple[str, float]]:
+    """
+    Returns a list of (route_name, weight) tuples for the given primary route.
+    Always includes the primary route itself with weight 1.0.
+    If multi-route is disabled or no config exists, returns just the primary route.
+    """
+    # Always start with the primary route
+    routes = [(primary_route, 1.0)]
+    
+    if not is_multi_route_enabled(repo_root):
+        return routes
+
+    cfg = load_config(repo_root)
+    multi_route_cfg = cfg.get("routing", {}).get("multi_route", {})
+    
+    # Look for config specifically for this primary route (e.g., "code_primary")
+    primary_key = f"{primary_route}_primary"
+    route_cfg = multi_route_cfg.get(primary_key)
+    
+    if not route_cfg:
+        return routes
+        
+    # Verify the config actually matches the primary route we expect
+    if route_cfg.get("primary") != primary_route:
+        log.warning(
+            f"Config: Mismatch in multi-route config for '{primary_key}'. "
+            f"Expected primary='{primary_route}', found '{route_cfg.get('primary')}'. "
+            "Ignoring secondary routes."
+        )
+        return routes
+
+    # Add secondary routes
+    secondaries = route_cfg.get("secondary", [])
+    for sec in secondaries:
+        r_name = sec.get("route")
+        weight = sec.get("weight", 1.0)
+        if r_name:
+            routes.append((r_name, float(weight)))
+            
+    return routes
 
 
 def embedding_gpu_max_retries() -> int:

@@ -223,4 +223,50 @@ To add a new `slice_type="sql"` that should also be routed to the `code` embeddi
 
 ---
 
-This concludes the documentation for the RAG Routing System.
+## 6. Multi-Route Retrieval (Fan-out & Fusion)
+
+Phase 6 introduces optional **multi-route retrieval**, where a single query can be sent to multiple routes (indices) in parallel, and the results are fused into a single ranked list. This is useful when a query might benefit from both code and documentation results (e.g., "How is X implemented and documented?").
+
+### 6.1. Configuration
+
+To enable this, use the `[routing.multi_route.<primary_route_name>_primary]` configuration block.
+
+- **`enable_multi_route`**: Must be set to `true` in `[routing.options]`.
+- **`[routing.multi_route.<primary>_primary]`**: Defines the secondary routes for a given primary route.
+    - `primary`: The name of the primary route (must match the section key).
+    - `secondary`: A list of tables defining `route` and `weight`.
+
+Example:
+```toml
+[routing.options]
+enable_query_routing = true
+enable_multi_route = true
+
+# If primary route is 'code', also query 'docs' with 0.5 weight
+[routing.multi_route.code_primary]
+primary = "code"
+secondary = [
+  { route = "docs", weight = 0.5 }
+]
+
+# If primary route is 'docs', also query 'code' with 0.3 weight
+[routing.multi_route.docs_primary]
+primary = "docs"
+secondary = [
+  { route = "code", weight = 0.3 }
+]
+```
+
+### 6.2. Fusion Logic
+
+When multiple routes return results:
+1.  **Normalization**: Scores from each route are normalized to the [0, 1] range (min-max normalization) to account for different embedding model scales.
+2.  **Weighting**: Normalized scores are multiplied by the configured `weight`. (Primary route always has weight 1.0).
+3.  **Fusion**: Results are merged by `slice_id`. If a slice appears in multiple routes, the **maximum** weighted score is kept.
+4.  **Ranking**: The final list is sorted by the fused score.
+
+### 6.3. Safety
+
+- If `enable_multi_route` is `false` (default), standard single-route retrieval is used.
+- If a secondary route is misconfigured (missing profile/index), it is skipped with a warning, and retrieval proceeds with the remaining routes.
+

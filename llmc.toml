@@ -58,6 +58,21 @@ other = "docs"
 
 [routing.options]
 enable_query_routing = true
+enable_multi_route = false
+
+# Phase 6: Multi-route retrieval configuration
+# Define a primary route and one or more secondary routes to fan out to.
+[routing.multi_route.code_primary]
+primary = "code"
+secondary = [
+  { route = "docs", weight = 0.5 }
+]
+
+[routing.multi_route.docs_primary]
+primary = "docs"
+secondary = [
+  { route = "code", weight = 0.3 }
+]
 
 gpu_min_free_mb = 1536
 
