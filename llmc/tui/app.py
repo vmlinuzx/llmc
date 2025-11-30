@@ -25,6 +25,7 @@ class MenuScreen(Screen):
         Binding("2", "show_search", "Search Code"),
         Binding("3", "show_inspect", "Inspect Entity"),
         Binding("4", "show_config", "Configuration"),
+        Binding("5", "show_rag_doctor", "RAG Doctor"),
         Binding("q", "quit", "Quit"),
     ]
     
@@ -69,6 +70,7 @@ class MenuScreen(Screen):
                 yield Button("[2] Search Code", id="btn-search", classes="menu-item")
                 yield Button("[3] Inspect Entity", id="btn-inspect", classes="menu-item")
                 yield Button("[4] Configuration", id="btn-config", classes="menu-item")
+                yield Button("[5] RAG Doctor", id="btn-rag-doctor", classes="menu-item")
             yield Static("\nPress number keys or click buttons to navigate", id="help-text")
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -81,6 +83,8 @@ class MenuScreen(Screen):
             self.action_show_inspect()
         elif event.button.id == "btn-config":
             self.action_show_config()
+        elif event.button.id == "btn-rag-doctor":
+            self.action_show_rag_doctor()
     
     def action_show_monitor(self) -> None:
         """Switch to monitor screen"""
@@ -97,6 +101,11 @@ class MenuScreen(Screen):
     def action_show_config(self) -> None:
         """Switch to configuration screen"""
         self.app.push_screen(ConfigScreen())
+
+    def action_show_rag_doctor(self) -> None:
+        """Switch to RAG Doctor screen"""
+        from llmc.tui.screens.rag_doctor import RAGDoctorScreen
+        self.app.push_screen(RAGDoctorScreen())
     
     def action_quit(self) -> None:
         """Quit the application"""

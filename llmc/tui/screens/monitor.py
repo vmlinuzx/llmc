@@ -125,6 +125,7 @@ class MonitorScreen(Screen):
         ("4", "nav_config", "Config"),
         ("5", "nav_analytics", "Analytics"),
         ("6", "nav_live_monitor", "TE Live"),
+        ("7", "nav_rag_doctor", "RAG Doctor"),
     ]
 
     def __init__(self):
@@ -142,6 +143,7 @@ class MonitorScreen(Screen):
             ("4", "Configuration", self.action_nav_config),
             ("5", "TE Analytics", self.action_nav_analytics),
             ("6", "TE Live Monitor", self.action_nav_live_monitor),
+            ("7", "RAG Doctor", self.action_nav_rag_doctor),
         ]
 
     def compose(self) -> ComposeResult:
@@ -459,6 +461,14 @@ class MonitorScreen(Screen):
         except Exception as exc:
             self.add_log(f"Open live monitor failed: {exc}", "ERR")
 
+    def action_nav_rag_doctor(self) -> None:
+        """Switch to RAG Doctor screen."""
+        try:
+            from llmc.tui.screens.rag_doctor import RAGDoctorScreen
+            self.app.push_screen(RAGDoctorScreen())
+        except Exception as exc:
+            self.add_log(f"Open RAG Doctor failed: {exc}", "ERR")
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle menu clicks."""
         btn_id = event.button.id or ""
@@ -469,6 +479,7 @@ class MonitorScreen(Screen):
             "menu-4": self.action_nav_config,
             "menu-5": self.action_nav_analytics,
             "menu-6": self.action_nav_live_monitor,
+            "menu-7": self.action_nav_rag_doctor,
         }
         handler = mapping.get(btn_id)
         if handler:
