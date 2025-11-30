@@ -40,9 +40,11 @@ CREATE TABLE IF NOT EXISTS spans (
 );
 
 CREATE TABLE IF NOT EXISTS embeddings_meta (
-    model TEXT PRIMARY KEY,
+    profile TEXT NOT NULL DEFAULT 'default',
+    model TEXT NOT NULL,
     dim INTEGER NOT NULL,
-    created_at DATETIME NOT NULL
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (profile, model)
 );
 
 CREATE TABLE IF NOT EXISTS embeddings (
@@ -345,16 +347,16 @@ class Database:
             for row in rows
         ]
 
-    def ensure_embedding_meta(self, model: str, dim: int) -> None:
+    def ensure_embedding_meta(self, model: str, dim: int, profile: str = "default") -> None:
         self.conn.execute(
             """
-            INSERT INTO embeddings_meta(model, dim, created_at)
-            VALUES (?, ?, strftime('%s','now'))
-            ON CONFLICT(model) DO UPDATE SET
+            INSERT INTO embeddings_meta(profile, model, dim, created_at)
+            VALUES (?, ?, ?, strftime('%s','now'))
+            ON CONFLICT(profile, model) DO UPDATE SET
                 dim = excluded.dim,
                 created_at = excluded.created_at
             """,
-            (model, dim),
+            (profile, model, dim),
         )
 
     def store_embedding(self, span_hash: str, vector: list[float]) -> None:
