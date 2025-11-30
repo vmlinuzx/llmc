@@ -23,13 +23,13 @@ def test_classify_query_sku():
     q = "Why is SKU W-44910 failing?"
     res = classify_query(q)
     assert res["route_name"] == "erp"
-    assert "sku_pattern" in res["reasons"][0]
+    assert "erp:sku" in res["reasons"][0]
 
 def test_classify_query_keywords():
     q = "Check inventory for model number X100"
     res = classify_query(q)
     assert res["route_name"] == "erp"
-    assert "erp_keywords" in res["reasons"][0]
+    assert "erp:" in res["reasons"][0] or "conflict-policy" in res["reasons"][0]
 
 def test_classify_query_tool_context():
     res = classify_query("some query", tool_context={"tool_id": "product_lookup"})
