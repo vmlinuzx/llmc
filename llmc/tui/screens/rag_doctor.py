@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -7,7 +9,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, DataTable, Footer, Header, Label, Static, TabbedContent, TabPane
+from textual.widgets import Button, DataTable, Footer, Header, Label, Static, TabbedContent, TabPane, RichLog
 
 from tools.rag.doctor import run_rag_doctor
 
@@ -89,6 +91,10 @@ class RAGDoctorScreen(Screen):
         margin: 1 0;
         border: wide $primary;
     }
+
+    .hidden {
+        display: none;
+    }
     """
 
     BINDINGS = [
@@ -121,6 +127,12 @@ class RAGDoctorScreen(Screen):
                         yield DataTable(id="offenders-table")
                     with TabPane("Guidance", id="tab-guidance"):
                         yield Static("Guidance will appear here.", id="guidance-text")
+                        with Vertical(id="action-buttons", classes="hidden"):
+                            yield Label("\nActions:", classes="section-header")
+                            yield Button("Dry Run: Embed Pending", id="btn-embed-dry", variant="default")
+                            yield Button("Execute: Embed Pending", id="btn-embed-exec", variant="error")
+                        yield Label("\nCommand Output:", id="output-label", classes="hidden")
+                        yield RichLog(id="command-log", classes="hidden", markup=True)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -136,6 +148,10 @@ class RAGDoctorScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-refresh":
             self.action_refresh()
+        elif event.button.id == "btn-embed-dry":
+            self.run_worker(lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --limit 20"), thread=True)
+        elif event.button.id == "btn-embed-exec":
+            self.run_worker(lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --execute --limit 100"), thread=True)
 
     def action_refresh(self) -> None:
         """Trigger a background refresh of the doctor report."""
@@ -161,6 +177,49 @@ class RAGDoctorScreen(Screen):
         
         summary = self.query_one("#summary-text", Static)
         summary.update(f"Failed to run RAG Doctor:\n\n{error_msg}")
+
+    def _run_te_cmd(self, cmd_suffix: str) -> None:
+        """Execute a TE command and stream output to the log."""
+        log = self.query_one("#command-log", RichLog)
+        self.app.call_from_thread(log.remove_class, "hidden")
+        self.app.call_from_thread(self.query_one("#output-label").remove_class, "hidden")
+        self.app.call_from_thread(log.clear)
+        self.app.call_from_thread(log.write, f"[bold cyan]Running: ./scripts/te {cmd_suffix}[/]\n")
+
+        try:
+            # Construct command: use TE wrapper
+            te_script = self.repo_root / "scripts" / "te"
+            cmd = [str(te_script)] + cmd_suffix.split()
+            
+            # Set environment for TE
+            env = dict(subprocess.os.environ)
+            env["TE_AGENT_ID"] = "manual-dave"
+            
+            proc = subprocess.Popen(
+                cmd, 
+                cwd=self.repo_root,
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                env=env,
+                bufsize=1
+            )
+
+            if proc.stdout:
+                for line in proc.stdout:
+                    self.app.call_from_thread(log.write, line.rstrip())
+            
+            proc.wait()
+            if proc.returncode == 0:
+                self.app.call_from_thread(log.write, "\n[bold green]Success.[/]")
+                # Auto-refresh doctor stats on success if it was an execution
+                if "--execute" in cmd_suffix:
+                     self.app.call_from_thread(self.action_refresh)
+            else:
+                self.app.call_from_thread(log.write, f"\n[bold red]Failed (exit code {proc.returncode}).[/]")
+
+        except Exception as e:
+             self.app.call_from_thread(log.write, f"\n[bold red]Error launching command: {e}[/]")
 
     def update_ui(self, report: dict[str, Any]) -> None:
         self.report = report
@@ -216,6 +275,14 @@ class RAGDoctorScreen(Screen):
         # 5. Update Guidance Tab
         guidance_widget = self.query_one("#guidance-text", Static)
         guidance_widget.update(self._generate_guidance(report))
+        
+        # Toggle Action Buttons
+        stats = report.get("stats") or {}
+        actions_panel = self.query_one("#action-buttons", Vertical)
+        if stats.get("pending_embeddings", 0) > 0:
+            actions_panel.remove_class("hidden")
+        else:
+            actions_panel.add_class("hidden")
 
     def _generate_guidance(self, report: dict[str, Any]) -> str:
         status = report.get("status", "UNKNOWN")
