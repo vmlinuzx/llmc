@@ -257,6 +257,11 @@ def embedding_gpu_min_free_mb(repo_root: Optional[Path] = None) -> int:
     return _env_int("EMBEDDINGS_GPU_MIN_FREE_MB", DEFAULT_GPU_MIN_FREE_MB)
 
 
+def is_query_routing_enabled(repo_root: Optional[Path] = None) -> bool:
+    cfg = load_config(repo_root)
+    return cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
+
+
 def embedding_gpu_max_retries() -> int:
     return max(0, _env_int("EMBEDDINGS_GPU_MAX_RETRIES", DEFAULT_GPU_MAX_RETRIES))
 

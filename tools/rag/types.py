@@ -27,6 +27,11 @@ class SpanRecord:
     span_hash: str
     doc_hint: Optional[str] = None
     imports: List[str] = field(default_factory=list)
+    # Content routing metadata
+    slice_type: str = "other"
+    slice_language: Optional[str] = None
+    classifier_confidence: float = 0.0
+    classifier_version: str = ""
 
     def to_json(self, repo_id: str, commit_sha: str) -> dict:
         return {
@@ -43,6 +48,10 @@ class SpanRecord:
             "span_hash": self.span_hash,
             "imports": self.imports,
             "doc_hint": self.doc_hint,
+            "slice_type": self.slice_type,
+            "slice_language": self.slice_language,
+            "classifier_confidence": self.classifier_confidence,
+            "classifier_version": self.classifier_version,
         }
 
 
@@ -55,6 +64,9 @@ class SpanWorkItem:
     end_line: int
     byte_start: int
     byte_end: int
+    slice_type: str = "other"
+    slice_language: Optional[str] = None
+    classifier_confidence: float = 0.0
 
     def read_bytes(self, repo_root: Path) -> bytes:
         data = (repo_root / self.file_path).read_bytes()
@@ -84,3 +96,8 @@ class EnrichmentRecord:
     model: Optional[str] = None
     created_at: Optional[str] = None
     schema_ver: Optional[str] = None
+    # Content routing metadata
+    content_type: Optional[str] = None
+    content_language: Optional[str] = None
+    content_type_confidence: Optional[float] = None
+    content_type_source: Optional[str] = None

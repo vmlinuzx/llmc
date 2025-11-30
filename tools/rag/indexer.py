@@ -19,6 +19,9 @@ from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
 from .utils import find_repo_root, git_changed_paths, git_commit_sha, iter_source_files, _gitignore_matcher
 
+# Import classification logic
+from llmc.routing.content_type import classify_slice
+
 # Import sidecar generator (optional dependency)
 try:
     from .sidecar_generator import SidecarGenerator
@@ -177,7 +180,16 @@ def index_repo(
                 continue
             
             # ATOMIC OPERATION: Extract spans and generate sidecar from same source/AST
+            text_preview = source[:1024].decode("utf-8", errors="ignore")
+            classification = classify_slice(relative_path, None, text_preview)
+
             spans = extract_spans(relative_path, lang, source)
+            for span in spans:
+                span.slice_type = classification.slice_type
+                span.slice_language = classification.slice_language
+                span.classifier_confidence = classification.confidence
+                span.classifier_version = classification.classifier_version
+
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(relative_path, lang, repo_root, source)
             
@@ -247,7 +259,16 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
                 continue
             
             # ATOMIC OPERATION: Extract spans and generate sidecar
+            text_preview = source[:1024].decode("utf-8", errors="ignore")
+            classification = classify_slice(rel, None, text_preview)
+
             spans = extract_spans(rel, lang, source)
+            for span in spans:
+                span.slice_type = classification.slice_type
+                span.slice_language = classification.slice_language
+                span.classifier_confidence = classification.confidence
+                span.classifier_version = classification.classifier_version
+
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(rel, lang, repo_root, source)
             

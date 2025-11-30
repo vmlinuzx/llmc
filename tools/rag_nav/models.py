@@ -62,6 +62,8 @@ class EnrichmentData:
     """Semantic enrichment for a code entity."""
     summary: Optional[str] = None
     usage_guide: Optional[str] = None
+    content_type: Optional[str] = None
+    content_language: Optional[str] = None
     # Extensible for future fields (inputs, outputs, etc.)
     
     def to_dict(self) -> dict:

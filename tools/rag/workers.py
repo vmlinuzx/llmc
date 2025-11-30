@@ -11,6 +11,7 @@ from .config import (
     embedding_model_dim,
     embedding_model_name,
     embedding_normalize,
+    load_config,
 )
 from .database import Database
 from .utils import _gitignore_matcher
@@ -122,22 +123,44 @@ def embedding_plan(
     model: str | None = None,
     dim: int | None = None,
 ) -> List[dict]:
-    resolved_model = model or embedding_model_name()
-    if resolved_model in HASH_MODELS:
-        resolved_dim = dim or 64
-    else:
-        resolved_dim = dim or embedding_model_dim()
-    normalize = False if resolved_model in HASH_MODELS else embedding_normalize()
+    config = load_config(repo_root)
+    routes = config.get("embeddings", {}).get("routes", {})
+    slice_map = config.get("routing", {}).get("slice_type_to_route", {})
+    profiles = config.get("embeddings", {}).get("profiles", {})
 
     items = db.pending_embeddings(limit=limit)
     plan: List[dict] = []
     for item in items:
+        # Resolve routing
+        route_key = slice_map.get(item.slice_type, "docs")
+        # Default to docs/embeddings if route not configured
+        route_cfg = routes.get(route_key, {"profile": "docs", "index": "embeddings"})
+        profile_name = route_cfg.get("profile", "docs")
+        profile_cfg = profiles.get(profile_name, {})
+
+        # Resolve model/dim
+        resolved_model = model
+        if not resolved_model or resolved_model == "auto":
+            resolved_model = profile_cfg.get("model") or embedding_model_name()
+
+        resolved_dim = dim
+        if not resolved_dim or resolved_dim <= 0:
+            if resolved_model in HASH_MODELS:
+                resolved_dim = 64
+            else:
+                resolved_dim = profile_cfg.get("dim") or embedding_model_dim()
+                
+        normalize = False if resolved_model in HASH_MODELS else embedding_normalize()
+
         code = item.read_source(repo_root)
         plan.append(
             {
                 "span_hash": item.span_hash,
                 "path": str(item.file_path),
                 "lang": item.lang,
+                "slice_type": item.slice_type,
+                "route": route_key,
+                "target_index": route_cfg.get("index", "embeddings"),
                 "lines": [item.start_line, item.end_line],
                 "code_length": len(code),
                 "embedding_hint": {
@@ -145,6 +168,7 @@ def embedding_plan(
                     "dim": resolved_dim,
                     "normalize": normalize,
                     "truncate_after": 1024,
+                    "profile": profile_name,
                 },
             }
         )
@@ -175,36 +199,83 @@ def execute_embeddings(
             fallback_dim = dim or embedding_model_dim()
         return [], fallback_model, fallback_dim
 
-    backend = build_embedding_backend(model, dim=dim)
+    config = load_config(repo_root)
+    routes = config.get("embeddings", {}).get("routes", {})
+    slice_map = config.get("routing", {}).get("slice_type_to_route", {})
+    profiles = config.get("embeddings", {}).get("profiles", {})
 
-    prepared_hashes: List[str] = []
-    texts: List[str] = []
+    # Group items by (profile_name, index_name, route_name)
+    from collections import defaultdict
+    groups = defaultdict(list)
+
     for item in items:
-        try:
-            code = item.read_source(repo_root)
-        except FileNotFoundError:
-            continue
-        formatted = _format_embedding_text(item, code)
-        if not formatted.strip():
-            continue
-        texts.append(formatted)
-        prepared_hashes.append(item.span_hash)
+        route_key = slice_map.get(item.slice_type, "docs")
+        route_cfg = routes.get(route_key, {"profile": "docs", "index": "embeddings"})
+        
+        profile_name = route_cfg.get("profile", "docs")
+        index_name = route_cfg.get("index", "embeddings")
+        
+        groups[(profile_name, index_name, route_key)].append(item)
 
-    if not texts:
-        return [], backend.model_name, backend.dim
+    total_created: List[Tuple[str, int]] = []
+    last_model = "mixed"
+    last_dim = 0
 
-    vectors = backend.embed_passages(texts)
-    if len(vectors) != len(prepared_hashes):  # pragma: no cover - defensive guard
-        raise RuntimeError(
-            f"Embedding backend returned {len(vectors)} vectors for {len(prepared_hashes)} spans"
-        )
-    created: List[Tuple[str, int]] = []
-    with db.transaction():
-        db.ensure_embedding_meta(backend.model_name, backend.dim)
-        for span_hash, vector in zip(prepared_hashes, vectors):
-            db.store_embedding(span_hash, vector)
-            created.append((span_hash, backend.dim))
-    return created, backend.model_name, backend.dim
+    for (profile_name, index_name, route_name), group_items in groups.items():
+        profile_cfg = profiles.get(profile_name, {})
+        
+        # Resolve model/dim (CLI overrides apply to all)
+        resolved_model = model
+        if not resolved_model or resolved_model == "auto":
+            resolved_model = profile_cfg.get("model") or embedding_model_name()
+            
+        resolved_dim = dim
+        if not resolved_dim or resolved_dim <= 0:
+            if resolved_model in HASH_MODELS:
+                resolved_dim = 64
+            else:
+                resolved_dim = profile_cfg.get("dim") or embedding_model_dim()
+
+        backend = build_embedding_backend(resolved_model, dim=resolved_dim)
+
+        prepared_hashes: List[str] = []
+        texts: List[str] = []
+        for item in group_items:
+            try:
+                code = item.read_source(repo_root)
+            except FileNotFoundError:
+                continue
+            formatted = _format_embedding_text(item, code)
+            if not formatted.strip():
+                continue
+            texts.append(formatted)
+            prepared_hashes.append(item.span_hash)
+
+        if not texts:
+            continue
+
+        vectors = backend.embed_passages(texts)
+        if len(vectors) != len(prepared_hashes):  # pragma: no cover - defensive guard
+            raise RuntimeError(
+                f"Embedding backend returned {len(vectors)} vectors for {len(prepared_hashes)} spans"
+            )
+        
+        with db.transaction():
+            db.ensure_embedding_meta(backend.model_name, backend.dim, profile=profile_name)
+            for span_hash, vector in zip(prepared_hashes, vectors):
+                db.store_embedding(
+                    span_hash, 
+                    vector, 
+                    route_name=route_name, 
+                    profile_name=profile_name, 
+                    table_name=index_name
+                )
+                total_created.append((span_hash, backend.dim))
+        
+        last_model = backend.model_name
+        last_dim = backend.dim
+
+    return total_created, last_model, last_dim
 
 
 def default_enrichment_callable(model: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
@@ -274,12 +345,20 @@ def execute_enrichment(
     with db.transaction():
         for item in items:
             code = item.read_source(repo_root)
+            
+            # Add content type header
+            header_lines = [f"[CONTENT_TYPE: {item.slice_type}]"]
+            if item.slice_language:
+                header_lines.append(f"[LANGUAGE: {item.slice_language}]")
+            
+            code_with_header = "\n".join(header_lines) + "\n\n" + code
+
             prompt = {
                 "span_hash": item.span_hash,
                 "path": str(item.file_path),
                 "lang": item.lang,
                 "lines": [item.start_line, item.end_line],
-                "code": code,
+                "code": code_with_header,
                 "instructions": "Return ONLY valid JSON per schema. Cite exact line ranges for every claim. If unsure, use null.",
             }
             try:
@@ -301,6 +380,10 @@ def execute_enrichment(
                 **response,
                 "model": model,
                 "schema_version": response.get("schema_version", "enrichment.v1"),
+                "content_type": item.slice_type,
+                "content_language": item.slice_language or item.lang,
+                "content_type_confidence": item.classifier_confidence,
+                "content_type_source": "deterministic_classifier_v1",
             }
             db.store_enrichment(item.span_hash, payload)
             successes += 1

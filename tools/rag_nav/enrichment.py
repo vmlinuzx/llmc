@@ -30,6 +30,8 @@ class EnrichmentSnippet:
     inputs: Optional[str] = None
     outputs: Optional[str] = None
     pitfalls: Optional[str] = None
+    content_type: Optional[str] = None
+    content_language: Optional[str] = None
 
 
 class SqliteEnrichmentStore:
@@ -85,8 +87,8 @@ class SqliteEnrichmentStore:
         except Exception:
             limit_int = 1
 
-        q_line = "SELECT summary, inputs, outputs, pitfalls FROM enrichments WHERE path = ? AND line = ? LIMIT ?"
-        q_path = "SELECT summary, inputs, outputs, pitfalls FROM enrichments WHERE path = ? LIMIT ?"
+        q_line = "SELECT summary, inputs, outputs, pitfalls, content_type, content_language FROM enrichments WHERE path = ? AND line = ? LIMIT ?"
+        q_path = "SELECT summary, inputs, outputs, pitfalls, content_type, content_language FROM enrichments WHERE path = ? LIMIT ?"
 
         rows: list[tuple] = []
         try:
@@ -166,7 +168,7 @@ class SqliteEnrichmentStore:
                     h = self._compute_span_hash(file, start, end, text)
                     if h:
                         cur.execute(
-                            "SELECT summary, inputs, outputs, pitfalls FROM enrichments WHERE span_hash = ? LIMIT ?",
+                            "SELECT summary, inputs, outputs, pitfalls, content_type, content_language FROM enrichments WHERE span_hash = ? LIMIT ?",
                             (h, int(limit)),
                         )
                         rows = cur.fetchall()
@@ -180,7 +182,7 @@ class SqliteEnrichmentStore:
                 # 2) (path, line) exact lookup.
                 if file is not None and start is not None:
                     cur.execute(
-                        "SELECT summary, inputs, outputs, pitfalls FROM enrichments WHERE path = ? AND line = ? LIMIT ?",
+                        "SELECT summary, inputs, outputs, pitfalls, content_type, content_language FROM enrichments WHERE path = ? AND line = ? LIMIT ?",
                         (file, int(start), int(limit)),
                     )
                     rows = cur.fetchall()
@@ -194,7 +196,7 @@ class SqliteEnrichmentStore:
                 # 3) Path-only fallback.
                 if file is not None:
                     cur.execute(
-                        "SELECT summary, inputs, outputs, pitfalls FROM enrichments WHERE path = ? LIMIT ?",
+                        "SELECT summary, inputs, outputs, pitfalls, content_type, content_language FROM enrichments WHERE path = ? LIMIT ?",
                         (file, int(limit)),
                     )
                     rows = cur.fetchall()

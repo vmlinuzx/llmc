@@ -8,10 +8,20 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from collections.abc import Iterable, Sequence
 
-from .config import index_path_for_read
+from .config import (
+    index_path_for_read,
+    is_query_routing_enabled,
+    load_config,
+    embedding_model_name,
+    embedding_model_dim,
+)
 from .database import Database
-from .embeddings import build_embedding_backend
+from .embeddings import build_embedding_backend, HASH_MODELS
 from .utils import find_repo_root
+from llmc.routing.query_type import classify_query
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _norm(vector: Sequence[float]) -> float:
@@ -289,6 +299,7 @@ def search_spans(
     repo_root: Path | None = None,
     model_override: str | None = None,
     debug: bool = False,
+    tool_context: Optional[Dict[str, Any]] = None,
 ) -> List[SpanSearchResult]:
     """Execute a simple cosine-similarity search over the local `.rag` index."""
     repo = repo_root or find_repo_root()
@@ -298,13 +309,82 @@ def search_spans(
             f"No embedding index found at {db_path}. Run `python -m tools.rag.cli index` and `embed --execute` first."
         )
 
-    backend = build_embedding_backend(model_override)
+    # Routing logic
+    route_decision = None
+    target_profile = None
+    target_index = "embeddings"
+    
+    # Defaults
+    resolved_model = model_override
+    resolved_dim = None
+
+    if is_query_routing_enabled(repo):
+        classification = classify_query(query, tool_context=tool_context)
+        route_name = classification["route_name"]
+        route_decision = classification
+        
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(
+                "Query routing: route=%s confidence=%.2f reasons=%s query_hash=%s",
+                route_name,
+                classification["confidence"],
+                classification["reasons"],
+                hash(query)
+            )
+        
+        config = load_config(repo)
+        # Resolve route -> profile -> index
+        # Assuming embeddings.routes.<name> exists
+        routes_cfg = config.get("embeddings", {}).get("routes", {})
+        route_cfg = routes_cfg.get(route_name, {})
+        
+        if not route_cfg:
+            # Fallback to docs if route not found
+            route_name = "docs"
+            route_cfg = routes_cfg.get("docs", {"profile": "default_docs", "index": "embeddings"})
+            if route_decision:
+                route_decision["fallback"] = "route_not_found"
+
+        target_index = route_cfg.get("index", "embeddings")
+        profile_name = route_cfg.get("profile", "default_docs")
+        
+        # Get profile config to find model/dim
+        profiles_cfg = config.get("embeddings", {}).get("profiles", {})
+        profile_cfg = profiles_cfg.get(profile_name, {})
+        
+        if not model_override:
+            resolved_model = profile_cfg.get("model")
+            resolved_dim = profile_cfg.get("dim")
+
+    # Fallback to defaults if not routed or model not found
+    if not resolved_model:
+        resolved_model = embedding_model_name()
+    if not resolved_dim:
+        resolved_dim = embedding_model_dim()
+        if resolved_model in HASH_MODELS:
+            resolved_dim = 64
+
+    backend = build_embedding_backend(resolved_model, dim=resolved_dim)
     query_vector = backend.embed_queries([query])[0]
     query_norm = _norm(query_vector)
 
     db = Database(db_path)
     try:
-        scored = _score_candidates(query_vector, query_norm, db.iter_embeddings(), query_text=query)
+        # Pass table_name to iter_embeddings
+        scored = _score_candidates(
+            query_vector, 
+            query_norm, 
+            db.iter_embeddings(table_name=target_index), 
+            query_text=query
+        )
+    except ValueError:
+         # Fallback to default table if target_index is invalid/empty
+         scored = _score_candidates(
+            query_vector, 
+            query_norm, 
+            db.iter_embeddings(table_name="embeddings"), 
+            query_text=query
+        )
     finally:
         db.close()
     
@@ -312,21 +392,30 @@ def search_spans(
     
     if debug:
         top_results = _enrich_debug_info(top_results, repo, db_path)
-        # Assign ranks
-        top_results = [
-            SpanSearchResult(
-                span_hash=r.span_hash,
-                path=r.path,
-                symbol=r.symbol,
-                kind=r.kind,
-                start_line=r.start_line,
-                end_line=r.end_line,
-                score=r.score,
-                summary=r.summary,
-                debug_info={**r.debug_info, "search": {**r.debug_info["search"], "rank": i + 1}} if r.debug_info else None
+        # Assign ranks and attach routing info
+        new_results = []
+        for i, r in enumerate(top_results):
+            d_info = r.debug_info or {}
+            search_info = d_info.get("search", {})
+            search_info["rank"] = i + 1
+            if route_decision:
+                search_info["routing"] = route_decision
+                search_info["target_index"] = target_index
+            
+            new_results.append(
+                SpanSearchResult(
+                    span_hash=r.span_hash,
+                    path=r.path,
+                    symbol=r.symbol,
+                    kind=r.kind,
+                    start_line=r.start_line,
+                    end_line=r.end_line,
+                    score=r.score,
+                    summary=r.summary,
+                    debug_info={**d_info, "search": search_info}
+                )
             )
-            for i, r in enumerate(top_results)
-        ]
+        top_results = new_results
 
     return top_results
 

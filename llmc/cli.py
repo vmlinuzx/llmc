@@ -196,7 +196,7 @@ def monitor():
     # Header
     layout["header"].update(
         Panel(
-            Text(f"LLMC v0.5.0 [DEV] --repo {repo_root}", justify="center", style="bold white"),
+            Text(f"LLMC v0.5.5 [DEV] --repo {repo_root}", justify="center", style="bold white"),
             style="white on blue"
         )
     )

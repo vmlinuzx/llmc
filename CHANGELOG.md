@@ -4,21 +4,25 @@ All notable changes to LLMC will be documented in this file.
 
 ## [0.5.5] - "Modular Mojo" - 2025-11-28
 
-### Blue Flavor: **Modular Mojo**
+### Purple Flavor: **Modular Mojo**
 
 This release introduces a major architectural upgrade to the embedding system, making LLMC more flexible and configurable than ever. It also includes significant hardening of the CLI tools and telemetry system.
 
+
 ### Added
 - **Modular Embeddings Architecture:**
+- **Currently we only support one profile, but the guts are there for a routing system now**
     - **Profiles:** Define multiple embedding profiles (e.g., `code` using local SentenceTransformers, `docs` using remote Ollama) in `llmc.toml`.
     - **Provider Abstraction:** Clean separation between `Hash`, `SentenceTransformer`, and `Ollama` providers.
     - **Configuration:** New `[embeddings.profiles.*]` section in `llmc.toml` allows granular control over models, dimensions, and provider-specific settings.
     - **Migration:** Automatic database schema migration to support profile-aware embedding storage.
 - **Live Integration Tests:** Added `tests/test_ollama_live.py` to verify real-world connectivity and data fidelity with Ollama endpoints.
 - **Data Integrity Tests:** Added `tests/test_te_enrichment_manual.py` to ensure binary storage of vectors is bit-perfect and profiles are correctly isolated.
+- **More TUI Functionality:** Added screen 7, RAG Doctor, this allows the monitoring of embeddings health, and perform corrective actions, and eventualy will do much more.  Also made logs spam a bit more with embeddings health updates, and who doesn't love more log spam.
 
 ### Changed
-- **Telemetry Hardening:** The Tool Envelope (TE) telemetry now consistently uses `.llmc/te_telemetry.db` (SQLite) instead of a mix of JSONL and DB, preventing data loss and configuration confusion.
+- **TE this system is beign designed to remove tool definitions from MCP servers aleviating the overhead that comes with that**
+- **Telemetry Hardening Alpha Testing:** The Tool Envelope (TE) telemetry now consistently uses `.llmc/te_telemetry.db` (SQLite) instead of a mix of JSONL and DB, preventing data loss and configuration confusion.
 - **CLI Improvements:**
     - `llmc-rag` now accepts user queries directly as arguments (e.g., `llmc-rag "how does X work?"`) instead of defaulting to "ping".
     - `llmc-rag-repo snapshot` no longer crashes due to missing imports.

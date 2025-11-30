@@ -158,7 +158,18 @@ def _print_search(res):
         return
     for i, item in enumerate(res.items, 1):
         enrich_tag = " [ENRICHED]" if item.enrichment else ""
-        print(f"{i}. {item.file}{enrich_tag}")
+        
+        # Phase 4: Content Type Annotation
+        type_str = ""
+        if item.enrichment and item.enrichment.content_type:
+            ct = item.enrichment.content_type
+            cl = item.enrichment.content_language
+            if cl:
+                type_str = f" [TYPE: {ct}, LANG: {cl}]"
+            else:
+                type_str = f" [TYPE: {ct}]"
+
+        print(f"{i}. {item.file}{enrich_tag}{type_str}")
         
         if item.enrichment:
             if item.enrichment.summary:

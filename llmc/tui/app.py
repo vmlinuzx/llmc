@@ -64,7 +64,7 @@ class MenuScreen(Screen):
     
     def compose(self) -> ComposeResult:
         with Vertical(id="menu-container"):
-            yield Static("LLMC v0.5.0 - Cyberpunk Console", id="title")
+            yield Static("LLMC - Cyberpunk Console", id="title")
             with ScrollableContainer(id="menu-scroll"):
                 yield Button("[1] Monitor System", id="btn-monitor", classes="menu-item")
                 yield Button("[2] Search Code", id="btn-search", classes="menu-item")
@@ -116,7 +116,7 @@ class LLMC_TUI(App):
     """Main LLMC TUI Application"""
     
     TITLE = "LLMC - Large Language Model Controller"
-    SUB_TITLE = "Cyberpunk Console v0.5.0"
+    SUB_TITLE = "Cyberpunk Console"
     
     CSS = """
     Screen {

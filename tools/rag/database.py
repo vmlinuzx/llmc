@@ -36,7 +36,11 @@ CREATE TABLE IF NOT EXISTS spans (
     byte_end INTEGER NOT NULL,
     span_hash TEXT NOT NULL UNIQUE,
     doc_hint TEXT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    slice_type TEXT,
+    slice_language TEXT,
+    classifier_confidence REAL,
+    classifier_version TEXT
 );
 
 CREATE TABLE IF NOT EXISTS embeddings_meta (
@@ -50,6 +54,16 @@ CREATE TABLE IF NOT EXISTS embeddings_meta (
 CREATE TABLE IF NOT EXISTS embeddings (
     span_hash TEXT PRIMARY KEY,
     vec BLOB NOT NULL,
+    route_name TEXT,
+    profile_name TEXT,
+    FOREIGN KEY (span_hash) REFERENCES spans(span_hash) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS emb_code (
+    span_hash TEXT PRIMARY KEY,
+    vec BLOB NOT NULL,
+    route_name TEXT,
+    profile_name TEXT,
     FOREIGN KEY (span_hash) REFERENCES spans(span_hash) ON DELETE CASCADE
 );
 
@@ -66,6 +80,10 @@ CREATE TABLE IF NOT EXISTS enrichments (
     side_effects TEXT,
     pitfalls TEXT,
     usage_snippet TEXT,
+    content_type TEXT,
+    content_language TEXT,
+    content_type_confidence REAL,
+    content_type_source TEXT,
     FOREIGN KEY (span_hash) REFERENCES spans(span_hash) ON DELETE CASCADE
 );
 
@@ -94,6 +112,17 @@ class Database:
             ("enrichments", "side_effects", "TEXT"),
             ("enrichments", "pitfalls", "TEXT"),
             ("enrichments", "usage_snippet", "TEXT"),
+            # Phase 1 routing migrations
+            ("spans", "slice_type", "TEXT"),
+            ("spans", "slice_language", "TEXT"),
+            ("spans", "classifier_confidence", "REAL"),
+            ("spans", "classifier_version", "TEXT"),
+            ("embeddings", "route_name", "TEXT"),
+            ("embeddings", "profile_name", "TEXT"),
+            ("enrichments", "content_type", "TEXT"),
+            ("enrichments", "content_language", "TEXT"),
+            ("enrichments", "content_type_confidence", "REAL"),
+            ("enrichments", "content_type_source", "TEXT"),
         ]
         for table, column, coltype in migrations:
             try:
@@ -202,8 +231,9 @@ class Database:
                 """
                 INSERT OR REPLACE INTO spans (
                     file_id, symbol, kind, start_line, end_line,
-                    byte_start, byte_end, span_hash, doc_hint
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    byte_start, byte_end, span_hash, doc_hint,
+                    slice_type, slice_language, classifier_confidence, classifier_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -216,6 +246,10 @@ class Database:
                         span.byte_end,
                         span.span_hash,
                         span.doc_hint,
+                        span.slice_type,
+                        span.slice_language,
+                        span.classifier_confidence,
+                        span.classifier_version,
                     )
                     for span in new_spans
                 ],
@@ -265,7 +299,8 @@ class Database:
         rows = self.conn.execute(
             """
             SELECT spans.span_hash, files.path, files.lang, spans.start_line,
-                   spans.end_line, spans.byte_start, spans.byte_end, files.mtime
+                   spans.end_line, spans.byte_start, spans.byte_end, files.mtime,
+                   spans.slice_type, spans.slice_language, spans.classifier_confidence
             FROM spans
             JOIN files ON spans.file_id = files.id
             LEFT JOIN enrichments ON spans.span_hash = enrichments.span_hash
@@ -291,6 +326,9 @@ class Database:
                     end_line=row["end_line"],
                     byte_start=row["byte_start"],
                     byte_end=row["byte_end"],
+                    slice_type=row["slice_type"] or "other",
+                    slice_language=row["slice_language"],
+                    classifier_confidence=row["classifier_confidence"] or 0.0,
                 )
             )
             if len(filtered) == limit:
@@ -302,8 +340,9 @@ class Database:
             """
             INSERT OR REPLACE INTO enrichments (
                 span_hash, summary, tags, evidence, model, created_at, schema_ver,
-                inputs, outputs, side_effects, pitfalls, usage_snippet
-            ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?)
+                inputs, outputs, side_effects, pitfalls, usage_snippet,
+                content_type, content_language, content_type_confidence, content_type_source
+            ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 span_hash,
@@ -317,6 +356,10 @@ class Database:
                 json.dumps(payload.get("side_effects", [])),
                 json.dumps(payload.get("pitfalls", [])),
                 payload.get("usage_snippet"),
+                payload.get("content_type"),
+                payload.get("content_language"),
+                payload.get("content_type_confidence"),
+                payload.get("content_type_source"),
             ),
         )
 
@@ -324,11 +367,12 @@ class Database:
         rows = self.conn.execute(
             """
             SELECT spans.span_hash, files.path, files.lang, spans.start_line,
-                   spans.end_line, spans.byte_start, spans.byte_end
+                   spans.end_line, spans.byte_start, spans.byte_end, spans.slice_type
             FROM spans
             JOIN files ON spans.file_id = files.id
             LEFT JOIN embeddings ON spans.span_hash = embeddings.span_hash
-            WHERE embeddings.span_hash IS NULL
+            LEFT JOIN emb_code ON spans.span_hash = emb_code.span_hash
+            WHERE embeddings.span_hash IS NULL AND emb_code.span_hash IS NULL
             ORDER BY spans.id
             LIMIT ?
             """,
@@ -343,6 +387,7 @@ class Database:
                 end_line=row["end_line"],
                 byte_start=row["byte_start"],
                 byte_end=row["byte_end"],
+                slice_type=row["slice_type"] or "other",
             )
             for row in rows
         ]
@@ -359,20 +404,26 @@ class Database:
             (profile, model, dim),
         )
 
-    def store_embedding(self, span_hash: str, vector: list[float]) -> None:
+    def store_embedding(self, span_hash: str, vector: list[float], route_name: str = "docs", profile_name: str = "default", table_name: str = "embeddings") -> None:
         blob = struct.pack(f"<{len(vector)}f", *vector)
+        if table_name not in ("embeddings", "emb_code"):
+            raise ValueError(f"Invalid table_name: {table_name}")
+
         self.conn.execute(
-            """
-            INSERT OR REPLACE INTO embeddings(span_hash, vec)
-            VALUES (?, ?)
+            f"""
+            INSERT OR REPLACE INTO {table_name}(span_hash, vec, route_name, profile_name)
+            VALUES (?, ?, ?, ?)
             """,
-            (span_hash, sqlite3.Binary(blob)),
+            (span_hash, sqlite3.Binary(blob), route_name, profile_name),
         )
 
-    def iter_embeddings(self) -> Iterator[sqlite3.Row]:
+    def iter_embeddings(self, table_name: str = "embeddings") -> Iterator[sqlite3.Row]:
         """Yield embedding rows joined with span/file metadata."""
+        if table_name not in ("embeddings", "emb_code"):
+            raise ValueError(f"Invalid table_name: {table_name}")
+            
         cursor = self.conn.execute(
-            """
+            f"""
             SELECT
                 spans.span_hash,
                 spans.symbol,
@@ -381,9 +432,9 @@ class Database:
                 spans.end_line,
                 files.path AS file_path,
                 COALESCE(enrichments.summary, spans.doc_hint, '') AS summary,
-                embeddings.vec
-            FROM embeddings
-            JOIN spans ON spans.span_hash = embeddings.span_hash
+                {table_name}.vec
+            FROM {table_name}
+            JOIN spans ON spans.span_hash = {table_name}.span_hash
             JOIN files ON files.id = spans.file_id
             LEFT JOIN enrichments ON enrichments.span_hash = spans.span_hash
             """
@@ -448,6 +499,10 @@ class Database:
                 s.end_line,
                 s.byte_start,
                 s.byte_end,
+                s.slice_type,
+                s.slice_language,
+                s.classifier_confidence,
+                s.classifier_version,
                 f.path AS file_path,
                 f.lang AS lang
             FROM spans AS s
@@ -465,6 +520,10 @@ class Database:
                 byte_start=row["byte_start"],
                 byte_end=row["byte_end"],
                 span_hash=row["span_hash"],
+                slice_type=row["slice_type"] or "other",
+                slice_language=row["slice_language"],
+                classifier_confidence=row["classifier_confidence"] or 0.0,
+                classifier_version=row["classifier_version"] or "",
             )
             for row in rows
         ]

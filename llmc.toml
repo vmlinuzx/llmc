@@ -33,6 +33,32 @@ timeout = 60
 provider = "hash"
 dimension = 64
 
+[embeddings.profiles.code_jina]
+provider = "ollama"
+model = "jina-embeddings-v2-base-code-Q5_K_M.gguf"
+dim = 768
+cost_class = "low"
+capabilities = ["code"]
+
+[embeddings.routes.code]
+profile = "code_jina"
+index = "emb_code"
+
+[embeddings.routes.docs]
+profile = "docs"
+index = "embeddings"
+
+[routing.slice_type_to_route]
+code = "code"
+docs = "docs"
+erp_product = "docs"
+config = "docs"
+data = "docs"
+other = "docs"
+
+[routing.options]
+enable_query_routing = true
+
 gpu_min_free_mb = 1536
 
 [storage]
