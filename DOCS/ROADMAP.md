@@ -115,18 +115,6 @@ These are the “this would be awesome” items that are worth doing, but not at
   - Return a compact, ranked subset for LLMs by default.
   - Expose the full symbol list only on explicit request.
 
-### 3.3 Router & agentic routing v2
-
-**Goal:** Turn the existing routing design into a supported surface again.
-
-- Decide the future of the router:
-  - Either wire a new `llmc-route` CLI that wraps the routing library and shows tier choices and rationale.
-  - Or keep routing strictly internal to enrichment and Desktop Commander tool selection.
-- Align router docs with reality:
-  - Keep the “*removed for now*” note until there is a stable CLI or policy file.
-
-
-
 ---
 
 ## 4. How to use this roadmap

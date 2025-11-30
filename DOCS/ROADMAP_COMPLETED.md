@@ -160,3 +160,27 @@ Carried from prior roadmap “Recently Completed (Highlights)”:
 - When you finish a meaningful roadmap item from `ROADMAP.md`, move a short summary into one of the sections above (or add a new section).
 - Keep the wording high‑level and human; the detailed implementation lives in code, tests, and SDDs.
 - Use this as your **“look what I already built”** reminder when the system feels overwhelming.
+
+---
+
+## 8. Modular Architecture & Ruthless Routing
+
+### 8.1 Modular Embeddings (v0.5.5)
+
+- Refactored embedding system to support configurable profiles (local/remote) and provider abstraction.
+- Enabled granular control over models, dimensions, and provider-specific settings via `llmc.toml`.
+- Added automatic schema migration for profile-aware storage.
+
+### 8.2 Ruthless Query Routing (v0.5.6)
+
+- Overhauled query classification with robust regexes and signal-based scoring.
+- Implemented "Ruthless" testing suite covering extreme edge cases (500k+ chars, unicode, injection).
+- Added configurable conflict resolution policy (Code vs ERP) and tool context overrides.
+- Fixed critical crashes and fenced code detection bugs.
+- Added comprehensive routing metrics and debugging info (`target_index`).
+
+### 8.3 Reliability & Observability
+
+- **RAG Doctor:** Implemented health monitoring and diagnostics for the RAG pipeline.
+- **Telemetry Hardening:** Switched TE telemetry to SQLite for reliability and consistency.
+- **Code Quality:** Massive linting cleanup and test suite repairs.
