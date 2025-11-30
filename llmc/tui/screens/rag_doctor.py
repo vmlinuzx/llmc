@@ -150,9 +150,9 @@ class RAGDoctorScreen(Screen):
         try:
             # Run the doctor tool directly
             report = run_rag_doctor(self.repo_root)
-            self.call_from_thread(self.update_ui, report)
+            self.app.call_from_thread(self.update_ui, report)
         except Exception as e:
-            self.call_from_thread(self.show_error, str(e))
+            self.app.call_from_thread(self.show_error, str(e))
 
     def show_error(self, error_msg: str) -> None:
         badge = self.query_one("#status-badge", Static)
