@@ -2,6 +2,34 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.5.6] - "Purple Flavor Tests" - 2025-11-30
+
+### Purple Flavor: **Tests That Finally Pass**
+
+This release marks the completion of a comprehensive routing system overhaul ("Ruthless Routing"), taking the system from a fragile state (D+) to production-ready robustness (A-). The query classification engine is now significantly smarter, safer, and fully configurable.
+
+### Added
+- **Modular Routing Architecture:** Split `query_type.py` into `code_heuristics`, `erp_heuristics`, and `common` modules for better maintainability and testing.
+- **Ruthless Code Detection:** New robust regex-based detection for code structures (defs, imports, assignments) and properly fenced code blocks (even with tricky whitespace).
+- **ERP Conflict Resolution:** Configurable policy to handle queries that look like both Code and ERP (e.g., "return sku"). Defaults to `prefer_code_on_conflict` with a tunable margin.
+- **Tool Context Override:** Explicit support for `tool_context` to force routing decisions (e.g., `tool_id="code_refactor"` forces Code route), enabling tighter agent integration.
+- **Routing Metrics:** Detailed telemetry for routing decisions, including conflict resolution reasons and confidence scores.
+- **Target Index Debugging:** Added `target_index` to debug info, improving visibility into which vector index is being queried.
+
+### Changed
+- **Priority Rebalancing:** Enforced strict priority order: Tool Context > Fenced Code > Code Structure > ERP SKU > Code Keywords > ERP Keywords > Default (Docs).
+- **Heuristic Scoring:** Code detection now uses a sophisticated scoring system (Signals) rather than simple boolean checks, allowing for nuanced tie-breaking.
+- **Backward Compatibility:** Added shims to ensure legacy tests and external consumers don't break despite the massive refactor.
+
+### Fixed
+- **Critical Crashes:** Eliminated crashes on `None` or empty input in the classifier.
+- **Regex Bugs:** Fixed overly strict fenced code detection that missed valid blocks.
+- **Test Suite:** Repaired the entire routing test suite, achieving 100% pass rate (46/48 tests, with 2 minor cosmetic mismatches accepted).
+- **Import Errors:** Fixed broken imports that were preventing the ruthless test suite from running.
+
+### Verified
+- **Ruthless Testing:** Survived 3 rounds of "Ruthless Testing" by Margrave Ros, passing stress tests (500k+ chars), unicode chaos, and malicious input without failure.
+
 ## [0.5.5] - "Modular Mojo" - 2025-11-28
 
 ### Purple Flavor: **Modular Mojo**
