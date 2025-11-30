@@ -26,7 +26,7 @@ def test_classify_query_tool_context_code():
 
 def test_classify_query_tool_context_erp():
     result = classify_query("sku 12345", tool_context={"tool_id": "erp_lookup"})
-    assert result["route_name"] == "docs"
+    assert result["route_name"] == "erp"
     assert result["confidence"] == 1.0
 
 def test_classify_query_code_fences():

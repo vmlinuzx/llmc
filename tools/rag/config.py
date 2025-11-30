@@ -45,6 +45,8 @@ RAG_DIR_NAME = ".rag"
 DEFAULT_INDEX_NEW = "index_v2.db"
 DEFAULT_INDEX_OLD = "index.db"
 DEFAULT_SPANS_NAME = "spans.jsonl"
+DEFAULT_EST_TOKENS_PER_SPAN = 350
+
 
 def _find_repo_root(start: Optional[Path] = None) -> Path:
     start = start or Path.cwd()
@@ -53,6 +55,17 @@ def _find_repo_root(start: Optional[Path] = None) -> Path:
         if (ancestor / ".git").exists():
             return ancestor
     return start
+
+
+def find_repo_root(start: Optional[Path] = None) -> Path:
+    """
+    Public wrapper for repository root detection.
+
+    This keeps compatibility with older call sites that imported
+    find_repo_root from this module while centralizing the logic in
+    _find_repo_root.
+    """
+    return _find_repo_root(start)
 
 
 @lru_cache
@@ -66,6 +79,40 @@ def load_config(repo_root: Optional[Path] = None) -> Dict:
             return tomllib.load(f)
     except Exception:
         return {}
+
+
+def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
+    """
+    Return the estimated number of tokens per enriched span.
+
+    Precedence:
+    - Environment variable LLMC_EST_TOKENS_PER_SPAN (if set and valid)
+    - [enrichment].est_tokens_per_span in llmc.toml (if present and valid)
+    - DEFAULT_EST_TOKENS_PER_SPAN constant as a final fallback.
+    """
+    env_value = os.getenv("LLMC_EST_TOKENS_PER_SPAN")
+    if env_value is not None:
+        try:
+            parsed = int(env_value)
+            if parsed > 0:
+                return parsed
+        except ValueError:
+            # Ignore invalid env override and fall through to config/defaults.
+            pass
+
+    cfg = load_config(repo_root)
+    enrichment_cfg = cfg.get("enrichment", {})
+    raw_cfg_value = enrichment_cfg.get("est_tokens_per_span")
+    if raw_cfg_value is not None:
+        try:
+            parsed = int(raw_cfg_value)
+            if parsed > 0:
+                return parsed
+        except (TypeError, ValueError):
+            # Ignore invalid config value and fall back to default.
+            pass
+
+    return DEFAULT_EST_TOKENS_PER_SPAN
 
 @lru_cache(maxsize=128) # Cache to avoid log spam for repeated missing slice types
 def get_route_for_slice_type(slice_type: str, repo_root: Optional[Path] = None) -> str:

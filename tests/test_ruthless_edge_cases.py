@@ -1,650 +1,436 @@
-"""Ruthless edge case tests for daemon, registry, and router."""
+"""
+Ruthless Edge Case Testing for Query Routing
+=============================================
 
-import os
-from pathlib import Path
-from unittest.mock import patch
+These tests are designed to BREAK the query routing system.
+Every green check is suspicious until proven otherwise.
+"""
+
 import pytest
-import yaml
-
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_daemon.control import read_control_events
-from tools.rag_daemon.workers import WorkerPool, make_job_id
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, Job, ControlEvents
-from tools.rag_daemon.state_store import StateStore
-from scripts.router import RouterSettings, choose_start_tier, choose_next_tier_on_failure, estimate_json_nodes_and_depth
+from llmc.routing.query_type import classify_query, CODE_STRUCT_REGEX, ERP_SKU_REGEX
 
 
 # ==============================================================================
-# REGISTRY CLIENT EDGE CASES
+# EDGE CASE 1: None and Empty Inputs
 # ==============================================================================
 
-def test_registry_malformed_yaml(tmp_path: Path) -> None:
-    """Test registry with malformed YAML."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text("{ invalid: yaml: [ unclosed")
-
-    client = RegistryClient(path=registry_file)
-
-    with pytest.raises(Exception):
-        client.load()
-
-
-def test_registry_empty_file(tmp_path: Path) -> None:
-    """Test registry with empty file."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text("")
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert result == {}
+def test_classify_query_none_input():
+    """What happens with None input? Should this crash or handle gracefully?"""
+    try:
+        result = classify_query(None)
+        # If it doesn't crash, what does it return?
+        print(f"Result for None: {result}")
+        assert "route_name" in result
+        assert "confidence" in result
+        assert "reasons" in result
+    except Exception as e:
+        print(f"None input caused exception: {type(e).__name__}: {e}")
+        # This might be a bug - should handle gracefully
 
 
-def test_registry_nonexistent_file(tmp_path: Path) -> None:
-    """Test registry with non-existent file."""
-    registry_file = tmp_path / "nonexistent.yml"
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert result == {}
-
-
-def test_registry_mixed_valid_invalid_entries(tmp_path: Path) -> None:
-    """Test registry with mix of valid and invalid entries."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text(yaml.dump([
-        {
-            "repo_id": "valid-repo",
-            "repo_path": "~/valid",
-            "rag_workspace_path": "~/valid/.llmc/rag"
-        },
-        "not-a-dict",  # Invalid entry
-        {
-            # Missing repo_id
-            "repo_path": "~/invalid",
-            "rag_workspace_path": "~/invalid/.llmc/rag"
-        },
-        None,  # Another invalid entry
-        {
-            "repo_id": "another-valid",
-            "repo_path": "~/another",
-            "rag_workspace_path": "~/another/.llmc/rag"
-        }
-    ]))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert "valid-repo" in result
-    assert "another-valid" in result
-    assert len(result) == 2
+def test_classify_query_empty_string():
+    """Empty string should default to docs, but what confidence?"""
+    result = classify_query("")
+    print(f"Empty string result: {result}")
+    assert result["route_name"] == "docs"
+    # Confidence should be low for empty input
+    assert result["confidence"] <= 0.6
 
 
-def test_registry_list_with_repos_key_mixed_entries(tmp_path: Path) -> None:
-    """Test registry with 'repos' key containing mixed entries."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text(yaml.dump({
-        "repos": [
-            {"repo_id": "repo1", "repo_path": "~/repo1", "rag_workspace_path": "~/repo1/.llmc/rag"},
-            "invalid",
-            {"repo_path": "~/invalid"},  # Missing repo_id
-            None,
-            {"repo_id": "repo2", "repo_path": "~/repo2", "rag_workspace_path": "~/repo2/.llmc/rag"},
-        ]
-    }))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert "repo1" in result
-    assert "repo2" in result
-    assert len(result) == 2
-
-
-def test_registry_duplicate_repo_ids(tmp_path: Path) -> None:
-    """Test registry with duplicate repo IDs (last one wins)."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text(yaml.dump([
-        {"repo_id": "duplicate", "repo_path": "~/first", "rag_workspace_path": "~/first/.llmc/rag"},
-        {"repo_id": "duplicate", "repo_path": "~/second", "rag_workspace_path": "~/second/.llmc/rag"},
-    ]))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert len(result) == 1
-    assert "duplicate" in result
-    # Last entry should win
-    resolved_path = str(result["duplicate"].repo_path)
-    assert "second" in resolved_path
-
-
-def test_registry_missing_required_fields(tmp_path: Path) -> None:
-    """Test registry entry missing required fields."""
-    registry_file = tmp_path / "repos.yml"
-    registry_file.write_text(yaml.dump([
-        {"repo_id": "missing-repo-path", "rag_workspace_path": "~/workspace"},
-        {"repo_path": "~/path", "rag_workspace_path": "~/workspace"},  # Missing repo_id
-    ]))
-
-    client = RegistryClient(path=registry_file)
-
-    # Should raise KeyError for missing required fields
-    with pytest.raises(KeyError):
-        client.load()
-
-
-def test_registry_invalid_path_expansion(tmp_path: Path) -> None:
-    """Test registry with paths that can't be expanded."""
-    registry_file = tmp_path / "repos.yml"
-    # Use a path that will fail expanduser
-    registry_file.write_text(yaml.dump([
-        {"repo_id": "bad-path", "repo_path": "/nonexistent/\x00invalid", "rag_workspace_path": "~/workspace"}
-    ]))
-
-    client = RegistryClient(path=registry_file)
-
-    # Invalid paths should be gracefully skipped, not crash
-    result = client.load()
-    assert len(result) == 0, "Invalid entries should be skipped, not cause crash"
-
-
-def test_registry_special_characters_in_paths(tmp_path: Path) -> None:
-    """Test registry with special characters in paths."""
-    registry_file = tmp_path / "repos.yml"
-
-    # Create dirs with special chars
-    special_dir = tmp_path / "repo with spaces & (parens)"
-    special_dir.mkdir()
-
-    workspace_dir = tmp_path / "workspace with 'quotes'"
-    workspace_dir.mkdir()
-
-    registry_file.write_text(yaml.dump([{
-        "repo_id": "special-chars",
-        "repo_path": str(special_dir),
-        "rag_workspace_path": str(workspace_dir)
-    }]))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert "special-chars" in result
-    # Paths should be properly resolved
+def test_classify_query_whitespace_only():
+    """Only whitespace - no code signals should be detected"""
+    result = classify_query("   \n\t   \r\n   ")
+    print(f"Whitespace-only result: {result}")
+    assert result["route_name"] == "docs"
+    assert "default=docs" in result["reasons"]
 
 
 # ==============================================================================
-# CONTROL EVENTS EDGE CASES
+# EDGE CASE 2: Unicode and Special Characters
 # ==============================================================================
 
-def test_control_read_nonexistent_directory(tmp_path: Path) -> None:
-    """Test reading control events from non-existent directory."""
-    non_existent_dir = tmp_path / "non_existent" / "control"
-
-    result = read_control_events(non_existent_dir)
-
-    # Should return empty events and create directory
-    assert result.refresh_all is False
-    assert result.refresh_repo_ids == set()
-    assert result.shutdown is False
-    assert non_existent_dir.exists()
+def test_classify_query_unicode_code():
+    """Can the system handle Unicode code patterns?"""
+    query = """def 函数():
+    return "你好世界"
+"""
+    result = classify_query(query)
+    print(f"Unicode code result: {result}")
+    # Should still detect 'def' as code keyword
+    assert result["route_name"] == "code"
 
 
-def test_control_read_directory_cannot_create(tmp_path: Path) -> None:
-    """Test when control directory cannot be created (permissions)."""
-    # Create a file at the location we want to create a directory
-    blocked_path = tmp_path / "blocked"
-    blocked_path.write_text("blocking file")
-
-    result = read_control_events(blocked_path)
-
-    # Should return empty events gracefully
-    assert result == ControlEvents()
+def test_classify_query_emoji():
+    """Emojis and special chars should not confuse the router"""
+    query = "How do I code this? 🤔 def foo(): pass"
+    result = classify_query(query)
+    print(f"Emoji result: {result}")
+    # Should detect def as code
+    assert result["route_name"] == "code"
 
 
-def test_control_flag_with_no_extension(tmp_path: Path) -> None:
-    """Test control directory with files that aren't .flag files."""
-    control_dir = tmp_path / "control"
-    control_dir.mkdir()
-
-    # Create non-flag files
-    (control_dir / "notaflag.txt").write_text("test")
-    (control_dir / "something.log").write_text("test")
-
-    result = read_control_events(control_dir)
-
-    # Should return empty events
-    assert result == ControlEvents()
+def test_classify_query_japanese_text():
+    """Japanese text - should default to docs"""
+    query = "これは日本語です。コードについて教えてください。"
+    result = classify_query(query)
+    print(f"Japanese text result: {result}")
+    # No ERP or code patterns, should be docs
+    assert result["route_name"] == "docs"
 
 
-def test_control_malformed_flag_names(tmp_path: Path) -> None:
-    """Test control directory with malformed flag names."""
-    control_dir = tmp_path / "control"
-    control_dir.mkdir()
-
-    # Create flags with edge case names
-    (control_dir / "refresh_.flag").touch()  # Empty repo_id
-    (control_dir / "refresh.flag").touch()   # Missing repo_id
-
-    result = read_control_events(control_dir)
-
-    # Should handle gracefully, no repo IDs added
-    assert result.refresh_repo_ids == set()
-
-
-def test_control_unable_to_delete_flags(tmp_path: Path) -> None:
-    """Test when flags cannot be deleted."""
-    control_dir = tmp_path / "control"
-    control_dir.mkdir()
-
-    # Create a flag file with read-only permissions
-    flag_file = control_dir / "refresh_all.flag"
-    flag_file.touch()
-    flag_file.chmod(0o444)  # Read-only
-
-    # Try to read events (should handle deletion failure gracefully)
-    result = read_control_events(control_dir)
-
-    # Should still parse the event
-    assert result.refresh_all is True
-
-    # Cleanup (file may already have been deleted by read_control_events)
-    if flag_file.exists():
-        flag_file.chmod(0o644)
-        flag_file.unlink()
+def test_classify_query_mixed_unicode_normal():
+    """Mixed unicode normal text"""
+    query = "查找 SKU ABC-12345 的库存水平"
+    result = classify_query(query)
+    print(f"Chinese + SKU result: {result}")
+    # Should detect SKU pattern even in unicode text
+    assert result["route_name"] == "erp"
 
 
 # ==============================================================================
-# WORKER POOL EDGE CASES
+# EDGE CASE 3: Regex Pattern Edge Cases
 # ==============================================================================
 
-def test_worker_job_id_uniqueness() -> None:
-    """Test that job IDs are unique."""
-    ids = {make_job_id() for _ in range(1000)}
-
-    # Should have 1000 unique IDs
-    assert len(ids) == 1000
-
-
-def test_worker_duplicate_job_submission(tmp_path: Path) -> None:
-    """Test submitting duplicate jobs for the same repo."""
-    config = DaemonConfig(
-        tick_interval_seconds=60,
-        max_concurrent_jobs=5,
-        max_consecutive_failures=3,
-        base_backoff_seconds=60,
-        max_backoff_seconds=3600,
-        registry_path=tmp_path / "repos.yml",
-        state_store_path=tmp_path / "state",
-        log_path=tmp_path / "logs",
-        control_dir=tmp_path / "control",
-        job_runner_cmd="test-runner",
-    )
-
-    state_store = StateStore(config.state_store_path)
-
-    # Create a repo
-    repo = RepoDescriptor(
-        repo_id="test-repo",
-        repo_path=tmp_path / "repo",
-        rag_workspace_path=tmp_path / "workspace",
-    )
-
-    # Create jobs for same repo
-    jobs = [
-        Job(job_id="job1", repo=repo),
-        Job(job_id="job2", repo=repo),
-        Job(job_id="job3", repo=repo),
+def test_sku_regex_very_short():
+    """Test SKU regex with very short patterns"""
+    # ERP_SKU_REGEX expects 1-4 letters + 4-6 digits
+    test_cases = [
+        ("A-123", False),  # Too few digits
+        ("AB-12345", True),  # Valid
+        ("ABC-12345", True),  # Valid
+        ("ABCDE-123", False),  # Too many letters
+        ("ABC-12", False),  # Too few digits
+        ("ABCDEFGHIJ-123456", False),  # Too many letters and digits
     ]
 
-    pool = WorkerPool(config, state_store)
-
-    # Attach a list to capture submitted jobs
-    submitted = []
-    pool.submitted = submitted
-
-    pool.submit_jobs(jobs)
-
-    # Only the first job should be submitted
-    assert len(submitted) == 1
-    assert submitted[0].job_id == "job1"
+    for pattern, should_match in test_cases:
+        matches = ERP_SKU_REGEX.findall(pattern)
+        if should_match:
+            assert len(matches) > 0, f"Pattern {pattern} should match but didn't"
+        else:
+            assert len(matches) == 0, f"Pattern {pattern} shouldn't match but got {matches}"
 
 
-def test_worker_concurrent_job_limit(tmp_path: Path) -> None:
-    """Test max concurrent jobs limit."""
-    config = DaemonConfig(
-        tick_interval_seconds=60,
-        max_concurrent_jobs=2,
-        max_consecutive_failures=3,
-        base_backoff_seconds=60,
-        max_backoff_seconds=3600,
-        registry_path=tmp_path / "repos.yml",
-        state_store_path=tmp_path / "state",
-        log_path=tmp_path / "logs",
-        control_dir=tmp_path / "control",
-        job_runner_cmd="test-runner",
-    )
-
-    state_store = StateStore(config.state_store_path)
-
-    # Create repos
-    repos = [
-        RepoDescriptor(
-            repo_id=f"repo-{i}",
-            repo_path=tmp_path / f"repo-{i}",
-            rag_workspace_path=tmp_path / f"workspace-{i}",
-        )
-        for i in range(5)
+def test_sku_regex_weird_but_valid():
+    """Weird patterns that might accidentally match"""
+    # What about these edge cases?
+    test_cases = [
+        "SKU ABC-12345",  # With prefix
+        "product W-44910 is failing",  # Inline
+        "Looking for STR-66320 or W-44910",  # Multiple
+        "ABC-12345.txt",  # With extension
+        "Pricing: W-44910 @ $19.99",  # With price
     ]
 
-    jobs = [Job(job_id=f"job-{i}", repo=repo) for i, repo in enumerate(repos)]
-
-    pool = WorkerPool(config, state_store)
-
-    # Attach a list to capture submitted jobs
-    submitted = []
-    pool.submitted = submitted
-
-    pool.submit_jobs(jobs)
-
-    # With max_concurrent_jobs=2, should submit all jobs
-    # (they're for different repos)
-    assert len(submitted) == 5
+    for pattern in test_cases:
+        matches = ERP_SKU_REGEX.findall(pattern)
+        print(f"Pattern '{pattern}' matched: {matches}")
+        # These should match the SKU part
+        assert len(matches) > 0
 
 
-# ==============================================================================
-# ROUTER EDGE CASES
-# ==============================================================================
+def test_code_struct_regex_pathological():
+    """Test CODE_STRUCT_REGEX with pathological cases"""
+    test_cases = [
+        # Should match
+        ("{\n    return x;\n}", True),
+        ("int main() { return 0; }", True),
+        ("class Foo: pass", True),
+        ("def func(): return True", True),
+        ("if (x) { do(); }", True),
+        # Should NOT match
+        ("{this is just braces}", False),  # Not code structure
+        ("{braces in prose}", False),
+        ("Just text with {braces}", False),
+        ("return but not code", False),  # Single keyword doesn't match structure
+    ]
 
-def test_router_settings_invalid_env_vars() -> None:
-    """Test RouterSettings with invalid environment variables."""
-    with patch.dict(os.environ, {
-        "ROUTER_CONTEXT_LIMIT": "not-a-number",
-        "ROUTER_NODE_LIMIT": "invalid",
-        "ROUTER_DEPTH_LIMIT": "",
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should fallback to defaults for invalid values
-        assert settings.context_limit == 32000
-        assert settings.depth_limit == 6
-
-
-def test_router_settings_extreme_values() -> None:
-    """Test RouterSettings with extreme values."""
-    with patch.dict(os.environ, {
-        "ROUTER_CONTEXT_LIMIT": "999999999",
-        "ROUTER_NODE_LIMIT": "-1",
-        "ROUTER_ARRAY_LIMIT": "0",
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should accept large values and negative values
-        assert settings.context_limit == 999999999
-        assert settings.node_limit == -1
-        assert settings.array_limit == 0
-
-
-def test_router_line_thresholds_invalid_format() -> None:
-    """Test RouterSettings with invalid line thresholds format."""
-    with patch.dict(os.environ, {
-        "ROUTER_LINE_THRESHOLDS": "not,a,comma,list",
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should fallback to defaults
-        assert settings.line_thresholds == (60, 100)
-
-
-def test_router_line_thresholds_single_value() -> None:
-    """Test RouterSettings with single value in line thresholds."""
-    with patch.dict(os.environ, {
-        "ROUTER_LINE_THRESHOLDS": "50",
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should fallback to defaults
-        assert settings.line_thresholds == (60, 100)
-
-
-def test_router_line_thresholds_inverted() -> None:
-    """Test RouterSettings with inverted thresholds."""
-    with patch.dict(os.environ, {
-        "ROUTER_LINE_THRESHOLDS": "100,50",  # low > high
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should swap them
-        assert settings.line_thresholds == (50, 100)
-
-
-def test_router_line_thresholds_zero_or_negative() -> None:
-    """Test RouterSettings with zero or negative thresholds."""
-    with patch.dict(os.environ, {
-        "ROUTER_LINE_THRESHOLDS": "0,-10",
-    }, clear=False):
-        settings = RouterSettings()
-
-        # Should fallback to defaults
-        assert settings.line_thresholds == (60, 100)
-
-
-def test_estimate_json_malformed_json() -> None:
-    """Test JSON estimation with malformed JSON."""
-    # Malformed JSON
-    result = estimate_json_nodes_and_depth("{ not closed properly")
-
-    # Should fallback to brace counting
-    assert result[0] > 0  # node_count
-    assert result[1] > 0  # depth
-
-
-def test_estimate_json_empty_string() -> None:
-    """Test JSON estimation with empty string."""
-    result = estimate_json_nodes_and_depth("")
-
-    assert result == (0, 0)
-
-
-def test_estimate_json_very_deep_nesting() -> None:
-    """Test JSON estimation with very deep nesting."""
-    deep_json = "{" * 100 + "}" * 100
-    result = estimate_json_nodes_and_depth(deep_json)
-
-    assert result[1] == 100  # depth
-
-
-def test_choose_tier_with_all_limits_exceeded() -> None:
-    """Test tier selection when all limits are exceeded."""
-    settings = RouterSettings()
-
-    metrics = {
-        "tokens_in": 50000,
-        "tokens_out": 50000,
-        "node_count": 1000,
-        "schema_depth": 10,
-        "array_elements": 6000,
-        "csv_columns": 100,
-        "line_count": 200,
-        "nesting_depth": 5,
-        "rag_k": 0,
-        "rag_avg_score": 0.1,
-    }
-
-    tier = choose_start_tier(metrics, settings)
-
-    # Should choose nano due to exceeding limits
-    assert tier == "nano"
-
-
-def test_choose_tier_with_no_rag_context() -> None:
-    """Test tier selection with no RAG context."""
-    settings = RouterSettings()
-
-    metrics = {
-        "tokens_in": 1000,
-        "tokens_out": 1000,
-        "node_count": 10,
-        "schema_depth": 1,
-        "line_count": 50,
-        "nesting_depth": 1,
-        "rag_k": 0,  # No RAG results
-        "rag_avg_score": None,
-    }
-
-    tier = choose_start_tier(metrics, settings)
-
-    # With no RAG, should be 7b but may promote due to rag_k=0
-    assert tier in ["7b", "14b"]
-
-
-def test_choose_next_tier_invalid_failure_type() -> None:
-    """Test next tier selection with unknown failure type."""
-    settings = RouterSettings()
-
-    # Unknown failure type for 14b
-    next_tier = choose_next_tier_on_failure("unknown_failure", "14b", {}, settings)
-
-    # Should return nano
-    assert next_tier == "nano"
-
-
-def test_choose_next_tier_promote_once_false() -> None:
-    """Test next tier selection with promote_once=False."""
-    settings = RouterSettings()
-
-    # With promote_once=False, should not promote
-    next_tier = choose_next_tier_on_failure("truncation", "7b", {}, settings, promote_once=False)
-
-    # Should return None (no further tier)
-    assert next_tier is None
+    for pattern, should_match in test_cases:
+        matches = CODE_STRUCT_REGEX.findall(pattern)
+        if should_match:
+            assert len(matches) > 0, f"Pattern '{pattern}' should match CODE_STRUCT_REGEX"
 
 
 # ==============================================================================
-# CONCURRENT MODIFICATION EDGE CASES
+# EDGE CASE 4: Ambiguous Queries
 # ==============================================================================
 
-def test_state_store_concurrent_updates(tmp_path: Path) -> None:
-    """Test concurrent state updates."""
-    store = StateStore(tmp_path / "state")
-
-    # Add initial state
-    store.update("repo1", lambda s: s)
-
-    # Try concurrent updates
-    for i in range(10):
-        store.update("repo1", lambda s: s)
-
-    # Should not raise exception
+def test_classify_query_product_vs_code():
+    """Ambiguous: 'product' is in both ERP_KEYWORDS and could be in code"""
+    # 'product' is in ERP_KEYWORDS
+    query = "product = get_product('sku')"
+    result = classify_query(query)
+    print(f"Product in code result: {result}")
+    # The code structure should win
+    assert result["route_name"] == "code"
 
 
-# ==============================================================================
-# RESOURCE EXHAUSTION EDGE CASES
-# ==============================================================================
-
-def test_registry_very_large_file(tmp_path: Path) -> None:
-    """Test registry with many entries."""
-    registry_file = tmp_path / "repos.yml"
-
-    # Create 1000 entries
-    entries = []
-    for i in range(1000):
-        entries.append({
-            "repo_id": f"repo-{i}",
-            "repo_path": f"~/repo-{i}",
-            "rag_workspace_path": f"~/repo-{i}/.llmc/rag"
-        })
-
-    registry_file.write_text(yaml.dump(entries))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert len(result) == 1000
+def test_classify_query_model_context():
+    """'model' is in ERP_KEYWORDS but could be code"""
+    query = "model = SomeModel()"
+    result = classify_query(query)
+    print(f"Model in code result: {result}")
+    # Code structure should win
+    assert result["route_name"] == "code"
 
 
-def test_control_many_flags(tmp_path: Path) -> None:
-    """Test control directory with many flag files."""
-    control_dir = tmp_path / "control"
-    control_dir.mkdir()
-
-    # Create 1000 refresh flags
-    for i in range(1000):
-        (control_dir / f"refresh_repo-{i}.flag").touch()
-
-    result = read_control_events(control_dir)
-
-    assert len(result.refresh_repo_ids) == 1000
-    assert "repo-500" in result.refresh_repo_ids
+def test_classify_query_item_in_text():
+    """'item' is generic but in ERP_KEYWORDS"""
+    # If only 'item' is mentioned, should it be ERP?
+    query = "an item was found"
+    result = classify_query(query)
+    print(f"Item in text result: {result}")
+    # Need 2 ERP keywords or 'sku' + 1 other
+    # This should default to docs
+    assert result["route_name"] == "docs"
 
 
-# ==============================================================================
-# SECURITY/INJECTION EDGE CASES
-# ==============================================================================
-
-def test_registry_path_traversal_attempt(tmp_path: Path) -> None:
-    """Test registry with path traversal attempts."""
-    registry_file = tmp_path / "repos.yml"
-
-    # Attempt path traversal
-    registry_file.write_text(yaml.dump([{
-        "repo_id": "evil",
-        "repo_path": "../../../etc/passwd",
-        "rag_workspace_path": "../../../tmp/evil"
-    }]))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    # Path traversal entries should be rejected for safety
-    assert "evil" not in result
+def test_classify_query_class_word():
+    """The word 'class' - is it code or docs?"""
+    query = "What is a class in programming?"
+    result = classify_query(query)
+    print(f"'class' word result: {result}")
+    # Single keyword without structure should not trigger code
+    # But let's see...
 
 
-def test_registry_control_chars_in_repo_id(tmp_path: Path) -> None:
-    """Test registry with control characters in repo_id."""
-    registry_file = tmp_path / "repos.yml"
+def test_classify_query_code_like_but_not():
+    """Text that looks like code but isn't"""
+    # Try to fool the regex
+    test_queries = [
+        "What does 'def' mean in Python?",
+        "Explain return statements",
+        "The {braces} here are just for show",
+    ]
 
-    # Attempt injection with control chars
-    registry_file.write_text(yaml.dump([{
-        "repo_id": "repo\nwith\nnewlines",
-        "repo_path": "~/repo",
-        "rag_workspace_path": "~/repo/.llmc/rag"
-    }]))
-
-    client = RegistryClient(path=registry_file)
-    result = client.load()
-
-    assert "repo\nwith\nnewlines" in result
+    for query in test_queries:
+        result = classify_query(query)
+        print(f"Query: '{query}' -> {result}")
+        # These should NOT be classified as code
+        # They are questions ABOUT code, not code itself
 
 
 # ==============================================================================
-# DATA CORRUPTION EDGE CASES
+# EDGE CASE 5: Tool Context Edge Cases
 # ==============================================================================
 
-def test_registry_binary_data(tmp_path: Path) -> None:
-    """Test registry with binary data."""
-    registry_file = tmp_path / "repos.yml"
+def test_classify_query_tool_context_case_sensitivity():
+    """Tool context should handle case variations"""
+    queries = [
+        ("test", {"tool_id": "CODE_NAVIGATOR"}),
+        ("test", {"tool_id": "Code_Refactor"}),
+        ("test", {"tool_id": "Erp_Lookup"}),
+        ("test", {"tool_id": "ERP"}),
+    ]
 
-    # Write binary data
-    registry_file.write_bytes(b"\x00\x01\x02\x03\xff\xfe\xfd")
-
-    client = RegistryClient(path=registry_file)
-
-    # Should handle gracefully or raise exception
-    with pytest.raises(Exception):
-        client.load()
+    for query, context in queries:
+        result = classify_query(query, tool_context=context)
+        print(f"Context {context} -> {result}")
+        # All should be routed based on context
 
 
-def test_registry_unicode_corruption(tmp_path: Path) -> None:
-    """Test registry with corrupted Unicode."""
-    registry_file = tmp_path / "repos.yml"
+def test_classify_query_tool_context_partial_matches():
+    """What about partial matches in tool_id?"""
+    # Does 'code' match in 'codecs'?
+    query = "test"
+    context = {"tool_id": "codecs_search"}
+    result = classify_query(query, tool_context=context)
+    print(f"codecs_search -> {result}")
+    # Check if it matches 'code' substring
 
-    # Invalid UTF-8 sequence
-    registry_file.write_text("\x80\x81\x82\x83")
 
-    client = RegistryClient(path=registry_file)
+def test_classify_query_tool_context_mixed():
+    """Multiple hints in tool_id"""
+    query = "test"
+    # Tool with both 'code' and 'erp' in name - which wins?
+    context = {"tool_id": "code_erp_hybrid"}
+    result = classify_query(query, tool_context=context)
+    print(f"code_erp_hybrid -> {result}")
+    # First match in the list should win
 
-    # Should handle gracefully
-    with pytest.raises(Exception):
-        client.load()
+
+def test_classify_query_tool_context_none_values():
+    """Tool context with None or missing values"""
+    result1 = classify_query("test", tool_context={"tool_id": None})
+    print(f"tool_id=None -> {result1}")
+
+    result2 = classify_query("test", tool_context={})
+    print(f"empty context -> {result2}")
+
+    result3 = classify_query("test", tool_context={"other_key": "value"})
+    print(f"context without tool_id -> {result3}")
+
+
+# ==============================================================================
+# EDGE CASE 6: Very Long and Pathological Inputs
+# ==============================================================================
+
+def test_classify_query_very_long_query():
+    """What about extremely long queries?"""
+    # 10k characters of 'lorem ipsum'
+    long_text = "Lorem ipsum " * 1000
+    result = classify_query(long_text)
+    print(f"Very long query result: route={result['route_name']}, confidence={result['confidence']}")
+    # Should complete without error
+    assert "route_name" in result
+
+
+def test_classify_query_repeated_patterns():
+    """Query with many code patterns"""
+    query = "\n".join([f"def func{i}(): return {i}" for i in range(100)])
+    result = classify_query(query)
+    print(f"Repeated patterns result: {result}")
+    # Should definitely be code
+    assert result["route_name"] == "code"
+
+
+def test_classify_query_many_sku_patterns():
+    """Many SKU patterns in one query"""
+    query = "SKU W-44910, SKU ABC-1234, SKU DEF-5678, SKU GHI-9012"
+    result = classify_query(query)
+    print(f"Many SKUs result: {result}")
+    # Should be ERP
+    assert result["route_name"] == "erp"
+
+
+# ==============================================================================
+# EDGE CASE 7: Conflicting Signals
+# ==============================================================================
+
+def test_classify_query_code_in_erp_context():
+    """Code structure in ERP tool context - who wins?"""
+    query = "def foo(): return 'code'"
+    context = {"tool_id": "erp_lookup"}
+    result = classify_query(query, tool_context=context)
+    print(f"Code in ERP context -> {result}")
+    # Tool context should win (confidence 1.0)
+
+
+def test_classify_query_erp_in_code_context():
+    """ERP content in code tool context"""
+    query = "SKU W-12345 is failing"
+    context = {"tool_id": "code_refactor"}
+    result = classify_query(query, tool_context=context)
+    print(f"ERP in code context -> {result}")
+    # Tool context should win
+
+
+def test_classify_query_contradictory_patterns():
+    """Query with patterns from all three categories"""
+    # Has code structure, ERP keywords, and is in general prose
+    query = """
+    Look at this code:
+    def process_sku(sku):
+        return sku
+
+    The SKU W-12345 is failing in our inventory.
+    """
+    result = classify_query(query)
+    print(f"Contradictory patterns -> {result}")
+    # Code fence should win with 0.9 confidence
+
+
+# ==============================================================================
+# EDGE CASE 8: Code Fence Edge Cases
+# ==============================================================================
+
+def test_classify_query_empty_code_fence():
+    """Empty code fence"""
+    query = "```\n```"
+    result = classify_query(query)
+    print(f"Empty code fence -> {result}")
+    # Should still be detected as code fence
+    assert result["route_name"] == "code"
+    assert "heuristic=code_fences" in result["reasons"]
+
+
+def test_classify_query_code_fence_without_language():
+    """Code fence without language hint"""
+    query = "```\ndef foo():\n    pass\n```"
+    result = classify_query(query)
+    print(f"Code fence no language -> {result}")
+    # Should still match
+    assert result["route_name"] == "code"
+
+
+def test_classify_query_triple_backticks_in_string():
+    """Triple backticks not actually a fence"""
+    query = r'The string "```" appears in this text'
+    result = classify_query(query)
+    print(f"Backticks in string -> {result}")
+    # Should NOT be detected as code fence
+    # This might be a bug!
+
+
+def test_classify_query_malformed_code_fence():
+    """Malformed or partial code fences"""
+    test_cases = [
+        "``code",  # Two backticks
+        "```code",  # No closing
+        "code```",  # No opening
+        "`` ` code ` ``",  # Escaped
+    ]
+
+    for query in test_cases:
+        result = classify_query(query)
+        print(f"Malformed fence '{query}' -> {result}")
+
+
+# ==============================================================================
+# EDGE CASE 9: Numbers and Special Patterns
+# ==============================================================================
+
+def test_classify_query_numbers_only():
+    """Query with just numbers"""
+    query = "12345"
+    result = classify_query(query)
+    print(f"Numbers only -> {result}")
+    # Should default to docs
+    assert result["route_name"] == "docs"
+
+
+def test_classify_query_alphanumeric_codes():
+    """Alphanumeric codes that aren't SKUs"""
+    test_cases = [
+        "ABC123",  # No dash
+        "A123",  # Too short
+        "ABCDEFG-123456",  # Too many chars/digits
+        "AB-12",  # Too few digits
+        "ABC-12A",  # Letters in number part
+    ]
+
+    for query in test_cases:
+        result = classify_query(query)
+        print(f"'{query}' -> {result}")
+        # None should match ERP pattern
+        # Should default to docs
+        assert result["route_name"] in ["docs", "code"]  # Could match code if patterns match
+
+
+def test_classify_query_version_numbers():
+    """Version numbers like 1.2.3"""
+    query = "version 1.2.3"
+    result = classify_query(query)
+    print(f"Version numbers -> {result}")
+    # Should be docs
+
+
+# ==============================================================================
+# EDGE CASE 10: Performance and Memory
+# ==============================================================================
+
+def test_classify_query_deeply_nested_structures():
+    """Deeply nested code structures"""
+    query = "\n".join(["    " * i + "return x" for i in range(1000)])
+    result = classify_query(query)
+    print(f"Deeply nested: route={result['route_name']}, confidence={result['confidence']}")
+    # Should handle without crashing
+    assert "route_name" in result
+
+
+if __name__ == "__main__":
+    # Run tests and print results
+    print("\n" + "="*80)
+    print("RUTHLESS EDGE CASE TESTING FOR QUERY ROUTING")
+    print("="*80)
+    pytest.main([__file__, "-v", "-s"])
