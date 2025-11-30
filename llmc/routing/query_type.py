@@ -2,17 +2,42 @@ from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+
+@dataclass
+class RouteSignal:
+    route: str
+    score: float
+    reason: str
 
 # Common code patterns
-# Ends with semicolon, curly braces, parens, brackets
-CODE_STRUCT_REGEX = re.compile(r"(\n\s*[\}\]\)];|\{|\}|=>|->|public static|fn |func |def |class |#include)", re.MULTILINE)
-# Keywords (simple heuristic)
-CODE_KEYWORDS = {"def", "class", "return", "import", "from", "var", "let", "const", "function", "if", "for", "while", "switch", "case", "break", "continue"}
+CODE_STRUCT_REGEXES = [
+    re.compile(r"(?:^|\n)\s*(def|async\s+def|class)\s+\w+", re.MULTILINE),  # defs/classes
+    re.compile(r"(?:^|\n)\s*from\s+\w+", re.MULTILINE),                      # from x import y
+    re.compile(r"(?:^|\n)\s*import\s+\w+", re.MULTILINE),                    # import x
+    re.compile(r"(?:^|\n)\s*\w+\s*=\s*[^=\n]+", re.MULTILINE),               # assignment (not ==)
+    re.compile(r"\bfor\s+\w+\s+in\s+[^:\n]+:?\s*", re.MULTILINE),          # for-loops
+    re.compile(r"\bwhile\s+[^:\n]+:?\s*", re.MULTILINE),                   # while-loops
+    re.compile(r"\blambda\s+\w+\s*:\s*[^:\n]+", re.MULTILINE),             # lambda
+    re.compile(r"\b\w+\s*\([^()\n]*\)", re.MULTILINE),                     # simple function call foo(...)
+]
+
+# Keywords (Expanded for Phase 2)
+CODE_KEYWORDS = {
+    # Python
+    "if","elif","else","for","while","return","def","class","import","from",
+    "try","except","with","lambda","yield","self","cls","print",
+    # JS / generic
+    "function","var","const","let","console.log","=>","async","await",
+    # Common code nouns
+    "args","kwargs","dict","list","tuple","int","str","bool","None",
+}
 
 # ERP Patterns
 ERP_SKU_REGEX = re.compile(r"\b([A-Z]{1,4}-\d{4,6})\b") # Matches W-44910, STR-66320
 ERP_KEYWORDS = {"sku", "upc", "asin", "model number", "item", "product", "catalog", "inventory", "price", "stock"}
 
+# Phase 1 – Change 3: Minimal but more robust fenced code detection
 FENCE_OPEN_RE = re.compile(r'(^|\n)```[\w-]*\s*\n', re.MULTILINE)
 
 def _count_fenced_code_blocks(_s: str) -> int:
@@ -35,6 +60,50 @@ def _count_fenced_code_blocks(_s: str) -> int:
             break
     return count
 
+def score_code_fences(text: str) -> Optional[RouteSignal]:
+    if _count_fenced_code_blocks(text) >= 1:
+        return RouteSignal(route="code", score=0.9, reason="heuristic=fenced-code")
+    return None
+
+def score_code_structure(text: str) -> Optional[RouteSignal]:
+    matches = []
+    for regex in CODE_STRUCT_REGEXES:
+        found = regex.findall(text)
+        for f in found:
+            # regex might return tuple (groups) or string
+            s = f[0] if isinstance(f, tuple) else f
+            if s.strip():
+                matches.append(s.strip())
+                if len(matches) >= 3: break
+        if len(matches) >= 3: break
+            
+    if matches:
+        # Score boosts slightly with more matches, capped at 0.85
+        base_score = 0.8
+        return RouteSignal(route="code", score=base_score, reason=f"code-structure={','.join(matches[:3])}")
+    return None
+
+def score_code_keywords(text: str) -> Optional[RouteSignal]:
+    words = set(re.findall(r"\b\w+\b", text))
+    found = words.intersection(CODE_KEYWORDS)
+    
+    # Phase 2: Lower threshold to >= 1 keyword, but lower confidence
+    if len(found) >= 1:
+        # Score: 0.8 for 2+ keywords (Tie with ERP), 0.4 for 1 (Weaker)
+        score = 0.8 if len(found) >= 2 else 0.4
+        return RouteSignal(route="code", score=score, reason=f"code-keywords={','.join(list(found)[:3])}")
+    return None
+
+def _score_erp(text: str, text_lower: str) -> Optional[RouteSignal]:
+    sku_matches = ERP_SKU_REGEX.findall(text)
+    if sku_matches:
+        return RouteSignal(route="erp", score=0.9, reason=f"sku_pattern={','.join(sku_matches[:3])}")
+        
+    erp_kw_found = [w for w in ERP_KEYWORDS if w in text_lower]
+    if len(erp_kw_found) >= 2 or ("sku" in erp_kw_found and len(erp_kw_found) >= 1):
+        return RouteSignal(route="erp", score=0.8, reason=f"erp_keywords={','.join(erp_kw_found[:3])}")
+    return None
+
 def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Return a deterministic classification for a query.
 
@@ -49,7 +118,6 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
     if text is None:
         text = ""
     if not isinstance(text, str):
-        # Defensive: ensure text is stringifiable
         text = str(text)
     if not text.strip():
         return {
@@ -58,78 +126,42 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
             "reasons": ["empty-or-none-input"]
         }
 
-    reasons: List[str] = []
-    
-    text_lower = text.lower()
-
     # 1. Tool/context hint (highest priority)
     if tool_context:
         tool_id = str(tool_context.get("tool_id", "")).lower()
-        
-        # ERP/Product lookup
         if any(x in tool_id for x in ["erp", "product", "inventory", "sku"]):
-            return {
-                "route_name": "erp",
-                "confidence": 1.0,
-                "reasons": [f"tool_context={tool_id}"]
-            }
-            
-        # Code-oriented tools
+            return {"route_name": "erp", "confidence": 1.0, "reasons": [f"tool_context={tool_id}"]}
         if any(x in tool_id for x in ["code", "refactor", "nav", "search_code", "ast"]):
-            return {
-                "route_name": "code",
-                "confidence": 1.0,
-                "reasons": [f"tool_context={tool_id}"]
-            }
+            return {"route_name": "code", "confidence": 1.0, "reasons": [f"tool_context={tool_id}"]}
 
-    # 2. Code-like text detection (Priority: High)
-    # Code fences check
-    if _count_fenced_code_blocks(text) >= 1:
+    text_lower = text.lower()
+    
+    # Collect Signals
+    signals: List[RouteSignal] = []
+    
+    # Code Signals
+    if s := score_code_fences(text): signals.append(s)
+    if s := score_code_structure(text): signals.append(s)
+    if s := score_code_keywords(text): signals.append(s)
+    
+    # ERP Signal
+    erp_signal = _score_erp(text, text_lower)
+    if erp_signal:
+        signals.append(erp_signal)
+    
+    # Select Best Signal
+    if not signals:
         return {
-            "route_name": "code",
-            "confidence": 0.9,
-            "reasons": ["heuristic=fenced-code"]
+            "route_name": "docs",
+            "confidence": 0.5,
+            "reasons": ["default=docs"]
         }
-
-    # Structure check
-    structure_matches = CODE_STRUCT_REGEX.findall(text)
-    if len(structure_matches) > 0:
-        return {
-            "route_name": "code",
-            "confidence": 0.7,
-            "reasons": [f"code-structure={','.join(set(structure_matches[:3]))}"]
-        }
-
-    # Keyword density check
-    words = set(re.findall(r"\b\w+\b", text))
-    code_keywords_found = words.intersection(CODE_KEYWORDS)
-    if len(code_keywords_found) >= 2:
-        return {
-            "route_name": "code",
-            "confidence": 0.7,
-            "reasons": [f"code-keywords={','.join(list(code_keywords_found)[:3])}"]
-        }
-
-    # 3. ERP/Product detection (Priority: Low)
-    sku_matches = ERP_SKU_REGEX.findall(text)
-    if sku_matches:
-        return {
-            "route_name": "erp",
-            "confidence": 0.9,
-            "reasons": [f"sku_pattern={','.join(sku_matches[:3])}"]
-        }
-        
-    erp_kw_found = [w for w in ERP_KEYWORDS if w in text_lower]
-    if len(erp_kw_found) >= 2 or ("sku" in erp_kw_found and len(erp_kw_found) >= 1):
-        return {
-            "route_name": "erp",
-            "confidence": 0.8,
-            "reasons": [f"erp_keywords={','.join(erp_kw_found[:3])}"]
-        }
-
-    # Default fallback
+    
+    # Tie-breaking: Code > ERP if scores are equal
+    best_signal = max(signals, key=lambda x: (x.score, 1 if x.route == "code" else 0))
+    
     return {
-        "route_name": "docs",
-        "confidence": 0.5,
-        "reasons": ["default=docs"]
+        "route_name": best_signal.route,
+        "confidence": best_signal.score,
+        "reasons": [s.reason for s in signals]
     }
