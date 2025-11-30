@@ -95,6 +95,12 @@ class RAGDoctorScreen(Screen):
     .hidden {
         display: none;
     }
+
+    .description {
+        margin-bottom: 1;
+        margin-left: 2;
+        color: $text-muted;
+    }
     """
 
     BINDINGS = [
@@ -130,7 +136,9 @@ class RAGDoctorScreen(Screen):
                         with Vertical(id="action-buttons", classes="hidden"):
                             yield Label("\nActions:", classes="section-header")
                             yield Button("Dry Run: Embed Pending", id="btn-embed-dry", variant="default")
+                            yield Label("  - Shows a plan of up to 20 spans that would be embedded, without making changes.", classes="description")
                             yield Button("Execute: Embed Pending", id="btn-embed-exec", variant="error")
+                            yield Label("  - Processes up to 100 pending spans, creating their embeddings.", classes="description")
                         yield Label("\nCommand Output:", id="output-label", classes="hidden")
                         yield RichLog(id="command-log", classes="hidden", markup=True)
         yield Footer()
