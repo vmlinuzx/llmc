@@ -23,6 +23,19 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
             "reasons": list[str], # human-readable reasons for logging
         }
     """
+    # Normalize input (Phase 1 – Change 1)
+    if text is None:
+        text = ""
+    if not isinstance(text, str):
+        # Defensive: ensure text is stringifiable
+        text = str(text)
+    if not text.strip():
+        return {
+            "route_name": "docs",
+            "confidence": 0.2,
+            "reasons": ["empty-or-none-input"]
+        }
+
     reasons: List[str] = []
     route_name = "docs"
     confidence = 0.5
