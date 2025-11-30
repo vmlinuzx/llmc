@@ -226,7 +226,7 @@ class AnalyticsScreen(Screen):
             WHERE mode = 'passthrough'
             GROUP BY cmd 
             ORDER BY count DESC
-            LIMIT 5
+            LIMIT 50
         """)
         
         for cmd, count, avg_out in cursor.fetchall():
@@ -247,7 +247,7 @@ class AnalyticsScreen(Screen):
             WHERE mode = 'enriched'
             GROUP BY cmd 
             ORDER BY count DESC
-            LIMIT 5
+            LIMIT 50
         """)
         
         for cmd, count, avg_lat in cursor.fetchall():
