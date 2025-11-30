@@ -37,8 +37,6 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
         }
 
     reasons: List[str] = []
-    route_name = "docs"
-    confidence = 0.5
     
     text_lower = text.lower()
 
@@ -62,7 +60,35 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
                 "reasons": [f"tool_context={tool_id}"]
             }
 
-    # 2. ERP/Product detection (Specific patterns)
+    # 2. Code-like text detection (Priority: High)
+    # Code fences check
+    if "```" in text:
+        return {
+            "route_name": "code",
+            "confidence": 0.9,
+            "reasons": ["heuristic=fenced-code"]
+        }
+
+    # Structure check
+    structure_matches = CODE_STRUCT_REGEX.findall(text)
+    if len(structure_matches) > 0:
+        return {
+            "route_name": "code",
+            "confidence": 0.7,
+            "reasons": [f"code-structure={','.join(set(structure_matches[:3]))}"]
+        }
+
+    # Keyword density check
+    words = set(re.findall(r"\b\w+\b", text))
+    code_keywords_found = words.intersection(CODE_KEYWORDS)
+    if len(code_keywords_found) >= 2:
+        return {
+            "route_name": "code",
+            "confidence": 0.7,
+            "reasons": [f"code-keywords={','.join(list(code_keywords_found)[:3])}"]
+        }
+
+    # 3. ERP/Product detection (Priority: Low)
     sku_matches = ERP_SKU_REGEX.findall(text)
     if sku_matches:
         return {
@@ -79,41 +105,9 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
             "reasons": [f"erp_keywords={','.join(erp_kw_found[:3])}"]
         }
 
-    # 3. Code-like text detection
-    text_stripped = text.strip()
-    
-    # Code fences check
-    if "```" in text:
-        # If it has code fences, it's likely referring to code or asking about code
-        # We'll treat it as code if it has language hints inside, or just generally strongly imply code
-        return {
-            "route_name": "code",
-            "confidence": 0.9,
-            "reasons": ["heuristic=code_fences"]
-        }
-
-    # Structure check
-    structure_matches = CODE_STRUCT_REGEX.findall(text)
-    if len(structure_matches) > 0:
-        reasons.append(f"pattern={','.join(set(structure_matches[:3]))}")
-        route_name = "code"
-        confidence = 0.7
-
-    # Keyword density check
-    words = set(re.findall(r"\b\w+\b", text))
-    code_keywords_found = words.intersection(CODE_KEYWORDS)
-    if len(code_keywords_found) >= 2:
-        reasons.append(f"keywords={','.join(list(code_keywords_found)[:3])}")
-        route_name = "code"
-        # Boost confidence if we already matched structure, otherwise set it
-        confidence = 0.8 if route_name == "code" else 0.7
-
-    # If no strong code signals, default to docs
-    if route_name == "docs":
-        reasons.append("default=docs")
-
+    # Default fallback
     return {
-        "route_name": route_name,
-        "confidence": confidence,
-        "reasons": reasons
+        "route_name": "docs",
+        "confidence": 0.5,
+        "reasons": ["default=docs"]
     }
