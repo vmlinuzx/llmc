@@ -172,6 +172,27 @@ def log_event(
         pass
 
 
+def log_routing_event(
+    mode: str,
+    details: Dict[str, Any],
+    repo_root: Path | None = None,
+) -> None:
+    """Log a routing-specific telemetry event."""
+    detail_str = ", ".join([f"{k}={v}" for k, v in details.items()])
+    cmd_str = f"[{mode}] {detail_str}"
+
+    log_event(
+        cmd=cmd_str,
+        mode=mode,
+        input_size=0,
+        output_size=0,
+        truncated=False,
+        handle_created=False,
+        latency_ms=0,
+        repo_root=repo_root,
+    )
+
+
 class TeTimer:
     """Context manager for timing TE operations."""
 

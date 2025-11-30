@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 from collections.abc import Callable
+import logging
 
 from jsonschema import Draft7Validator, ValidationError
 
@@ -12,10 +13,14 @@ from .config import (
     embedding_model_name,
     embedding_normalize,
     load_config,
+    get_route_for_slice_type, # Added import
+    resolve_route,             # Added import
 )
 from .database import Database
 from .utils import _gitignore_matcher
 from .embeddings import HASH_MODELS, build_embedding_backend
+
+log = logging.getLogger(__name__) # Initialize logger
 
 MAX_SNIPPET_CHARS = 800
 
@@ -132,13 +137,21 @@ def embedding_plan(
     plan: List[dict] = []
     for item in items:
         # Resolve routing
-        route_key = slice_map.get(item.slice_type, "docs")
-        # Default to docs/embeddings if route not configured
-        route_cfg = routes.get(route_key, {"profile": "docs", "index": "embeddings"})
-        profile_name = route_cfg.get("profile", "docs")
+        route_name = get_route_for_slice_type(item.slice_type, repo_root)
+        try:
+            profile_name, index_name = resolve_route(route_name, "ingest", repo_root)
+        except ConfigError as e:
+            log.warning(f"Skipping span {item.span_hash} due to config error: {e}")
+            continue
+
+        log.debug(
+            f"Embed Plan: Span {item.span_hash} (slice_type={item.slice_type}) "
+            f"routed to: route='{route_name}', profile='{profile_name}', index='{index_name}'"
+        )
+        
+        # Resolve model/dim from the resolved profile
         profile_cfg = profiles.get(profile_name, {})
 
-        # Resolve model/dim
         resolved_model = model
         if not resolved_model or resolved_model == "auto":
             resolved_model = profile_cfg.get("model") or embedding_model_name()
@@ -159,8 +172,8 @@ def embedding_plan(
                 "path": str(item.file_path),
                 "lang": item.lang,
                 "slice_type": item.slice_type,
-                "route": route_key,
-                "target_index": route_cfg.get("index", "embeddings"),
+                "route": route_name,
+                "target_index": index_name,
                 "lines": [item.start_line, item.end_line],
                 "code_length": len(code),
                 "embedding_hint": {
@@ -200,41 +213,45 @@ def execute_embeddings(
         return [], fallback_model, fallback_dim
 
     config = load_config(repo_root)
-    routes = config.get("embeddings", {}).get("routes", {})
-    slice_map = config.get("routing", {}).get("slice_type_to_route", {})
-    profiles = config.get("embeddings", {}).get("profiles", {})
 
     # Group items by (profile_name, index_name, route_name)
     from collections import defaultdict
     groups = defaultdict(list)
 
     for item in items:
-        route_key = slice_map.get(item.slice_type, "docs")
-        route_cfg = routes.get(route_key, {"profile": "docs", "index": "embeddings"})
+        route_name = get_route_for_slice_type(item.slice_type, repo_root)
+        try:
+            profile_name, index_name = resolve_route(route_name, "ingest", repo_root)
+        except ConfigError as e:
+            log.warning(f"Skipping span {item.span_hash} due to config error: {e}")
+            continue
         
-        profile_name = route_cfg.get("profile", "docs")
-        index_name = route_cfg.get("index", "embeddings")
-        
-        groups[(profile_name, index_name, route_key)].append(item)
+        groups[(profile_name, index_name, route_name)].append(item)
 
     total_created: List[Tuple[str, int]] = []
     last_model = "mixed"
     last_dim = 0
 
     for (profile_name, index_name, route_name), group_items in groups.items():
-        profile_cfg = profiles.get(profile_name, {})
+        log.debug(
+            f"Execute Embeddings: Processing {len(group_items)} spans for "
+            f"route='{route_name}', profile='{profile_name}', index='{index_name}'"
+        )
+        
+        profile_cfg = config.get("embeddings", {}).get("profiles", {})
+        profile_details = profile_cfg.get(profile_name, {}) # Get details for the resolved profile
         
         # Resolve model/dim (CLI overrides apply to all)
         resolved_model = model
         if not resolved_model or resolved_model == "auto":
-            resolved_model = profile_cfg.get("model") or embedding_model_name()
+            resolved_model = profile_details.get("model") or embedding_model_name() # Use profile_details
             
         resolved_dim = dim
         if not resolved_dim or resolved_dim <= 0:
             if resolved_model in HASH_MODELS:
                 resolved_dim = 64
             else:
-                resolved_dim = profile_cfg.get("dim") or embedding_model_dim()
+                resolved_dim = profile_details.get("dim") or embedding_model_dim() # Use profile_details
 
         backend = build_embedding_backend(resolved_model, dim=resolved_dim)
 

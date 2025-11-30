@@ -209,6 +209,116 @@ def _handle_stats(repo_root: Path) -> int:
             line = f"{cmd} ({count}x) - {avg_lat:.1f}ms"
             print(f"│ {line:<54}│")
         print("└───────────────────────────────────────────────────────┘")
+        print()
+        
+        # Routing Stats
+        print("┌─ Routing Stats ───────────────────────────────────────┐")
+        
+        # Slice Ingest Routing
+        slice_ingest_cursor = conn.execute("""
+            SELECT 
+                cmd
+            FROM telemetry_events 
+            WHERE mode = 'routing_ingest_slice'
+        """)
+        slice_ingest_events = slice_ingest_cursor.fetchall()
+        
+        slice_types: Dict[str, int] = {}
+        slice_routes: Dict[str, int] = {}
+        for event in slice_ingest_events:
+            cmd_str = event[0]
+            # Example: [routing_ingest_slice] slice_type=code, route_name=code, profile_name=code_jina
+            parts = cmd_str.split("] ")[1].split(", ")
+            details = {p.split("=")[0]: p.split("=")[1] for p in parts}
+            
+            slice_type = details.get("slice_type", "unknown")
+            route_name = details.get("route_name", "unknown")
+            
+            slice_types[slice_type] = slice_types.get(slice_type, 0) + 1
+            slice_routes[route_name] = slice_routes.get(route_name, 0) + 1
+
+        print("│ Slices Ingested:                                      │")
+        if not slice_types and not slice_routes:
+            print("│   (no data)                                           │")
+        else:
+            print("│   by_slice_type:                                      │")
+            for stype, count in sorted(slice_types.items()):
+                print(f"│     {stype:<15} {count:<28}│")
+            print("│   by_route_name:                                      │")
+            for rname, count in sorted(slice_routes.items()):
+                print(f"│     {rname:<15} {count:<28}│")
+        print("│                                                       │")
+
+        # Query Routing
+        query_classify_cursor = conn.execute("""
+            SELECT 
+                cmd
+            FROM telemetry_events 
+            WHERE mode = 'routing_query_classify'
+        """)
+        query_classify_events = query_classify_cursor.fetchall()
+        
+        query_routes: Dict[str, int] = {}
+        for event in query_classify_events:
+            cmd_str = event[0]
+            # Example: [routing_query_classify] route_name=docs, confidence=0.8
+            parts = cmd_str.split("] ")[1].split(", ")
+            details = {p.split("=")[0]: p.split("=")[1] for p in parts}
+            
+            route_name = details.get("route_name", "unknown")
+            query_routes[route_name] = query_routes.get(route_name, 0) + 1
+        
+        fallback_cursor = conn.execute("""
+            SELECT 
+                cmd
+            FROM telemetry_events 
+            WHERE mode = 'routing_fallback'
+        """)
+        fallback_events = fallback_cursor.fetchall()
+        
+        fallbacks: Dict[str, int] = {}
+        for event in fallback_events:
+            cmd_str = event[0]
+            # Example: [routing_fallback] type=missing_slice_type_mapping, slice_type=weird_type, fallback_to=docs
+            parts = cmd_str.split("] ")[1].split(", ")
+            details = {p.split("=")[0]: p.split("=")[1] for p in parts}
+            
+            fallback_type = details.get("type", "unknown")
+            fallbacks[fallback_type] = fallbacks.get(fallback_type, 0) + 1
+
+        error_cursor = conn.execute("""
+            SELECT 
+                cmd
+            FROM telemetry_events 
+            WHERE mode = 'routing_error'
+        """)
+        error_events = error_cursor.fetchall()
+        
+        routing_errors: Dict[str, int] = {}
+        for event in error_events:
+            cmd_str = event[0]
+            # Example: [routing_error] type=critical_missing_docs_route, missing_route=docs, operation=ingest
+            parts = cmd_str.split("] ")[1].split(", ")
+            details = {p.split("=")[0]: p.split("=")[1] for p in parts}
+            
+            error_type = details.get("type", "unknown")
+            routing_errors[error_type] = routing_errors.get(error_type, 0) + 1
+
+        print("│ Query Routing:                                        │")
+        if not query_routes and not fallbacks and not routing_errors:
+            print("│   (no data)                                           │")
+        else:
+            print("│   by_route_name:                                      │")
+            for rname, count in sorted(query_routes.items()):
+                print(f"│     {rname:<15} {count:<28}│")
+            print("│   Fallbacks:                                          │")
+            for ftype, count in sorted(fallbacks.items()):
+                print(f"│     {ftype:<15} {count:<28}│")
+            print("│   Errors:                                             │")
+            for etype, count in sorted(routing_errors.items()):
+                print(f"│     {etype:<15} {count:<28}│")
+
+        print("└───────────────────────────────────────────────────────┘")
         
     finally:
         conn.close()

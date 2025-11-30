@@ -5,12 +5,39 @@ and reranker weights for RAG Nav search.
 
 from __future__ import annotations
 
-import configparser
-import os
-from pathlib import Path
-from typing import Dict, Optional, Set
+import logging
+import warnings
+from typing import Any, Dict, Optional, Set, Tuple
 import tomllib
 from functools import lru_cache
+
+from llmc.te.telemetry import log_routing_event # Import the new logging function
+
+# Set up logging for this module
+log = logging.getLogger(__name__)
+
+# Custom exception for configuration errors
+class ConfigError(Exception):
+    """Custom exception for errors found in configuration."""
+    pass
+
+# Custom warning filter to log warnings only once per message
+class ConfigWarningFilter(logging.Filter):
+    """Filters out duplicate warning messages."""
+    def __init__(self, name=''):
+        super().__init__(name)
+        self.seen = set()
+
+    def filter(self, record):
+        if record.levelno == logging.WARNING and record.msg in self.seen:
+            return False
+        self.seen.add(record.msg)
+        return True
+
+# Apply the filter to prevent log spam from config warnings
+for handler in logging.root.handlers:
+    handler.addFilter(ConfigWarningFilter())
+
 
 RAG_DIR_NAME = ".rag"
 DEFAULT_INDEX_NEW = "index_v2.db"
@@ -38,10 +65,201 @@ def load_config(repo_root: Optional[Path] = None) -> Dict:
     except Exception:
         return {}
 
-
-def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
+@lru_cache(maxsize=128) # Cache to avoid log spam for repeated missing slice types
+def get_route_for_slice_type(slice_type: str, repo_root: Optional[Path] = None) -> str:
+    """
+    Determines the route_name for a given slice_type.
+    Defaults to "docs" if the slice_type is not explicitly mapped.
+    Emits a warning if a slice_type is unmapped, but only once per unique slice_type.
+    """
     cfg = load_config(repo_root)
-    return cfg.get("enrichment", {}).get("est_tokens_per_span", 350)
+    slice_type_to_route = cfg.get("routing", {}).get("slice_type_to_route", {})
+    
+    route_name = slice_type_to_route.get(slice_type)
+    if route_name is None:
+        log.warning(
+            f"Config: Missing 'routing.slice_type_to_route' entry for slice_type='{slice_type}'. "
+            "Defaulting to route_name='docs'."
+        )
+        log_routing_event(
+            mode="routing_fallback",
+            details={
+                "type": "missing_slice_type_mapping",
+                "slice_type": slice_type,
+                "fallback_to": "docs",
+            },
+            repo_root=repo_root,
+        )
+        return "docs"
+    return route_name
+
+@lru_cache(maxsize=128)
+def resolve_route(route_name: str, operation_type: str, repo_root: Optional[Path] = None) -> Tuple[str, str]:
+    """
+    Resolves the embedding profile and index for a given route name.
+    Handles missing route configurations and missing profile references with fallbacks or errors.
+
+    Args:
+        route_name: The name of the route (e.g., "docs", "code").
+        operation_type: The type of operation ("ingest" or "query") for logging context.
+        repo_root: The root path of the repository.
+
+    Returns:
+        A tuple containing (profile_name, index_name).
+
+    Raises:
+        ConfigError: If a critical configuration is missing and no fallback is possible.
+    """
+    cfg = load_config(repo_root)
+    
+    # 1. Check for missing embeddings.routes.* entries
+    routes_cfg = cfg.get("embeddings", {}).get("routes", {})
+    route_details = routes_cfg.get(route_name)
+
+    # Fallback logic for missing route_name
+    if route_details is None:
+        if route_name != "docs": # Avoid infinite recursion if "docs" route itself is missing
+            log.warning(
+                f"Config: Missing 'embeddings.routes.{route_name}' for {operation_type}. "
+                "Falling back to 'docs' route."
+            )
+            log_routing_event(
+                mode="routing_fallback",
+                details={
+                    "type": "missing_route_config",
+                    "missing_route": route_name,
+                    "operation": operation_type,
+                    "fallback_to": "docs",
+                },
+                repo_root=repo_root,
+            )
+            return resolve_route("docs", operation_type, repo_root)
+        else: # "docs" route is missing, this is a critical error
+            error_msg = (
+                "Critical Config Error: 'embeddings.routes.docs' is missing, "
+                "and no fallback is possible. Please define it in llmc.toml."
+            )
+            log.error(error_msg)
+            log_routing_event(
+                mode="routing_error",
+                details={
+                    "type": "critical_missing_docs_route",
+                    "missing_route": "docs",
+                    "operation": operation_type,
+                    "error": error_msg,
+                },
+                repo_root=repo_root,
+            )
+            raise ConfigError(error_msg)
+
+    profile_name = route_details.get("profile")
+    index_name = route_details.get("index")
+
+    if not profile_name or not index_name:
+        if route_name != "docs":
+            log.warning(
+                f"Config: Route '{route_name}' for {operation_type} has incomplete definition "
+                f"(profile: {profile_name}, index: {index_name}). Falling back to 'docs' route."
+            )
+            log_routing_event(
+                mode="routing_fallback",
+                details={
+                    "type": "incomplete_route_definition",
+                    "route": route_name,
+                    "operation": operation_type,
+                    "profile_missing": profile_name is None,
+                    "index_missing": index_name is None,
+                    "fallback_to": "docs",
+                },
+                repo_root=repo_root,
+            )
+            return resolve_route("docs", operation_type, repo_root)
+        else:
+            error_msg = (
+                f"Critical Config Error: 'embeddings.routes.docs' is incompletely defined "
+                f"(profile: {profile_name}, index: {index_name}). Please fix it in llmc.toml."
+            )
+            log.error(error_msg)
+            log_routing_event(
+                mode="routing_error",
+                details={
+                    "type": "critical_incomplete_docs_route",
+                    "route": "docs",
+                    "operation": operation_type,
+                    "profile_missing": profile_name is None,
+                    "index_missing": index_name is None,
+                    "error": error_msg,
+                },
+                repo_root=repo_root,
+            )
+            raise ConfigError(error_msg)
+
+    # 2. Check for missing embeddings.profiles.* entries
+    profiles_cfg = cfg.get("embeddings", {}).get("profiles", {})
+    profile_details = profiles_cfg.get(profile_name)
+
+    if profile_details is None:
+        if route_name == "docs": # Fallback to default_docs only if the target route is "docs"
+            log.warning(
+                f"Config: Profile '{profile_name}' referenced by route '{route_name}' "
+                f"for {operation_type} is missing. Attempting to use 'default_docs' profile."
+            )
+            log_routing_event(
+                mode="routing_fallback",
+                details={
+                    "type": "missing_profile_reference",
+                    "profile": profile_name,
+                    "route": route_name,
+                    "operation": operation_type,
+                    "fallback_to": "default_docs",
+                },
+                repo_root=repo_root,
+            )
+            # This is a bit tricky: if 'default_docs' is also missing or its profile is missing,
+            # resolve_route('docs') would handle the error or use its own fallback.
+            # Here we assume 'default_docs' is a profile name, not a route name.
+            default_docs_profile = profiles_cfg.get("default_docs")
+            if default_docs_profile:
+                return "default_docs", index_name # Use the default_docs profile but keep the index_name from the original route
+            else:
+                error_msg = (
+                    f"Config Error: Route '{route_name}' for {operation_type} refers to missing profile "
+                    f"'{profile_name}', and 'default_docs' profile is also missing. "
+                    "Please define the profile or 'default_docs' in llmc.toml."
+                )
+                log.error(error_msg)
+                log_routing_event(
+                    mode="routing_error",
+                    details={
+                        "type": "critical_missing_profile_and_default",
+                        "profile": profile_name,
+                        "route": route_name,
+                        "operation": operation_type,
+                        "error": error_msg,
+                    },
+                    repo_root=repo_root,
+                )
+                raise ConfigError(error_msg)
+        else: # Cannot fallback for non-docs routes, raise error
+            error_msg = (
+                f"Config Error: Route '{route_name}' for {operation_type} refers to missing profile "
+                f"'{profile_name}'. Please define the profile in llmc.toml."
+            )
+            log.error(error_msg)
+            log_routing_event(
+                mode="routing_error",
+                details={
+                    "type": "missing_profile_reference",
+                    "profile": profile_name,
+                    "route": route_name,
+                    "operation": operation_type,
+                    "error": error_msg,
+                },
+                repo_root=repo_root,
+            )
+            raise ConfigError(error_msg)
+            
+    return profile_name, index_name
 
 
 def get_exclude_dirs(repo_root: Optional[Path] = None) -> Set[str]:
@@ -259,6 +477,7 @@ def embedding_gpu_min_free_mb(repo_root: Optional[Path] = None) -> int:
 
 def is_query_routing_enabled(repo_root: Optional[Path] = None) -> bool:
     cfg = load_config(repo_root)
+    # Default to False if the flag is omitted (backwards-compatible behavior)
     return cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
 
 

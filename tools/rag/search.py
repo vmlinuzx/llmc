@@ -20,6 +20,7 @@ from .embeddings import build_embedding_backend, HASH_MODELS
 from .utils import find_repo_root
 from llmc.routing.query_type import classify_query
 import logging
+from tools.rag.config import ConfigError # Added import
 
 logger = logging.getLogger(__name__)
 
@@ -311,58 +312,91 @@ def search_spans(
 
     # Routing logic
     route_decision = None
-    target_profile = None
-    target_index = "embeddings"
-    
-    # Defaults
-    resolved_model = model_override
-    resolved_dim = None
+    final_route_name = "docs" # Default to docs
+    final_profile_name = None
+    final_index_name = "embeddings" # Default to embeddings table name
 
     if is_query_routing_enabled(repo):
         classification = classify_query(query, tool_context=tool_context)
-        route_name = classification["route_name"]
+        classified_route_name = classification["route_name"]
         route_decision = classification
         
-        if logger.isEnabledFor(logging.INFO):
-            logger.info(
-                "Query routing: route=%s confidence=%.2f reasons=%s query_hash=%s",
-                route_name,
-                classification["confidence"],
-                classification["reasons"],
-                hash(query)
+        logger.debug(
+            "Query routing classification: route='%s' confidence=%.2f reasons=%s",
+            classified_route_name,
+            classification["confidence"],
+            classification["reasons"],
+        )
+        log_routing_event(
+            mode="routing_query_classify",
+            details={
+                "route_name": classified_route_name,
+                "confidence": f"{classification['confidence']:.2f}",
+                "reasons": ";".join(classification["reasons"]),
+                "query_hash": hash(query)
+            },
+            repo_root=repo,
+        )
+
+        try:
+            # Try to resolve the classified route
+            profile_name, index_name = resolve_route(classified_route_name, "query", repo)
+            final_route_name = classified_route_name
+            final_profile_name = profile_name
+            final_index_name = index_name
+            logger.debug(
+                f"Query routing resolved: route='{final_route_name}', profile='{final_profile_name}', index='{final_index_name}'"
             )
-        
-        config = load_config(repo)
-        # Resolve route -> profile -> index
-        # Assuming embeddings.routes.<name> exists
-        routes_cfg = config.get("embeddings", {}).get("routes", {})
-        route_cfg = routes_cfg.get(route_name, {})
-        
-        if not route_cfg:
-            # Fallback to docs if route not found
-            route_name = "docs"
-            route_cfg = routes_cfg.get("docs", {"profile": "default_docs", "index": "embeddings"})
-            if route_decision:
-                route_decision["fallback"] = "route_not_found"
+        except ConfigError as e:
+            # Fallback to docs if the classified route is not safely resolvable
+            logger.warning(
+                f"Query routing: Classified route '{classified_route_name}' cannot be resolved safely: {e}. "
+                "Falling back to 'docs' route."
+            )
+            log_routing_event(
+                mode="routing_fallback",
+                details={
+                    "type": "unsafe_classified_route_fallback",
+                    "classified_route": classified_route_name,
+                    "reason": str(e),
+                    "fallback_to": "docs",
+                    "operation": "query",
+                },
+                repo_root=repo,
+            )
+            # Re-resolve for docs route to get its profile and index
+            try:
+                profile_name, index_name = resolve_route("docs", "query", repo)
+                final_route_name = "docs"
+                final_profile_name = profile_name
+                final_index_name = index_name
+                logger.debug(
+                    f"Query routing fallback resolved: route='{final_route_name}', profile='{final_profile_name}', index='{final_index_name}'"
+                )
+            except ConfigError as docs_e:
+                # If even docs route is problematic, this is a critical config issue
+                logger.error(f"Critical Config Error: Even 'docs' route cannot be resolved: {docs_e}. Query search will likely fail.")
+                # This error will likely be caught by the outer try-except for db.iter_embeddings
+                pass
 
-        target_index = route_cfg.get("index", "embeddings")
-        profile_name = route_cfg.get("profile", "default_docs")
-        
-        # Get profile config to find model/dim
-        profiles_cfg = config.get("embeddings", {}).get("profiles", {})
-        profile_cfg = profiles_cfg.get(profile_name, {})
-        
-        if not model_override:
-            resolved_model = profile_cfg.get("model")
-            resolved_dim = profile_cfg.get("dim")
-
+    # Determine final model and dim based on the resolved profile
+    config = load_config(repo) # Reload config to ensure fresh state after potential fallbacks
+    
+    # Get profile config to find model/dim
+    profiles_cfg = config.get("embeddings", {}).get("profiles", {})
+    resolved_profile_cfg = profiles_cfg.get(final_profile_name, {}) # Use final_profile_name
+    
     # Fallback to defaults if not routed or model not found
     if not resolved_model:
-        resolved_model = embedding_model_name()
+        resolved_model = resolved_profile_cfg.get("model") or embedding_model_name()
     if not resolved_dim:
-        resolved_dim = embedding_model_dim()
+        resolved_dim = resolved_profile_cfg.get("dim") or embedding_model_dim()
         if resolved_model in HASH_MODELS:
             resolved_dim = 64
+
+    logger.debug(
+        f"Query embedding backend: model='{resolved_model}', dim='{resolved_dim}'"
+    )
 
     backend = build_embedding_backend(resolved_model, dim=resolved_dim)
     query_vector = backend.embed_queries([query])[0]
@@ -374,11 +408,22 @@ def search_spans(
         scored = _score_candidates(
             query_vector, 
             query_norm, 
-            db.iter_embeddings(table_name=target_index), 
+            db.iter_embeddings(table_name=final_index_name), # Use final_index_name
             query_text=query
         )
     except ValueError:
          # Fallback to default table if target_index is invalid/empty
+         logger.warning(f"Query search against '{final_index_name}' failed (e.g. invalid table). Falling back to 'embeddings' table.")
+         log_routing_event(
+            mode="routing_fallback",
+            details={
+                "type": "invalid_query_index_fallback",
+                "failed_index": final_index_name,
+                "fallback_to": "embeddings",
+                "operation": "query",
+            },
+            repo_root=repo,
+         )
          scored = _score_candidates(
             query_vector, 
             query_norm, 
@@ -400,7 +445,7 @@ def search_spans(
             search_info["rank"] = i + 1
             if route_decision:
                 search_info["routing"] = route_decision
-                search_info["target_index"] = target_index
+                search_info["target_index"] = final_index_name # Use final_index_name
             
             new_results.append(
                 SpanSearchResult(
