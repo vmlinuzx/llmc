@@ -51,6 +51,7 @@ EXT_LANG_MAP = {
 }
 
 SHEBANG_REGEX = re.compile(r"^#!.*(python|bash|sh|node|env python|env bash)")
+ERP_KEY_REGEX = re.compile(r'["\']?(sku|upc|asin|model_number|product_id|catalog_ref)["\']?\s*[:=]', re.IGNORECASE)
 
 def classify_slice(path: Path, mime: Optional[str], text: str) -> ClassificationResult:
     reasons = []
@@ -58,6 +59,28 @@ def classify_slice(path: Path, mime: Optional[str], text: str) -> Classification
     slice_type = "other"
     slice_language = None
     
+    # 0. ERP/Product check (High priority)
+    # Path heuristics
+    path_str = str(path).lower()
+    is_erp_path = any(part in path.parts for part in ["erp", "pim", "products", "catalog"])
+    
+    # Content heuristics for structured files
+    is_structured_ext = path.suffix.lower() in [".json", ".yaml", ".yml", ".csv", ".xml"]
+    has_erp_keys = False
+    if is_structured_ext and text:
+        # Scan first 2k chars for speed
+        sample = text[:2000]
+        if ERP_KEY_REGEX.search(sample):
+            has_erp_keys = True
+
+    if is_erp_path or (is_structured_ext and has_erp_keys):
+        return ClassificationResult(
+            slice_type="erp_product",
+            slice_language=None, # data usually doesn't have a language
+            confidence=1.0 if is_erp_path and has_erp_keys else 0.8,
+            reasons=["erp path" if is_erp_path else "erp keys"]
+        )
+
     # 1. Extension check
     ext = path.suffix.lower()
     if ext in EXT_TYPE_MAP:

@@ -268,5 +268,42 @@ When multiple routes return results:
 ### 6.3. Safety
 
 - If `enable_multi_route` is `false` (default), standard single-route retrieval is used.
-- If a secondary route is misconfigured (missing profile/index), it is skipped with a warning, and retrieval proceeds with the remaining routes.
+---
+
+## 7. ERP/Product Route
+
+Phase 7 introduces a dedicated **ERP route** for product-related content. This separates ERP/PIM data (SKUs, specs, catalog info) from general documentation and code, allowing for targeted retrieval and potential future specialization (e.g. different chunking or models).
+
+### 7.1. Logic
+
+- **Ingest**: Slices originating from ERP imports or containing structured product data (JSON/CSV with SKUs) are classified as `slice_type="erp_product"` and routed to the `erp` route.
+- **Query**: Queries containing SKUs (e.g., `W-44910`) or product keywords (`SKU`, `UPC`, `model number`) are classified as `route_name="erp"`.
+- **Retrieval**: The `erp` route uses its own index (`emb_erp`) but currently reuses the documentation embedding model.
+
+### 7.2. Configuration
+
+To enable the ERP route:
+
+1. Define the route in `llmc.toml`:
+   ```toml
+   [embeddings.routes.erp]
+   profile = "docs"     # Reuse existing docs profile or define a custom one
+   index   = "emb_erp"  # Separate index table
+   ```
+
+2. Map the slice type:
+   ```toml
+   [routing.slice_type_to_route]
+   erp_product = "erp"
+   ```
+
+3. (Optional) Add multi-route fan-out:
+   ```toml
+   [routing.multi_route.erp_primary]
+   primary = "erp"
+   secondary = [
+     { route = "docs", weight = 0.2 }
+   ]
+   ```
+
 

@@ -48,10 +48,14 @@ index = "emb_code"
 profile = "docs"
 index = "embeddings"
 
+[embeddings.routes.erp]
+profile = "docs"
+index = "emb_erp"
+
 [routing.slice_type_to_route]
 code = "code"
 docs = "docs"
-erp_product = "docs"
+erp_product = "erp"
 config = "docs"
 data = "docs"
 other = "docs"
