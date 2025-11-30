@@ -13,6 +13,28 @@ CODE_KEYWORDS = {"def", "class", "return", "import", "from", "var", "let", "cons
 ERP_SKU_REGEX = re.compile(r"\b([A-Z]{1,4}-\d{4,6})\b") # Matches W-44910, STR-66320
 ERP_KEYWORDS = {"sku", "upc", "asin", "model number", "item", "product", "catalog", "inventory", "price", "stock"}
 
+FENCE_OPEN_RE = re.compile(r'(^|\n)```[\w-]*\s*\n', re.MULTILINE)
+
+def _count_fenced_code_blocks(_s: str) -> int:
+    """Count fenced code blocks like: ```lang(optional)\n...\n```
+    Returns number of complete fenced blocks (open + close).
+    """
+    count = 0
+    pos = 0
+    while True:
+        m = FENCE_OPEN_RE.search(_s, pos)
+        if not m:
+            break
+        open_idx = m.end()
+        close_idx = _s.find("```", open_idx)
+        if close_idx != -1:
+            count += 1
+            pos = close_idx + 3
+        else:
+            # no closing fence; stop scanning
+            break
+    return count
+
 def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Return a deterministic classification for a query.
 
@@ -62,7 +84,7 @@ def classify_query(text: str, tool_context: Optional[Dict[str, Any]] = None) -> 
 
     # 2. Code-like text detection (Priority: High)
     # Code fences check
-    if "```" in text:
+    if _count_fenced_code_blocks(text) >= 1:
         return {
             "route_name": "code",
             "confidence": 0.9,
