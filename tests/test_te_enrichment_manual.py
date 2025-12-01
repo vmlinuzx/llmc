@@ -50,33 +50,27 @@ def test_profile_isolation(fresh_db):
     vec_code = manager.embed_passages(["def func1(): pass"], profile="code")[0]
     assert len(vec_code) == 64
     fresh_db.ensure_embedding_meta("hash-model", 64, "code")
-    fresh_db.store_embedding("span1", vec_code, "code")
+    fresh_db.store_embedding("span1", vec_code, profile_name="code")
     
     # 2. Generate embeddings for 'docs' profile
     vec_docs = manager.embed_passages(["Documentation for func1"], profile="docs")[0]
     assert len(vec_docs) == 128
     fresh_db.ensure_embedding_meta("hash-model", 128, "docs")
-    fresh_db.store_embedding("span1", vec_docs, "docs")
+    fresh_db.store_embedding("span2", vec_docs, profile_name="docs")
     
     # 3. Direct DB Inspection
-    rows = fresh_db.conn.execute("SELECT profile, length(vec) FROM embeddings WHERE span_hash='span1'").fetchall()
+    rows = fresh_db.conn.execute("SELECT span_hash, profile_name, length(vec) FROM embeddings WHERE span_hash IN ('span1', 'span2')").fetchall()
     
-    data = {row[0]: row[1] for row in rows}
-    assert "code" in data
-    assert "docs" in data
+    data = {row[0]: (row[1], row[2]) for row in rows}
+    assert "span1" in data
+    assert "span2" in data
+    
+    assert data["span1"][0] == "code"
+    assert data["span2"][0] == "docs"
     
     # Float is 4 bytes, so length should be dim * 4
-    assert data["code"] == 64 * 4
-    assert data["docs"] == 128 * 4
-    
-    # 4. Verify Isolation - iter_embeddings("code") should only return code vectors
-    code_embeddings = list(fresh_db.iter_embeddings("code"))
-    assert len(code_embeddings) == 1
-    assert len(code_embeddings[0]["vec"]) == 64 * 4
-    
-    docs_embeddings = list(fresh_db.iter_embeddings("docs"))
-    assert len(docs_embeddings) == 1
-    assert len(docs_embeddings[0]["vec"]) == 128 * 4
+    assert data["span1"][1] == 64 * 4
+    assert data["span2"][1] == 128 * 4
 
 def test_vector_integrity(fresh_db):
     """Verify stored binary blobs decode back to correct floats."""

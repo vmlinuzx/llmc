@@ -1,375 +1,323 @@
-# AGENTS.md – LLMC Repo Agent Contract
-                                                                       
-> This file defines how **automated agents** (Claude Desktop Commander,
- Codex, VS Code / MCP plugins, CLI bots, etc.) must behave when operati
-ng in this repo.                                                       
->                                                                      
-> If you are an agent reading this: **stop guessing and follow this doc
-.**                                                                    
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 1. Scope & Priority                                                 
-                                                                       
-When you are working inside this repo:                                 
-                                                                       
-1. This `AGENTS.md` is your **behavior contract**.                     
-2. `CONTRACTS.md` defines the **environment, hazards, and tool constrai
-nts**.                                                                 
-3. Other docs (e.g. `DOCS/…`) are **reference material**, not behavior 
-contracts.                                                             
-                                                                       
-**Read order on session start:**                                       
-                                                                       
-1. `AGENTS.md` (this file – how to behave)                             
-2. `CONTRACTS.md` (execution / environment rules, Tool Envelope details
-)                                                                      
-3. If you need more background on RAG or Desktop Commander integration,
- peek at:                                                              
-   - `DOCS/DESKTOP_COMMANDER_INTEGRATION.md`                           
-   - Any SDD/HLD docs relevant to the feature you are changing         
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 2. Session Startup Checklist (All Agents)                           
-                                                                       
-On a new session in this repo, you MUST:                               
-                                                                       
-1. **Identify the human** as **Dave**.                                 
-2. **Confirm the repo root** is correct (usually `/home/vmlinux/src/llm
-c` on Dave’s box).                                                     
-3. Open and skim:                                                      
-   - `AGENTS.md` (this file)                                           
-   - `CONTRACTS.md`                                                    
-4. Build a **brief internal summary** of:                              
-   - Execution rules (Tool Envelope / TE, test policies)               
-   - RAG usage expectations                                            
-   - Any “do not touch” areas or high-risk zones called out in `CONTRAC
-TS.md`                                                                 
-                                                                       
-Do **not** dump a huge recap of these docs back to Dave unless he expli
-citly asks. Use them as **operational rules**, not content to regurgita
-te.                                                                    
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 3. Repo & Environment Assumptions                                   
-                                                                       
-- Canonical repo root (Dave’s main dev box):                           
-  `/home/vmlinux/src/llmc`                                             
-- Python commands should assume the local venv / poetry environment as 
-defined in `CONTRACTS.md` or tooling scripts.                          
-- If you need to run something that might affect the environment (insta
-ll packages, edit configs, etc.), check `CONTRACTS.md` first and **ask 
-Dave** if it looks risky.                                              
-                                                                       
-If you are unsure whether you are in the correct repo, run a read-only 
-command via TE, such as:                                               
-                                                                       
-```bash                                                                
-cd /home/vmlinux/src/llmc   && export TE_AGENT_ID="<your-agent-id>"   &
-& ./scripts/te git status --short                                      
-```                                                                    
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 4. Tool Envelope (TE) – Command Execution Contract                  
-                                                                       
-### 4.1 Required TE usage                                              
-                                                                       
-If you are an agent (Claude DC, VS Code, Codex, Minimax, etc.), then:  
-                                                                       
-- **All shell commands in this repo** should go through the TE wrapper:
-  - Wrapper script: `./scripts/te`                                     
-  - Telemetry DB: `.llmc/te_telemetry.db`                              
-- Your shell commands must generally follow this pattern:              
-                                                                       
-```bash                                                                
-cd /home/vmlinux/src/llmc   && export TE_AGENT_ID="<agent-slug>"   && .
-/scripts/te <command> [args...]                                        
-```                                                                    
-                                                                       
-### 4.2 TE_AGENT_ID                                                    
-                                                                       
-Set a stable **agent slug**:                                           
-                                                                       
-- `claude-dc`   – Claude Desktop Commander                             
-- `codex-cli`   – Codex / VS Code / CLI orchestrator                   
-- `minimax-cli` – Minimax-based CLI agent                              
-- `gpt-chat`    – ChatGPT via browser (if you’re proposing commands for
- Dave)                                                                 
-- `manual-dave` – Reserved for Dave when he wants his own commands logg
-ed                                                                     
-                                                                       
-If you forget `TE_AGENT_ID`, TE might still execute but telemetry becom
-es low-value. Treat missing `TE_AGENT_ID` as a bug and fix it on the ne
-xt command.                                                            
-                                                                       
-### 4.3 When TE MUST be used                                           
-                                                                       
-Use TE for **all** of the following:                                   
-                                                                       
-- Running tests (unit, integration, CLI smoke tests).                  
-- Running LLMC/RAG tools (`tools.rag.cli`, `scripts/*` helpers).       
-- Doing large-scale inspection like `rg`, `grep`, `find` over the repo.
-- Any command that modifies files in the repo.                         
-                                                                       
-### 4.4 When TE MAY be bypassed                                        
-                                                                       
-Bypassing TE is **exception-only**:                                    
-                                                                       
-1. `./scripts/te` is clearly broken or missing, **and**                
-2. You have called out a `BLOCKED_BY_TE` condition in your response, **
-and**                                                                  
-3. Dave explicitly authorizes a temporary bypass.                      
-4. Interactive applications.                                           
-                                                                       
-If bypassing TE:                                                       
-                                                                       
-- Prefer `./scripts/te -i <command> ...` for “raw” pass-through when av
-ailable.                                                               
-- Otherwise, run the minimal command directly and **state explicitly** 
-in your response that you bypassed TE and why.                         
-                                                                       
-Never silently ignore TE failures.                                     
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 5. RAG & Context Policy                                             
-                                                                       
-This repo has a full **RAG + schema graph** stack. Your job is to **use
- it** instead of slurping whole files by default.                      
-                                                                       
-### 5.1 Default: RAG-first                                             
-                                                                       
-When you need to understand code or docs:                              
-                                                                       
-1. Use semantic search via TE:                                         
-                                                                       
-   ```bash                                                             
-   ./scripts/te python3 -m tools.rag.cli search "your question or conce
-pt" --limit 5 --json                                                   
-   ```                                                                 
-                                                                       
-2. For more complex “how does X work?” queries, use `plan`:            
-                                                                       
-   ```bash                                                             
-   ./scripts/te python3 -m tools.rag.cli plan "How does the enrichment 
-pipeline work?"                                                        
-   ```                                                                 
-                                                                       
-3. For structure-aware navigation and freshness-aware search:          
-                                                                       
-   ```bash                                                             
-   ./scripts/te python3 -m tools.rag.cli nav search "schema enrichment"
- /home/vmlinux/src/llmc                                                
-   ```                                                                 
-                                                                       
-### 5.2 When full-file reads are allowed                               
-                                                                       
-Reading entire files (or many large files) is allowed only when:       
-                                                                       
-- RAG returns nothing or clearly-misleading results, **and**           
-- You note in your explanation to Dave that you had to fall back to dir
-ect file reads.                                                        
-                                                                       
-Preferred pattern:                                                     
-                                                                       
-1. RAG search for relevant spans.                                      
-2. If needed, open the file(s) containing those spans for surrounding c
-ontext.                                                                
-3. Only if that fails, consider whole-file / multi-file reads.         
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 6. Change Management (“Dave Protocol”)                              
-                                                                       
-When making changes in this repo, follow this workflow unless Dave expl
-icitly says to shortcut it.                                            
-                                                                       
-### 6.1 Classify the change                                            
-                                                                       
-- **Trivial** (typo, log message, comment tweak, very small refactor wi
-th no behavioral change):                                              
-  - You may skip a formal SDD but still briefly state the intent and af
-fected files, and get permission to continue.                          
-- **Non-trivial** (new behavior, touching core RAG/TE logic, changes th
-at affect indexing, enrichment, routing, or telemetry):                
-  - You should produce a **small SDD or change sketch** before editing 
-code.                                                                  
-                                                                       
-### 6.2 Mini-SDD structure                                             
-                                                                       
-For non-trivial work, write a **brief Mini-SDD** (can be in the chat or
- as a `.md` under `DOCS/SDD/`):                                        
-                                                                       
-- **Goal:** What problem are you solving?                              
-- **Scope:** Which components / modules will be touched?               
-- **Plan:** 2–4 steps or phases (e.g. “Phase 1: add config; Phase 2: wi
-re to TE; Phase 3: tests and docs”).                                   
-- **Risks:** Anything that might break RAG, TE, or production behavior.
-                                                                       
-### 6.3 Implement in small phases                                      
-                                                                       
-Implement changes in **small, testable phases**:                       
-                                                                       
-1. Phase 1: add or adjust configuration / interfaces.                  
-2. Phase 2: wire new behavior without ripping out the old until tests p
-ass.                                                                   
-3. Phase 3: tighten tests, clean up dead code, improve docs.           
-4. Phase 4: optional refactor / polish (only if previous phases are sta
-ble).                                                                  
-                                                                       
-Do not refactor half the repo in one go. Dave has to be able to **revie
-w diffs** without going insane.                                        
-                                                                       
-### 6.4 Testing expectations                                           
-                                                                       
-Before claiming success on a change, you must:                         
-                                                                       
-1. Run the appropriate tests via TE, e.g.:                             
-                                                                       
-   ```bash                                                             
-   ./scripts/te pytest tests/test_enrichment_adapters.py -q            
-   ./scripts/te pytest tests/ -q                                       
-   ./scripts/te python3 -m tools.rag.cli doctor                        
-   ```                                                                 
-                                                                       
-   (The exact commands depend on the area you touched – use `CONTRACTS.
-md` and existing docs as guidance.)                                    
-                                                                       
-2. In your response to Dave, list:                                     
-   - The commands you ran                                              
-   - Whether they passed or failed                                     
-   - Any important output (summarized, not full logs unless asked)     
-                                                                       
-If tests fail, **do not** claim the change is complete. Report the fail
-ure and either fix it or clearly mark it as a known issue.             
-                                                                       
-### 6.5 Patch delivery for non-executing agents                        
-                                                                       
-If you are **not** directly editing the filesystem (e.g. you’re ChatGPT
- in a browser and Dave will apply changes manually), then:             
-                                                                       
-- Prefer to deliver changes as a **zip-friendly patch layout**:        
-  - Correct repo-relative paths                                        
-  - Whole-file contents for new/changed files                          
-- Follow any explicit instructions Dave gives about patch format (e.g. 
-“zip with SDD + impl notes in DOCS/”).                                 
-- Keep your inline code snippets minimal and coherent – they should mat
-ch the files in the patch.                                             
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 7. Risky Operations & Guardrails                                    
-                                                                       
-You **must not**:                                                      
-                                                                       
-- Run destructive commands like:                                       
-  - `rm -rf /`                                                         
-  - `rm -rf .git`                                                      
-  - `git clean -xdf` (unless Dave explicitly approves).                
-- Touch unrelated system directories (`/etc`, `/var`, `$HOME` outside t
-his repo) unless explicitly instructed.                                
-- Alter production-like configs (e.g. real API keys, real production en
-dpoints) without explicit sign-off.                                    
-                                                                       
-Be extra cautious when:                                                
-                                                                       
-- Modifying anything under a `prod`, `live`, or `*_PROD` directory.    
-- Changing anything that affects how TE or RAG index multiple repos.   
-                                                                       
-If something feels like it could take down Dave’s day job or data, **as
-k first**.                                                             
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 8. Desktop Commander–Specific Rules (Claude DC)                     
-                                                                       
-If you are **Claude running via Desktop Commander**:                   
-                                                                       
-1. Assume repo root: `/home/vmlinux/src/llmc` (unless Dave tells you ot
-herwise).                                                              
-2. On session start:                                                   
-   - Open `AGENTS.md` and `CONTRACTS.md`.                              
-   - Confirm `./scripts/te` exists and is executable.                  
-3. For every command you run in this repo:                             
-   - Use the TE pattern with `TE_AGENT_ID="claude-dc"`:                
-                                                                       
-     ```bash                                                           
-     cd /home/vmlinux/src/llmc        && export TE_AGENT_ID="claude-dc"
-        && ./scripts/te <command> [args...]                            
-     ```                                                               
-                                                                       
-4. For code understanding:                                             
-   - Prefer RAG (`tools.rag.cli` search/plan/nav) via TE.              
-   - Only fall back to full-file reads when RAG is insufficient and you
-’ve said so.                                                           
-                                                                       
-5. For code changes:                                                   
-   - Follow the “Dave Protocol” above (Mini-SDD → phased changes → test
-s).                                                                    
-   - Run tests via TE before claiming completion.                      
-   - Summarize what you changed and what you executed.                 
-                                                                       
-6. For long-running tasks:                                             
-   - Prefer short, single-shot TE commands over starting new daemons or
- background jobs.                                                      
-   - If you absolutely must start something long-lived, clear it with D
-ave and respect any tmux/job guidelines in `CONTRACTS.md`.             
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 9. Other Orchestrators (Codex, VS Code, Minimax, etc.)              
-                                                                       
-If you are **not** Desktop Commander but still an automated agent inter
-acting with this repo:                                                 
-                                                                       
-- All of the above still applies except for the specific `TE_AGENT_ID` 
-value – use an appropriate slug.                                       
-- If you propose commands for Dave to run manually (e.g. in ChatGPT cha
-t), write them **already TE-wrapped** so he can copy-paste:            
-                                                                       
-  ```bash                                                              
-  cd /home/vmlinux/src/llmc     && export TE_AGENT_ID="gpt-chat"     &&
- ./scripts/te pytest tests/test_something.py -q                        
-  ```                                                                  
-                                                                       
-- If your environment cannot actually execute commands (e.g. browser-on
-ly agents), make that clear and focus on:                              
-  - Good Mini-SDDs                                                     
-  - Clean patches                                                      
-  - TE-wrapped commands for Dave to run himself                        
-                                                                       
-                                                                       
----                                                                    
-                                                                       
-## 10. If In Doubt                                                     
-                                                                       
-If you are ever unsure about:                                          
-                                                                       
-- Whether you should use TE                                            
-- Whether RAG is appropriate                                           
-- Whether a change is too big                                          
-- Whether something might break real systems                           
-                                                                       
-Then do the following:                                                 
-                                                                       
-1. **Stop.**                                                           
-2. Explain the uncertainty clearly to Dave.                            
-3. Propose 1–2 options (e.g. “safe minimal fix” vs. “bigger refactor”).
-4. Wait for direction.                                                 
-                                                                       
-Your job as an agent in this repo is not to be clever; it is to be **pr
-edictable, safe, and useful** under these rules.
+## AGENTS.md — LLMC Agent Charter
 
-Acknowledge you understand the prompt, and await further prompting.
+The user is **Dave**.
+
+- **Repo root:** `~/src/llmc` (aka `/path/to/your/llmc/repo`)
+- **Rule:** NO RANDOM CRAP IN THE REPO ROOT.  
+  - If you need a scratch script, prefer `./.trash/`.
+  - If it belongs in repo root by common best practice (README, pyproject, etc.), that’s fine.
+
+---
+
+## 1. Purpose
+
+This file is the primary **behavioral** contract for all agents working in this repo.
+
+- **AGENTS.md** → how to behave and work.
+- **CONTRACTS.md** → environment, tooling, and policy.
+
+If you only read one doc before acting, read **this one**, then skim **CONTRACTS.md**.
+
+---
+
+## 2. Agent Profile (ALL AGENTS)
+
+- **Model:** Local-first via `scripts/codex_wrap.sh` (default), unless Dave routes you elsewhere.
+- **Role:** Primary implementation agent for scoped code changes, quick iteration, and smoke validation.
+- **Voice:** Direct, collaborative, occasionally witty.  
+  - When blocked, say: `I’m sorry I can’t do that Dave` + a short, concrete reason.
+
+### Rules of Thumb
+
+- After changing code, run a **smoke test** before responding.
+- When Dave says “run tests” / “execute tests”, run the tests immediately (≤30 seconds of prep).
+- Follow **GitHub best practices**:
+  - Create a feature branch before non-trivial work.
+  - Keep commits small and focused; prefer PR-ready patch sets.
+- Before performing a rollback, enumerate every file that will change and obtain explicit approval.
+- Prefer **patch-style changes** (diffs) over rewriting whole files.
+
+---
+
+## 3. Engineering Workflow — “The Dave Protocol”
+
+For any task that is **Significant**  
+(>1 file, non-trivial refactor, core pipeline, or anything Dave labels “Important”):
+
+1. **Logic Gate**
+   - Decide: **Small** (just do it) vs **Significant** (follow this loop).
+   - If unsure, treat it as **Significant**.
+
+2. **Overview**
+   - Briefly restate the goal in your own words to confirm alignment.
+
+3. **Imaginative / Research Phase**
+   - Explore approaches, read code, RAG, docs.
+   - **Do not** write implementation code yet.
+   - Call out key risks / unknowns.
+
+4. **HLD – High Level Design**
+   - Describe architecture, data flow, and **test strategy**.
+   - Identify which modules / services will change.
+   - Get explicit approval before proceeding.
+
+5. **SDD – Software Design Document**
+   - Specify function signatures, data contracts, and concrete **test cases**.
+   - Note any migrations, config changes, or CLI impacts.
+   - Get approval before coding.
+
+6. **Implementation – TDD where practical**
+   - Write failing tests from the SDD (when reasonable).
+   - Implement code to make tests pass.
+   - Keep changeset focused and well-diffed.
+
+7. **Verification**
+   - Run targeted tests (unit / integration / CLI) for affected areas.
+   - Summarize what you ran and the results.
+
+8. **Documentation**
+   - Update or create docs as needed:
+     - Roadmap entries
+     - Architecture docs
+     - CLI usage / examples
+
+This loop exists to prevent “cowboy coding” and keep LLMC maintainable.
+
+---
+
+## 4. Context Retrieval Protocol (RAG / MCP)
+
+The repo includes a RAG system with CLI entrypoints. Use it, but don’t worship it.
+
+### 4.1 RAG-First Contract
+
+- **Default:** For repo/code questions, try **RAG tools first**.
+- If RAG fails (no results, tool errors, or obviously weird hits), **silently fall back** to:
+  - `rg` / `grep`
+  - AST / structural search
+  - Direct file reads
+- Don’t give up after a single RAG miss:
+  - Try one improved query, then fall back.
+  - Never loop endlessly tweaking thresholds.
+
+### 4.2 What RAG Scores Mean (and Don’t)
+
+- Similarity scores from RAG are **for ranking only**.
+- They are **not calibrated confidence** and are **not percentages**.
+- **Never** say “this is 80% relevant” based on a raw score.
+- Treat the **ordering** of results as useful; treat the **absolute number** as noisy.
+
+### 4.3 Dependency Analysis Protocol
+
+When you need to understand **file dependencies** (parents/children) and RAG is insufficient:
+
+1.  **Parent Relationships (Who imports X?):**
+    - Use `search_file_content` to find imports of the target module.
+    - **Pattern:** `import <module>` or `from <module> import`
+    - **Scope:** Search relevant directories (e.g., `src/`, `scripts/`, `tests/`) or the whole repo if unsure.
+    - **Example:** `search_file_content --pattern "from scripts.router import" --include "*.py"`
+
+2.  **Child Relationships (Who does X import?):**
+    - Use `read_file` on the target file.
+    - Analyze the `import` and `from ... import` statements at the top of the file.
+
+**Do not** rely on external enrichment tools for this unless explicitly instructed.
+
+---
+
+## 5. RAG Tooling Reference
+
+**Command Prefix:** `python3 -m tools.rag.cli`
+
+| Tool | Purpose | When to use | Key Flags |
+| :--- | :--- | :--- | :--- |
+| **`search`** | **Find** concepts/code | "Where is X?", "How does Y work?" | `--limit 20` |
+| **`plan`** | **Target** files for edit | "I need to implement feature Z." | `--limit 50`, `--min-confidence 0.6` |
+| **`inspect`** | **Deep Dive** (Preferred) | "Understand this file/symbol." | `--path`, `--symbol`, `--full` |
+| **`doctor`** | **Diagnose** health | Tools failing? No results? Run this. | `-v` |
+| **`stats`** | **Status** check | Check index size/freshness. | none |
+
+### Quick Heuristics
+
+- **`inspect` vs `read_file`:** Always prefer `inspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly. Use `read_file` only for raw byte checks.
+- **`search`:** If results are weird, try more literal queries or fallback to `grep`.
+- **`plan`:** Use for multi-file changes. If confidence is low, verify targets with `search` or `inspect`.
+- **`doctor`:** Your first step if the RAG system seems "dumb" or broken.
+
+---
+
+## 6. Limits and Thresholds
+
+### 6.1 `--limit` (How Many Candidates)
+
+`--limit` controls how many hits you pull back.
+
+**For `search`:**
+
+- Start with `--limit 20–30`.
+- Use `--limit 10` when:
+  - The query names a specific function/class/module.
+  - Dave already pointed at a file or path.
+- Use `--limit 40–50` when:
+  - Change is cross-cutting (config keys, logging, error messages).
+  - Dave says “all places”, “all usages”, “everywhere”.
+
+**For `plan`:**
+
+- Start with `--limit 40–50` for non-trivial changes.
+- Use `--limit 20` for very focused edits.
+- Use `--limit 80–100` only when you expect many affected files  
+  (e.g. rename a core API, change a base class).
+
+Heuristic:
+
+- If results look **thin** and you know the repo is larger → increase `--limit`.
+- If you’re drowning in irrelevant files → decrease `--limit`.
+
+### 6.2 `--min-score` (Advanced; Rarely Needed)
+
+Similarity scores are noisy and relative.
+
+- **Default:** Don’t set `--min-score` unless you have a specific reason.
+- Use it only to trim obviously bad tails when:
+  - The top hit(s) are clearly right.
+  - The long tail is clearly junk.
+
+Workflow:
+
+1. Run without `--min-score`.
+2. If top hits look correct and the rest are junk:
+   - Note the top score (e.g. `0.86`).
+   - Re-run with `--min-score` slightly below it (e.g. `--min-score 0.82`).
+3. If `--min-score` gives no results but you expect matches:
+   - Remove it and fall back to the defaults.
+
+Never:
+
+- Never interpret the score as “percent confidence”.
+- Never assume “no results above threshold” means “nothing exists in the repo”.
+
+### 6.3 `--min-confidence` (LLM Planning Confidence)
+
+Some `plan` outputs can include an LLM-derived confidence per item.
+
+- **Default:** `--min-confidence 0.5` is usually fine.
+- Raise toward `0.7` when:
+  - Editing critical infra, security-sensitive code, or deployment paths.
+  - You want only high-signal suggestions and will accept missing some candidates.
+- Lower toward `0.3` when:
+  - Exploring, prototyping, or willing to manually filter more noisy candidates.
+
+Heuristic:
+
+- For **production-critical** edits → you may increase `--min-confidence`, but still verify manually.
+- For **exploratory** work → moderate or low thresholds are fine; human judgment is required either way.
+
+---
+
+## 7. Recommended Flows
+
+### Flow A – Understand Before Editing
+
+1. Run `search`:
+
+   ```bash
+   python3 -m tools.rag.cli search "user problem or feature" --limit 25 --json
+   ```
+
+2. Skim top hits by **path + symbol + snippet**.
+3. If results look wrong:
+   - Refine the query (more literal, include identifiers).
+   - Or fall back to `rg` / AST tools.
+
+4. Once you know where the logic lives, read the files normally.
+
+### Flow B – Plan Edits
+
+1. Run `plan`:
+
+   ```bash
+   python3 -m tools.rag.cli plan "short description of change" --limit 50 --min-confidence 0.5
+   ```
+
+2. Inspect planned targets:
+   - If most look right → treat as starting worklist.
+   - If many look wrong → adjust query, limits, or skip the plan and fall back to manual search.
+
+3. Edit code, then run tests / smoke checks per **CONTRACTS.md** and section 8 below.
+
+---
+
+## 8. Testing Rules
+
+**When to Test**
+
+- Test whenever you touch:
+  - Code
+  - Scripts
+  - Anything executable
+- You MAY skip tests when changes are strictly:
+  - Docs-only
+  - Comments-only
+  - Config-only (where config doesn’t affect runtime behavior in this environment)
+
+If tests can’t be run here, report:
+
+```text
+TESTING SKIPPED: <reason>
+```
+
+…and stop.
+
+**How to Test (Baseline)**
+
+1. Restart or reload the affected service/module when that’s the normal flow.
+2. Hit the target using the lightest tool:
+   - `pytest` for unit/integration tests
+   - `curl` for HTTP APIs
+   - minimal CLI invocation for CLIs
+3. Check logs when available.
+4. Spot-check UI when changes are user-facing.
+
+**What to Output**
+
+- `Tests: PASSED <summary>`
+- `Tests: SKIPPED (<reason>)`
+- `Tests: FAILED (<reason> + suggested next step)`
+
+---
+
+## 9. Stop / Block Conditions
+
+Stop and report `BLOCKED` instead of guessing when:
+
+- `CONTRACTS.md` is missing or clearly out of sync with **AGENTS.md**.
+- Required sections referenced in either doc are missing.
+- Repo layout is drastically different from what the docs describe.
+
+Message format:
+
+```text
+BLOCKED: <short reason>. Waiting for Dave.
+```
+
+---
+
+## 10. Scope Discipline
+
+- One **focused** changeset per request unless Dave explicitly widens scope.
+- Stay inside the repo (`/home/$USER/src/llmc`) unless instructed otherwise.
+- Prefer diffs and incremental changes over giant rewrites.
+
+---
+
+## 11. After Reading This
+
+After loading this file:
+
+1. Read **CONTRACTS.md** for environment, install policy, tmux policy, and task protocol.
+2. Respect both documents together:
+   - **AGENTS.md** → behavior and workflows.
+   - **CONTRACTS.md** → constraints and environment.
+
+You now understand the rules. Try not to piss off Future Dave.

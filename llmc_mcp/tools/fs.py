@@ -1,0 +1,390 @@
+"""
+Filesystem tools for LLMC MCP server.
+
+Security features:
+- Path normalization (resolves .., symlinks)
+- Traversal protection (must stay within allowed_roots)
+- Device file rejection
+- Symlink escape detection
+"""
+
+from __future__ import annotations
+
+import os
+import stat as stat_module
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+
+class PathSecurityError(Exception):
+    """Raised when path access is denied for security reasons."""
+    pass
+
+
+@dataclass
+class FsResult:
+    """Result from filesystem operation."""
+    success: bool
+    data: Any
+    meta: dict[str, Any]
+    error: str | None = None
+
+
+def normalize_path(path: str | Path) -> Path:
+    """
+    Normalize and resolve a path safely.
+    
+    - Expands ~ to home directory
+    - Resolves .. and symlinks
+    - Returns absolute path
+    
+    Raises:
+        PathSecurityError: If path contains null bytes or is otherwise invalid
+    """
+    path_str = str(path)
+    
+    # Reject null bytes (potential injection)
+    if "\x00" in path_str:
+        raise PathSecurityError("Path contains null bytes")
+    
+    # Expand ~ and make absolute
+    expanded = os.path.expanduser(path_str)
+    resolved = Path(expanded).resolve()
+    
+    return resolved
+
+
+def check_path_allowed(path: Path, allowed_roots: list[str]) -> bool:
+    """
+    Check if path is within allowed roots.
+    
+    Args:
+        path: Resolved absolute path to check
+        allowed_roots: List of allowed root directories
+        
+    Returns:
+        True if path is within an allowed root
+        
+    Note:
+        Empty allowed_roots means full access (per SDD)
+    """
+    # Empty list = full access (operator choice)
+    if not allowed_roots:
+        return True
+    
+    # Resolve all roots for comparison
+    resolved_roots = [Path(r).resolve() for r in allowed_roots]
+    
+    # Check if path is under any allowed root
+    for root in resolved_roots:
+        try:
+            path.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    
+    return False
+
+
+def _is_device_file(path: Path) -> bool:
+    """Check if path is a device file (block/char special)."""
+    try:
+        mode = path.stat().st_mode
+        return stat_module.S_ISBLK(mode) or stat_module.S_ISCHR(mode)
+    except (OSError, IOError):
+        return False
+
+
+def _check_symlink_escape(path: Path, allowed_roots: list[str]) -> bool:
+    """
+    Check if a symlink resolves outside allowed roots.
+    
+    Returns True if the symlink escapes (i.e., is NOT allowed).
+    """
+    if not path.is_symlink():
+        return False
+    
+    # Where does symlink actually point?
+    resolved = path.resolve()
+    return not check_path_allowed(resolved, allowed_roots)
+
+
+def validate_path(path: str | Path, allowed_roots: list[str]) -> Path:
+    """
+    Validate and normalize path for safe access.
+    
+    Args:
+        path: Raw path from user
+        allowed_roots: Allowed root directories
+        
+    Returns:
+        Validated, resolved Path
+        
+    Raises:
+        PathSecurityError: If path is not safe to access
+    """
+    resolved = normalize_path(path)
+    
+    # Check allowed roots
+    if not check_path_allowed(resolved, allowed_roots):
+        raise PathSecurityError(
+            f"Path {resolved} is outside allowed roots: {allowed_roots}"
+        )
+    
+    # Check for device files
+    if resolved.exists() and _is_device_file(resolved):
+        raise PathSecurityError(f"Cannot access device file: {resolved}")
+    
+    # Check symlink escape
+    if _check_symlink_escape(resolved, allowed_roots):
+        raise PathSecurityError(f"Symlink escapes allowed roots: {resolved}")
+    
+    return resolved
+
+
+def read_file(
+    path: str | Path,
+    allowed_roots: list[str],
+    max_bytes: int = 1_048_576,  # 1MB default
+    encoding: str = "utf-8",
+) -> FsResult:
+    """
+    Read file contents safely.
+    
+    Args:
+        path: File path to read
+        allowed_roots: Allowed root directories
+        max_bytes: Maximum bytes to read (truncates if exceeded)
+        encoding: Text encoding (tries binary fallback)
+        
+    Returns:
+        FsResult with file contents or error
+    """
+    try:
+        resolved = validate_path(path, allowed_roots)
+        
+        if not resolved.exists():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"File not found: {resolved}",
+            )
+        
+        if not resolved.is_file():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"Not a file: {resolved}",
+            )
+        
+        # Get file size
+        file_size = resolved.stat().st_size
+        truncated = file_size > max_bytes
+        
+        # Read file
+        try:
+            with open(resolved, "r", encoding=encoding) as f:
+                content = f.read(max_bytes)
+        except UnicodeDecodeError:
+            # Fall back to binary read
+            with open(resolved, "rb") as f:
+                raw = f.read(max_bytes)
+                content = raw.decode("utf-8", errors="replace")
+        
+        return FsResult(
+            success=True,
+            data=content,
+            meta={
+                "path": str(resolved),
+                "size": file_size,
+                "truncated": truncated,
+                "encoding": encoding,
+            },
+        )
+        
+    except PathSecurityError as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=str(e),
+        )
+    except Exception as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=f"Read error: {e}",
+        )
+
+
+def list_dir(
+    path: str | Path,
+    allowed_roots: list[str],
+    max_entries: int = 1000,
+    include_hidden: bool = False,
+) -> FsResult:
+    """
+    List directory contents safely.
+    
+    Args:
+        path: Directory path to list
+        allowed_roots: Allowed root directories
+        max_entries: Maximum entries to return
+        include_hidden: Include hidden files (starting with .)
+        
+    Returns:
+        FsResult with list of entries or error
+    """
+    try:
+        resolved = validate_path(path, allowed_roots)
+        
+        if not resolved.exists():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"Directory not found: {resolved}",
+            )
+        
+        if not resolved.is_dir():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"Not a directory: {resolved}",
+            )
+        
+        entries = []
+        total_count = 0
+        
+        for entry in sorted(resolved.iterdir()):
+            total_count += 1
+            
+            # Skip hidden unless requested
+            if not include_hidden and entry.name.startswith("."):
+                continue
+            
+            if len(entries) >= max_entries:
+                continue  # Count but don't add
+            
+            entry_type = "dir" if entry.is_dir() else "file"
+            if entry.is_symlink():
+                entry_type = "symlink"
+            
+            entries.append({
+                "name": entry.name,
+                "type": entry_type,
+                "path": str(entry),
+            })
+        
+        return FsResult(
+            success=True,
+            data=entries,
+            meta={
+                "path": str(resolved),
+                "total_entries": total_count,
+                "returned_entries": len(entries),
+                "truncated": total_count > max_entries,
+            },
+        )
+        
+    except PathSecurityError as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=str(e),
+        )
+    except PermissionError:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=f"Permission denied: {path}",
+        )
+    except Exception as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=f"List error: {e}",
+        )
+
+
+def stat_path(
+    path: str | Path,
+    allowed_roots: list[str],
+) -> FsResult:
+    """
+    Get file/directory metadata safely.
+    
+    Args:
+        path: Path to stat
+        allowed_roots: Allowed root directories
+        
+    Returns:
+        FsResult with stat info or error
+    """
+    try:
+        resolved = validate_path(path, allowed_roots)
+        
+        if not resolved.exists():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"Path not found: {resolved}",
+            )
+        
+        st = resolved.stat()
+        
+        # Determine type
+        if resolved.is_symlink():
+            file_type = "symlink"
+        elif resolved.is_dir():
+            file_type = "directory"
+        elif resolved.is_file():
+            file_type = "file"
+        else:
+            file_type = "other"
+        
+        # Format timestamps as ISO UTC
+        mtime = datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat()
+        ctime = datetime.fromtimestamp(st.st_ctime, tz=timezone.utc).isoformat()
+        atime = datetime.fromtimestamp(st.st_atime, tz=timezone.utc).isoformat()
+        
+        return FsResult(
+            success=True,
+            data={
+                "size": st.st_size,
+                "type": file_type,
+                "mode": oct(st.st_mode)[-4:],  # e.g., "0644"
+                "mtime": mtime,
+                "ctime": ctime,
+                "atime": atime,
+                "uid": st.st_uid,
+                "gid": st.st_gid,
+                "nlink": st.st_nlink,
+            },
+            meta={"path": str(resolved)},
+        )
+        
+    except PathSecurityError as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=str(e),
+        )
+    except Exception as e:
+        return FsResult(
+            success=False,
+            data=None,
+            meta={"path": str(path)},
+            error=f"Stat error: {e}",
+        )
