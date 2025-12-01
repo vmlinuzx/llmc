@@ -1,0 +1,17 @@
+
+# .dockerignore for LLMC
+.git
+.__pycache__/
+**/__pycache__/
+.venv
+*.egg-info
+dist
+build
+Dockerfile
+deploy/*
+.env*
+.tmp
+.trash
+logs
+metrics
+data

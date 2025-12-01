@@ -1,0 +1,24 @@
+
+# deploy/mcp/docker-compose.yml — Single-container MCP + TE
+services:
+  llmc-mcp:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+    image: llmc-mcp:dev
+    container_name: llmc-mcp
+    stdin_open: true    # required for MCP stdio connections
+    tty: true           # keeps stdio attached
+    environment:
+      - LLMC_TE_AGENT_ID=${LLMC_TE_AGENT_ID:-agent-compose}
+      - LLMC_TE_SESSION_ID=${LLMC_TE_SESSION_ID:-compose-dev}
+      - LLMC_TE_MODEL=${LLMC_TE_MODEL:-unknown}
+      - LLMC_LOG_FORMAT=json
+    volumes:
+      - ../../:/app:rw
+      - ${LLMC_WORKSPACE:-.}:/workspace
+      - ./data:/data
+      - ./metrics:/metrics
+      - ./logs:/logs
+    # Default command launches MCP server (stdio)
+    command: ["server"]

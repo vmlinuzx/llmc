@@ -1,0 +1,14 @@
+
+# deploy/mcp/llmc.toml.example
+[mcp]
+name = "llmc-mcp"
+
+[mcp.observability]
+log_format = "json"
+log_dir = "/logs"
+metrics_dir = "/metrics"
+audit_csv = "/logs/token_audit.csv"
+
+[te]
+handles_dir = "/app/.llmc/te_handles"
+# executable can be overridden with env LLMC_TE_EXE
