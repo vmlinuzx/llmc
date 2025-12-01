@@ -125,8 +125,8 @@ def log_event(
 
     event = TeEvent(
         timestamp=_now_iso(),
-        agent_id=os.getenv("TE_AGENT_ID", "unknown"),
-        session_id=os.getenv("TE_SESSION_ID", "unknown"),
+        agent_id=os.getenv("LLMC_TE_AGENT_ID") or os.getenv("TE_AGENT_ID", "unknown"),
+        session_id=os.getenv("LLMC_TE_SESSION_ID") or os.getenv("TE_SESSION_ID", "unknown"),
         cmd=cmd,
         mode=mode,
         input_size=input_size,

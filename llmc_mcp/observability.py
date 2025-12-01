@@ -9,7 +9,6 @@ Provides:
 
 from __future__ import annotations
 
-import csv
 import json
 import logging
 import os
@@ -22,6 +21,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
+from llmc_mcp.audit import TokenAuditWriter
 from llmc_mcp.config import McpObservabilityConfig
 
 
@@ -36,6 +36,7 @@ class JsonLogFormatter(logging.Formatter):
     def __init__(self, include_correlation_id: bool = True):
         super().__init__()
         self.include_correlation_id = include_correlation_id
+        self.session_id = os.getenv("LLMC_TE_SESSION_ID") or os.getenv("TE_SESSION_ID")
     
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
@@ -44,6 +45,10 @@ class JsonLogFormatter(logging.Formatter):
             "logger": record.name,
             "msg": record.getMessage(),
         }
+        
+        # Add session_id if present
+        if self.session_id:
+            log_data["session_id"] = self.session_id
         
         # Add correlation_id if present on record
         if self.include_correlation_id and hasattr(record, "correlation_id"):
@@ -159,76 +164,6 @@ class MetricsCollector:
             self._start_time = time.time()
             self._tokens_in = 0
             self._tokens_out = 0
-
-
-
-class TokenAuditWriter:
-    """CSV writer for token audit trail.
-    
-    Appends per-request token usage to CSV file for cost tracking.
-    Thread-safe with lazy file creation.
-    """
-    
-    CSV_HEADERS = [
-        "timestamp",
-        "correlation_id", 
-        "tool",
-        "tokens_in",
-        "tokens_out",
-        "latency_ms",
-        "success",
-    ]
-    
-    def __init__(self, csv_path: str | Path, enabled: bool = True):
-        self.csv_path = Path(csv_path)
-        self.enabled = enabled
-        self._lock = Lock()
-        self._initialized = False
-    
-    def _ensure_file(self) -> None:
-        """Create CSV file with headers if needed."""
-        if self._initialized:
-            return
-        
-        # Create parent dirs
-        self.csv_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Write headers if file doesn't exist
-        if not self.csv_path.exists():
-            with open(self.csv_path, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow(self.CSV_HEADERS)
-        
-        self._initialized = True
-    
-    def record(
-        self,
-        correlation_id: str,
-        tool: str,
-        tokens_in: int,
-        tokens_out: int,
-        latency_ms: float,
-        success: bool,
-    ) -> None:
-        """Append a record to the audit CSV."""
-        if not self.enabled:
-            return
-        
-        with self._lock:
-            self._ensure_file()
-            
-            with open(self.csv_path, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow([
-                    datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-                    correlation_id,
-                    tool,
-                    tokens_in,
-                    tokens_out,
-                    round(latency_ms, 2),
-                    "ok" if success else "error",
-                ])
-
 
 
 class ObservabilityContext:

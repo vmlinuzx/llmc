@@ -7,7 +7,7 @@ from pathlib import Path
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from llmc_mcp.tools.exec import run_cmd, validate_command, CommandSecurityError, DEFAULT_ALLOWLIST
+from llmc_mcp.tools.cmd import run_cmd, validate_command, CommandSecurityError, DEFAULT_ALLOWLIST
 
 
 def test_allowlist_validation():

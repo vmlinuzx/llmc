@@ -78,6 +78,26 @@ class TestJsonLogFormatter(unittest.TestCase):
         data = json.loads(output)
         self.assertEqual(data["cid"], "abc12345")
     
+    def test_includes_session_id(self):
+        os.environ["TE_SESSION_ID"] = "sess_123"
+        try:
+            formatter = JsonLogFormatter()
+            record = logging.LogRecord(
+                name="test",
+                level=logging.INFO,
+                pathname="",
+                lineno=0,
+                msg="Test",
+                args=(),
+                exc_info=None,
+            )
+            
+            output = formatter.format(record)
+            data = json.loads(output)
+            self.assertEqual(data["session_id"], "sess_123")
+        finally:
+            del os.environ["TE_SESSION_ID"]
+    
     def test_includes_extra_fields(self):
         formatter = JsonLogFormatter()
         record = logging.LogRecord(

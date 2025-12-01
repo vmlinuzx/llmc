@@ -88,6 +88,12 @@ All other commands pass through to bash with telemetry.
     )
 
     parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output results as JSON",
+    )
+
+    parser.add_argument(
         "--version",
         action="store_true",
         help="Show TE version",
@@ -326,7 +332,7 @@ def _handle_stats(repo_root: Path) -> int:
     return 0
 
 
-def _handle_grep(args: list[str], raw: bool, repo_root: Path) -> int:
+def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = False) -> int:
     """Handle grep subcommand."""
     if not args:
         print("[TE] grep requires a pattern", file=sys.stderr)
@@ -349,8 +355,13 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path) -> int:
         )
 
     # Output
-    output = result.render()
-    print(output)
+    if json_mode:
+        import json
+        output = json.dumps(result.to_dict(), indent=2)
+        print(output)
+    else:
+        output = result.render()
+        print(output)
 
     # Telemetry
     meta = result.header
@@ -372,7 +383,7 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path) -> int:
     return 0
 
 
-def _handle_passthrough(command: str, args: list[str], repo_root: Path) -> int:
+def _handle_passthrough(command: str, args: list[str], repo_root: Path, json_mode: bool = False) -> int:
     """
     Pass-through handler for unknown commands.
     
@@ -394,26 +405,52 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path) -> int:
                 check=False,
             )
             
-            # Output stdout/stderr as-is
-            if result.stdout:
-                print(result.stdout, end="")
-            if result.stderr:
-                print(result.stderr, end="", file=sys.stderr)
+            # Output
+            if json_mode:
+                import json
+                response = {
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "exit_code": result.returncode,
+                    "error": None
+                }
+                output_content = json.dumps(response, indent=2)
+                print(output_content)
+                output_size = len(output_content)
+            else:
+                # Output stdout/stderr as-is
+                if result.stdout:
+                    print(result.stdout, end="")
+                if result.stderr:
+                    print(result.stderr, end="", file=sys.stderr)
+                
+                output_size = len(result.stdout) + len(result.stderr)
+                output_content = result.stdout + result.stderr  # Capture for telemetry
             
-            output_size = len(result.stdout) + len(result.stderr)
-            output_content = result.stdout + result.stderr  # Capture for telemetry
             exit_code = result.returncode
             error = None
             
         except subprocess.TimeoutExpired:
-            print(f"[TE] command timed out after 30s: {full_cmd}", file=sys.stderr)
+            msg = f"command timed out after 30s: {full_cmd}"
+            if json_mode:
+                import json
+                print(json.dumps({"error": msg, "exit_code": 124}, indent=2))
+            else:
+                print(f"[TE] {msg}", file=sys.stderr)
+            
             output_size = 0
             output_content = ""
             exit_code = 124  # timeout exit code
             error = "timeout"
             
         except Exception as e:
-            print(f"[TE] execution failed: {e}", file=sys.stderr)
+            msg = f"execution failed: {e}"
+            if json_mode:
+                import json
+                print(json.dumps({"error": msg, "exit_code": 1}, indent=2))
+            else:
+                print(f"[TE] {msg}", file=sys.stderr)
+                
             output_size = 0
             output_content = ""
             exit_code = 1
@@ -469,6 +506,7 @@ def main() -> int:
     
     command = remaining[0]
     cmd_args = remaining[1:] if len(remaining) > 1 else []
+    json_mode = args.json
 
     # Find repo root
     repo_root = _find_repo_root()
@@ -492,21 +530,23 @@ def main() -> int:
     
     # If -i/--raw is set, OR command is unknown, OR tool is disabled → passthrough
     if args.raw or not is_enriched or not tool_enabled:
-        return _handle_passthrough(command, cmd_args, repo_root)
+        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
     
     # Dispatch to enriched handler
     if command == "grep":
-        return _handle_grep(cmd_args, raw=False, repo_root=repo_root)
+        return _handle_grep(cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode)
 
     elif command == "cat":
         # Phase 1 - not yet implemented, fall back to pass-through
-        print("[TE] cat enrichment not yet implemented, using pass-through", file=sys.stderr)
-        return _handle_passthrough(command, cmd_args, repo_root)
+        if not json_mode:
+            print("[TE] cat enrichment not yet implemented, using pass-through", file=sys.stderr)
+        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
 
     elif command == "find":
         # Phase 1 - not yet implemented, fall back to pass-through
-        print("[TE] find enrichment not yet implemented, using pass-through", file=sys.stderr)
-        return _handle_passthrough(command, cmd_args, repo_root)
+        if not json_mode:
+            print("[TE] find enrichment not yet implemented, using pass-through", file=sys.stderr)
+        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
 
     # Should never reach here
     return 1

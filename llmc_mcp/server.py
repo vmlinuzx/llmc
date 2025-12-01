@@ -49,6 +49,15 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
+        name="list_tools",
+        description="List all available tools and their schemas.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
         name="rag_search",
         description="Search LLMC RAG index for relevant code/docs. Returns ranked snippets with provenance.",
         inputSchema={
@@ -171,6 +180,17 @@ class LlmcMcpServer:
         # Initialize observability (M4)
         self.obs = ObservabilityContext(config.observability)
         
+        self.tool_handlers = {
+            "health": self._handle_health,
+            "list_tools": self._handle_list_tools,
+            "rag_search": self._handle_rag_search,
+            "read_file": self._handle_read_file,
+            "list_dir": self._handle_list_dir,
+            "stat": self._handle_stat,
+            "run_cmd": self._handle_run_cmd,
+            "get_metrics": self._handle_get_metrics,
+        }
+        
         self._register_handlers()
         logger.info(f"LLMC MCP Server initialized ({config.config_version})")
     
@@ -189,38 +209,44 @@ class LlmcMcpServer:
             cid = self.obs.correlation_id()
             start_time = time.time()
             success = True
+            error_msg = None
             
-            logger.info(f"call_tool: {name} cid={cid}")
+            logger.info(f"call_tool: {name}", extra={"correlation_id": cid, "tool": name})
             
             try:
-                if name == "health":
-                    result = await self._handle_health()
-                elif name == "rag_search":
-                    result = await self._handle_rag_search(arguments)
-                elif name == "read_file":
-                    result = await self._handle_read_file(arguments)
-                elif name == "list_dir":
-                    result = await self._handle_list_dir(arguments)
-                elif name == "stat":
-                    result = await self._handle_stat(arguments)
-                elif name == "run_cmd":
-                    result = await self._handle_run_cmd(arguments)
-                elif name == "get_metrics":
-                    result = await self._handle_get_metrics()
+                handler = self.tool_handlers.get(name)
+                if handler:
+                    # Handle args being optional for some handlers
+                    import inspect
+                    sig = inspect.signature(handler)
+                    if "args" in sig.parameters:
+                        result = await handler(arguments)
+                    else:
+                        result = await handler()
                 else:
                     success = False
+                    error_msg = f"Unknown tool: {name}"
                     result = [TextContent(
                         type="text",
-                        text=f'{{"error": "Unknown tool: {name}"}}',
+                        text=f'{{"error": "{error_msg}"}}',
                     )]
                 
-                # Check for error in result
+                # Check for error in result (soft failure)
                 if result and '"error"' in result[0].text:
                     success = False
+                    # Try to extract error message for logging
+                    try:
+                        import json
+                        data = json.loads(result[0].text)
+                        if "error" in data:
+                            error_msg = data["error"]
+                    except:
+                        pass
                     
             except Exception as e:
                 success = False
-                logger.exception(f"Tool {name} failed: {e}")
+                error_msg = str(e)
+                logger.exception(f"Tool {name} failed: {e}", extra={"correlation_id": cid, "tool": name})
                 result = [TextContent(
                     type="text",
                     text=f'{{"error": "{str(e)}"}}',
@@ -238,7 +264,16 @@ class LlmcMcpServer:
                 tokens_out=len(result[0].text) // 4 if result else 0,
             )
             
-            logger.info(f"call_tool done: {name} cid={cid} latency={latency_ms:.1f}ms success={success}")
+            logger.info(
+                f"call_tool done: {name}",
+                extra={
+                    "correlation_id": cid,
+                    "tool": name,
+                    "latency_ms": latency_ms,
+                    "status": "ok" if success else "error",
+                    "error": error_msg
+                }
+            )
             
             return result
     
@@ -255,6 +290,20 @@ class LlmcMcpServer:
         }
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
     
+    async def _handle_list_tools(self) -> list[TextContent]:
+        """List tools handler."""
+        import json
+        # TOOLS is global
+        data = [
+            {
+                "name": t.name,
+                "description": t.description,
+                "inputSchema": t.inputSchema
+            } 
+            for t in TOOLS
+        ]
+        return [TextContent(type="text", text=json.dumps(data, indent=2))]
+
     async def _handle_get_metrics(self) -> list[TextContent]:
         """Get server metrics handler."""
         import json
@@ -297,8 +346,8 @@ class LlmcMcpServer:
                 text=json.dumps({"error": result.error}),
             )]
         
-        # Return snippets directly (matches CLI --json format)
-        return [TextContent(type="text", text=json.dumps(result.snippets, indent=2))]
+        # Return normalized structure (data + meta)
+        return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
     
     async def _handle_read_file(self, args: dict) -> list[TextContent]:
         """Read file handler."""
@@ -380,7 +429,7 @@ class LlmcMcpServer:
     async def _handle_run_cmd(self, args: dict) -> list[TextContent]:
         """Execute command handler."""
         import json
-        from llmc_mcp.tools.exec import run_cmd
+        from llmc_mcp.tools.cmd import run_cmd
         
         command = args.get("command", "")
         timeout = args.get("timeout", self.config.tools.exec_timeout)

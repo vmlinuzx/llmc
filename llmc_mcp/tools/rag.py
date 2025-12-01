@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger("llmc-mcp.rag")
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -29,9 +29,20 @@ class RagSnippet:
 @dataclass 
 class RagSearchResult:
     """RAG search response."""
-    snippets: list[dict[str, Any]]
-    provenance: bool = True
+    data: list[dict[str, Any]]
+    meta: dict[str, Any]
     error: str | None = None
+
+    @property
+    def snippets(self) -> list[dict[str, Any]]:
+        """Alias for data for backward compatibility."""
+        return self.data
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to standardized dictionary."""
+        if self.error:
+            return {"error": self.error, "meta": self.meta}
+        return {"data": self.data, "meta": self.meta}
 
 
 def rag_search(
@@ -57,7 +68,7 @@ def rag_search(
     import os
     
     if not query or not query.strip():
-        return RagSearchResult(snippets=[], error="query is required")
+        return RagSearchResult(data=[], meta={}, error="query is required")
     
     repo_path = Path(repo_root).resolve() if isinstance(repo_root, str) else repo_root.resolve()
     
@@ -98,17 +109,19 @@ def rag_search(
             for idx, r in enumerate(results)
         ]
         
-        return RagSearchResult(snippets=snippets, provenance=True)
+        meta = {"count": len(snippets), "provenance": True}
+        return RagSearchResult(data=snippets, meta=meta)
         
     except FileNotFoundError as e:
         logger.warning(f"RAG index not found: {e}")
         return RagSearchResult(
-            snippets=[],
+            data=[],
+            meta={},
             error=f"RAG index not found. Run 'rag index' first: {e}",
         )
     except Exception as e:
         logger.exception("RAG search error")
-        return RagSearchResult(snippets=[], error=str(e))
+        return RagSearchResult(data=[], meta={}, error=str(e))
     finally:
         # Restore original working directory
         os.chdir(original_cwd)

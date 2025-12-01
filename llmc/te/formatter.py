@@ -86,6 +86,25 @@ class FormattedOutput:
             parts.extend(self.breadcrumbs)
         return "\n".join(parts)
 
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON output."""
+        # Parse header JSON to get meta dict
+        meta = {}
+        if self.header.startswith("# TE_BEGIN_META"):
+            try:
+                # Extract JSON between markers
+                lines = self.header.splitlines()
+                if len(lines) >= 2:
+                    meta = json.loads(lines[1])
+            except Exception:
+                pass
+        
+        return {
+            "meta": meta,
+            "content": self.content,
+            "breadcrumbs": self.breadcrumbs
+        }
+
 
 def compute_hot_zone(file_counts: dict[str, int], total: int) -> str | None:
     """Compute hot zone string if results concentrate in one area."""

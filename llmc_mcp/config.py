@@ -22,6 +22,12 @@ class McpServerConfig:
     port: int = 8080
     log_level: str = "info"
 
+    def validate(self) -> None:
+        if self.transport not in ("stdio", "http"):
+            raise ValueError(f"Invalid transport: {self.transport}")
+        if not (1 <= self.port <= 65535):
+            raise ValueError(f"Invalid port: {self.port}")
+
 
 @dataclass
 class McpAuthConfig:
@@ -29,6 +35,10 @@ class McpAuthConfig:
     mode: str = "none"  # "none" | "token"
     header: str = "X-LLMC-Token"
     token_env: str = "LLMC_MCP_TOKEN"
+
+    def validate(self) -> None:
+        if self.mode not in ("none", "token"):
+            raise ValueError(f"Invalid auth mode: {self.mode}")
 
 
 @dataclass
@@ -42,6 +52,12 @@ class McpToolsConfig:
     read_timeout: int = 10
     exec_timeout: int = 30
 
+    def validate(self) -> None:
+        if self.read_timeout <= 0:
+            raise ValueError("read_timeout must be positive")
+        if self.exec_timeout <= 0:
+            raise ValueError("exec_timeout must be positive")
+
 
 @dataclass
 class McpRagConfig:
@@ -51,6 +67,12 @@ class McpRagConfig:
     top_k: int = 3
     token_budget: int = 600
 
+    def validate(self) -> None:
+        if self.top_k <= 0:
+            raise ValueError("top_k must be positive")
+        if self.token_budget <= 0:
+            raise ValueError("token_budget must be positive")
+
 
 @dataclass
 class McpLimitsConfig:
@@ -59,6 +81,10 @@ class McpLimitsConfig:
     max_response_bytes: int = 1048576
     rate_limit_rps: int = 10
     concurrency_per_token: int = 8
+
+    def validate(self) -> None:
+        if self.max_request_bytes <= 0:
+            raise ValueError("max_request_bytes must be positive")
 
 
 @dataclass
@@ -77,6 +103,12 @@ class McpObservabilityConfig:
     # Retention (0 = forever)
     retention_days: int = 0
 
+    def validate(self) -> None:
+        if self.enabled and self.csv_token_audit_enabled:
+            path = Path(self.csv_path)
+            if path.exists() and not path.is_file():
+                raise ValueError(f"Audit CSV path '{self.csv_path}' exists but is not a file")
+
 
 @dataclass
 class McpConfig:
@@ -89,6 +121,14 @@ class McpConfig:
     rag: McpRagConfig = field(default_factory=McpRagConfig)
     limits: McpLimitsConfig = field(default_factory=McpLimitsConfig)
     observability: McpObservabilityConfig = field(default_factory=McpObservabilityConfig)
+
+    def validate(self) -> None:
+        self.server.validate()
+        self.auth.validate()
+        self.tools.validate()
+        self.rag.validate()
+        self.limits.validate()
+        self.observability.validate()
 
 
 def _get_nested(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -216,5 +256,8 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
     
     # Apply ENV overrides (highest precedence)
     cfg = _apply_env_overrides(cfg)
+    
+    # Validate final config
+    cfg.validate()
     
     return cfg
