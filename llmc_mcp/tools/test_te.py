@@ -1,8 +1,9 @@
-
 import json
-import types
 import subprocess
+import types
+
 from llmc_mcp.tools import te as te_module
+
 
 class DummyCtx:
     def __init__(self):
@@ -10,11 +11,13 @@ class DummyCtx:
         self.session_id = "sess-abc"
         self.model = "qwen-2.5-32b"
 
+
 def test_te_run_injects_json_and_env(monkeypatch):
     captured = {}
+
     def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
-        captured['argv'] = argv
-        captured['env'] = env
+        captured["argv"] = argv
+        captured["env"] = env
         # Simulate TE --json stdout
         out = json.dumps({"ok": True, "echo": argv[-1] if argv else None})
         cp = types.SimpleNamespace(returncode=0, stdout=out, stderr="")
@@ -29,16 +32,20 @@ def test_te_run_injects_json_and_env(monkeypatch):
     assert captured["env"]["LLMC_TE_SESSION_ID"] == ctx.session_id
     assert captured["env"]["TE_SESSION_ID"] == ctx.session_id
 
+
 def test_te_run_handles_non_json_stdout(monkeypatch):
     def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
         return types.SimpleNamespace(returncode=0, stdout="not json", stderr="")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
     res = te_module.te_run(["status"])
     assert "raw" in res["data"]
 
+
 def test_te_run_failure_path(monkeypatch):
     def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
         raise RuntimeError("boom")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
     res = te_module.te_run(["oops"])
     assert res["meta"]["error"] is True

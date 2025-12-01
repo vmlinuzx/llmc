@@ -1,8 +1,7 @@
 """Pytest fixtures for LLMC MCP."""
 
-import os
 import pytest
-from pathlib import Path
+
 
 @pytest.fixture
 def mock_te_env(monkeypatch):
@@ -14,6 +13,7 @@ def mock_te_env(monkeypatch):
     monkeypatch.setenv("TE_AGENT_ID", "test-agent")
     monkeypatch.setenv("TE_SESSION_ID", "test-session")
     monkeypatch.setenv("TE_MODEL", "test-model")
+
 
 @pytest.fixture
 def temp_llmc_repo(tmp_path):

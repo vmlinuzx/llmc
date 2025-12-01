@@ -119,6 +119,6 @@ def get_te_config(repo_root: Path | None = None) -> TeConfig:
 
 def get_output_budget(agent_id: str | None, repo_root: Path | None = None) -> int:
     """Get output budget for an agent (respects LLMC_TE_AGENT_ID/TE_AGENT_ID env)."""
-    agent = agent_id or os.getenv("LLMC_TE_AGENT_ID") or os.getenv("TE_AGENT_ID", "unknown")
+    agent = agent_id or os.getenv("LLMC_TE_AGENT_ID", os.getenv("TE_AGENT_ID", "unknown"))
     cfg = get_te_config(repo_root)
     return cfg.agent_budgets.get(agent, cfg.agent_budgets.get("unknown", 16_000))

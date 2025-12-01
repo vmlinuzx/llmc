@@ -1,4 +1,3 @@
-
 """
 M5 Phase-1: TE wrapper tools
 
@@ -10,16 +9,17 @@ Design goals:
 - Stable JSON envelope: {"data": <parsed JSON or raw>, "meta": {...}}.
 - Zero hard dependency on TE at import time; subprocess invoked at call.
 """
+
 from __future__ import annotations
 
-import os
+from collections.abc import Mapping, Sequence
 import json
-import time
-import uuid
-import shlex
 import logging
+import os
 import subprocess
-from typing import Mapping, Sequence, Optional, Dict, Any
+import time
+from typing import Any
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ try:
     from llmc_mcp.observability import ObservabilityContext, generate_correlation_id  # type: ignore
 except Exception:  # pragma: no cover
     ObservabilityContext = None  # type: ignore
+
     def generate_correlation_id() -> str:
         return uuid.uuid4().hex[:8]
 
@@ -56,14 +57,15 @@ def _ensure_json_flag(args: Sequence[str]) -> Sequence[str]:
     return args
 
 
-def _ctx_to_env(ctx) -> Dict[str, str]:
+def _ctx_to_env(ctx) -> dict[str, str]:
     """
     Convert session context (if any) into namespaced env vars.
     Falls back to existing env when ctx is None.
     """
-    env: Dict[str, str] = {}
+    env: dict[str, str] = {}
+
     # Prefer LLMC_TE_* but allow a downstream to still read legacy TE_*
-    def put(k: str, v: Optional[str]):
+    def put(k: str, v: str | None):
         if v is None:
             return
         env[f"LLMC_{k}"] = v
@@ -82,11 +84,11 @@ def _ctx_to_env(ctx) -> Dict[str, str]:
 def _run_te(
     te_args: Sequence[str],
     *,
-    ctx: Optional["McpSessionContext"] = None,
-    timeout: Optional[float] = None,
-    cwd: Optional[str] = None,
-    extra_env: Optional[Mapping[str, str]] = None,
-) -> Dict[str, Any]:
+    ctx: McpSessionContext | None = None,
+    timeout: float | None = None,
+    cwd: str | None = None,
+    extra_env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
     """
     Execute TE with enforced --json and return a normalized envelope.
     {
@@ -105,8 +107,7 @@ def _run_te(
     try:
         cp = subprocess.run(
             argv,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             cwd=cwd,
             timeout=timeout,
             env=env,
@@ -147,18 +148,18 @@ def _run_te(
 def te_run(
     args: Sequence[str],
     *,
-    ctx: Optional["McpSessionContext"] = None,
-    timeout: Optional[float] = None,
-    cwd: Optional[str] = None,
-    extra_env: Optional[Mapping[str, str]] = None,
-) -> Dict[str, Any]:
+    ctx: McpSessionContext | None = None,
+    timeout: float | None = None,
+    cwd: str | None = None,
+    extra_env: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
     """
     Public tool entry point.
     Example:
         te_run(["run", "echo", "hello"])
     """
     corr = generate_correlation_id()
-    if ObservabilityContext:
+    if ObservabilityContext is not None:
         # If available, record timing + correlation in logs/metrics.
         with ObservabilityContext.scope(tool="te_run", correlation_id=corr):
             result = _run_te(args, ctx=ctx, timeout=timeout, cwd=cwd, extra_env=extra_env)

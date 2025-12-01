@@ -4,8 +4,13 @@
 
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1     PYTHONUNBUFFERED=1     PIP_NO_CACHE_DIR=1     # Namespaced session vars; legacy exported for compatibility
-    LLMC_TE_AGENT_ID=agent-docker     LLMC_TE_SESSION_ID=docker-dev     LLMC_TE_MODEL=unknown
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
+# Namespaced session vars; legacy exported for compatibility
+ENV LLMC_TE_AGENT_ID=agent-docker
+ENV LLMC_TE_SESSION_ID=docker-dev
+ENV LLMC_TE_MODEL=unknown
 
 # System deps (git for editable installs; rg optional but handy for TE)
 RUN apt-get update && apt-get install -y --no-install-recommends \

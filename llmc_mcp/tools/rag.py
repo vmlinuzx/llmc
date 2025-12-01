@@ -7,8 +7,8 @@ Provides ~5-10x speedup over CLI subprocess approach.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RagSnippet:
     """Single RAG search result."""
+
     text: str
     src: str  # "path#Lstart-Lend"
     score: float
@@ -26,9 +27,10 @@ class RagSnippet:
     summary: str | None = None
 
 
-@dataclass 
+@dataclass
 class RagSearchResult:
     """RAG search response."""
+
     data: list[dict[str, Any]]
     meta: dict[str, Any]
     error: str | None = None
@@ -54,45 +56,46 @@ def rag_search(
 ) -> RagSearchResult:
     """
     Direct RAG search - no subprocess.
-    
+
     Args:
         query: Natural language query or code concept
         repo_root: Path to LLMC repo root
         limit: Max results to return
         scope: "repo", "docs", or "both" (currently ignored, uses default routing)
         debug: Include enrichment/graph metadata
-        
+
     Returns:
         RagSearchResult with snippets and provenance
     """
     import os
-    
+
     if not query or not query.strip():
         return RagSearchResult(data=[], meta={}, error="query is required")
-    
+
     repo_path = Path(repo_root).resolve() if isinstance(repo_root, str) else repo_root.resolve()
-    
+
     # Save current dir and change to repo root
     # This ensures RAG config loading finds llmc.toml
     original_cwd = os.getcwd()
-    
+
     try:
         os.chdir(repo_path)
-        
+
         # Clear any cached config to ensure fresh load from correct path
         from tools.rag.config import load_config
+
         load_config.cache_clear()
-        
+
         # Direct import - module stays loaded between calls
         from tools.rag.search import search_spans
-        
+
         results = search_spans(
             query.strip(),
             limit=limit,
             repo_root=repo_path,
             debug=debug,
         )
-        
+
         # Transform to MCP response format (matches CLI --json output)
         snippets = [
             {
@@ -108,10 +111,10 @@ def rag_search(
             }
             for idx, r in enumerate(results)
         ]
-        
+
         meta = {"count": len(snippets), "provenance": True}
         return RagSearchResult(data=snippets, meta=meta)
-        
+
     except FileNotFoundError as e:
         logger.warning(f"RAG index not found: {e}")
         return RagSearchResult(
@@ -134,19 +137,19 @@ def rag_bootload(
 ) -> dict[str, Any]:
     """
     RAG bootloader - returns minimal context for session initialization.
-    
+
     Per SDD: Returns plan/scope/notes based on AGENTS/CONTRACTS.
-    
+
     Args:
         session_id: Session identifier
-        task_id: Task identifier  
+        task_id: Task identifier
         repo_root: Path to LLMC repo root
-        
+
     Returns:
         Dict with plan, scope, notes
     """
     repo_path = Path(repo_root) if isinstance(repo_root, str) else repo_root
-    
+
     # For MVP, return minimal bootstrap info
     # Future: Parse task_id to determine scope, load relevant context
     return {

@@ -12,22 +12,24 @@ M0-M3 Tools:
 - list_dir: Directory listing
 - stat: File/dir metadata
 - run_cmd: Command execution with allowlist (M3)
-"""
+""" # noqa: I001
 
 from __future__ import annotations
 
 import asyncio
+import inspect
+import json
 import logging
 import sys
 import time
 from pathlib import Path
-
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from typing import Any, Callable, cast
 
 from llmc_mcp.config import McpConfig, load_config
 from llmc_mcp.observability import ObservabilityContext, setup_logging
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import TextContent, Tool
 
 # Configure logging to stderr (Claude Desktop captures it)
 logging.basicConfig(
@@ -243,14 +245,14 @@ TOOLS: list[Tool] = [
 
 class LlmcMcpServer:
     """LLMC MCP Server implementation."""
-    
+
     def __init__(self, config: McpConfig):
         self.config = config
         self.server = Server("llmc-mcp")
-        
+
         # Initialize observability (M4)
         self.obs = ObservabilityContext(config.observability)
-        
+
         self.tool_handlers = {
             "health": self._handle_health,
             "list_tools": self._handle_list_tools,
@@ -264,19 +266,19 @@ class LlmcMcpServer:
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
         }
-        
+
         self._register_handlers()
         logger.info(f"LLMC MCP Server initialized ({config.config_version})")
-    
+
     def _register_handlers(self):
         """Register MCP protocol handlers."""
-        
+
         @self.server.list_tools()
         async def list_tools() -> list[Tool]:
             """Return available tools."""
             logger.debug("list_tools called")
             return TOOLS
-        
+
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             """Handle tool invocation with observability."""
@@ -284,15 +286,18 @@ class LlmcMcpServer:
             start_time = time.time()
             success = True
             error_msg = None
-            
+
             logger.info(f"call_tool: {name}", extra={"correlation_id": cid, "tool": name})
-            
+
             try:
                 handler = self.tool_handlers.get(name)
                 if handler:
+                    assert handler is not None # Mypy: handler can be None
                     # Handle args being optional for some handlers
                     import inspect
-                    sig = inspect.signature(handler)
+                    from typing import Callable # Added for Callable type hint
+
+                    sig = inspect.signature(cast(Callable[..., Any], handler))
                     if "args" in sig.parameters:
                         result = await handler(arguments)
                     else:
@@ -300,32 +305,37 @@ class LlmcMcpServer:
                 else:
                     success = False
                     error_msg = f"Unknown tool: {name}"
-                    result = [TextContent(
-                        type="text",
-                        text=f'{{"error": "{error_msg}"}}',
-                    )]
-                
+                    result = [
+                        TextContent(
+                            type="text",
+                            text=f'{{"error": "{error_msg}"}}',
+                        )
+                    ]
+
                 # Check for error in result (soft failure)
-                if result and '"error"' in result[0].text:
-                    success = False
-                    # Try to extract error message for logging
-                    try:
-                        import json
-                        data = json.loads(result[0].text)
-                        if "error" in data:
-                            error_msg = data["error"]
-                    except:
-                        pass
-                    
+                if result and result[0].text:
+                    if '"error"' in result[0].text:  # Still check for the string "error"
+                        success = False
+                        try:
+                            data = json.loads(result[0].text)
+                            if "error" in data:
+                                error_msg = data["error"]
+                        except json.JSONDecodeError:
+                            # If not valid JSON, just use the whole text as error message
+                            error_msg = result[0].text
             except Exception as e:
                 success = False
                 error_msg = str(e)
-                logger.exception(f"Tool {name} failed: {e}", extra={"correlation_id": cid, "tool": name})
-                result = [TextContent(
-                    type="text",
-                    text=f'{{"error": "{str(e)}"}}',
-                )]
-            
+                logger.exception(
+                    f"Tool {name} failed: {e}", extra={"correlation_id": cid, "tool": name}
+                )
+                result = [
+                    TextContent(
+                        type="text",
+                        text=f'{{"error": "{str(e)}"}}',
+                    )
+                ]
+
             # Record metrics
             latency_ms = (time.time() - start_time) * 1000
             self.obs.record(
@@ -337,7 +347,7 @@ class LlmcMcpServer:
                 tokens_in=len(str(arguments)) // 4,
                 tokens_out=len(result[0].text) // 4 if result else 0,
             )
-            
+
             logger.info(
                 f"call_tool done: {name}",
                 extra={
@@ -345,15 +355,16 @@ class LlmcMcpServer:
                     "tool": name,
                     "latency_ms": latency_ms,
                     "status": "ok" if success else "error",
-                    "error": error_msg
-                }
+                    "error": error_msg,
+                },
             )
-            
+
             return result
-    
+
     async def _handle_health(self) -> list[TextContent]:
         """Health check handler."""
         import json
+
         result = {
             "ok": True,
             "version": self.config.config_version,
@@ -363,17 +374,14 @@ class LlmcMcpServer:
             "run_cmd_enabled": self.config.tools.enable_run_cmd,
         }
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
-    
+
     async def _handle_list_tools(self) -> list[TextContent]:
         """List tools handler."""
         import json
+
         # TOOLS is global
         data = [
-            {
-                "name": t.name,
-                "description": t.description,
-                "inputSchema": t.inputSchema
-            } 
+            {"name": t.name, "description": t.description, "inputSchema": t.inputSchema}
             for t in TOOLS
         ]
         return [TextContent(type="text", text=json.dumps(data, indent=2))]
@@ -381,31 +389,38 @@ class LlmcMcpServer:
     async def _handle_get_metrics(self) -> list[TextContent]:
         """Get server metrics handler."""
         import json
-        
+
         if not self.obs.enabled:
-            return [TextContent(
-                type="text",
-                text='{"error": "Observability disabled in config (mcp.observability.enabled = false)"}',
-            )]
-        
+            return [
+                TextContent(
+                    type="text",
+                    text='{"error": "Observability disabled in config (mcp.observability.enabled = false)"}',
+                )
+            ]
+
         stats = self.obs.get_stats()
         return [TextContent(type="text", text=json.dumps(stats, indent=2))]
-    
+
     async def _handle_rag_search(self, args: dict) -> list[TextContent]:
         """RAG search handler - direct adapter (no subprocess)."""
         import json
+
         from llmc_mcp.tools.rag import rag_search
-        
+
         query = args.get("query", "")
         scope = args.get("scope", self.config.rag.default_scope)
         limit = min(args.get("limit", 5), self.config.rag.top_k * 2)
-        
+
         if not query:
             return [TextContent(type="text", text='{"error": "query is required"}')]
-        
+
         # Find LLMC root from config
-        llmc_root = Path(self.config.tools.allowed_roots[0]) if self.config.tools.allowed_roots else Path(".")
-        
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
         # Direct call - no subprocess overhead
         result = rag_search(
             query=query,
@@ -413,120 +428,144 @@ class LlmcMcpServer:
             limit=limit,
             scope=scope,
         )
-        
+
         if result.error:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": result.error}),
-            )]
-        
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error}),
+                )
+            ]
+
         # Return normalized structure (data + meta)
         return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
-    
+
     async def _handle_read_file(self, args: dict) -> list[TextContent]:
         """Read file handler."""
         import json
+
         from llmc_mcp.tools.fs import read_file
-        
+
         path = args.get("path", "")
         max_bytes = args.get("max_bytes", 1_048_576)
-        
+
         if not path:
             return [TextContent(type="text", text='{"error": "path is required"}')]
-        
+
         result = read_file(path, self.config.tools.allowed_roots, max_bytes=max_bytes)
-        
+
         if result.success:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"data": result.data, "meta": result.meta}),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
+                )
+            ]
         else:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": result.error, "meta": result.meta}),
-            )]
-    
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error, "meta": result.meta}),
+                )
+            ]
+
     async def _handle_list_dir(self, args: dict) -> list[TextContent]:
         """List directory handler."""
         import json
+
         from llmc_mcp.tools.fs import list_dir
-        
+
         path = args.get("path", "")
         max_entries = args.get("max_entries", 1000)
         include_hidden = args.get("include_hidden", False)
-        
+
         if not path:
             return [TextContent(type="text", text='{"error": "path is required"}')]
-        
+
         result = list_dir(
             path,
             self.config.tools.allowed_roots,
             max_entries=max_entries,
             include_hidden=include_hidden,
         )
-        
+
         if result.success:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"data": result.data, "meta": result.meta}),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
+                )
+            ]
         else:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": result.error, "meta": result.meta}),
-            )]
-    
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error, "meta": result.meta}),
+                )
+            ]
+
     async def _handle_stat(self, args: dict) -> list[TextContent]:
         """Stat path handler."""
         import json
+
         from llmc_mcp.tools.fs import stat_path
-        
+
         path = args.get("path", "")
-        
+
         if not path:
             return [TextContent(type="text", text='{"error": "path is required"}')]
-        
+
         result = stat_path(path, self.config.tools.allowed_roots)
-        
+
         if result.success:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"data": result.data, "meta": result.meta}),
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
+                )
+            ]
         else:
-            return [TextContent(
-                type="text",
-                text=json.dumps({"error": result.error, "meta": result.meta}),
-            )]
-    
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error, "meta": result.meta}),
+                )
+            ]
+
     async def _handle_run_cmd(self, args: dict) -> list[TextContent]:
         """Execute command handler."""
         import json
+
         from llmc_mcp.tools.cmd import run_cmd
-        
+
         command = args.get("command", "")
         timeout = args.get("timeout", self.config.tools.exec_timeout)
-        
+
         if not command:
             return [TextContent(type="text", text='{"error": "command is required"}')]
-        
+
         if not self.config.tools.enable_run_cmd:
-            return [TextContent(
-                type="text",
-                text='{"error": "run_cmd is disabled in config (mcp.tools.enable_run_cmd = false)"}',
-            )]
-        
+            return [
+                TextContent(
+                    type="text",
+                    text='{"error": "run_cmd is disabled in config (mcp.tools.enable_run_cmd = false)"}',
+                )
+            ]
+
         # Get working directory (first allowed root)
-        cwd = Path(self.config.tools.allowed_roots[0]) if self.config.tools.allowed_roots else Path(".")
-        
+        cwd = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
         result = run_cmd(
             command=command,
             cwd=cwd,
             allowlist=self.config.tools.run_cmd_allowlist,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )
-        
+
         response = {
             "success": result.success,
             "stdout": result.stdout,
@@ -535,26 +574,27 @@ class LlmcMcpServer:
         }
         if result.error:
             response["error"] = result.error
-            
+
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
-    
+
     async def _handle_te_run(self, args: dict) -> list[TextContent]:
         """Execute command through TE wrapper."""
         import json
-        from llmc_mcp.tools.te import te_run
+
         from llmc_mcp.context import McpSessionContext
-        
+        from llmc_mcp.tools.te import te_run
+
         cmd_args = args.get("args", [])
         cwd_str = args.get("cwd")
         timeout = args.get("timeout", self.config.tools.exec_timeout)
-        
+
         if not cmd_args or not isinstance(cmd_args, list):
             return [TextContent(type="text", text='{"error": "args list is required"}')]
-            
+
         # Resolve CWD: must be allowed
         allowed_roots = [Path(p).resolve() for p in self.config.tools.allowed_roots]
-        cwd = allowed_roots[0] # Default to first root
-        
+        cwd = allowed_roots[0]  # Default to first root
+
         if cwd_str:
             requested_cwd = Path(cwd_str).resolve()
             # Verify within allowed roots
@@ -566,18 +606,20 @@ class LlmcMcpServer:
                     break
                 except ValueError:
                     continue
-            
+
             if is_allowed:
                 cwd = requested_cwd
             else:
-                return [TextContent(
-                    type="text", 
-                    text=json.dumps({"error": f"cwd '{cwd_str}' not allowed", "meta": {}})
-                )]
-        
+                return [
+                    TextContent(
+                        type="text",
+                        text=json.dumps({"error": f"cwd '{cwd_str}' not allowed", "meta": {}}),
+                    )
+                ]
+
         # Build context from environment (in a real server, this would come from request headers)
         ctx = McpSessionContext.from_env()
-        
+
         # Execute
         result = te_run(
             cmd_args,
@@ -585,43 +627,45 @@ class LlmcMcpServer:
             timeout=min(timeout, self.config.tools.exec_timeout),
             cwd=str(cwd),
         )
-        
+
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
-    
+
     async def _handle_repo_read(self, args: dict) -> list[TextContent]:
         """Handle repo_read tool."""
         import json
-        from llmc_mcp.tools.te_repo import repo_read
+
         from llmc_mcp.context import McpSessionContext
-        
+        from llmc_mcp.tools.te_repo import repo_read
+
         root = args.get("root")
         path = args.get("path")
         max_bytes = args.get("max_bytes")
-        
+
         if not root or not path:
             return [TextContent(type="text", text='{"error": "root and path are required"}')]
-            
+
         ctx = McpSessionContext.from_env()
-        
+
         result = repo_read(root=root, path=path, max_bytes=max_bytes, ctx=ctx)
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_rag_query(self, args: dict) -> list[TextContent]:
         """Handle rag_query tool."""
         import json
-        from llmc_mcp.tools.te_repo import rag_query
+
         from llmc_mcp.context import McpSessionContext
-        
+        from llmc_mcp.tools.te_repo import rag_query
+
         query = args.get("query")
         k = args.get("k", 5)
         index = args.get("index")
         filters = args.get("filters")
-        
+
         if not query:
             return [TextContent(type="text", text='{"error": "query is required"}')]
-            
+
         ctx = McpSessionContext.from_env()
-        
+
         result = rag_query(query=query, k=k, index=index, filters=filters, ctx=ctx)
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
@@ -639,48 +683,54 @@ class LlmcMcpServer:
 def main():
     """Entry point for LLMC MCP server."""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="LLMC MCP Server")
     parser.add_argument(
-        "--config", "-c",
+        "--config",
+        "-c",
         help="Path to llmc.toml config file",
         default=None,
     )
     parser.add_argument(
-        "--log-level", "-l",
+        "--log-level",
+        "-l",
         choices=["debug", "info", "warning", "error"],
         default=None,
         help="Override log level",
     )
     args = parser.parse_args()
-    
+
     # Load config
     config = load_config(args.config)
-    
+
     # Apply CLI overrides
     if args.log_level:
         config.server.log_level = args.log_level
         config.observability.log_level = args.log_level
-    
+
     # Set up logging (use observability config if enabled)
-    global logger
+    global logger # noqa: PLW0603
     if config.observability.enabled:
         logger = setup_logging(config.observability, "llmc-mcp")
     else:
         log_level = getattr(logging, config.server.log_level.upper(), logging.INFO)
         logging.getLogger().setLevel(log_level)
         logger.setLevel(log_level)
-    
+
     # Log effective config (minus secrets)
     logger.info(f"Config loaded: enabled={config.enabled}, version={config.config_version}")
-    logger.info(f"Tools: allowed_roots={config.tools.allowed_roots}, run_cmd={config.tools.enable_run_cmd}")
+    logger.info(
+        f"Tools: allowed_roots={config.tools.allowed_roots}, run_cmd={config.tools.enable_run_cmd}"
+    )
     logger.info(f"RAG: scope={config.rag.default_scope}, top_k={config.rag.top_k}")
-    logger.info(f"Observability: enabled={config.observability.enabled}, log_format={config.observability.log_format}")
-    
+    logger.info(
+        f"Observability: enabled={config.observability.enabled}, log_format={config.observability.log_format}"
+    )
+
     if not config.enabled:
         logger.warning("MCP server disabled in config, exiting")
         sys.exit(0)
-    
+
     # Create and run server
     server = LlmcMcpServer(config)
     asyncio.run(server.run())

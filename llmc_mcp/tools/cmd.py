@@ -10,24 +10,25 @@ Security features:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import logging
+from pathlib import Path
 import shlex
 import subprocess
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class CommandSecurityError(Exception):
     """Raised when command execution is denied for security reasons."""
+
     pass
 
 
 @dataclass
 class ExecResult:
     """Result from command execution."""
+
     success: bool
     stdout: str
     stderr: str
@@ -62,30 +63,28 @@ def validate_command(
 ) -> str:
     """
     Validate command against allowlist.
-    
+
     Args:
         cmd_parts: Parsed command parts (first element is binary)
         allowlist: List of allowed binary names
-        
+
     Returns:
         The binary name if allowed
-        
+
     Raises:
         CommandSecurityError: If binary not in allowlist
     """
     if not cmd_parts:
         raise CommandSecurityError("Empty command")
-    
+
     binary = cmd_parts[0]
-    
+
     # Extract just the binary name (handle paths like /usr/bin/python)
     binary_name = Path(binary).name
-    
+
     if binary_name not in allowlist:
-        raise CommandSecurityError(
-            f"Binary '{binary_name}' not in allowlist. Allowed: {allowlist}"
-        )
-    
+        raise CommandSecurityError(f"Binary '{binary_name}' not in allowlist. Allowed: {allowlist}")
+
     return binary_name
 
 
@@ -98,14 +97,14 @@ def run_cmd(
 ) -> ExecResult:
     """
     Execute a shell command with security constraints.
-    
+
     Args:
         command: Shell command string to execute
         cwd: Working directory for execution
         allowlist: List of allowed binary names (uses DEFAULT_ALLOWLIST if None)
         timeout: Max execution time in seconds
         env: Optional environment variables to set
-        
+
     Returns:
         ExecResult with stdout, stderr, exit_code
     """
@@ -117,10 +116,10 @@ def run_cmd(
             exit_code=-1,
             error="Empty command",
         )
-    
+
     allowed = allowlist if allowlist is not None else DEFAULT_ALLOWLIST
     cwd_path = Path(cwd).resolve() if isinstance(cwd, str) else cwd.resolve()
-    
+
     # Parse command to validate binary
     try:
         cmd_parts = shlex.split(command)
@@ -132,7 +131,7 @@ def run_cmd(
             exit_code=-1,
             error=f"Invalid command syntax: {e}",
         )
-    
+
     # Validate against allowlist
     try:
         binary_name = validate_command(cmd_parts, allowed)
@@ -145,11 +144,12 @@ def run_cmd(
             exit_code=-1,
             error=str(e),
         )
-    
+
     # Execute with timeout
     try:
         result = subprocess.run(
             command,
+            check=False,
             shell=True,
             cwd=str(cwd_path),
             capture_output=True,
@@ -157,14 +157,14 @@ def run_cmd(
             timeout=timeout,
             env=env,
         )
-        
+
         return ExecResult(
             success=result.returncode == 0,
             stdout=result.stdout,
             stderr=result.stderr,
             exit_code=result.returncode,
         )
-        
+
     except subprocess.TimeoutExpired:
         return ExecResult(
             success=False,

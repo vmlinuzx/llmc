@@ -56,12 +56,6 @@ if TYPE_CHECKING:
         BackendAdapter as BackendAdapterT,
         BackendCascade as BackendCascadeT,
     )
-    from tools.rag.enrichment_router import (
-        EnrichmentRouter as EnrichmentRouterT,
-        EnrichmentSliceView as EnrichmentSliceViewT,
-        EnrichmentRouteDecision as EnrichmentRouteDecisionT,
-        build_router_from_toml,
-    )
 else:
     _cfg_enrich_mod = importlib.import_module("tools.rag.config_enrichment")
     EnrichmentBackendSpec = _cfg_enrich_mod.EnrichmentBackendSpec

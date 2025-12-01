@@ -1,4 +1,3 @@
-
 """
 llmc_mcp.benchmarks.runner
 
@@ -14,15 +13,16 @@ Usage:
 Env:
     LLMC_BENCH_OUTDIR=/path/to/metrics
 """
+
 from __future__ import annotations
 
-import csv
+from collections.abc import Callable
+from dataclasses import dataclass
 import json
 import os
 import time
+from typing import Any
 import uuid
-from dataclasses import dataclass, asdict
-from typing import Callable, Dict, List, Any, Optional
 
 # Optional wrapper imports; tolerate absence for dry runs
 try:
@@ -31,7 +31,7 @@ except Exception:  # pragma: no cover
     te_run = None  # type: ignore
 
 try:
-    from llmc_mcp.tools.te_repo import repo_read, rag_query
+    from llmc_mcp.tools.te_repo import rag_query, repo_read
 except Exception:  # pragma: no cover
     repo_read = None  # type: ignore
     rag_query = None  # type: ignore
@@ -64,6 +64,7 @@ def _json_size(obj: Any) -> int:
 
 def _now_stamp() -> str:
     import datetime as _dt
+
     return _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
@@ -73,19 +74,33 @@ def _outdir() -> str:
     return od
 
 
-def _emit_csv(rows: List[BenchResult]) -> str:
+def _emit_csv(rows: list[BenchResult]) -> str:
     path = os.path.join(_outdir(), f"benchmarks_{_now_stamp()}.csv")
     with open(path, "w", newline="", encoding="utf-8") as f:
         import csv as _csv
+
         w = _csv.writer(f)
-        w.writerow(["bench_id","case","tool","ok","returncode","duration_s","data_bytes","note"])
+        w.writerow(
+            ["bench_id", "case", "tool", "ok", "returncode", "duration_s", "data_bytes", "note"]
+        )
         for r in rows:
-            w.writerow([r.bench_id, r.case, r.tool, int(r.ok), r.returncode, f"{r.duration_s:.6f}", r.data_bytes, r.note])
+            w.writerow(
+                [
+                    r.bench_id,
+                    r.case,
+                    r.tool,
+                    int(r.ok),
+                    r.returncode,
+                    f"{r.duration_s:.6f}",
+                    r.data_bytes,
+                    r.note,
+                ]
+            )
     return path
 
 
 def _maybe_reset_metrics():
-    if MetricsCollector and hasattr(MetricsCollector, "reset"):
+    if MetricsCollector is not None and hasattr(MetricsCollector, "reset"):
         try:
             MetricsCollector.reset()
         except Exception:
@@ -95,7 +110,9 @@ def _maybe_reset_metrics():
 def case_te_echo() -> BenchResult:
     start = time.time()
     if te_run is None:
-        return BenchResult(str(uuid.uuid4()), "te_echo", "te_run", False, -1, 0.0, 0, "te_run unavailable")
+        return BenchResult(
+            str(uuid.uuid4()), "te_echo", "te_run", False, -1, 0.0, 0, "te_run unavailable"
+        )
     res = te_run(["run", "echo", "hello-bench"])
     dur = time.time() - start
     rc = int(res.get("meta", {}).get("returncode", -1))
@@ -107,7 +124,16 @@ def case_te_echo() -> BenchResult:
 def case_repo_read_small() -> BenchResult:
     start = time.time()
     if repo_read is None:
-        return BenchResult(str(uuid.uuid4()), "repo_read_small", "repo_read", False, -1, 0.0, 0, "repo_read unavailable")
+        return BenchResult(
+            str(uuid.uuid4()),
+            "repo_read_small",
+            "repo_read",
+            False,
+            -1,
+            0.0,
+            0,
+            "repo_read unavailable",
+        )
     res = repo_read(root=".", path="README.md", max_bytes=4096)
     dur = time.time() - start
     rc = int(res.get("meta", {}).get("returncode", -1))
@@ -119,7 +145,9 @@ def case_repo_read_small() -> BenchResult:
 def case_rag_top3() -> BenchResult:
     start = time.time()
     if rag_query is None:
-        return BenchResult(str(uuid.uuid4()), "rag_top3", "rag_query", False, -1, 0.0, 0, "rag_query unavailable")
+        return BenchResult(
+            str(uuid.uuid4()), "rag_top3", "rag_query", False, -1, 0.0, 0, "rag_query unavailable"
+        )
     res = rag_query("bench: quick sanity", k=3)
     dur = time.time() - start
     rc = int(res.get("meta", {}).get("returncode", -1))
@@ -128,28 +156,31 @@ def case_rag_top3() -> BenchResult:
     return BenchResult(str(uuid.uuid4()), "rag_top3", "rag_query", ok, rc, dur, sz)
 
 
-CASES: Dict[str, Callable[[], BenchResult]] = {
+CASES: dict[str, Callable[[], BenchResult]] = {
     "te_echo": case_te_echo,
     "repo_read_small": case_repo_read_small,
     "rag_top3": case_rag_top3,
 }
 
 
-def run_cases(selected: Optional[List[str]] = None) -> List[BenchResult]:
+def run_cases(selected: list[str] | None = None) -> list[BenchResult]:
     _maybe_reset_metrics()
     names = selected or list(CASES.keys())
-    rows: List[BenchResult] = []
+    rows: list[BenchResult] = []
     for name in names:
         fn = CASES.get(name)
         if not fn:
-            rows.append(BenchResult(str(uuid.uuid4()), name, "-", False, -1, 0.0, 0, "unknown case"))
+            rows.append(
+                BenchResult(str(uuid.uuid4()), name, "-", False, -1, 0.0, 0, "unknown case")
+            )
             continue
         rows.append(fn())
     return rows
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     import argparse
+
     p = argparse.ArgumentParser(description="LLMC MCP Benchmarks")
     p.add_argument("--cases", type=str, help="Comma-separated case names")
     p.add_argument("--quick", action="store_true", help="Run a minimal set (te_echo only)")

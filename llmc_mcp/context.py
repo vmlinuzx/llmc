@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-import os
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Mapping
+import os
 
 
 @dataclass
 class McpSessionContext:
     """Context for an MCP session (agent, session, model)."""
-    
+
     agent_id: str
     session_id: str
     model: str

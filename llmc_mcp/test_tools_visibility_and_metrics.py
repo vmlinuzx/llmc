@@ -1,14 +1,15 @@
-
 # llmc_mcp/test_tools_visibility_and_metrics.py
 import importlib
-import types
+
 import pytest
+
 
 def _load_server():
     try:
         return importlib.import_module("llmc_mcp.server")
     except Exception as e:
         pytest.skip(f"server module not importable: {e}")
+
 
 def _get_registry(server):
     # Try multiple patterns to locate the registry
@@ -23,12 +24,14 @@ def _get_registry(server):
             return reg
     pytest.skip("No accessible tool registry on server module.")
 
+
 def test_tool_registry_contains_te_wrappers():
     server = _load_server()
     reg = _get_registry(server)
     names = set(reg.keys())
     for name in ("te_run", "repo_read", "rag_query"):
         assert name in names, f"Expected tool '{name}' to be registered; got {sorted(names)}"
+
 
 def test_get_metrics_basic_shape():
     server = _load_server()
