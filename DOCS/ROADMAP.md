@@ -38,6 +38,7 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
 - Add or update tests to assert:
   - Enriched fields are present in the JSON envelopes returned by nav tools.
   - A missing or stale enrichment fails gracefully instead of crashing a tool.
+- **Completed (Nov 2025):** Ensured integration tests (P0 acceptance) properly reflect the enrichment schema, allowing tests to verify that enrichment data is attached correctly.
 
 ### 1.4 Clean public story and remove dead surfaces
 

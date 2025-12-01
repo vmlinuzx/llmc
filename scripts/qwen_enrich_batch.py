@@ -56,6 +56,12 @@ if TYPE_CHECKING:
         BackendAdapter as BackendAdapterT,
         BackendCascade as BackendCascadeT,
     )
+    from tools.rag.enrichment_router import (
+        EnrichmentRouter as EnrichmentRouterT,
+        EnrichmentSliceView as EnrichmentSliceViewT,
+        EnrichmentRouteDecision as EnrichmentRouteDecisionT,
+        build_router_from_toml,
+    )
 else:
     _cfg_enrich_mod = importlib.import_module("tools.rag.config_enrichment")
     EnrichmentBackendSpec = _cfg_enrich_mod.EnrichmentBackendSpec
@@ -65,6 +71,12 @@ else:
     load_enrichment_config = _cfg_enrich_mod.load_enrichment_config
     select_chain = _cfg_enrich_mod.select_chain
 
+    # Router integration (SDD v2.1)
+    _router_enrich_mod = importlib.import_module("tools.rag.enrichment_router")
+    EnrichmentRouter = _router_enrich_mod.EnrichmentRouter
+    EnrichmentSliceView = _router_enrich_mod.EnrichmentSliceView
+    EnrichmentRouteDecision = _router_enrich_mod.EnrichmentRouteDecision
+    build_router_from_toml = _router_enrich_mod.build_router_from_toml
 _db_mod = importlib.import_module("tools.rag.database")
 Database = _db_mod.Database
 
@@ -1358,11 +1370,12 @@ def _build_cascade_for_attempt(
     host_chain_count: int,
     enrichment_config: EnrichmentConfigT | None = None,
     selected_chain: Sequence[EnrichmentBackendSpecT] | None = None,
+    backend_specs: Sequence[EnrichmentBackendSpecT] | None = None,
 ) -> tuple[BackendCascadeT, str, dict[str, Any], str | None, str | None, str, str | None]:
     """Build a BackendCascade and preset metadata for a single attempt.
 
     This mirrors the existing tier/back-end selection logic in ``main`` but
-    can optionally use a config-driven enrichment chain.
+    can optionally use a config-driven enrichment chain or router-provided specs.
     """
 
     backend_choice = "gateway" if tier_for_attempt == "nano" else "ollama"
@@ -1375,16 +1388,21 @@ def _build_cascade_for_attempt(
     host_url: str | None = None
     chain_name_used: str | None = None
 
-    # Config-driven path: build adapters from EnrichmentConfig if available.
-    if enrichment_config is not None and selected_chain:
+    # Router path: use explicit backend_specs if provided.
+    # Or Config-driven path: build adapters from EnrichmentConfig if available.
+    specs_to_use = None
+    if backend_specs is not None:
+        specs_to_use = list(backend_specs)
+    elif enrichment_config is not None and selected_chain:
         try:
-            tier_chain = filter_chain_for_tier(list(selected_chain), tier_for_attempt)
+            specs_to_use = filter_chain_for_tier(list(selected_chain), tier_for_attempt)
         except Exception:
-            tier_chain = []
+            specs_to_use = []
 
-        if tier_chain:
-            chain_name_used = tier_chain[0].chain
-            for spec in tier_chain:
+    if specs_to_use:
+        if specs_to_use:
+            chain_name_used = specs_to_use[0].chain
+            for spec in specs_to_use:
                 provider = spec.provider
                 if provider == "ollama":
                     url = spec.url or ""
@@ -1478,12 +1496,33 @@ def main() -> int:
     summary_json_path = os.environ.get("LLMC_ENRICH_SUMMARY_JSON")
     enrichment_config: EnrichmentConfigT | None = None
     selected_chain: Sequence[EnrichmentBackendSpecT] | None = None
+    enrichment_router = None  # Router integration (SDD v2.1)
     if not force_legacy:
         try:
             enrichment_config = load_enrichment_config(
                 repo_root=repo_root,
                 toml_path=args.chain_config,
             )
+            # Build router for future per-span routing (SDD v2.1 Phase 2+)
+            try:
+                enrichment_router = build_router_from_toml(
+                    repo_root=repo_root,
+                    env=os.environ,
+                    toml_path=args.chain_config,
+                )
+                if args.verbose and enrichment_router.enable_routing:
+                    print(
+                        f"[enrichment] router enabled with {len(enrichment_router.routes)} routes",
+                        file=sys.stderr,
+                    )
+            except Exception as router_exc:
+                if args.verbose:
+                    print(
+                        f"[enrichment] router init failed: {router_exc}; using direct chain selection",
+                        file=sys.stderr,
+                    )
+                enrichment_router = None
+
             selected_chain = select_chain(enrichment_config, args.chain_name)
         except EnrichmentConfigError as exc:  # type: ignore[name-defined]
             print(
@@ -1772,6 +1811,32 @@ def main() -> int:
                 attempt_idx = 0
                 current_host_idx = 0
 
+                # Router Integration (SDD v2.1 Phase 2)
+                route_specs: Sequence[EnrichmentBackendSpecT] | None = None
+                if enrichment_router:
+                    try:
+                        slice_view = EnrichmentSliceView(
+                            span_hash=item["span_hash"],
+                            file_path=Path(item["path"]),
+                            start_line=line_start,
+                            end_line=line_end,
+                            content_type=item.get("slice_type", "unknown"),
+                            classifier_confidence=item.get("classifier_confidence", 0.0),
+                            approx_token_count=tokens_in,
+                        )
+                        decision = enrichment_router.choose_chain(
+                            slice_view,
+                            chain_override=args.chain_name,
+                        )
+                        enrichment_router.log_decision(decision, item["span_hash"])
+                        route_specs = decision.backend_specs
+                        if args.verbose and decision.reasons:
+                            print(f"  [router] {item['span_hash'][:8]} -> chain={decision.chain_name!r} reasons={decision.reasons}", file=sys.stderr)
+                    except Exception as exc:
+                        if args.verbose:
+                            print(f"  [router] routing failed for {item['span_hash'][:8]}: {exc}", file=sys.stderr)
+                        route_specs = None
+
                 while attempt_idx < max_attempts:
                     attempt_idx += 1
                     tier_for_attempt = current_tier or start_tier
@@ -1787,6 +1852,7 @@ def main() -> int:
                         host_chain_count=host_chain_count,
                         enrichment_config=enrichment_config,
                         selected_chain=selected_chain,
+                        backend_specs=route_specs,
                     )
 
                     options = tier_preset.get("options") if selected_backend == "ollama" else None

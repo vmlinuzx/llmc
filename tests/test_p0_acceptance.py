@@ -19,7 +19,7 @@ def _mk_repo(tmp: Path) -> Path:
                     {
                         "id": "fn:foo",
                         "name": "foo",
-                        "path": "repo/a.py",
+                        "path": "a.py",  # relative to repo root
                         "start_line": 1,
                         "end_line": 2,
                     }
@@ -39,8 +39,9 @@ def _mk_enrich_db(repo: Path) -> Path:
     con = sqlite3.connect(db)
     cur = con.cursor()
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS enrichments(path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT, evidence TEXT, span_hash TEXT)"
+        "CREATE TABLE IF NOT EXISTS enrichments(path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT, evidence TEXT, span_hash TEXT, content_type TEXT, content_language TEXT)"
     )
+    # Path must match what's in the graph: "a.py" (relative to repo root)
     cur.execute(
         "INSERT INTO enrichments(path,line,summary,inputs,outputs,pitfalls,evidence) VALUES(?,?,?,?,?,?,?)",
         ("a.py", 1, "Function foo doubles input", "x", "2x", "", ""),

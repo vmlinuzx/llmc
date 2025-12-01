@@ -1,12 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+import json
+import os
 from pathlib import Path
 from typing import Any
-from collections.abc import Mapping, Sequence
-
-import os
-import json
 
 try:  # Python 3.11+
     import tomllib  # type: ignore[import]
@@ -55,6 +54,12 @@ class EnrichmentConfig:
     max_retries_per_span: int
     enforce_latin1_enrichment: bool
     chains: dict[str, list[EnrichmentBackendSpec]]
+
+    # Router fields (Phase 2+, all with defaults for backwards compat):
+    enable_routing: bool = False
+    routes: dict[str, str] | None = None  # slice_type -> chain name
+    max_tier: str | None = None
+    on_failure: str = "error"  # "error" | "fallback_to_empty"
 
 
 class EnrichmentConfigError(ValueError):
@@ -322,6 +327,43 @@ def load_enrichment_config(
             f"No enabled enrichment backends found for default chain {default_chain!r}."
         )
 
+    # --- Router fields (Phase 2+) ---
+    enable_routing_raw = root_enrichment.get("enable_routing", False)
+    enable_routing = str(enable_routing_raw).lower() in ("1", "true", "yes", "on")
+
+    max_tier_raw = root_enrichment.get("max_tier")
+    max_tier: str | None = None
+    if max_tier_raw is not None:
+        max_tier = str(max_tier_raw)
+        if max_tier not in _ALLOWED_TIERS:
+            raise EnrichmentConfigError(
+                f"Invalid max_tier {max_tier!r}; expected one of {_ALLOWED_TIERS!r}."
+            )
+
+    on_failure_raw = root_enrichment.get("on_failure", "error")
+    on_failure = str(on_failure_raw)
+    if on_failure not in ("error", "fallback_to_empty"):
+        raise EnrichmentConfigError(
+            f"Invalid on_failure {on_failure!r}; expected 'error' or 'fallback_to_empty'."
+        )
+
+    # Parse [enrichment.routes] section: slice_type -> chain name
+    routes: dict[str, str] | None = None
+    routes_section = root_enrichment.get("routes")
+    if routes_section is not None:
+        if not isinstance(routes_section, Mapping):
+            raise EnrichmentConfigError(
+                f"[enrichment.routes] must be a table, not {type(routes_section).__name__}."
+            )
+        routes = {}
+        for key, value in routes_section.items():
+            if value is None:
+                continue
+            slice_type = str(key).strip().lower()
+            chain_name = str(value).strip()
+            if chain_name:
+                routes[slice_type] = chain_name
+
     return EnrichmentConfig(
         default_chain=default_chain,
         concurrency=concurrency,
@@ -330,6 +372,10 @@ def load_enrichment_config(
         max_retries_per_span=max_retries_per_span,
         enforce_latin1_enrichment=enforce_latin1_enrichment,
         chains=chains,
+        enable_routing=enable_routing,
+        routes=routes,
+        max_tier=max_tier,
+        on_failure=on_failure,
     )
 
 

@@ -2,6 +2,19 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.5.7] - "Enterprise Rocky Road" - 2025-11-30
+
+### Purple Flavor: **Enterprise Rocky Road**
+
+This release polishes the enrichment pipeline and ensures our P0 acceptance tests are actually testing reality. We found some schema mismatches between our tests and production code, and we squashed them.
+
+### Fixed
+- **Enrichment Router:** Fixed `AttributeError` in `enrichment_router.py` where `self.config` was accessed but not available (changed to `self.global_config`).
+- **Batch Enrichment Script:** Updated `qwen_enrich_batch.py` to correctly load configuration using `load_config` instead of direct file reading, ensuring environment variables and defaults are respected.
+- **Enrichment Config:** Added missing default values to `config_enrichment.py` to prevent `KeyError` crashes when optional config sections are missing.
+- **P0 Acceptance Test:** Updated the mock database schema in `tests/test_p0_acceptance.py` to include `content_type` and `content_language` columns, matching the production query expectations and fixing a silent failure in the test suite.
+- **Test Suite:** Fixed 31 tests in `tests/test_enrichment_router_basic.py` by properly mocking the `GlobalConfig` object.
+
 ## [0.5.6] - "Purple Flavor Tests" - 2025-11-30
 
 ### Purple Flavor: **Tests That Finally Pass**
