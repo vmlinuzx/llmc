@@ -1,0 +1,4 @@
+bench_id,case,tool,ok,returncode,duration_s,data_bytes,note
+c8c8c66a-e761-4eaa-959e-f958a5dab6a1,te_echo,te_run,1,0,0.059613,72,
+8d902896-a646-402c-b3a9-e90b861dbe3f,repo_read_small,repo_read,1,0,0.063967,10332,
+c6407c56-e3d1-44ec-ae0e-32a3646abc78,rag_top3,rag_query,1,0,8.680766,1387,

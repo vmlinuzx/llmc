@@ -528,11 +528,62 @@ def main() -> int:
     elif command == "find":
         tool_enabled = cfg.find_enabled
     
+    # Dispatch to enriched handler
+    if command == "run":
+        if not cmd_args:
+            print("[TE] run requires a command", file=sys.stderr)
+            return 1
+        return _handle_passthrough(cmd_args[0], cmd_args[1:], repo_root, json_mode=json_mode)
+
+    if command == "repo":
+        # Map 'te repo read ...' to 'cat ...' for now (MVP)
+        # In future this should call tools.rag_repo.cli
+        if cmd_args and cmd_args[0] == "read":
+            # Expect --root and --path args
+            # Simplified parsing for MVP bench support
+            try:
+                root_idx = cmd_args.index("--root") + 1
+                path_idx = cmd_args.index("--path") + 1
+                root = cmd_args[root_idx]
+                path = cmd_args[path_idx]
+                full_path = str(Path(root) / path)
+                return _handle_passthrough("cat", [full_path], repo_root, json_mode=json_mode)
+            except (ValueError, IndexError):
+                print("[TE] repo read requires --root and --path", file=sys.stderr)
+                return 1
+        # Fallback for other repo commands
+        return _handle_passthrough("python3", ["-m", "tools.rag_repo.cli_entry"] + cmd_args, repo_root, json_mode=json_mode)
+
+    if command == "rag":
+        # Map 'te rag query ...' to 'python3 -m tools.rag.cli search ...'
+        if cmd_args and cmd_args[0] == "query":
+            # Map --q to search query
+            new_args = ["-m", "tools.rag.cli", "search"]
+            try:
+                q_idx = cmd_args.index("--q") + 1
+                query = cmd_args[q_idx]
+                new_args.append(query)
+                
+                # Map --k to --limit
+                if "--k" in cmd_args:
+                    k_idx = cmd_args.index("--k") + 1
+                    new_args.extend(["--limit", cmd_args[k_idx]])
+                
+                # Pass --json if in json mode
+                if json_mode:
+                    new_args.append("--json")
+                    
+                return _handle_passthrough("python3", new_args, repo_root, json_mode=json_mode)
+            except (ValueError, IndexError):
+                print("[TE] rag query requires --q", file=sys.stderr)
+                return 1
+        # Fallback
+        return _handle_passthrough("python3", ["-m", "tools.rag.cli"] + cmd_args, repo_root, json_mode=json_mode)
+
     # If -i/--raw is set, OR command is unknown, OR tool is disabled → passthrough
     if args.raw or not is_enriched or not tool_enabled:
         return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
     
-    # Dispatch to enriched handler
     if command == "grep":
         return _handle_grep(cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode)
 
