@@ -235,6 +235,21 @@ class ObservabilityContext:
         """Get current metrics snapshot."""
         return self.metrics.get_stats()
 
+    @classmethod
+    def scope(cls, tool: str, correlation_id: str | None = None):
+        """Context manager for tracing a tool execution scope.
+        
+        Currently a no-op placeholder to satisfy tool interfaces.
+        Future: thread-local context or span tracing.
+        """
+        from contextlib import contextmanager
+        
+        @contextmanager
+        def _scope():
+            yield
+            
+        return _scope()
+
 
 def setup_logging(config: McpObservabilityConfig, logger_name: str = "llmc-mcp") -> logging.Logger:
     """Configure logging based on observability settings.

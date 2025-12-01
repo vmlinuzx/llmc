@@ -167,6 +167,77 @@ TOOLS: list[Tool] = [
             "required": [],
         },
     ),
+    Tool(
+        name="te_run",
+        description="Execute a shell command through the Tool Envelope (TE) wrapper. Returns structured JSON output.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Command arguments (e.g. ['grep', 'pattern', 'file'])",
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Optional working directory (must be within allowed roots)",
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Execution timeout in seconds",
+                },
+            },
+            "required": ["args"],
+        },
+    ),
+    Tool(
+        name="repo_read",
+        description="Read a file from a repository via the Tool Envelope.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "root": {
+                    "type": "string",
+                    "description": "Root path of the repository",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Relative path to the file",
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": "Maximum bytes to read (optional)",
+                },
+            },
+            "required": ["root", "path"],
+        },
+    ),
+    Tool(
+        name="rag_query",
+        description="Query the RAG system via the Tool Envelope.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query",
+                },
+                "k": {
+                    "type": "integer",
+                    "description": "Number of results to return (default 5)",
+                },
+                "index": {
+                    "type": "string",
+                    "description": "Specific index to query (optional)",
+                },
+                "filters": {
+                    "type": "object",
+                    "description": "Metadata filters (optional)",
+                },
+            },
+            "required": ["query"],
+        },
+    ),
 ]
 
 
@@ -189,6 +260,9 @@ class LlmcMcpServer:
             "stat": self._handle_stat,
             "run_cmd": self._handle_run_cmd,
             "get_metrics": self._handle_get_metrics,
+            "te_run": self._handle_te_run,
+            "repo_read": self._handle_repo_read,
+            "rag_query": self._handle_rag_query,
         }
         
         self._register_handlers()
@@ -464,6 +538,93 @@ class LlmcMcpServer:
             
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
     
+    async def _handle_te_run(self, args: dict) -> list[TextContent]:
+        """Execute command through TE wrapper."""
+        import json
+        from llmc_mcp.tools.te import te_run
+        from llmc_mcp.context import McpSessionContext
+        
+        cmd_args = args.get("args", [])
+        cwd_str = args.get("cwd")
+        timeout = args.get("timeout", self.config.tools.exec_timeout)
+        
+        if not cmd_args or not isinstance(cmd_args, list):
+            return [TextContent(type="text", text='{"error": "args list is required"}')]
+            
+        # Resolve CWD: must be allowed
+        allowed_roots = [Path(p).resolve() for p in self.config.tools.allowed_roots]
+        cwd = allowed_roots[0] # Default to first root
+        
+        if cwd_str:
+            requested_cwd = Path(cwd_str).resolve()
+            # Verify within allowed roots
+            is_allowed = False
+            for root in allowed_roots:
+                try:
+                    requested_cwd.relative_to(root)
+                    is_allowed = True
+                    break
+                except ValueError:
+                    continue
+            
+            if is_allowed:
+                cwd = requested_cwd
+            else:
+                return [TextContent(
+                    type="text", 
+                    text=json.dumps({"error": f"cwd '{cwd_str}' not allowed", "meta": {}})
+                )]
+        
+        # Build context from environment (in a real server, this would come from request headers)
+        ctx = McpSessionContext.from_env()
+        
+        # Execute
+        result = te_run(
+            cmd_args,
+            ctx=ctx,
+            timeout=min(timeout, self.config.tools.exec_timeout),
+            cwd=str(cwd),
+        )
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    
+    async def _handle_repo_read(self, args: dict) -> list[TextContent]:
+        """Handle repo_read tool."""
+        import json
+        from llmc_mcp.tools.te_repo import repo_read
+        from llmc_mcp.context import McpSessionContext
+        
+        root = args.get("root")
+        path = args.get("path")
+        max_bytes = args.get("max_bytes")
+        
+        if not root or not path:
+            return [TextContent(type="text", text='{"error": "root and path are required"}')]
+            
+        ctx = McpSessionContext.from_env()
+        
+        result = repo_read(root=root, path=path, max_bytes=max_bytes, ctx=ctx)
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    async def _handle_rag_query(self, args: dict) -> list[TextContent]:
+        """Handle rag_query tool."""
+        import json
+        from llmc_mcp.tools.te_repo import rag_query
+        from llmc_mcp.context import McpSessionContext
+        
+        query = args.get("query")
+        k = args.get("k", 5)
+        index = args.get("index")
+        filters = args.get("filters")
+        
+        if not query:
+            return [TextContent(type="text", text='{"error": "query is required"}')]
+            
+        ctx = McpSessionContext.from_env()
+        
+        result = rag_query(query=query, k=k, index=index, filters=filters, ctx=ctx)
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
     async def run(self):
         """Run the server with stdio transport."""
         logger.info("Starting LLMC MCP server (stdio transport)")
