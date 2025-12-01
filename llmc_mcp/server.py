@@ -20,6 +20,8 @@ import asyncio
 import inspect
 import json
 import logging
+import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -253,6 +255,9 @@ class LlmcMcpServer:
         # Initialize observability (M4)
         self.obs = ObservabilityContext(config.observability)
 
+        # Initialize tools list (starting with static tools)
+        self.tools = list(TOOLS)
+
         self.tool_handlers = {
             "health": self._handle_health,
             "list_tools": self._handle_list_tools,
@@ -267,8 +272,90 @@ class LlmcMcpServer:
             "rag_query": self._handle_rag_query,
         }
 
+        self._register_dynamic_executables()
         self._register_handlers()
         logger.info(f"LLMC MCP Server initialized ({config.config_version})")
+
+    def _register_dynamic_executables(self):
+        """Register custom executables defined in config."""
+        if not self.config.tools.executables:
+            return
+
+        for name, path in self.config.tools.executables.items():
+            logger.info(f"Registering dynamic executable tool: {name} -> {path}")
+            
+            # Create Tool definition
+            tool = Tool(
+                name=name,
+                description=f"Execute {path}",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "args": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Arguments to pass to the executable",
+                        }
+                    },
+                    "required": [],
+                },
+            )
+            self.tools.append(tool)
+
+            # Register handler
+            self.tool_handlers[name] = self._create_executable_handler(path)
+
+    def _create_executable_handler(self, cmd_path: str) -> Callable:
+        """Create a handler closure for a specific executable."""
+        async def handler(args: dict) -> list[TextContent]:
+            cmd_args = args.get("args", [])
+            return await self._handle_run_executable(cmd_path, cmd_args)
+        return handler
+
+    async def _handle_run_executable(self, cmd_path: str, args: list[str]) -> list[TextContent]:
+        """Execute a configured executable."""
+        cwd = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        # Construct command
+        quoted_args = [shlex.quote(str(a)) for a in args]
+        full_cmd = f"{shlex.quote(cmd_path)} {' '.join(quoted_args)}"
+
+        try:
+            result = subprocess.run(
+                full_cmd,
+                check=False,
+                shell=True,
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                timeout=self.config.tools.exec_timeout,
+            )
+
+            response = {
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "exit_code": result.returncode,
+            }
+            return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+        except subprocess.TimeoutExpired:
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": f"Command timed out after {self.config.tools.exec_timeout}s",
+                "exit_code": -1
+            }, indent=2))]
+        except Exception as e:
+            logger.exception(f"Error running {cmd_path}")
+            return [TextContent(type="text", text=json.dumps({
+                "success": False,
+                "error": str(e),
+                "exit_code": -1
+            }, indent=2))]
 
     def _register_handlers(self):
         """Register MCP protocol handlers."""
@@ -277,7 +364,7 @@ class LlmcMcpServer:
         async def list_tools() -> list[Tool]:
             """Return available tools."""
             logger.debug("list_tools called")
-            return TOOLS
+            return self.tools
 
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict) -> list[TextContent]:
@@ -379,10 +466,10 @@ class LlmcMcpServer:
         """List tools handler."""
         import json
 
-        # TOOLS is global
+        # Use self.tools which includes dynamic ones
         data = [
             {"name": t.name, "description": t.description, "inputSchema": t.inputSchema}
-            for t in TOOLS
+            for t in self.tools
         ]
         return [TextContent(type="text", text=json.dumps(data, indent=2))]
 
