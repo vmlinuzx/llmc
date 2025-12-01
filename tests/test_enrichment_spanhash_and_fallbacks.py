@@ -16,14 +16,14 @@ def make_db_with_span(tmp_path: Path) -> tuple[Path, str]:
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS enrichments")
     cur.execute(
-        "CREATE TABLE enrichments(span_hash TEXT, path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT)"
+        "CREATE TABLE enrichments(span_hash TEXT, path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT, content_type TEXT, content_language TEXT)"
     )
     file = "repo/a.py".lower()
     start, end = 10, 12
     text = "def foo(x):\n    return x\n"
     key = "|".join([file, str(start), str(end), " ".join(text.split())]).encode()
     h = hashlib.sha1(key).hexdigest()
-    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?,?)", (h, file, start, "sum-a", "in-a", "out-a", "pit-a"))
+    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?,?,?,?)", (h, file, start, "sum-a", "in-a", "out-a", "pit-a", "code", "python"))
     con.commit()
     con.close()
     return db, text
@@ -48,10 +48,10 @@ def test_fallback_line_then_path(tmp_path):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS enrichments")
     cur.execute(
-        "CREATE TABLE enrichments(path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT)"
+        "CREATE TABLE enrichments(path TEXT, line INTEGER, summary TEXT, inputs TEXT, outputs TEXT, pitfalls TEXT, content_type TEXT, content_language TEXT)"
     )
-    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?)", ("repo/b.py", 5, "sum-b", "in-b", "out-b", "pit-b"))
-    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?)", ("repo/c.py", 0, "sum-c", "in-c", "out-c", "pit-c"))
+    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?,?,?)", ("repo/b.py", 5, "sum-b", "in-b", "out-b", "pit-b", "code", "python"))
+    cur.execute("INSERT INTO enrichments VALUES(?,?,?,?,?,?,?,?)", ("repo/c.py", 0, "sum-c", "in-c", "out-c", "pit-c", "code", "python"))
     con.commit()
     con.close()
 

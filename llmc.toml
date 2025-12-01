@@ -1,4 +1,10 @@
-#Currently the default_profile is all that works!  I'm working on an embedding routing system.
+# ==============================================================================
+# Embeddings
+# ==============================================================================
+# 
+# 
+# 
+
 [embeddings]
 default_profile = "docs"
 
@@ -89,6 +95,15 @@ gpu_min_free_mb = 1536
 pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
 
 
+
+# ==============================================================================
+# Enrichment
+# ==============================================================================
+# 
+# 
+# 
+
+
 [enrichment]
 #enabled = true
 default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a default_chain defined and at least one llm URL for this to work!
@@ -135,6 +150,15 @@ options = { num_ctx = 12288, temperature = 0.2 }
 # routing_tier = "nano"
 # enabled = false
 
+
+# ==============================================================================
+# INDEXING
+# ==============================================================================
+# 
+# 
+# 
+
+
 [indexing]
 exclude_dirs = [
     ".git",
@@ -154,6 +178,13 @@ exclude_dirs = [
     "tools/rag/quality_check",
 ]
 
+
+# ==============================================================================
+# LOGGING
+# ==============================================================================
+# 
+# 
+# 
 
 
 [logging]
@@ -202,3 +233,60 @@ claude-dc = 180000
 qwen-local = 28000
 human-cli = 50000
 default = 16000
+
+
+# ==============================================================================
+# MCP CONFIGURATION - Model Context Protocol Server
+# ==============================================================================
+# stdio transport for Claude Desktop; HTTP deferred to later milestone.
+# Config precedence: CLI → ENV → TOML → defaults
+
+[mcp]
+enabled = true
+config_version = "v0"
+
+[mcp.server]
+# stdio transport - no host/port needed for Claude Desktop
+transport = "stdio"
+log_level = "info"
+
+[mcp.auth]
+# stdio doesn't need auth (process isolation)
+mode = "none"
+
+[mcp.tools]
+# Filesystem access roots - constrained to repo for MVP
+allowed_roots = ["/home/vmlinux/src/llmc"]
+enable_run_cmd = true  # M3: Command execution enabled
+run_cmd_allowlist = [
+    "bash", "sh", "rg", "grep", "cat", "head", "tail",
+    "ls", "find", "wc", "sort", "uniq",
+    "python", "python3", "pip",
+    "git"
+]
+read_timeout = 10
+exec_timeout = 30
+
+[mcp.rag]
+# RAG adapter settings
+jit_context_enabled = true
+default_scope = "repo"
+top_k = 3
+token_budget = 600
+
+[mcp.limits]
+max_request_bytes = 262144
+max_response_bytes = 1048576
+
+[mcp.observability]
+# M4: Observability - metrics, logging, token audit
+enabled = true
+log_format = "json"  # "json" | "text"
+log_level = "info"
+include_correlation_id = true
+# Metrics (in-memory for stdio; get_metrics tool to inspect)
+metrics_enabled = true
+# Token audit CSV trail
+csv_token_audit_enabled = false
+csv_path = "./artifacts/mcp_token_audit.csv"
+retention_days = 0  # 0 = keep forever

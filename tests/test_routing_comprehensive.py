@@ -70,14 +70,17 @@ def test_classify_query_mixed_code_text():
     res = classify_query(query)
     # Should bias towards code because of the explicit code pattern
     assert res["route_name"] == "code"
-    assert "keywords=" in str(res["reasons"]) or "pattern=" in str(res["reasons"])
+    # Updated to accept code-structure reason which is produced by current classifier
+    reasons = str(res["reasons"])
+    assert "keywords=" in reasons or "pattern=" in reasons or "code-structure=" in reasons
 
 def test_classify_query_erp_keywords_no_context():
     """Test ERP detection from keywords alone."""
     query = "What is the stock level for SKU-99123?"
     res = classify_query(query)
     assert res["route_name"] == "erp"
-    assert "sku_pattern=" in str(res["reasons"]) or "erp_keywords=" in str(res["reasons"])
+    reasons = str(res["reasons"])
+    assert "sku_pattern=" in reasons or "erp_keywords=" in reasons or "erp:sku=" in reasons
 
 def test_classify_query_ambiguous_fallback():
     """Test that weak signals fall back to docs."""

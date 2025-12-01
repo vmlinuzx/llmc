@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
 from collections.abc import Mapping
+from pathlib import Path
 
 from tools.rag.config_enrichment import (
     EnrichmentBackendSpec,
     EnrichmentConfig,
+    filter_chain_for_tier,
     load_enrichment_config,
     select_chain,
-    filter_chain_for_tier,
 )
 
 
@@ -169,3 +169,147 @@ def test_filter_chain_for_tier_respects_routing_tier() -> None:
 
     tier_14b = filter_chain_for_tier(chain, "14b")
     assert [s.name for s in tier_14b] == ["s3"]
+
+
+
+# -----------------------------------------------------------------------------
+# Phase 3 Tests - Router config fields (SDD 4.2)
+# -----------------------------------------------------------------------------
+
+
+def test_load_config_router_fields_defaults(tmp_path: Path) -> None:
+    """Verify router fields default correctly when not specified."""
+    repo_root = tmp_path
+    llmc = repo_root / "llmc.toml"
+    _write_toml(
+        llmc,
+        """
+[enrichment]
+default_chain = "default"
+
+[[enrichment.chain]]
+name = "default-backend"
+chain = "default"
+provider = "ollama"
+enabled = true
+""",
+    )
+    config = load_enrichment_config(repo_root, env={})
+    assert config.enable_routing is False
+    assert config.routes is None
+    assert config.max_tier is None
+    assert config.on_failure == "error"
+
+
+def test_load_config_with_routing_enabled(tmp_path: Path) -> None:
+    """Verify enable_routing=true is parsed correctly."""
+    repo_root = tmp_path
+    llmc = repo_root / "llmc.toml"
+    _write_toml(
+        llmc,
+        """
+[enrichment]
+default_chain = "default"
+enable_routing = true
+max_tier = "14b"
+on_failure = "fallback_to_empty"
+
+[[enrichment.chain]]
+name = "default-backend"
+chain = "default"
+provider = "ollama"
+enabled = true
+""",
+    )
+    config = load_enrichment_config(repo_root, env={})
+    assert config.enable_routing is True
+    assert config.max_tier == "14b"
+    assert config.on_failure == "fallback_to_empty"
+
+
+def test_load_config_with_routes_section(tmp_path: Path) -> None:
+    """Verify [enrichment.routes] section is parsed correctly."""
+    repo_root = tmp_path
+    llmc = repo_root / "llmc.toml"
+    _write_toml(
+        llmc,
+        """
+[enrichment]
+default_chain = "default"
+enable_routing = true
+
+[[enrichment.chain]]
+name = "default-backend"
+chain = "default"
+provider = "ollama"
+enabled = true
+
+[[enrichment.chain]]
+name = "code-backend"
+chain = "code_chain"
+provider = "ollama"
+enabled = true
+
+[enrichment.routes]
+code = "code_chain"
+docs = "default"
+erp_product = "default"
+""",
+    )
+    config = load_enrichment_config(repo_root, env={})
+    assert config.routes is not None
+    assert config.routes.get("code") == "code_chain"
+    assert config.routes.get("docs") == "default"
+    assert config.routes.get("erp_product") == "default"
+
+
+def test_load_config_invalid_max_tier_raises(tmp_path: Path) -> None:
+    """Verify invalid max_tier raises EnrichmentConfigError."""
+    import pytest
+
+    from tools.rag.config_enrichment import EnrichmentConfigError
+
+    repo_root = tmp_path
+    llmc = repo_root / "llmc.toml"
+    _write_toml(
+        llmc,
+        """
+[enrichment]
+default_chain = "default"
+max_tier = "999b"
+
+[[enrichment.chain]]
+name = "default-backend"
+chain = "default"
+provider = "ollama"
+enabled = true
+""",
+    )
+    with pytest.raises(EnrichmentConfigError, match="Invalid max_tier"):
+        load_enrichment_config(repo_root, env={})
+
+
+def test_load_config_invalid_on_failure_raises(tmp_path: Path) -> None:
+    """Verify invalid on_failure raises EnrichmentConfigError."""
+    import pytest
+
+    from tools.rag.config_enrichment import EnrichmentConfigError
+
+    repo_root = tmp_path
+    llmc = repo_root / "llmc.toml"
+    _write_toml(
+        llmc,
+        """
+[enrichment]
+default_chain = "default"
+on_failure = "explode"
+
+[[enrichment.chain]]
+name = "default-backend"
+chain = "default"
+provider = "ollama"
+enabled = true
+""",
+    )
+    with pytest.raises(EnrichmentConfigError, match="Invalid on_failure"):
+        load_enrichment_config(repo_root, env={})
