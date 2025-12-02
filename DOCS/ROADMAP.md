@@ -99,13 +99,6 @@ These are things that make LLMC nicer to live with once the core system is “go
   - `llmc init && llmc index && llmc-tui`
   with minimal extra steps.
 
-### 2.2 Refactor MCP bootstrap prompt
-
-**Goal:** Clean up `server.py` by moving the large bootstrap prompt to a separate file.
-
-- Move `BOOTSTRAP` constant from `llmc_mcp/server.py` to `llmc_mcp/prompts.py` (or similar).
-- Ensure it remains easily editable but doesn't clutter the main server logic.
-
 ### 2.2 Polyglot RAG support
 
 **Goal:** Make the schema graph and RAG story work across more than just Python.

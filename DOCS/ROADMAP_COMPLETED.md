@@ -82,6 +82,12 @@ It is not an exhaustive changelog; it is a brag sheet and a memory aid.
 - Configurable via `llmc.toml` (`[enrichment] vacuum_interval_hours`, default 24).
 - Tracks execution time per repo to ensure minimal performance impact.
 
+### 2.7 MCP Bootstrap Prompt Refactor
+
+- Moved the large `BOOTSTRAP` constant from `llmc_mcp/server.py` to `llmc_mcp/prompts.py`.
+- Updated `llmc_mcp/server.py` to import and use the prompt from the new module.
+- Ensured no changes to the prompt's content.
+
 ---
 
 ## 3. Desktop Commander / Tools Surface
