@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # scripts/bench_quick.sh — run quick benchmark (te_echo)
 set -euo pipefail

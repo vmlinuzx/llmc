@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # scripts/bench_full.sh — run full suite
 set -euo pipefail

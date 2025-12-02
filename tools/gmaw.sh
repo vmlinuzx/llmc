@@ -163,7 +163,7 @@ EOF
 ###############################################################################
 
 configure_gemini_env() {
-  : "${GEMINI_MODEL:=gemini-pro}"
+  : "${GEMINI_MODEL:=gemini-3-pro-preview}"
 }
 
 ###############################################################################
@@ -225,7 +225,7 @@ main() {
 
   # Interactive mode: no explicit user prompt → just preamble + live chat.
   if [ -z "$user_prompt" ]; then
-    gemini -i "$(build_preamble)" "${gemini_extra_args[@]}"
+    gemini -m "$GEMINI_MODEL" -i "$(build_preamble)" "${gemini_extra_args[@]}"
     exit $?
   fi
 
@@ -233,7 +233,7 @@ main() {
   {
     build_preamble
     printf '\n\n[USER REQUEST]\n%s\n' "$user_prompt"
-  } | gemini --model "$GEMINI_MODEL" "${gemini_extra_args[@]}"
+  } | gemini -m "$GEMINI_MODEL" "${gemini_extra_args[@]}"
 }
 
 main "$@"
