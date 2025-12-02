@@ -1087,10 +1087,12 @@ class LlmcMcpServer:
             ]
 
     async def _handle_run_cmd(self, args: dict) -> list[TextContent]:
-        """Execute command handler."""
+        """Execute command handler with smart RAG hints for search patterns."""
         import json
+        import re
 
         from llmc_mcp.tools.cmd import run_cmd
+        from llmc_mcp.tools.rag import rag_search_enriched
 
         command = args.get("command", "")
         timeout = args.get("timeout", self.config.tools.exec_timeout)
@@ -1113,6 +1115,65 @@ class LlmcMcpServer:
             else Path(".")
         )
 
+        # Smart grep interceptor: detect search patterns and show RAG preview
+        grep_pattern = None
+        
+        # Detect grep -r / grep -R
+        if "grep -r" in command.lower() or "grep -R" in command.lower():
+            match = re.search(r'grep\s+-[rR]\w*\s+["\']?([^"\']+)["\']?', command)
+            if match:
+                grep_pattern = match.group(1)
+        # Detect ripgrep (rg)
+        elif command.strip().startswith("rg "):
+            match = re.search(r'rg\s+["\']?([^"\']+)["\']?', command)
+            if match:
+                grep_pattern = match.group(1)
+        
+        # If we detected a search pattern worth trying RAG on
+        if grep_pattern and len(grep_pattern) > 2 and not grep_pattern.startswith("-"):
+            try:
+                # Try RAG search first
+                rag_result = rag_search_enriched(
+                    query=grep_pattern,
+                    repo_root=cwd,
+                    limit=5,
+                    enrich_mode="auto",
+                    include_features=False,
+                )
+                
+                if not rag_result.error and rag_result.data:
+                    # Format RAG preview
+                    preview = "🎯 Smart Search Results (AI-powered semantic search):\n\n"
+                    for i, item in enumerate(rag_result.data[:5], 1):
+                        lines = item.get("lines", [0, 0])
+                        preview += f"{i}. {item['path']}:{lines[0]}-{lines[1]}\n"
+                        preview += f"   Symbol: {item['symbol']} ({item['kind']})\n"
+                        preview += f"   Relevance: {item['score']:.3f}\n"
+                        if item.get('summary'):
+                            summary = item['summary'][:120]
+                            preview += f"   {summary}{'...' if len(item['summary']) > 120 else ''}\n"
+                        preview += "\n"
+                    
+                    preview += "💡 These are semantic search results with AI understanding.\n"
+                    preview += "   They find MEANING, not just text matches.\n"
+                    preview += f"   Original command: {command}\n"
+                    preview += "   Run the original command if you need exact string matching.\n"
+                    
+                    # Return RAG results instead of grep
+                    return [TextContent(type="text", text=json.dumps({
+                        "success": True,
+                        "smart_search": True,
+                        "stdout": preview,
+                        "rag_results": rag_result.data,
+                        "original_command": command,
+                        "hint": "Smart search intercepted grep. These semantic results are often better. Use grep directly if you need exact text matching."
+                    }, indent=2))]
+                    
+            except Exception as e:
+                # If RAG fails, fall through to normal grep
+                logger.debug(f"Smart grep RAG fallback failed: {e}")
+
+        # Normal command execution
         result = run_cmd(
             command=command,
             cwd=cwd,
