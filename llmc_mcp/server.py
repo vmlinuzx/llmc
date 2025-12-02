@@ -242,6 +242,199 @@ TOOLS: list[Tool] = [
             "required": ["query"],
         },
     ),
+    # L2 LinuxOps Tools
+    Tool(
+        name="linux.proc_list",
+        description="List running processes with CPU/memory usage. Returns bounded results sorted by CPU.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum processes to return (1-5000, default 200)",
+                    "default": 200,
+                },
+                "user": {
+                    "type": "string",
+                    "description": "Optional username filter",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="linux.proc_kill",
+        description="Send signal to a process. Safety guards prevent killing PID 1 or MCP server.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pid": {
+                    "type": "integer",
+                    "description": "Process ID to signal",
+                },
+                "signal": {
+                    "type": "string",
+                    "enum": ["TERM", "KILL", "INT", "HUP", "STOP", "CONT"],
+                    "description": "Signal to send (default TERM)",
+                    "default": "TERM",
+                },
+            },
+            "required": ["pid"],
+        },
+    ),
+    Tool(
+        name="linux.sys_snapshot",
+        description="Get system resource snapshot: CPU, memory, disk usage, and load average.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+        },
+    ),
+    # L3 LinuxOps - Interactive REPLs
+    Tool(
+        name="linux.proc_start",
+        description="Start an interactive process/REPL. Returns proc_id for subsequent send/read/stop.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "Command to run (e.g. 'python -i', 'bash', 'node')",
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Working directory (optional)",
+                },
+                "initial_read_timeout_ms": {
+                    "type": "integer",
+                    "description": "Time to wait for initial output (default 1000)",
+                    "default": 1000,
+                },
+            },
+            "required": ["command"],
+        },
+    ),
+    Tool(
+        name="linux.proc_send",
+        description="Send input to a managed process. Newline appended automatically.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID from proc_start",
+                },
+                "input": {
+                    "type": "string",
+                    "description": "Text to send to the process",
+                },
+            },
+            "required": ["proc_id", "input"],
+        },
+    ),
+    Tool(
+        name="linux.proc_read",
+        description="Read output from a managed process with timeout.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID",
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "description": "Max wait time in ms (default 1000, max 10000)",
+                    "default": 1000,
+                },
+            },
+            "required": ["proc_id"],
+        },
+    ),
+    Tool(
+        name="linux.proc_stop",
+        description="Stop a managed process and clean up.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID to stop",
+                },
+                "signal": {
+                    "type": "string",
+                    "enum": ["TERM", "KILL", "INT", "HUP"],
+                    "description": "Signal to send (default TERM)",
+                    "default": "TERM",
+                },
+            },
+            "required": ["proc_id"],
+        },
+    ),
+    # L1 Phase 2 - FS Write Tools
+    Tool(
+        name="linux.fs_write",
+        description="Write or append text to a file. Supports atomic writes and SHA256 precondition checks.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path to write"},
+                "content": {"type": "string", "description": "Text content to write"},
+                "mode": {"type": "string", "enum": ["rewrite", "append"], "default": "rewrite"},
+                "expected_sha256": {"type": "string", "description": "If set, verify file hash before write"},
+            },
+            "required": ["path", "content"],
+        },
+    ),
+    Tool(
+        name="linux.fs_mkdir",
+        description="Create a directory (and parent directories if needed).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Directory path to create"},
+                "exist_ok": {"type": "boolean", "default": True},
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="linux.fs_move",
+        description="Move or rename a file or directory.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "Source path"},
+                "dest": {"type": "string", "description": "Destination path"},
+            },
+            "required": ["source", "dest"],
+        },
+    ),
+    Tool(
+        name="linux.fs_delete",
+        description="Delete a file or directory.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Path to delete"},
+                "recursive": {"type": "boolean", "default": False, "description": "Required for directories"},
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="linux.fs_edit",
+        description="Surgical text replacement in a file. Finds and replaces exact text matches.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File to edit"},
+                "old_text": {"type": "string", "description": "Text to find"},
+                "new_text": {"type": "string", "description": "Replacement text"},
+                "expected_replacements": {"type": "integer", "default": 1, "description": "Expected match count"},
+            },
+            "required": ["path", "old_text", "new_text"],
+        },
+    ),
 ]
 
 
@@ -270,6 +463,21 @@ class LlmcMcpServer:
             "te_run": self._handle_te_run,
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
+            # L2 LinuxOps
+            "linux.proc_list": self._handle_proc_list,
+            "linux.proc_kill": self._handle_proc_kill,
+            "linux.sys_snapshot": self._handle_sys_snapshot,
+            # L3 LinuxOps - REPLs
+            "linux.proc_start": self._handle_proc_start,
+            "linux.proc_send": self._handle_proc_send,
+            "linux.proc_read": self._handle_proc_read,
+            "linux.proc_stop": self._handle_proc_stop,
+            # L1 Phase 2 - FS Writes
+            "linux.fs_write": self._handle_fs_write,
+            "linux.fs_mkdir": self._handle_fs_mkdir,
+            "linux.fs_move": self._handle_fs_move,
+            "linux.fs_delete": self._handle_fs_delete,
+            "linux.fs_edit": self._handle_fs_edit,
         }
 
         self._register_dynamic_executables()
@@ -755,6 +963,209 @@ class LlmcMcpServer:
 
         result = rag_query(query=query, k=k, index=index, filters=filters, ctx=ctx)
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    # L2 LinuxOps handlers
+    async def _handle_proc_list(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_list tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_list
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        max_results = args.get("max_results", 200)
+        user = args.get("user")
+
+        try:
+            result = mcp_linux_proc_list(
+                config=self.config.linux_ops,
+                max_results=max_results,
+                user=user,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    async def _handle_proc_kill(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_kill tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_kill
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        pid = args.get("pid")
+        signal = args.get("signal", "TERM")
+
+        if pid is None:
+            return [TextContent(type="text", text='{"error": "pid is required"}')]
+
+        try:
+            result = mcp_linux_proc_kill(
+                config=self.config.linux_ops,
+                pid=pid,
+                signal=signal,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    async def _handle_sys_snapshot(self, args: dict) -> list[TextContent]:
+        """Handle linux.sys_snapshot tool."""
+        from llmc_mcp.tools.linux_ops.sysinfo import mcp_linux_sys_snapshot
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        try:
+            result = mcp_linux_sys_snapshot(config=self.config.linux_ops)
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    # L3 LinuxOps - REPL handlers
+    async def _handle_proc_start(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_start tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_start
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        command = args.get("command")
+        cwd = args.get("cwd")
+        initial_timeout = args.get("initial_read_timeout_ms", 1000)
+
+        if not command:
+            return [TextContent(type="text", text='{"error": "command is required"}')]
+
+        try:
+            result = mcp_linux_proc_start(
+                command=command,
+                cwd=cwd,
+                initial_read_timeout_ms=initial_timeout,
+                config=self.config.linux_ops,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    async def _handle_proc_send(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_send tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_send
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        proc_id = args.get("proc_id")
+        input_text = args.get("input")
+
+        if not proc_id or input_text is None:
+            return [TextContent(type="text", text='{"error": "proc_id and input are required"}')]
+
+        try:
+            result = mcp_linux_proc_send(
+                proc_id=proc_id,
+                input=input_text,
+                config=self.config.linux_ops,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    async def _handle_proc_read(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_read tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_read
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        proc_id = args.get("proc_id")
+        timeout_ms = args.get("timeout_ms", 1000)
+
+        if not proc_id:
+            return [TextContent(type="text", text='{"error": "proc_id is required"}')]
+
+        try:
+            result = mcp_linux_proc_read(
+                proc_id=proc_id,
+                timeout_ms=timeout_ms,
+                config=self.config.linux_ops,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    async def _handle_proc_stop(self, args: dict) -> list[TextContent]:
+        """Handle linux.proc_stop tool."""
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_stop
+        from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+
+        proc_id = args.get("proc_id")
+        signal = args.get("signal", "TERM")
+
+        if not proc_id:
+            return [TextContent(type="text", text='{"error": "proc_id is required"}')]
+
+        try:
+            result = mcp_linux_proc_stop(
+                proc_id=proc_id,
+                signal=signal,
+                config=self.config.linux_ops,
+            )
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except LinuxOpsError as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+
+    # L1 Phase 2 - FS Write handlers
+    async def _handle_fs_write(self, args: dict) -> list[TextContent]:
+        """Handle linux.fs_write tool."""
+        from llmc_mcp.tools.fs import write_file
+        path = args.get("path", "")
+        content = args.get("content", "")
+        mode = args.get("mode", "rewrite")
+        expected_sha256 = args.get("expected_sha256")
+        if not path or content is None:
+            return [TextContent(type="text", text='{"error": "path and content required"}')]
+        result = write_file(path, self.config.tools.allowed_roots, content, mode, expected_sha256)
+        if result.success:
+            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
+        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+
+    async def _handle_fs_mkdir(self, args: dict) -> list[TextContent]:
+        """Handle linux.fs_mkdir tool."""
+        from llmc_mcp.tools.fs import create_directory
+        path = args.get("path", "")
+        exist_ok = args.get("exist_ok", True)
+        if not path:
+            return [TextContent(type="text", text='{"error": "path required"}')]
+        result = create_directory(path, self.config.tools.allowed_roots, exist_ok)
+        if result.success:
+            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
+        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+
+    async def _handle_fs_move(self, args: dict) -> list[TextContent]:
+        """Handle linux.fs_move tool."""
+        from llmc_mcp.tools.fs import move_file
+        source = args.get("source", "")
+        dest = args.get("dest", "")
+        if not source or not dest:
+            return [TextContent(type="text", text='{"error": "source and dest required"}')]
+        result = move_file(source, dest, self.config.tools.allowed_roots)
+        if result.success:
+            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
+        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+
+    async def _handle_fs_delete(self, args: dict) -> list[TextContent]:
+        """Handle linux.fs_delete tool."""
+        from llmc_mcp.tools.fs import delete_file
+        path = args.get("path", "")
+        recursive = args.get("recursive", False)
+        if not path:
+            return [TextContent(type="text", text='{"error": "path required"}')]
+        result = delete_file(path, self.config.tools.allowed_roots, recursive)
+        if result.success:
+            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
+        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+
+    async def _handle_fs_edit(self, args: dict) -> list[TextContent]:
+        """Handle linux.fs_edit tool."""
+        from llmc_mcp.tools.fs import edit_block
+        path = args.get("path", "")
+        old_text = args.get("old_text", "")
+        new_text = args.get("new_text", "")
+        expected = args.get("expected_replacements", 1)
+        if not path or not old_text:
+            return [TextContent(type="text", text='{"error": "path and old_text required"}')]
+        result = edit_block(path, self.config.tools.allowed_roots, old_text, new_text, expected)
+        if result.success:
+            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
+        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
 
     async def run(self):
         """Run the server with stdio transport."""

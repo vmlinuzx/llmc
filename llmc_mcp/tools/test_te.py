@@ -15,7 +15,7 @@ class DummyCtx:
 def test_te_run_injects_json_and_env(monkeypatch):
     captured = {}
 
-    def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
+    def fake_run(argv, stdout=None, stderr=None, cwd=None, timeout=None, env=None, text=None, check=None, capture_output=None):
         captured["argv"] = argv
         captured["env"] = env
         # Simulate TE --json stdout
@@ -34,7 +34,7 @@ def test_te_run_injects_json_and_env(monkeypatch):
 
 
 def test_te_run_handles_non_json_stdout(monkeypatch):
-    def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
+    def fake_run(*args, **kwargs):
         return types.SimpleNamespace(returncode=0, stdout="not json", stderr="")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -43,7 +43,7 @@ def test_te_run_handles_non_json_stdout(monkeypatch):
 
 
 def test_te_run_failure_path(monkeypatch):
-    def fake_run(argv, stdout, stderr, cwd, timeout, env, text, check):
+    def fake_run(*args, **kwargs):
         raise RuntimeError("boom")
 
     monkeypatch.setattr(subprocess, "run", fake_run)

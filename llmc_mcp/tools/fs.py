@@ -393,3 +393,223 @@ def stat_path(
             meta={"path": str(path)},
             error=f"Stat error: {e}",
         )
+
+
+
+# ============================================================================
+# Write Operations (L1 Phase 2)
+# ============================================================================
+
+import hashlib
+import shutil
+
+
+def write_file(
+    path: str | Path,
+    allowed_roots: list[str],
+    content: str,
+    mode: str = "rewrite",
+    expected_sha256: str | None = None,
+    max_bytes: int = 10_485_760,  # 10MB default limit
+) -> FsResult:
+    """
+    Write or append content to a file.
+
+    Args:
+        path: File path to write
+        allowed_roots: Allowed root directories
+        content: Text content to write
+        mode: "rewrite" (overwrite) or "append"
+        expected_sha256: If provided, verify existing file hash before write
+        max_bytes: Maximum bytes allowed to write
+
+    Returns:
+        FsResult with bytes_written and new_sha256
+    """
+    try:
+        resolved = validate_path(path, allowed_roots)
+        content_bytes = content.encode("utf-8")
+        
+        if len(content_bytes) > max_bytes:
+            return FsResult(
+                success=False, data=None,
+                meta={"path": str(resolved)},
+                error=f"Content too large: {len(content_bytes)} > {max_bytes}",
+            )
+
+        # Verify existing hash if requested
+        if expected_sha256 and resolved.exists():
+            existing_hash = hashlib.sha256(resolved.read_bytes()).hexdigest()
+            if existing_hash != expected_sha256:
+                return FsResult(
+                    success=False, data=None,
+                    meta={"path": str(resolved), "actual_sha256": existing_hash},
+                    error=f"SHA256 mismatch",
+                )
+
+        # Write atomically for rewrite, direct for append
+        if mode == "rewrite":
+            tmp_path = resolved.with_suffix(resolved.suffix + ".tmp")
+            tmp_path.write_bytes(content_bytes)
+            tmp_path.replace(resolved)
+        else:
+            with open(resolved, "ab") as f:
+                f.write(content_bytes)
+
+        new_hash = hashlib.sha256(resolved.read_bytes()).hexdigest()
+        return FsResult(
+            success=True,
+            data={"bytes_written": len(content_bytes), "new_sha256": new_hash},
+            meta={"path": str(resolved)},
+        )
+    except PathSecurityError as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
+    except Exception as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Write error: {e}")
+
+
+
+def create_directory(
+    path: str | Path,
+    allowed_roots: list[str],
+    exist_ok: bool = True,
+) -> FsResult:
+    """Create a directory (and parents if needed)."""
+    try:
+        resolved = validate_path(path, allowed_roots)
+        resolved.mkdir(parents=True, exist_ok=exist_ok)
+        return FsResult(
+            success=True,
+            data={"created": True},
+            meta={"path": str(resolved)},
+        )
+    except FileExistsError:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error="Directory exists")
+    except PathSecurityError as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
+    except Exception as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Mkdir error: {e}")
+
+
+def move_file(
+    source: str | Path,
+    dest: str | Path,
+    allowed_roots: list[str],
+) -> FsResult:
+    """Move/rename a file or directory."""
+    try:
+        src_resolved = validate_path(source, allowed_roots)
+        dst_resolved = validate_path(dest, allowed_roots)
+        
+        if not src_resolved.exists():
+            return FsResult(success=False, data=None, meta={"source": str(source)}, error="Source not found")
+        
+        shutil.move(str(src_resolved), str(dst_resolved))
+        return FsResult(
+            success=True,
+            data={"source": str(src_resolved), "dest": str(dst_resolved)},
+            meta={},
+        )
+    except PathSecurityError as e:
+        return FsResult(success=False, data=None, meta={}, error=str(e))
+    except Exception as e:
+        return FsResult(success=False, data=None, meta={}, error=f"Move error: {e}")
+
+
+def delete_file(
+    path: str | Path,
+    allowed_roots: list[str],
+    recursive: bool = False,
+) -> FsResult:
+    """Delete a file or directory."""
+    try:
+        resolved = validate_path(path, allowed_roots)
+        
+        if not resolved.exists():
+            return FsResult(success=False, data=None, meta={"path": str(path)}, error="Path not found")
+        
+        # Safety: don't delete allowed roots themselves
+        for root in allowed_roots:
+            if resolved == Path(root).resolve():
+                return FsResult(success=False, data=None, meta={"path": str(path)}, error="Cannot delete allowed root")
+        
+        if resolved.is_dir():
+            if not recursive:
+                return FsResult(success=False, data=None, meta={"path": str(path)}, error="Is directory, use recursive=True")
+            shutil.rmtree(resolved)
+        else:
+            resolved.unlink()
+        
+        return FsResult(success=True, data={"deleted": str(resolved)}, meta={})
+    except PathSecurityError as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
+    except Exception as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Delete error: {e}")
+
+
+
+def edit_block(
+    path: str | Path,
+    allowed_roots: list[str],
+    old_text: str,
+    new_text: str,
+    expected_replacements: int = 1,
+) -> FsResult:
+    """
+    Surgical text replacement in a file.
+    
+    Args:
+        path: File to edit
+        allowed_roots: Allowed directories
+        old_text: Text to find and replace
+        new_text: Replacement text
+        expected_replacements: Expected number of matches (default 1)
+    
+    Returns:
+        FsResult with replacement count and snippets
+    """
+    try:
+        resolved = validate_path(path, allowed_roots)
+        
+        if not resolved.exists():
+            return FsResult(success=False, data=None, meta={"path": str(path)}, error="File not found")
+        if not resolved.is_file():
+            return FsResult(success=False, data=None, meta={"path": str(path)}, error="Not a file")
+        
+        content = resolved.read_text(encoding="utf-8")
+        count = content.count(old_text)
+        
+        if count == 0:
+            # Try to find close match for helpful error
+            return FsResult(
+                success=False, data=None,
+                meta={"path": str(path)},
+                error=f"Text not found in file",
+            )
+        
+        if count != expected_replacements:
+            return FsResult(
+                success=False, data=None,
+                meta={"path": str(path), "actual_count": count},
+                error=f"Expected {expected_replacements} matches, found {count}",
+            )
+        
+        # Do the replacement
+        new_content = content.replace(old_text, new_text)
+        
+        # Write atomically
+        tmp_path = resolved.with_suffix(resolved.suffix + ".tmp")
+        tmp_path.write_text(new_content, encoding="utf-8")
+        tmp_path.replace(resolved)
+        
+        return FsResult(
+            success=True,
+            data={"replacements": count},
+            meta={"path": str(resolved)},
+        )
+    except PathSecurityError as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
+    except UnicodeDecodeError:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error="File is not UTF-8 text")
+    except Exception as e:
+        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Edit error: {e}")

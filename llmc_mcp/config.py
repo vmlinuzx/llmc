@@ -8,6 +8,8 @@ from pathlib import Path
 import tomllib
 from typing import Any, cast
 
+from llmc_mcp.tools.linux_ops.config import LinuxOpsConfig, load_linux_ops_config
+
 
 @dataclass
 class McpServerConfig:
@@ -124,6 +126,7 @@ class McpConfig:
     rag: McpRagConfig = field(default_factory=McpRagConfig)
     limits: McpLimitsConfig = field(default_factory=McpLimitsConfig)
     observability: McpObservabilityConfig = field(default_factory=McpObservabilityConfig)
+    linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
 
     def validate(self) -> None:
         self.server.validate()
