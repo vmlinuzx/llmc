@@ -121,6 +121,39 @@ def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
 
     return DEFAULT_EST_TOKENS_PER_SPAN
 
+
+def get_vacuum_interval_hours(repo_root: Optional[Path] = None) -> int:
+    """
+    Return the vacuum interval in hours. Default is 24.
+    
+    Precedence:
+    - Environment variable LLMC_RAG_VACUUM_INTERVAL_HOURS
+    - [enrichment].vacuum_interval_hours in llmc.toml
+    - Default: 24
+    """
+    env_value = os.getenv("LLMC_RAG_VACUUM_INTERVAL_HOURS")
+    if env_value is not None:
+        try:
+            parsed = int(env_value)
+            if parsed > 0:
+                return parsed
+        except ValueError:
+            pass
+
+    cfg = load_config(repo_root)
+    enrichment_cfg = cfg.get("enrichment", {})
+    raw_cfg_value = enrichment_cfg.get("vacuum_interval_hours")
+    if raw_cfg_value is not None:
+        try:
+            parsed = int(raw_cfg_value)
+            if parsed > 0:
+                return parsed
+        except (TypeError, ValueError):
+            pass
+
+    return 24
+
+
 @lru_cache(maxsize=128) # Cache to avoid log spam for repeated missing slice types
 def get_route_for_slice_type(slice_type: str, repo_root: Optional[Path] = None) -> str:
     """

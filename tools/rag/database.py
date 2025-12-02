@@ -133,6 +133,10 @@ class Database:
     def close(self) -> None:
         self._conn.close()
 
+    def vacuum(self) -> None:
+        """Reclaim unused space in the database."""
+        self._conn.execute("VACUUM")
+
     def _open_and_prepare(self) -> sqlite3.Connection:
         """Open the sqlite database, quarantining corrupt files if needed."""
         attempts = 0

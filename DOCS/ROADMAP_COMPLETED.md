@@ -76,6 +76,12 @@ It is not an exhaustive changelog; it is a brag sheet and a memory aid.
 - Documented `DOCS/RAG_Enrichment_Hardening.md` covering config, `enforce_latin1_enrichment` behavior, retries, timeouts, and backend fallbacks.
 - Added a structured triage checklist for common enrichment issues (stuck jobs, backend flapping, DB pollution).
 
+### 2.6 Database Maintenance (Auto-Vacuum)
+
+- Implemented automatic SQLite `VACUUM` maintenance in the enrichment loop.
+- Configurable via `llmc.toml` (`[enrichment] vacuum_interval_hours`, default 24).
+- Tracks execution time per repo to ensure minimal performance impact.
+
 ---
 
 ## 3. Desktop Commander / Tools Surface

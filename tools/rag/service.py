@@ -29,7 +29,7 @@ import subprocess
 import sys
 import time
 
-from tools.rag.config import load_config
+from tools.rag.config import load_config, get_vacuum_interval_hours
 
 try:  # Python 3.11+
     import tomllib  # type: ignore
@@ -119,15 +119,22 @@ class ServiceState:
         self.state = self._load()
     
     def _load(self) -> dict:
-        if STATE_FILE.exists():
-            return json.loads(STATE_FILE.read_text())
-        return {
+        defaults = {
             "repos": [],
             "pid": None,
             "status": "stopped",
             "last_cycle": None,
-            "interval": 180
+            "interval": 180,
+            "last_vacuum": {}
         }
+        if STATE_FILE.exists():
+            try:
+                loaded = json.loads(STATE_FILE.read_text())
+                # merge loaded into defaults to ensure new keys exist
+                defaults.update(loaded)
+            except Exception:
+                pass
+        return defaults
 
     def _refresh_from_disk(self) -> None:
         """
@@ -192,6 +199,22 @@ class ServiceState:
         self.state["last_cycle"] = datetime.now(UTC).isoformat()
         self.save()
     
+    def get_last_vacuum(self, repo_path: str) -> float:
+        """Get timestamp of last vacuum for a repo (0.0 if never)."""
+        vacuums = self.state.get("last_vacuum", {})
+        # Ensure we handle case where last_vacuum might be missing in old state files
+        if not isinstance(vacuums, dict):
+            vacuums = {}
+        return float(vacuums.get(repo_path, 0.0))
+
+    def update_last_vacuum(self, repo_path: str):
+        """Record vacuum timestamp for a repo."""
+        self._refresh_from_disk()
+        if "last_vacuum" not in self.state or not isinstance(self.state["last_vacuum"], dict):
+            self.state["last_vacuum"] = {}
+        self.state["last_vacuum"][repo_path] = time.time()
+        self.save()
+
     def is_running(self) -> bool:
         if self.state["pid"] is None:
             return False
@@ -560,6 +583,26 @@ class RAGService:
             print(f"  ✅ Graph rebuilt: {status}")
         except Exception as e:
             print(f"  ⚠️  Graph build failed: {e}")
+
+        # Step 6: Database Maintenance (Vacuum)
+        try:
+            vacuum_interval_hours = get_vacuum_interval_hours(repo)
+            last_vacuum = self.state.get_last_vacuum(str(repo))
+            now = time.time()
+            if now - last_vacuum > vacuum_interval_hours * 3600:
+                print("  🧹 Running database vacuum...")
+                from tools.rag.database import Database
+                from tools.rag.config import index_path_for_write
+                
+                db_path = index_path_for_write(repo)
+                db = Database(db_path)
+                db.vacuum()
+                db.close()
+                
+                self.state.update_last_vacuum(str(repo))
+                print("  ✅ Database vacuum complete")
+        except Exception as e:
+            print(f"  ⚠️  Database vacuum failed: {e}")
         
         print(f"  ✅ {repo.name} processing complete")
     

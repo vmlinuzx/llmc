@@ -49,15 +49,6 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
     - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
   - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto‑refactor).
 
-### 1.5 Database Maintenance (Auto-Vacuum)
-
-**Goal:** Keep the RAG SQLite database size under control automatically.
-
-- Implement a periodic `VACUUM` maintenance task in the enrichment loop:
-  - Run frequency configurable via `llmc.toml` (e.g., `vacuum_interval_hours = 24`).
-  - Ensure it only runs if the interval has passed to avoid performance hits.
-  - Helps reclaim disk space from deleted vectors/enrichments (currently ~16% fragmentation).
-
 ### 1.6 System Friendliness (Idle Loop Throttling)
 
 **Goal:** Prevent the daemon from burning CPU when there is no work to do.
@@ -135,7 +126,20 @@ These are things that make LLMC nicer to live with once the core system is “go
   - How normalization works.
   - That normalized scores are comparable across queries.
 
+### 2.4 Deterministic Repo Docgen (v2)
 
+**Goal:** Generate accurate, per-file repository documentation automatically with RAG-based freshness gating.
+
+- Implement deterministic doc generation per file:
+  - Single freshness gate: RAG must be current for exact file+hash.
+  - SHA256 gating handled only by orchestrator.
+  - Backend contract: JSON stdin → Markdown stdout (no chatter).
+- Build graph context builder with deterministic ordering and caps.
+- Create LLM backend harness with canonical prompt template.
+- Output to `DOCS/REPODOCS/<relative_path>.md` structure.
+- Add observability: counters, timers, and size metrics.
+- Implement concurrency control with file locking.
+- **Reference:** [SDD_Docgen_v2_for_Codex.md](file:///home/vmlinux/src/llmc/DOCS/planning/SDD_Docgen_v2_for_Codex.md)
 
 ---
 
@@ -177,6 +181,31 @@ These are the “this would be awesome” items that are worth doing, but not at
   - Code execution trace viewer (privacy-gated).
 - Implement retention policies with auto-cleanup.
 - Add `get_telemetry` MCP tool for LLM self-analysis.
+
+### 3.4 Multi-Agent Coordination & Anti-Stomp
+
+**Goal:** Enable multiple agents to work concurrently without stomping on each other's changes.
+
+- Research and design coordination mechanisms:
+  - File-level locking with claim/release protocol.
+  - Conflict detection (detect overlapping edits before commit).
+  - Work queue / ticketing system for task distribution.
+  - Lint-aware coordination (prevent concurrent edits that break linting).
+- Implement anti-stomp primitives:
+  - `claim_file(path, agent_id, timeout)` - Reserve file for editing.
+  - `release_file(path, agent_id)` - Release claim.
+  - `check_conflicts(path, agent_id)` - Detect if file changed since claim.
+  - Automatic release on timeout or agent disconnect.
+- Add coordination layer to MCP server:
+  - Track active claims in SQLite (`.llmc/agent_claims.db`).
+  - Expose coordination tools via MCP (`claim_file`, `release_file`, etc.).
+  - Integrate with file write operations (auto-claim before edit).
+- Testing strategy:
+  - Simulate 3+ concurrent agents editing different files.
+  - Simulate conflict scenarios (same file, overlapping lines).
+  - Verify lint passes after concurrent edits.
+- **Prior art:** Flat ticketing system (worked up to 3 agents with occasional lint issues).
+- **Success criteria:** 5+ agents working concurrently with zero stomps and clean lints.
 
 ---
 
