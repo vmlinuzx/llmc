@@ -13,7 +13,14 @@ from pathlib import Path
 import tomllib
 from functools import lru_cache
 
-from llmc.te.telemetry import log_routing_event # Import the new logging function
+# Conditional import for telemetry - allows the module to work without llmc dependency
+try:
+    from llmc.te.telemetry import log_routing_event
+except ImportError:
+    # No-op fallback when llmc module is not available
+    def log_routing_event(mode: str, details: Dict[str, Any], repo_root: Optional[Path] = None, **kwargs) -> None:
+        """No-op fallback for telemetry logging when llmc module is unavailable."""
+        pass
 
 # Set up logging for this module
 log = logging.getLogger(__name__)

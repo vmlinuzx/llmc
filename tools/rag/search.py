@@ -18,12 +18,36 @@ from .config import (
     get_multi_route_config,
     is_multi_route_enabled,
 )
-from llmc.routing.fusion import fuse_scores
-from llmc.te.telemetry import log_routing_event
+
+# Conditional import for telemetry - allows the module to work without llmc dependency
+try:
+    from llmc.te.telemetry import log_routing_event
+except ImportError:
+    # No-op fallback when llmc module is not available
+    def log_routing_event(mode: str, details: Dict[str, Any], repo_root: Optional[Path] = None, **kwargs) -> None:
+        """No-op fallback for telemetry logging when llmc module is unavailable."""
+        pass
+
+# Conditional import for routing components - allows the module to work without llmc dependency
+try:
+    from llmc.routing.fusion import fuse_scores
+except ImportError:
+    # No-op fallback when llmc module is not available
+    def fuse_scores(results_by_route: Dict[str, List[Any]], route_weights: Dict[str, float]) -> List[Any]:
+        """No-op fallback for score fusion when llmc module is unavailable."""
+        return []
+
+try:
+    from llmc.routing.router import create_router
+except ImportError:
+    # No-op fallback when llmc module is not available
+    def create_router(config: Dict[str, Any]) -> Any:
+        """No-op fallback for router creation when llmc module is unavailable."""
+        return None
+
 from .database import Database
 from .embeddings import build_embedding_backend, HASH_MODELS
 from .utils import find_repo_root
-from llmc.routing.router import create_router
 import logging
 from tools.rag.config import ConfigError # Added import
 

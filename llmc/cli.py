@@ -28,9 +28,10 @@ except ImportError:
 try:
     from tools.rag_nav.metadata import load_status
     from tools.rag_nav.tool_handlers import _load_graph, _rag_graph_path # _load_graph is private, but okay for demo
-except ImportError:
-    console.print("[bold red]ERROR:[/bold red] LLMC core modules not found. Ensure PYTHONPATH is set or you are in the correct directory.", style="bold red")
-    console.print("         Run 'export PYTHONPATH=$(pwd)' from the project root.", style="bold red")
+except ImportError as e:
+    print("[bold red]ERROR:[/bold red] LLMC core modules not found. Ensure PYTHONPATH is set or you are in the correct directory.")
+    print("         Run 'export PYTHONPATH=$(pwd)' from the project root.")
+    print(f"         Import error: {e}")
     exit(1)
 
 
