@@ -618,11 +618,24 @@ class LlmcMcpServer:
             if not handler:
                 return {"error": f"Unknown tool: {name}"}
 
-            # Run async handler synchronously
-            try:
+            # Run async handler synchronously (from thread pool to avoid nested loop issues)
+            import concurrent.futures
+            def _run_async():
                 loop = asyncio.new_event_loop()
-                result = loop.run_until_complete(handler(tool_args))
-                loop.close()
+                asyncio.set_event_loop(loop)
+                try:
+                    sig = inspect.signature(handler)
+                    if "args" in sig.parameters:
+                        return loop.run_until_complete(handler(tool_args))
+                    else:
+                        return loop.run_until_complete(handler())
+                finally:
+                    loop.close()
+            
+            try:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(_run_async)
+                    result = future.result(timeout=30)
                 if result and result[0].text:
                     return json.loads(result[0].text)
                 return {"error": "Empty result"}
@@ -1110,24 +1123,45 @@ class LlmcMcpServer:
         return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_rag_query(self, args: dict) -> list[TextContent]:
-        """Handle rag_query tool."""
+        """Handle rag_query tool - direct RAG adapter (no te dependency)."""
         import json
 
-        from llmc_mcp.context import McpSessionContext
-        from llmc_mcp.tools.te_repo import rag_query
+        from llmc_mcp.tools.rag import rag_search
 
         query = args.get("query")
-        k = args.get("k", 5)
-        index = args.get("index")
-        filters = args.get("filters")
+        limit = args.get("k", 5)
+        # Note: index and filters args are ignored for now (not supported by direct adapter)
+        # index = args.get("index")
+        # filters = args.get("filters")
 
         if not query:
             return [TextContent(type="text", text='{"error": "query is required"}')]
 
-        ctx = McpSessionContext.from_env()
+        # Find LLMC root from config
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
 
-        result = rag_query(query=query, k=k, index=index, filters=filters, ctx=ctx)
-        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        # Direct call - no subprocess/te overhead
+        result = rag_search(
+            query=query,
+            repo_root=llmc_root,
+            limit=limit,
+            scope="repo",
+        )
+
+        if result.error:
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error}),
+                )
+            ]
+
+        # Return normalized structure (data + meta)
+        return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
 
     # L2 LinuxOps handlers
     async def _handle_proc_list(self, args: dict) -> list[TextContent]:

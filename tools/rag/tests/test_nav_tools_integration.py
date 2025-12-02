@@ -243,96 +243,6 @@ class TestToolIntegrationScenarios:
     These simulate how the navigation tools would use the envelope system.
     """
 
-    @pytest.mark.skip(reason="Navigation tools not yet integrated with RagResult")
-    def test_search_tool_with_fresh_index(self, tmp_path: Path):
-        """
-        Search tool with fresh index should return OK with RAG_GRAPH source.
-        """
-        # Setup a fixture repo with fresh index
-        repo_dir = tmp_path / "fixture_repo"
-        repo_dir.mkdir()
-
-        # Create some files
-        (repo_dir / "file1.py").write_text("def function_a(): pass")
-        (repo_dir / "file2.py").write_text("def function_b(): pass")
-
-        # Create a fresh index status
-        status_file = repo_dir / ".llmc" / "rag_index_status.json"
-        status_file.parent.mkdir()
-        status_file.write_text(
-            json.dumps(
-                {
-                    "repo": str(repo_dir),
-                    "index_state": "fresh",
-                    "last_indexed_at": "2025-11-16T15:00:00Z",
-                    "last_indexed_commit": "abc123",
-                    "schema_version": "1.0",
-                }
-            )
-        )
-
-        # Mock or call the actual search tool
-        # result = search_tool(repo_dir, "function_a")
-
-        # assert isinstance(result, RagResult)
-        # assert result.meta.status == "OK"
-        # assert result.meta.source == "RAG_GRAPH"
-        # assert result.meta.freshness_state == "FRESH"
-        pass
-
-    @pytest.mark.skip(reason="Navigation tools not yet integrated with RagResult")
-    def test_where_used_with_stale_index(self, tmp_path: Path):
-        """
-        Where-used tool with stale index should return FALLBACK.
-        """
-        # Setup a fixture repo with stale index
-        repo_dir = tmp_path / "fixture_repo"
-        repo_dir.mkdir()
-
-        status_file = repo_dir / ".llmc" / "rag_index_status.json"
-        status_file.parent.mkdir()
-        status_file.write_text(
-            json.dumps(
-                {
-                    "repo": str(repo_dir),
-                    "index_state": "stale",
-                    "last_indexed_at": "2025-11-15T10:00:00Z",
-                    "last_indexed_commit": "old123",
-                    "schema_version": "1.0",
-                }
-            )
-        )
-
-        # Mock or call the actual where-used tool
-        # result = where_used_tool(repo_dir, "function_a")
-
-        # assert result.meta.status == "FALLBACK"
-        # assert result.meta.source == "LOCAL_FALLBACK"
-        # assert result.meta.freshness_state == "STALE"
-        pass
-
-    @pytest.mark.skip(reason="Navigation tools not yet integrated with RagResult")
-    def test_lineage_tool_without_index(self, tmp_path: Path):
-        """
-        Lineage tool without index should return ERROR.
-        """
-        # Setup a repo without index
-        repo_dir = tmp_path / "fixture_repo"
-        repo_dir.mkdir()
-
-        # No .llmc directory
-
-        # Mock or call the actual lineage tool
-        # result = lineage_tool(repo_dir, "ClassA")
-
-        # assert result.meta.status == "ERROR"
-        # assert result.meta.error_code == "RAG_UNAVAILABLE"
-        # assert result.meta.source == "NONE"
-        # assert result.items == []
-        pass
-
-
-@pytest.mark.rag_freshness
 class TestCliOutput:
     """
     Test CLI output contracts (when CLI tools are implemented).
@@ -340,35 +250,6 @@ class TestCliOutput:
     This ensures that command-line tools produce stable JSON output.
     """
 
-    @pytest.mark.skip(reason="CLI integration not yet implemented")
-    def test_cli_json_output_structure(self, tmp_path: Path):
-        """
-        CLI tools should output valid JSON with correct structure.
-        """
-        # This would test running a CLI tool with --json flag
-        # cmd = ["python", "-m", "tools.rag.cli", "search", "query", "--json"]
-        # result = subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
-
-        # assert result.returncode == 0
-
-        # Parse JSON output
-        # output = json.loads(result.stdout)
-
-        # Verify structure
-        # assert "meta" in output
-        # assert "items" in output
-        pass
-
-    @pytest.mark.skip(reason="CLI integration not yet implemented")
-    def test_cli_error_output(self, tmp_path: Path):
-        """
-        CLI tools should output error results as JSON when --json is used.
-        """
-        # Test that errors are also in the RagResult envelope
-        pass
-
-
-@pytest.mark.rag_freshness
 class TestMcpContract:
     """
     Test MCP (Model Context Protocol) output contracts.
