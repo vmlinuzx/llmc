@@ -28,17 +28,17 @@ llmc tui
 
 ### Development Mode (No Install)
 
-If you're developing and don't want to install, use the wrapper script:
+If you're developing and don't want to install, use the wrapper script in the repo root:
 
 ```bash
-# From anywhere in the repo
-./scripts/llmc --help
-./scripts/llmc index
-./scripts/llmc search "query"
+# From repo root
+./llmc-cli --help
+./llmc-cli index
+./llmc-cli search "query"
 
 # Or add to your PATH
-export PATH="$PWD/scripts:$PATH"
-llmc --help
+export PATH="$PWD:$PATH"
+llmc-cli --help
 ```
 
 ### What's New in v0.6.0 "Modular Mojo"

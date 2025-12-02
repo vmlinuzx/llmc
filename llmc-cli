@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# LLMC CLI Wrapper - Run from anywhere in the repo
+# LLMC CLI Wrapper - Run from repo root
 # This is a convenience wrapper for development. For production, use: pip install -e .
 
-# Find repo root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Find repo root (script is in repo root)
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Run the CLI with proper PYTHONPATH
 cd "$REPO_ROOT"
