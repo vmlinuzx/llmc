@@ -10,18 +10,19 @@ This module provides the EnrichmentPipeline class which coordinates:
 
 Usage:
     from tools.rag.enrichment_pipeline import EnrichmentPipeline
-    from tools.rag.enrichment_adapters.ollama import OllamaBackend
+    from tools.rag.enrichment_factory import create_backend_from_spec
     
     pipeline = EnrichmentPipeline(
         db=database,
         router=enrichment_router,
-        backend_factory=OllamaBackend.from_spec,
+        backend_factory=create_backend_from_spec,
         prompt_builder=build_enrichment_prompt,
     )
     
     result = pipeline.process_batch(limit=50)
     print(f"Enriched {result.succeeded}/{result.attempted} spans")
 """
+
 
 from __future__ import annotations
 
@@ -139,12 +140,14 @@ class EnrichmentPipeline:
     
     This pipeline replaces the monolithic qwen_enrich_batch.py script with
     a clean, testable architecture that uses the BackendAdapter protocol.
-    
+   
    Usage:
+        from tools.rag.enrichment_factory import create_backend_from_spec
+        
         pipeline = EnrichmentPipeline(
             db=database,
             router=enrichment_router,
-            backend_factory=OllamaBackend.from_spec,
+            backend_factory=create_backend_from_spec,
             prompt_builder=build_enrichment_prompt,
         )
         
