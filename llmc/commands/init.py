@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Annotated
 
 import tomli_w
 import typer
@@ -46,15 +47,20 @@ DEFAULT_CONFIG = {
 
 @app.command()
 def init(
-    path: Path = typer.Option(
-        ".", "--path", "-p", help="Path to initialize the workspace in (default: current directory)"
-    ),
+    path: Annotated[
+        Path | None,
+        typer.Option(
+            "--path",
+            "-p",
+            help="Path to initialize the workspace in (default: current directory)",
+        ),
+    ] = None,
 ):
     """
     Bootstrap .llmc/ workspace and configuration.
     """
     # Determine root
-    if path == Path("."):
+    if path is None or path == Path("."):
         # Try to find existing root first to avoid nesting .llmc inside .llmc
         try:
             repo_root = find_repo_root()
@@ -103,6 +109,6 @@ def init(
 
     except Exception as e:
         typer.echo(f"Error initializing database: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     typer.echo("✨ LLMC workspace initialized successfully.")

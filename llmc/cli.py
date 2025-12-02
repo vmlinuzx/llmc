@@ -11,12 +11,10 @@ from typing import Any
 
 # Conditional imports so it doesn't crash if you haven't pip installed yet
 try:
-    from rich.align import Align
     from rich.console import Console
     from rich.layout import Layout
     from rich.live import Live
     from rich.panel import Panel
-    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
     from rich.table import Table
     from rich.text import Text
     import typer
@@ -30,7 +28,6 @@ try:
     from tools.rag_nav.metadata import load_status
     from tools.rag_nav.tool_handlers import (  # _load_graph is private, but okay for demo
         _load_graph,
-        _rag_graph_path,
     )
 except ImportError as e:
     print(
@@ -45,26 +42,6 @@ app = typer.Typer()
 console = Console()
 
 LLMC_ROOT = Path(__file__).parent.parent.parent  # Assumes llmc/cli.py is in llmc/llmc/cli.py
-
-
-def make_layout() -> Layout:
-    """Define the 6-panel grid."""
-    layout = Layout(name="root")
-
-    layout.split(
-        Layout(name="header", size=3), Layout(name="body", ratio=1), Layout(name="footer", size=3)
-    )
-
-    layout["body"].split_row(
-        Layout(name="left", ratio=1),
-        Layout(name="right", ratio=2),  # Give more space to logs/status
-    )
-
-    layout["left"].split_column(Layout(name="menu", ratio=2), Layout(name="help", ratio=1))
-
-    layout["right"].split_column(Layout(name="context", ratio=1), Layout(name="log", ratio=2))
-
-    return layout
 
 
 def get_repo_stats(repo_root: Path) -> dict[str, Any]:
