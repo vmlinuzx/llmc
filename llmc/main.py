@@ -2,7 +2,12 @@ import typer
 from typing import Optional
 from llmc.core import LLMC_VERSION, find_repo_root, load_config
 from llmc.commands.init import init as init_command
-from llmc.commands.rag import index, search, inspect, plan, stats, doctor
+from llmc.commands.rag import (
+    index, search, inspect, plan, stats, doctor,
+    # Phase 5: Advanced RAG
+    sync, enrich, embed, graph, export, benchmark,
+    nav_search, nav_where_used, nav_lineage
+)
 from llmc.commands.tui import tui, monitor
 from llmc.commands import service as service_commands
 
@@ -15,12 +20,24 @@ app = typer.Typer(
 
 # Core commands
 app.command(name="init")(init_command)
+
+# RAG commands (Phase 2)
 app.command()(index)
 app.command()(search)
 app.command()(inspect)
 app.command()(plan)
 app.command()(stats)
 app.command()(doctor)
+
+# Advanced RAG commands (Phase 5)
+app.command()(sync)
+app.command()(enrich)
+app.command()(embed)
+app.command()(graph)
+app.command()(export)
+app.command()(benchmark)
+
+# TUI commands (Phase 3)
 app.command()(tui)
 app.command()(monitor)
 
@@ -42,6 +59,14 @@ repo_app.command(name="list")(service_commands.repo_list)
 service_app.add_typer(repo_app, name="repo")
 
 app.add_typer(service_app, name="service")
+
+# Nav subcommand group (Phase 5)
+nav_app = typer.Typer(help="Navigate code using RAG graph")
+nav_app.command(name="search")(nav_search)
+nav_app.command(name="where-used")(nav_where_used)
+nav_app.command(name="lineage")(nav_lineage)
+
+app.add_typer(nav_app, name="nav")
 
 def version_callback(value: bool):
     if value:
