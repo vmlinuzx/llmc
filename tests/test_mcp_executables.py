@@ -1,10 +1,6 @@
 
 import pytest
 import asyncio
-
-# Skip entire module if mcp is not installed
-pytest.importorskip("mcp.server", reason="mcp package not installed")
-
 from llmc_mcp.config import McpConfig, McpToolsConfig
 from llmc_mcp.server import LlmcMcpServer
 
