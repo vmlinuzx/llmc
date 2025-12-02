@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""LLMC RAG Client - Unified facade for RAG operations."""
 from pathlib import Path
 from typing import Optional, Dict, Any
 from tools.rag_nav.tool_handlers import (

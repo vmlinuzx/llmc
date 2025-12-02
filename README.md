@@ -26,6 +26,21 @@ llmc tui
 
 **See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
 
+### Development Mode (No Install)
+
+If you're developing and don't want to install, use the wrapper script:
+
+```bash
+# From anywhere in the repo
+./scripts/llmc --help
+./scripts/llmc index
+./scripts/llmc search "query"
+
+# Or add to your PATH
+export PATH="$PWD/scripts:$PATH"
+llmc --help
+```
+
 ### What's New in v0.6.0 "Modular Mojo"
 - **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
 - **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.

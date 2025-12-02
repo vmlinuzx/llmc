@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""LLMC Unified CLI - Main entry point."""
 import typer
 from typing import Optional
 from llmc.core import LLMC_VERSION, find_repo_root, load_config
