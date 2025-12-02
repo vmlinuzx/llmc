@@ -186,6 +186,29 @@ These are the “this would be awesome” items that are worth doing, but not at
 - **Prior art:** Flat ticketing system (worked up to 3 agents with occasional lint issues).
 - **Success criteria:** 5+ agents working concurrently with zero stomps and clean lints.
 
+### 3.5 Comprehensive Repo Cleanup
+
+**Goal:** Clean up build artifacts, cache files, and cruft throughout the entire repository.
+
+**Prerequisites:**
+- Documentation agent complete (for pre-cleanup docs sweep)
+
+**Tasks:**
+- Full documentation sweep of every file (via documentation agent)
+- Identify and remove/move build artifacts:
+  - `__pycache__/` directories
+  - `.egg-info/` directories
+  - Orphaned cache files
+  - Temporary test outputs
+  - Old backup files (`*~`, `*.bak`)
+- Update `.gitignore` to prevent future artifact commits
+- Create cleanup script for regular maintenance
+- Document artifact management policy in `CONTRIBUTING.md`
+
+**Priority:** Low (blocked on documentation agent completion)
+
+**Estimated Effort:** 4-6 hours
+
 ---
 
 ## 4. How to use this roadmap
