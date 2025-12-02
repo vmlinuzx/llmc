@@ -32,6 +32,10 @@ tui = [
   "rich>=13.0.0",
   "textual>=0.41.0",
 ]
+daemon = [
+  "uvicorn>=0.30.0",  # ASGI server for HTTP transport
+  "httpx>=0.27.0",    # HTTP client for health checks
+]
 
 [tool.setuptools]
 # Explicitly declare which top-level packages are part of the install.
@@ -45,6 +49,7 @@ llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
 llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
 llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
 llmc-profile = "llmcwrapper.cli.llmc_profile:main"
+llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
 
 [tool.pytest.ini_options]
