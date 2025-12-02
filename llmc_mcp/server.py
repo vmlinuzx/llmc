@@ -242,6 +242,41 @@ TOOLS: list[Tool] = [
             "required": ["query"],
         },
     ),
+    Tool(
+        name="rag_search_enriched",
+        description="Advanced RAG search with graph-based relationship enrichment. Supports multiple enrichment modes for semantic + relationship-aware retrieval.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query or code concept to search for",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (1-20)",
+                    "default": 5,
+                },
+                "enrich_mode": {
+                    "type": "string",
+                    "enum": ["vector", "graph", "hybrid", "auto"],
+                    "description": "Enrichment strategy: vector (semantic only), graph (relationships), hybrid (both), auto (intelligent routing)",
+                    "default": "auto",
+                },
+                "graph_depth": {
+                    "type": "integer",
+                    "description": "Relationship traversal depth (0-3). Higher values find more distant relationships",
+                    "default": 1,
+                },
+                "include_features": {
+                    "type": "boolean",
+                    "description": "Include enrichment quality metrics in response meta",
+                    "default": False,
+                },
+            },
+            "required": ["query"],
+        },
+    ),
     # L2 LinuxOps Tools
     Tool(
         name="linux_proc_list",
@@ -504,6 +539,7 @@ class LlmcMcpServer:
             "te_run": self._handle_te_run,
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
+            "rag_search_enriched": self._handle_rag_search_enriched,
             # L2 LinuxOps
             "linux_proc_list": self._handle_proc_list,
             "linux_proc_kill": self._handle_proc_kill,
@@ -593,6 +629,7 @@ class LlmcMcpServer:
                 # Try classic handlers for stub calls
                 classic_handlers = {
                     "rag_search": self._handle_rag_search,
+                    "rag_search_enriched": self._handle_rag_search_enriched,
                     "read_file": self._handle_read_file,
                     "list_dir": self._handle_list_dir,
                     "stat": self._handle_stat,
@@ -912,6 +949,50 @@ class LlmcMcpServer:
 
         # Return normalized structure (data + meta)
         return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+
+    async def _handle_rag_search_enriched(self, args: dict) -> list[TextContent]:
+        """RAG search with graph enrichment - advanced mode."""
+        import json
+
+        from llmc_mcp.tools.rag import rag_search_enriched
+
+        query = args.get("query", "")
+        limit = min(args.get("limit", 5), self.config.rag.top_k * 2)
+        enrich_mode = args.get("enrich_mode", "auto")
+        graph_depth = min(args.get("graph_depth", 1), 3)  # Cap at 3
+        include_features = args.get("include_features", False)
+
+        if not query:
+            return [TextContent(type="text", text='{"error": "query is required"}')]
+
+        # Find LLMC root from config
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        # Direct call with enrichment
+        result = rag_search_enriched(
+            query=query,
+            repo_root=llmc_root,
+            limit=limit,
+            enrich_mode=enrich_mode,
+            graph_depth=graph_depth,
+            include_features=include_features,
+        )
+
+        if result.error:
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"error": result.error}),
+                )
+            ]
+
+        # Return normalized structure (data + meta)
+        return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+
 
     async def _handle_read_file(self, args: dict) -> list[TextContent]:
         """Read file handler."""
