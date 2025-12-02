@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, List
+import re
+
 
 @dataclass
 class ClassificationResult:
     slice_type: str
-    slice_language: Optional[str]
+    slice_language: str | None
     confidence: float
-    reasons: List[str]
+    reasons: list[str]
     classifier_version: str = "v1.0"
 
 # Extension mappings
@@ -53,7 +53,7 @@ EXT_LANG_MAP = {
 SHEBANG_REGEX = re.compile(r"^#!.*(python|bash|sh|node|env python|env bash)")
 ERP_KEY_REGEX = re.compile(r'["\']?(sku|upc|asin|model_number|product_id|catalog_ref)["\']?\s*[:=]', re.IGNORECASE)
 
-def classify_slice(path: Path, mime: Optional[str], text: str) -> ClassificationResult:
+def classify_slice(path: Path, mime: str | None, text: str) -> ClassificationResult:
     reasons = []
     confidence = 0.0
     slice_type = "other"

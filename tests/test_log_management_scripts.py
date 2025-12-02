@@ -9,12 +9,12 @@ Tests cover:
 - Never deleting non-log files
 - Safety checks for unset/incorrect log directories
 """
-import os
-import subprocess
-import tempfile
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
+import tempfile
 
 # Add scripts directory to path
 scripts_dir = Path(__file__).parent.parent / "scripts"
@@ -42,7 +42,7 @@ class TestLLMCCleanLogs:
         script_path = scripts_dir / "llmc-clean-logs.sh"
         result = subprocess.run(
             ["bash", "-n", str(script_path)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
@@ -52,7 +52,7 @@ class TestLLMCCleanLogs:
         script_path = scripts_dir / "llmc-clean-logs.sh"
         result = subprocess.run(
             [str(script_path), "--help"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0
@@ -79,7 +79,7 @@ class TestLLMCCleanLogs:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--check"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept dir flag (may fail if log manager not found)
@@ -90,7 +90,7 @@ class TestLLMCCleanLogs:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--size", "5MB", "--check"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept size flag
@@ -101,7 +101,7 @@ class TestLLMCCleanLogs:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--check"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept check flag
@@ -112,7 +112,7 @@ class TestLLMCCleanLogs:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--rotate"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept rotate flag
@@ -123,7 +123,7 @@ class TestLLMCCleanLogs:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--rotate", "--quiet"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept quiet flag
@@ -135,7 +135,7 @@ class TestLLMCCleanLogs:
             # Use a non-existent log manager path
             result = subprocess.run(
                 [str(script_path), "--dir", tmpdir, "--check"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # May fail due to missing log manager or other issues
@@ -196,7 +196,7 @@ class TestLLMCLogManager:
         script_path = scripts_dir / "llmc_log_manager.py"
         result = subprocess.run(
             [str(script_path), "--help"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0
@@ -208,7 +208,7 @@ class TestLLMCLogManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--check", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should check logs (may have no logs to check)
@@ -219,7 +219,7 @@ class TestLLMCLogManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--rotate", "--max-size", "10MB", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should rotate logs
@@ -231,14 +231,14 @@ class TestLLMCLogManager:
             # Test with MB suffix
             result = subprocess.run(
                 [str(script_path), "--check", "--max-size", "5MB", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
 
             # Test with KB suffix
             result = subprocess.run(
                 [str(script_path), "--check", "--max-size", "512KB", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
 
@@ -248,7 +248,7 @@ class TestLLMCLogManager:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--check", "--quiet", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should work with quiet flag
@@ -258,7 +258,7 @@ class TestLLMCLogManager:
         script_path = scripts_dir / "llmc_log_manager.py"
         result = subprocess.run(
             [str(script_path), "--check", "/nonexistent/path"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         # Should handle gracefully (may error or return empty results)
@@ -268,7 +268,7 @@ class TestLLMCLogManager:
         script_path = scripts_dir / "llmc_log_manager.py"
         result = subprocess.run(
             [str(script_path), "--check"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         # Should require log directory argument
@@ -284,7 +284,7 @@ class TestLLMCLogManager:
 
             result = subprocess.run(
                 [str(script_path), "--check", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should find and check these files
@@ -300,7 +300,7 @@ class TestLLMCLogManager:
 
             result = subprocess.run(
                 [str(script_path), "--rotate", "--max-size", "0.01MB", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should handle JSONL specially (keep structure)

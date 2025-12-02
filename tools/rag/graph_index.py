@@ -14,14 +14,12 @@ Public API:
 
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Dict, List, Set
 from collections.abc import Iterable
+from dataclasses import dataclass, field
+import json
+from pathlib import Path
 
-
-ALLOWED_EDGE_TYPES: Set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}
+ALLOWED_EDGE_TYPES: set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}
 
 
 class GraphNotFound(FileNotFoundError):
@@ -42,9 +40,9 @@ class GraphIndices:
     """In-memory indices derived from the graph artifact."""
 
     # Map a "symbol key" to the set of file paths that reference/use it (where-used).
-    symbol_to_files: Dict[str, Set[str]] = field(default_factory=dict)
+    symbol_to_files: dict[str, set[str]] = field(default_factory=dict)
     # Lineage: for a given source symbol key, files of its callees (downstream).
-    symbol_to_callee_files: Dict[str, Set[str]] = field(default_factory=dict)
+    symbol_to_callee_files: dict[str, set[str]] = field(default_factory=dict)
 
 
 def _read_graph_payload(path: Path) -> dict:
@@ -79,7 +77,7 @@ def _norm_path(path_str: str) -> str:
     return str(Path(base).as_posix())
 
 
-def _candidate_keys(name: str) -> List[str]:
+def _candidate_keys(name: str) -> list[str]:
     """
     Generate multiple keys for matching a symbol string robustly.
 
@@ -88,7 +86,7 @@ def _candidate_keys(name: str) -> List[str]:
         -> ["tools.auth.jwt:verify_jwt", "verify_jwt", "jwt.verify_jwt", "verify_jwt"]
       - "pkg.mod.func" -> ["pkg.mod.func", "func"]
     """
-    out: List[str] = []
+    out: list[str] = []
     if not name:
         return out
 
@@ -108,8 +106,8 @@ def _candidate_keys(name: str) -> List[str]:
         out.append(value.split(".")[-1])
 
     # Deduplicate while preserving order.
-    seen: Set[str] = set()
-    uniq: List[str] = []
+    seen: set[str] = set()
+    uniq: list[str] = []
     for key in out:
         if key and key not in seen:
             seen.add(key)
@@ -117,7 +115,7 @@ def _candidate_keys(name: str) -> List[str]:
     return uniq
 
 
-def _index_nodes(graph: dict) -> Dict[str, Node]:
+def _index_nodes(graph: dict) -> dict[str, Node]:
     """
     Build a mapping from node id to Node, tolerating multiple shapes.
 
@@ -126,7 +124,7 @@ def _index_nodes(graph: dict) -> Dict[str, Node]:
     - Schema graphs: graph["entities"]
     """
     nodes = graph.get("nodes") or graph.get("vertices") or graph.get("entities") or []
-    id_to_node: Dict[str, Node] = {}
+    id_to_node: dict[str, Node] = {}
 
     if not isinstance(nodes, list):
         return id_to_node
@@ -201,7 +199,7 @@ def _iter_edges(graph: dict) -> Iterable[dict]:
         }
 
 
-def _accumulate(mapping: Dict[str, Set[str]], key: str, path: str) -> None:
+def _accumulate(mapping: dict[str, set[str]], key: str, path: str) -> None:
     """Accumulate a file path under the given symbol key."""
     if not key or not path:
         return
@@ -217,8 +215,8 @@ def build_indices_from_graph(graph: dict) -> GraphIndices:
       under keys derived from the destination symbol.
     """
     id_to_node = _index_nodes(graph)
-    symbol_to_files: Dict[str, Set[str]] = {}
-    symbol_to_callee_files: Dict[str, Set[str]] = {}
+    symbol_to_files: dict[str, set[str]] = {}
+    symbol_to_callee_files: dict[str, set[str]] = {}
 
     for edge in _iter_edges(graph):
         etype = str(edge.get("type") or edge.get("label") or "").upper()
@@ -281,7 +279,7 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
     return indices
 
 
-def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> List[str]:
+def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> list[str]:
     """
     Return file paths that reference `symbol`, using strict and suffix matches.
 
@@ -293,8 +291,8 @@ def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> Lis
     limit = max(1, int(limit)) if limit > 0 else 1
     keys = _candidate_keys(symbol)
 
-    seen: Set[str] = set()
-    out: List[str] = []
+    seen: set[str] = set()
+    out: list[str] = []
 
     # Exact key matches first.
     for key in keys:
@@ -320,7 +318,7 @@ def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> Lis
     return out[:limit]
 
 
-def lineage_files(indices: GraphIndices, symbol: str, direction: str, limit: int = 50) -> List[str]:
+def lineage_files(indices: GraphIndices, symbol: str, direction: str, limit: int = 50) -> list[str]:
     """
     Return files related by CALLS edges for lineage queries.
 
@@ -338,8 +336,8 @@ def lineage_files(indices: GraphIndices, symbol: str, direction: str, limit: int
     # Downstream: use symbol_to_callee_files index.
     keys = _candidate_keys(symbol)
     limit = max(1, int(limit)) if limit > 0 else 1
-    seen: Set[str] = set()
-    out: List[str] = []
+    seen: set[str] = set()
+    out: list[str] = []
 
     for key in keys:
         for path in indices.symbol_to_callee_files.get(key, ()):

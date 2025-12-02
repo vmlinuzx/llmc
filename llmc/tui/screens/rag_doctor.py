@@ -1,15 +1,24 @@
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
+import subprocess
 from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, DataTable, Footer, Header, Label, Static, TabbedContent, TabPane, RichLog
+from textual.widgets import (
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Label,
+    RichLog,
+    Static,
+    TabbedContent,
+    TabPane,
+)
 
 from tools.rag.doctor import run_rag_doctor
 

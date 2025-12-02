@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
-from typing import Optional
+import sys
 
 from .config import load_tool_config
 from .fs import SafeFS
@@ -13,8 +12,8 @@ from .inspect_repo import inspect_repo
 from .models import RegistryEntry
 from .notifier import notify_refresh
 from .registry import RegistryAdapter
-from .workspace import init_workspace, plan_workspace, validate_workspace
 from .utils import canonical_repo_path, generate_repo_id, safe_subpath
+from .workspace import init_workspace, plan_workspace, validate_workspace
 
 
 def resolve_workspace_from_cli(
@@ -82,7 +81,7 @@ def export_bundle(
 def _print_top_level_help() -> None:
     """Print a tree-style help overview for llmc-rag-repo."""
     print(
-        (
+        
             "LLMC RAG Repo Tool\n\n"
             "Manage which repos are tracked by the LLMC RAG daemon.\n\n"
             "Usage:\n"
@@ -97,11 +96,11 @@ def _print_top_level_help() -> None:
             "  llmc-rag-repo add /home/you/src/llmc\n"
             "  llmc-rag-repo list\n"
             "  llmc-rag-repo inspect /home/you/src/llmc\n"
-        )
+        
     )
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 
@@ -156,7 +155,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     return 1
 
 
-def cli(argv: Optional[list[str]] = None) -> int:
+def cli(argv: list[str] | None = None) -> int:
     """
     Legacy-compatible entry point exported as `tools.rag_repo.cli`.
 
@@ -166,7 +165,7 @@ def cli(argv: Optional[list[str]] = None) -> int:
     return main(argv)
 
 
-def _cmd_add(args, tool_config, registry: Optional[RegistryAdapter]) -> int:
+def _cmd_add(args, tool_config, registry: RegistryAdapter | None) -> int:
     if registry is None:
         registry = RegistryAdapter(tool_config)
 

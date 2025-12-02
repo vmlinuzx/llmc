@@ -6,7 +6,6 @@ import pytest
 
 from tools.rag.eval.search_eval import run
 
-
 QUERIES = Path("DOCS/RAG_NAV/P9_Search/canary_queries.jsonl")
 OUTDIR = Path(".llmc/eval")
 

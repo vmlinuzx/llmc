@@ -444,7 +444,7 @@ def write_file(
                 return FsResult(
                     success=False, data=None,
                     meta={"path": str(resolved), "actual_sha256": existing_hash},
-                    error=f"SHA256 mismatch",
+                    error="SHA256 mismatch",
                 )
 
         # Write atomically for rewrite, direct for append
@@ -584,7 +584,7 @@ def edit_block(
             return FsResult(
                 success=False, data=None,
                 meta={"path": str(path)},
-                error=f"Text not found in file",
+                error="Text not found in file",
             )
         
         if count != expected_replacements:

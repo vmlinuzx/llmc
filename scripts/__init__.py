@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Make scripts/ a package and setup paths
-import sys
 from pathlib import Path
+import sys
 
 # Ensure scripts dir is in path so internal imports work when imported as a package
 SCRIPTS_DIR = Path(__file__).resolve().parent

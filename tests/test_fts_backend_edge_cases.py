@@ -6,8 +6,8 @@ Tests cover:
 - Various database states
 """
 
-import sqlite3
 from pathlib import Path
+import sqlite3
 from unittest.mock import patch
 
 
@@ -129,7 +129,7 @@ class TestFTSFallback:
     def test_fallback_on_fts_io_error(self, tmp_path: Path):
         """Test fallback on I/O errors with FTS."""
         # Simulate disk error
-        with patch("sqlite3.connect", side_effect=IOError("Disk full")):
+        with patch("sqlite3.connect", side_effect=OSError("Disk full")):
             # Should catch error and fall back
             pass
 

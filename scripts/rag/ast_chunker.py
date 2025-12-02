@@ -11,12 +11,10 @@ available or unrecognised file types are encountered.
 
 from __future__ import annotations
 
-import logging
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
-from collections.abc import Sequence
-
 from bisect import bisect_right
+from collections.abc import Sequence
+from dataclasses import dataclass
+import logging
 
 try:
     from tree_sitter import Node  # type: ignore
@@ -32,13 +30,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ChunkRecord:
     text: str
-    metadata: Dict[str, Optional[object]]
+    metadata: dict[str, object | None]
 
 
 class ASTChunker:
     """Generate AST-aligned chunks with graceful fallback."""
 
-    LANGUAGE_BY_EXTENSION: Dict[str, str] = {
+    LANGUAGE_BY_EXTENSION: dict[str, str] = {
         ".py": "python",
         ".pyw": "python",
         ".js": "javascript",
@@ -58,7 +56,7 @@ class ASTChunker:
 
     # Node types that often convey structure. Used both for top-level node
     # selection and recursive splitting candidates.
-    STRUCTURAL_HINTS: Dict[str, Tuple[str, ...]] = {
+    STRUCTURAL_HINTS: dict[str, tuple[str, ...]] = {
         "python": (
             "module",
             "class_definition",
@@ -122,7 +120,7 @@ class ASTChunker:
         ),
     }
 
-    IGNORE_TYPES: Tuple[str, ...] = (
+    IGNORE_TYPES: tuple[str, ...] = (
         "comment",
         "block_comment",
         "line_comment",
@@ -138,17 +136,17 @@ class ASTChunker:
         self.max_chars = max_chars
         self.overlap_chars = overlap_chars
         self.header_chars = header_chars
-        self._parsers: Dict[str, object] = {}
+        self._parsers: dict[str, object] = {}
         self._text: str = ""
         self._text_bytes: bytes = b""
         # Mapping from character index to byte offset in _text_bytes.
-        self._char_to_byte_index: List[int] = []
-        self._line_offsets: List[int] = []
+        self._char_to_byte_index: list[int] = []
+        self._line_offsets: list[int] = []
         self._span_counter: int = 0
 
     # Public API ---------------------------------------------------------
 
-    def chunk_text(self, text: str, file_path: str) -> List[Tuple[str, Dict]]:
+    def chunk_text(self, text: str, file_path: str) -> list[tuple[str, dict]]:
         """
         Return chunk text + metadata pairs.
         """
@@ -180,13 +178,13 @@ class ASTChunker:
 
     # Core chunking ------------------------------------------------------
 
-    def _chunk_tree(self, root: Node, language: str) -> List[ChunkRecord]:
+    def _chunk_tree(self, root: Node, language: str) -> list[ChunkRecord]:
         meaningful_children = self._meaningful_children(root)
         if not meaningful_children:
             meaningful_children = [root]
 
         self._span_counter = 0
-        results: List[ChunkRecord] = []
+        results: list[ChunkRecord] = []
         cursor_byte = root.start_byte
 
         for node in meaningful_children:
@@ -224,9 +222,9 @@ class ASTChunker:
         self,
         node: Node,
         language: str,
-        parent_span: Optional[str],
+        parent_span: str | None,
         depth: int,
-    ) -> List[ChunkRecord]:
+    ) -> list[ChunkRecord]:
         if node.end_byte <= node.start_byte:
             return []
         node_text = self._slice(node.start_byte, node.end_byte)
@@ -259,7 +257,7 @@ class ASTChunker:
         header_end_byte = self._char_to_byte(header_end_char)
         header_text = self._slice(node.start_byte, header_end_byte)
 
-        records: List[ChunkRecord] = []
+        records: list[ChunkRecord] = []
         if header_text.strip():
             header_meta = self._build_metadata(
                 span_id=span_id,
@@ -333,16 +331,16 @@ class ASTChunker:
         *,
         language: str,
         parent_node_type: str,
-        parent_span: Optional[str],
+        parent_span: str | None,
         role: str,
         depth: int,
-    ) -> List[ChunkRecord]:
+    ) -> list[ChunkRecord]:
         start_char = self._byte_to_char(start_byte)
         end_char = self._byte_to_char(end_byte)
         if end_char <= start_char:
             return []
 
-        segments: List[Tuple[int, int]] = []
+        segments: list[tuple[int, int]] = []
         cursor = start_char
         while cursor < end_char:
             approx_end = min(end_char, cursor + self.max_chars)
@@ -362,7 +360,7 @@ class ASTChunker:
                 break
             cursor = max(approx_end - self.overlap_chars, cursor + 1)
 
-        records: List[ChunkRecord] = []
+        records: list[ChunkRecord] = []
         total = len(segments) or 1
         for ordinal, (seg_start_char, seg_end_char) in enumerate(segments):
             seg_start_byte = self._char_to_byte(seg_start_char)
@@ -398,11 +396,11 @@ class ASTChunker:
         node_type: str,
         language: str,
         role: str,
-        parent_span: Optional[str],
+        parent_span: str | None,
         depth: int,
         ordinal: int,
         total_segments: int,
-    ) -> Dict[str, Optional[object]]:
+    ) -> dict[str, object | None]:
         start_char = self._byte_to_char(start_byte)
         end_char = self._byte_to_char(end_byte)
         start_line, start_col = self._char_to_line_col(start_char)
@@ -429,7 +427,7 @@ class ASTChunker:
         }
 
     def _annotate_child_counts(self, chunks: Sequence[ChunkRecord]) -> None:
-        child_map: Dict[str, int] = {}
+        child_map: dict[str, int] = {}
         for record in chunks:
             parent = record.metadata.get("span_parent_id")
             if parent:
@@ -440,7 +438,7 @@ class ASTChunker:
 
     # Tree traversal helpers ---------------------------------------------
 
-    def _meaningful_children(self, node: Node) -> List[Node]:
+    def _meaningful_children(self, node: Node) -> list[Node]:
         return [
             child
             for child in node.children
@@ -454,9 +452,9 @@ class ASTChunker:
         node: Node,
         language: str,
         lower_byte_bound: int,
-    ) -> List[Node]:
+    ) -> list[Node]:
         hints = self.STRUCTURAL_HINTS.get(language, ())
-        meaningful: List[Node] = []
+        meaningful: list[Node] = []
         stack = [node]
         while stack:
             current = stack.pop()
@@ -481,7 +479,7 @@ class ASTChunker:
 
     # Language + parser helpers ------------------------------------------
 
-    def _detect_language(self, file_path: str) -> Optional[str]:
+    def _detect_language(self, file_path: str) -> str | None:
         suffix = file_path.lower()
         for ext, lang in self.LANGUAGE_BY_EXTENSION.items():
             if suffix.endswith(ext):
@@ -543,7 +541,7 @@ class ASTChunker:
         idx = bisect_right(self._char_to_byte_index, byte_offset) - 1
         return max(idx, 0)
 
-    def _char_to_line_col(self, char_index: int) -> Tuple[int, int]:
+    def _char_to_line_col(self, char_index: int) -> tuple[int, int]:
         if not self._line_offsets:
             return (1, 1)
         line_idx = bisect_right(self._line_offsets, char_index) - 1
@@ -564,9 +562,9 @@ class ASTChunker:
         start_char: int,
         end_char: int,
         language: str,
-        parent_span: Optional[str],
+        parent_span: str | None,
         role: str,
-    ) -> List[Tuple[str, Dict]]:
+    ) -> list[tuple[str, dict]]:
         if not text.strip():
             return []
 
@@ -589,7 +587,7 @@ class ASTChunker:
         self._annotate_child_counts(records)
         return [(record.text, record.metadata) for record in records]
 
-    def fallback_chunks(self, text: str) -> List[Tuple[str, Dict]]:
+    def fallback_chunks(self, text: str) -> list[tuple[str, dict]]:
         """Expose legacy chunking for external callers."""
         return self._legacy_chunks(
             text=text,

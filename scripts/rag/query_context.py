@@ -8,15 +8,15 @@ Usage:
     python query_context.py "api routes" --limit 5
 """
 
-import os
-import sys
 import argparse
+import os
 from pathlib import Path
-from typing import List, Dict, Optional
+import sys
 
 import chromadb
 from chromadb.config import Settings
 from sentence_transformers import SentenceTransformer
+
 
 # Configuration
 def resolve_rag_db_path() -> Path:
@@ -64,9 +64,9 @@ class ContextQuerier:
                 settings=Settings(anonymized_telemetry=False)
             )
             self.collection = self.client.get_collection(COLLECTION_NAME)
-        except Exception as e:
+        except Exception:
             print(f"❌ Error: RAG database not found at {db_path}")
-            print(f"   Run 'python index_workspace.py' first to create the index")
+            print("   Run 'python index_workspace.py' first to create the index")
             sys.exit(1)
 
         # Initialize embedding model
@@ -76,11 +76,11 @@ class ContextQuerier:
     def query(
         self,
         query_text: str,
-        project: Optional[str] = None,
-        file_type: Optional[str] = None,
+        project: str | None = None,
+        file_type: str | None = None,
         limit: int = 10,
         include_related: bool = True
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Query for relevant code context"""
         
         # Build where filter

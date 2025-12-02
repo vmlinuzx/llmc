@@ -27,11 +27,10 @@ remains correct as the enrichment pipeline evolves.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List
-
+from typing import Any
 
 from tools.rag.database import Database
-from tools.rag.enrichment import batch_enrich, EnrichmentBatchResult
+from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
 from tools.rag.workers import enrichment_plan
 
 
@@ -106,9 +105,9 @@ def _fake_llm_call_factory(summary_prefix: str = "Summary") -> callable:
     used by ``execute_enrichment``.
     """
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
-    def _fake_llm_call(prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def _fake_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
         calls.append(prompt)
         span_hash = prompt.get("span_hash", "unknown")
         return {
@@ -252,9 +251,9 @@ def test_enrichment_errors_are_reported_and_do_not_write_rows(tmp_path: Path) ->
     span_hash = "span_error"
     _insert_file_and_span(db, repo_root, Path("err.py"), "err_func", span_hash)
 
-    calls: List[Dict[str, Any]] = []
+    calls: list[dict[str, Any]] = []
 
-    def failing_llm(prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def failing_llm(prompt: dict[str, Any]) -> dict[str, Any]:
         calls.append(prompt)
         raise RuntimeError("synthetic LLM failure")
 

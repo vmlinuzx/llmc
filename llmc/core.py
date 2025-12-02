@@ -1,6 +1,5 @@
-import os
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 
 try:
     import tomllib
@@ -23,7 +22,7 @@ def find_repo_root(start_path: Path = Path(".")) -> Path:
     # Fallback: return current directory (will likely fail later if not initialized)
     return current
 
-def load_config(repo_root: Optional[Path] = None) -> Dict[str, Any]:
+def load_config(repo_root: Path | None = None) -> dict[str, Any]:
     """
     Load llmc.toml from the repository root.
     """

@@ -7,11 +7,11 @@ Agent budgets auto-tune output to caller's context window.
 
 from __future__ import annotations
 
-import os
-import tomllib
 from dataclasses import dataclass, field
 from functools import lru_cache
+import os
 from pathlib import Path
+import tomllib
 from typing import Any
 
 

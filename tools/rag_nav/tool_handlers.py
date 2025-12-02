@@ -8,39 +8,39 @@ advanced scoring — just enough to satisfy tests with deterministic behavior.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
+import logging
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Set, Tuple
-from collections.abc import Iterable
-import logging
-
-from tools.rag_nav.models import (
-    Snippet,
-    SnippetLocation,
-    SearchItem,
-    SearchResult,
-    WhereUsedItem,
-    WhereUsedResult,
-    LineageItem,
-    LineageResult,
-    EnrichmentData,
-    SourceTag,
-)
-from tools.rag.locator import identify_symbol_at_line
+from typing import Any
 
 # --- Context Gateway integration imports ---
 from tools.rag.config import load_rerank_weights
+from tools.rag.db_fts import RagDbNotFound, fts_search
 from tools.rag.graph_index import (
     GraphNotFound as IndexGraphNotFound,
     lineage_files as lineage_files_from_index,
     load_indices as load_graph_indices,
     where_used_files as where_used_files_from_index,
 )
+from tools.rag.graph_stitch import Neighbor, expand_search_items
+from tools.rag.locator import identify_symbol_at_line
+from tools.rag.rerank import RerankHit, rerank_hits
 from tools.rag_nav.gateway import compute_route as _compute_route
-from tools.rag.db_fts import fts_search, RagDbNotFound
-from tools.rag.rerank import rerank_hits, RerankHit
-from tools.rag.graph_stitch import expand_search_items, Neighbor
+from tools.rag_nav.models import (
+    EnrichmentData,
+    LineageItem,
+    LineageResult,
+    SearchItem,
+    SearchResult,
+    Snippet,
+    SnippetLocation,
+    SourceTag,
+    WhereUsedItem,
+    WhereUsedResult,
+)
+
 # -------------------------------------------
 
 _enrich_log = logging.getLogger("llmc.enrich")
@@ -55,7 +55,7 @@ def _rag_graph_path(repo_root: Path | str) -> Path:
     return Path(repo_root) / ".llmc" / "rag_graph.json"
 
 
-def _attach_graph_enrichment(repo_root: Path | str, items: List[Any]):
+def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
     """Attach enrichment data from loaded graph nodes to result items.
     
     Args:
@@ -70,9 +70,9 @@ def _attach_graph_enrichment(repo_root: Path | str, items: List[Any]):
         return items
         
     # Index nodes by file path for fast lookup (legacy/fallback)
-    nodes_by_path: Dict[str, List[dict]] = {}
+    nodes_by_path: dict[str, list[dict]] = {}
     # Also index by ID for AST lookup
-    nodes_by_id: Dict[str, dict] = {}
+    nodes_by_id: dict[str, dict] = {}
     
     for n in nodes:
         p = _node_path(n)
@@ -168,7 +168,7 @@ def _load_graph(repo_root: Path | str) -> tuple[list[dict], list[dict]]:
     """Return (nodes, edges). If missing or invalid, return ([], [])."""
     path = _rag_graph_path(repo_root)
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         nodes = data.get("nodes") or data.get("entities") or []
         edges = data.get("edges") or []
@@ -207,7 +207,7 @@ def _node_path(n: dict) -> str:
     return str(n.get("path") or n.get("file") or n.get("filepath") or "")
 
 
-def _node_span(n: dict) -> tuple[Optional[int], Optional[int]]:
+def _node_span(n: dict) -> tuple[int | None, int | None]:
     span = n.get("span") or n.get("loc") or {}
     start = span.get("start_line") or span.get("start") or span.get("line_start") or n.get("start_line")
     end = span.get("end_line") or span.get("end") or span.get("line_end") or n.get("end_line")
@@ -219,7 +219,7 @@ def _node_span(n: dict) -> tuple[Optional[int], Optional[int]]:
         return None, None
 
 
-def _read_snippet(repo_root: str, path: str, start_line: Optional[int], end_line: Optional[int]) -> Snippet:
+def _read_snippet(repo_root: str, path: str, start_line: int | None, end_line: int | None) -> Snippet:
     """Read file and slice [start_line, end_line]. Lines are 1-based, inclusive."""
     abspath = os.path.join(repo_root, path) if path else ""
     text = ""
@@ -227,7 +227,7 @@ def _read_snippet(repo_root: str, path: str, start_line: Optional[int], end_line
     el = end_line or (sl + 15)
     if os.path.isfile(abspath):
         try:
-            with open(abspath, "r", encoding="utf-8", errors="ignore") as f:
+            with open(abspath, encoding="utf-8", errors="ignore") as f:
                 lines = f.readlines()
             total = len(lines)
             sl = max(1, min(sl, total if total else 1))
@@ -238,7 +238,7 @@ def _read_snippet(repo_root: str, path: str, start_line: Optional[int], end_line
     return Snippet(text=text, location=SnippetLocation(path=path or "", start_line=sl, end_line=el))
 
 
-def _max_n(max_results: Optional[int], default: int = 20) -> int:
+def _max_n(max_results: int | None, default: int = 20) -> int:
     try:
         if max_results is None:
             return default
@@ -247,9 +247,9 @@ def _max_n(max_results: Optional[int], default: int = 20) -> int:
         return default
 
 
-def _index_nodes(nodes: list[dict]) -> tuple[Dict[str, dict], Dict[str, List[dict]]]:
-    by_id: Dict[str, dict] = {}
-    by_name_lower: Dict[str, List[dict]] = {}
+def _index_nodes(nodes: list[dict]) -> tuple[dict[str, dict], dict[str, list[dict]]]:
+    by_id: dict[str, dict] = {}
+    by_name_lower: dict[str, list[dict]] = {}
     for n in nodes:
         nid = str(n.get("id") or _node_name(n))
         by_id[nid] = n
@@ -259,12 +259,12 @@ def _index_nodes(nodes: list[dict]) -> tuple[Dict[str, dict], Dict[str, List[dic
     return by_id, by_name_lower
 
 
-def _match_nodes(nodes: list[dict], query: str) -> List[dict]:
+def _match_nodes(nodes: list[dict], query: str) -> list[dict]:
     q = (query or "").lower().strip()
     if not q:
         return []
-    out: List[dict] = []
-    seen: Set[int] = set()
+    out: list[dict] = []
+    seen: set[int] = set()
     for i, n in enumerate(nodes):
         name = _node_name(n).lower()
         path = _node_path(n).lower()
@@ -275,11 +275,11 @@ def _match_nodes(nodes: list[dict], query: str) -> List[dict]:
     return out
 
 
-def _resolve_symbol_nodes(nodes: list[dict], symbol: str) -> List[dict]:
+def _resolve_symbol_nodes(nodes: list[dict], symbol: str) -> list[dict]:
     if not symbol:
         return []
     q = symbol.lower()
-    out: List[dict] = []
+    out: list[dict] = []
     for n in nodes:
         name = _node_name(n).lower()
         if name.endswith(q) or q in name:
@@ -323,8 +323,8 @@ def build_graph_for_repo(repo_root: Path | str):
 
     # Next, build an AST-only schema graph (no DB required) and derive a
     # minimal nodes/edges representation for RAG Nav.
-    nodes: List[Dict[str, Any]] = []
-    edges: List[Dict[str, Any]] = []
+    nodes: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
 
     try:
         schema_graph = _schema_build_graph_for_repo(repo_root_path, require_enrichment=False)
@@ -338,13 +338,13 @@ def build_graph_for_repo(repo_root: Path | str):
             if isinstance(path, str) and ":" in path and not entity.file_path:
                 # Strip line-range suffix if present (e.g., "foo.py:10-20")
                 path = path.split(":", 1)[0]
-            span: Dict[str, int] = {}
+            span: dict[str, int] = {}
             if entity.start_line is not None:
                 span["start_line"] = int(entity.start_line)
             if entity.end_line is not None:
                 span["end_line"] = int(entity.end_line)
 
-            node: Dict[str, Any] = {
+            node: dict[str, Any] = {
                 "id": entity.id,
                 "name": entity.id,
                 "path": path or "",
@@ -372,8 +372,8 @@ def build_graph_for_repo(repo_root: Path | str):
                 yield path
 
         # First pass: collect defined symbol names by scanning for def/class.
-        defined_symbols: Set[str] = set()
-        file_paths: List[Path] = []
+        defined_symbols: set[str] = set()
+        file_paths: list[Path] = []
         for file_path in _iter_py_files(repo_root_path):
             file_paths.append(file_path)
             try:
@@ -507,7 +507,7 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
     
     # 3. Build Spatial Index: (normalized_path, start_line) -> EnrichmentRecord
     # This bridges the gap between AST (Graph) and Content Hash (DB).
-    enrich_by_loc: Dict[Tuple[str, int], Any] = {}
+    enrich_by_loc: dict[tuple[str, int], Any] = {}
     
     # load_enrichment_data now returns Dict[span_hash, List[EnrichmentRecord]]
     # We iterate the lists of records.
@@ -573,7 +573,7 @@ def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
     # Parse JSON fields if they're stored as strings
     import json
     
-    def safe_json_load(value: Optional[str]) -> Optional[list]:
+    def safe_json_load(value: str | None) -> list | None:
         if not value:
             return None
         try:
@@ -620,7 +620,7 @@ def _grep_snippets(repo_root, needle, max_items):
         for rel in _iter_repo_py_files(repo_root):
             abspath = os.path.join(str(repo_root), rel)
             try:
-                with open(abspath, "r", encoding="utf-8", errors="ignore") as f:
+                with open(abspath, encoding="utf-8", errors="ignore") as f:
                     lines = f.readlines()
                 for i, line in enumerate(lines, start=1):
                     if needle in line:
@@ -640,15 +640,15 @@ def _grep_snippets(repo_root, needle, max_items):
 
 
 
-def _neighbors_to_items(neigh: List[Neighbor]) -> List[SearchItem]:
-    items: List[SearchItem] = []
+def _neighbors_to_items(neigh: list[Neighbor]) -> list[SearchItem]:
+    items: list[SearchItem] = []
     for n in neigh:
         loc = SnippetLocation(path=n.path, start_line=1, end_line=1)
         items.append(SearchItem(file=n.path, snippet=Snippet(text="", location=loc)))
     return items
 
 
-def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> SearchResult:
+def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchResult:
     """Search using DB FTS + reranker + 1-hop graph stitch when route allows RAG."""
     route = _compute_route(Path(repo_root))
     repo_root_path = Path(repo_root)
@@ -670,7 +670,7 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
             ]
             weights = load_rerank_weights(repo_root_path)
             ranked = rerank_hits(query, rr_hits, top_k=max_results, weights=weights)
-            items: List[SearchItem] = [
+            items: list[SearchItem] = [
                 SearchItem(
                     file=h.file,
                     snippet=Snippet(
@@ -717,7 +717,7 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
 
     # Fallback: local grep over .py files when no RAG route or DB issues.
     grep_hits = _grep_snippets(repo_root, query, max_results)
-    fallback_items: List[SearchItem] = []
+    fallback_items: list[SearchItem] = []
     for rel, sl, el, text in grep_hits:
         fallback_items.append(
             SearchItem(
@@ -741,7 +741,7 @@ def tool_rag_search(repo_root, query: str, limit: Optional[int] = None) -> Searc
     return _maybe_attach_enrichment_search(repo_root, res)
 
 
-def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> WhereUsedResult:
+def tool_rag_where_used(repo_root, symbol: str, limit: int | None = None) -> WhereUsedResult:
     """Where-used query using graph indices when the Context Gateway allows RAG."""
     route = _compute_route(Path(repo_root))
     max_results = _max_n(limit, default=50)
@@ -750,7 +750,7 @@ def tool_rag_where_used(repo_root, symbol: str, limit: Optional[int] = None) -> 
         try:
             indices = load_graph_indices(Path(repo_root))
             files = where_used_files_from_index(indices, symbol, limit=max_results)
-            items: List[WhereUsedItem] = []
+            items: list[WhereUsedItem] = []
             for path in files[:max_results]:
                 loc = SnippetLocation(path=path, start_line=1, end_line=1)
                 snippet = Snippet(text="", location=loc)
@@ -795,7 +795,7 @@ def tool_rag_lineage(
     repo_root,
     symbol: str,
     direction: str,
-    max_results: Optional[int] = None,
+    max_results: int | None = None,
 ) -> LineageResult:
     """Lineage query using graph indices when the Context Gateway allows RAG."""
     route = _compute_route(Path(repo_root))
@@ -813,7 +813,7 @@ def tool_rag_lineage(
                 direction=normalized_direction,
                 limit=limit,
             )
-            items: List[LineageItem] = []
+            items: list[LineageItem] = []
             for path in files[:limit]:
                 loc = SnippetLocation(path=path, start_line=1, end_line=1)
                 snippet = Snippet(text="", location=loc)
@@ -834,7 +834,7 @@ def tool_rag_lineage(
 
     # Fallback: naive grep for callsites "symbol(" as pseudo-lineage.
     grep_hits = _grep_snippets(repo_root, f"{symbol}(", limit)
-    fallback_items: List[LineageItem] = []
+    fallback_items: list[LineageItem] = []
     for rel, sl, el, text in grep_hits:
         fallback_items.append(
             LineageItem(
@@ -857,7 +857,7 @@ def tool_rag_lineage(
     return _maybe_attach_enrichment_lineage(repo_root, res)
 
 
-def tool_rag_stats(repo_root: Path | str) -> Dict[str, Any]:
+def tool_rag_stats(repo_root: Path | str) -> dict[str, Any]:
     """Return statistics about the RAG graph and enrichment coverage."""
     nodes, _ = _load_graph(repo_root)
     total_nodes = len(nodes)
@@ -876,7 +876,7 @@ def _enrichment_enabled() -> bool:
     return flag in {"1", "true", "yes", "on"} or attach in {"1", "true", "yes"}
 
 
-def _enrichment_max_chars() -> Optional[int]:
+def _enrichment_max_chars() -> int | None:
     raw = os.getenv("LLMC_ENRICH_MAX_CHARS")
     if raw and raw.isdigit():
         try:
@@ -899,7 +899,7 @@ def _maybe_attach_enrichment_search(repo_root: str, res: SearchResult) -> Search
         )
 
         db_env = os.getenv("LLMC_ENRICH_DB")
-        db_path: Optional[Path]
+        db_path: Path | None
         if not db_env or not Path(db_env).exists():
             db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
         else:
@@ -940,7 +940,7 @@ def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) ->
         )
 
         db_env = os.getenv("LLMC_ENRICH_DB")
-        db_path: Optional[Path]
+        db_path: Path | None
         if not db_env or not Path(db_env).exists():
             db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
         else:
@@ -980,7 +980,7 @@ def _maybe_attach_enrichment_lineage(repo_root: str, res: LineageResult) -> Line
         )
 
         db_env = os.getenv("LLMC_ENRICH_DB")
-        db_path: Optional[Path]
+        db_path: Path | None
         items = getattr(res, "items", None)
         if not db_env or not Path(db_env).exists():
             db_path = discover_enrichment_db(Path(repo_root), items)

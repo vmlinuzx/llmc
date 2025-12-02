@@ -16,10 +16,9 @@ Requirements:
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
-
 
 RCLONE_REMOTE = "dcgoogledrive:"
 REMOTE_DIR = "llmc"

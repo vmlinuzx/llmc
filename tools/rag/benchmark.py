@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass
-from statistics import mean
 from collections.abc import Sequence
+from dataclasses import dataclass
+import math
+from statistics import mean
 
 from .embeddings import build_embedding_backend
 

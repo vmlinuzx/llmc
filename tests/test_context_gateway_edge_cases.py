@@ -7,8 +7,8 @@ Tests cover:
 """
 
 import json
-import subprocess
 from pathlib import Path
+import subprocess
 from unittest.mock import Mock, patch
 
 
@@ -89,7 +89,7 @@ class TestGitHeadDetection:
     def test_detect_git_head_git_not_installed(self, tmp_path: Path):
         """Test behavior when git is not installed."""
         # Simulate git not being available
-        from subprocess import run, DEVNULL
+        from subprocess import DEVNULL, run
 
         try:
             result = run(
@@ -730,6 +730,7 @@ class TestGatewayPerformance:
     def test_compute_route_performance(self, tmp_path: Path):
         """Test that compute_route performs well."""
         import time
+
         from tools.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
@@ -764,6 +765,7 @@ class TestGatewayPerformance:
     def test_concurrent_compute_route_calls(self, tmp_path: Path):
         """Test concurrent compute_route calls."""
         import threading
+
         from tools.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"

@@ -1,7 +1,6 @@
-import pytest
-from dataclasses import asdict
-from tools.rag_nav.models import EnrichmentData, SearchItem, Snippet, SnippetLocation, SearchResult
 from tools.rag_nav.enrichment import EnrichmentSnippet
+from tools.rag_nav.models import EnrichmentData, SearchItem, SearchResult, Snippet, SnippetLocation
+
 
 def test_enrichment_data_structure():
     """Test that EnrichmentData supports the new content_type fields."""

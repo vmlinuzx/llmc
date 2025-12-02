@@ -9,21 +9,20 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+import sys
+from typing import Any
 
 from tools.rag_nav.tool_handlers import tool_rag_search
 
-
-DEFAULT_CANARY: List[Dict[str, Any]] = [
+DEFAULT_CANARY: list[dict[str, Any]] = [
     {"q": "jwt verify", "relevant": ["jwt", "verify", "auth"]},
     {"q": "sqlite fts search", "relevant": ["fts", "sqlite", "db"]},
     {"q": "graph neighbors", "relevant": ["graph", "edge", "calls", "imports"]},
 ]
 
 
-def precision_at_k(items: List[object], relevant_tokens: List[str], k: int = 10) -> float:
+def precision_at_k(items: list[object], relevant_tokens: list[str], k: int = 10) -> float:
     """
     Compute precision@k by checking whether any relevant token appears in the
     file path or snippet text of the top-k items.
@@ -43,7 +42,7 @@ def precision_at_k(items: List[object], relevant_tokens: List[str], k: int = 10)
     return hits / max(1, k)
 
 
-def _load_queries(path: Optional[Path]) -> List[Dict[str, Any]]:
+def _load_queries(path: Path | None) -> list[dict[str, Any]]:
     """Load canary queries from a JSONL file, or fall back to DEFAULT_CANARY."""
     if path and path.exists():
         try:
@@ -67,7 +66,7 @@ def _clear_weight_env() -> None:
         os.environ.pop(env, None)
 
 
-def run(repo_root: Path, queries_path: Optional[Path] = None, k: int = 10) -> Dict[str, Any]:
+def run(repo_root: Path, queries_path: Path | None = None, k: int = 10) -> dict[str, Any]:
     """
     Run a baseline and alt evaluation over a set of canary queries.
 
@@ -77,7 +76,7 @@ def run(repo_root: Path, queries_path: Optional[Path] = None, k: int = 10) -> Di
     queries = _load_queries(queries_path)
 
     def eval_once() -> float:
-        scores: List[float] = []
+        scores: list[float] = []
         for query in queries:
             result = tool_rag_search(repo_root, query["q"], limit=max(10, k))
             scores.append(precision_at_k(result.items, query.get("relevant", []), k=k))

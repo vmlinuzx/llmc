@@ -1,13 +1,19 @@
 # llmcwrapper/providers/anthropic.py
 from __future__ import annotations
-import os, requests, time
-from typing import Any, Dict
+
+import os
+import time
+from typing import Any
+
+import requests
+
 from .base import ProviderDriver
+
 
 class AnthropicDriver(ProviderDriver):
     name = "anthropic"
 
-    def send(self, *, messages, tools, max_tokens, temperature, model, correlation_id, profile_cfg, resolved_cfg) -> Dict[str, Any]:
+    def send(self, *, messages, tools, max_tokens, temperature, model, correlation_id, profile_cfg, resolved_cfg) -> dict[str, Any]:
         base_url = resolved_cfg["providers"]["anthropic"].get("base_url", "https://api.anthropic.com/v1/messages")
         api_key = os.environ.get(resolved_cfg["providers"]["anthropic"].get("env_key","ANTHROPIC_API_KEY"))
         version = resolved_cfg["providers"]["anthropic"].get("anthropic_version","2023-06-01")

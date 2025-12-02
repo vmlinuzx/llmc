@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 from pathlib import Path
-from typing import Optional
 
 
 class PathTraversalError(ValueError):
@@ -55,7 +54,7 @@ def is_git_repo(path: Path) -> bool:
         return False
 
 
-def read_text_if_exists(path: Path) -> Optional[str]:
+def read_text_if_exists(path: Path) -> str | None:
     if not path.exists():
         return None
     return path.read_text(encoding="utf-8")

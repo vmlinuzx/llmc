@@ -1,7 +1,10 @@
-import struct
 import math
+import struct
+
 import pytest
-from tools.rag.search import _score_candidates, SpanSearchResult, _unpack_vector
+
+from tools.rag.search import _score_candidates
+
 
 def _pack_vector(vec):
     return struct.pack(f"<{len(vec)}f", *vec)

@@ -5,10 +5,8 @@ Handles service lifecycle management via systemd, with graceful fallback
 to fork() mode on systems without systemd.
 """
 import os
-import subprocess
 from pathlib import Path
-from typing import Optional, Dict, Tuple
-
+import subprocess
 
 SYSTEMD_USER_DIR = Path.home() / ".config" / "systemd" / "user"
 SERVICE_NAME = "llmc-rag.service"
@@ -27,7 +25,7 @@ class SystemdManager:
             # Check if we can list services (requires working D-Bus connection)
             result = subprocess.run(
                 ["systemctl", "--user", "list-units", "--type=service", "--no-pager"],
-                capture_output=True,
+                check=False, capture_output=True,
                 timeout=5,
                 text=True
             )
@@ -71,7 +69,7 @@ WantedBy=default.target
         
         return True
     
-    def start(self) -> Tuple[bool, str]:
+    def start(self) -> tuple[bool, str]:
         """Start the service via systemd."""
         if not self.service_file.exists():
             if not self.install_service():
@@ -88,7 +86,7 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
     
-    def stop(self) -> Tuple[bool, str]:
+    def stop(self) -> tuple[bool, str]:
         """Stop the service via systemd."""
         try:
             subprocess.run(
@@ -101,7 +99,7 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
     
-    def restart(self) -> Tuple[bool, str]:
+    def restart(self) -> tuple[bool, str]:
         """Restart the service via systemd."""
         try:
             subprocess.run(
@@ -114,12 +112,12 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
     
-    def status(self) -> Dict:
+    def status(self) -> dict:
         """Get service status from systemd."""
         try:
             result = subprocess.run(
                 ["systemctl", "--user", "status", SERVICE_NAME],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             
@@ -152,7 +150,7 @@ WantedBy=default.target
                 "error": str(e)
             }
     
-    def enable(self) -> Tuple[bool, str]:
+    def enable(self) -> tuple[bool, str]:
         """Enable service to start on boot."""
         try:
             subprocess.run(
@@ -165,7 +163,7 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
     
-    def disable(self) -> Tuple[bool, str]:
+    def disable(self) -> tuple[bool, str]:
         """Disable service from starting on boot."""
         try:
             subprocess.run(
@@ -178,7 +176,7 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
     
-    def get_logs(self, lines: int = 50, follow: bool = False) -> Optional[subprocess.Popen]:
+    def get_logs(self, lines: int = 50, follow: bool = False) -> subprocess.Popen | None:
         """Get logs via journalctl."""
         cmd = ["journalctl", "--user", "-u", SERVICE_NAME, "-n", str(lines)]
         
@@ -188,6 +186,6 @@ WantedBy=default.target
             return subprocess.Popen(cmd)
         else:
             # Return output directly
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
             print(result.stdout)
             return None

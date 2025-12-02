@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-import re
-from dataclasses import dataclass, asdict
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 from collections.abc import Iterable, Sequence
+from dataclasses import asdict, dataclass
+import json
+from pathlib import Path
+import re
 
 from .config import index_path_for_read
 from .database import Database
@@ -50,14 +49,14 @@ class SpanCandidate:
     outputs: Sequence[str]
     side_effects: Sequence[str]
     pitfalls: Sequence[str]
-    usage_snippet: Optional[str]
+    usage_snippet: str | None
 
 
 @dataclass
 class PlanSpan:
     span_hash: str
     path: str
-    lines: Tuple[int, int]
+    lines: tuple[int, int]
     score: float
     rationale: Sequence[str]
     symbol: str
@@ -68,14 +67,14 @@ class PlanResult:
     query: str
     intent: str
     spans: Sequence[PlanSpan]
-    symbols: Sequence[Dict[str, object]]
+    symbols: Sequence[dict[str, object]]
     confidence: float
     fallback_recommended: bool
     rationale: Sequence[str]
 
 
-def _tokenize(text: str) -> List[str]:
-    tokens: List[str] = []
+def _tokenize(text: str) -> list[str]:
+    tokens: list[str] = []
     for raw in TOKEN_PATTERN.findall(text.lower()):
         if raw in STOPWORDS:
             continue
@@ -89,7 +88,7 @@ def _derive_intent(tokens: Sequence[str]) -> str:
     return "-".join(tokens[:4])
 
 
-def _load_json_field(raw: Optional[str]) -> Sequence[str]:
+def _load_json_field(raw: str | None) -> Sequence[str]:
     if not raw:
         return []
     try:
@@ -138,7 +137,7 @@ def _fetch_candidates(db: Database) -> Iterable[SpanCandidate]:
         )
 
 
-def _score_candidate(tokens: Sequence[str], candidate: SpanCandidate) -> Tuple[float, List[str]]:
+def _score_candidate(tokens: Sequence[str], candidate: SpanCandidate) -> tuple[float, list[str]]:
     if not tokens:
         return 0.0, []
 
@@ -152,7 +151,7 @@ def _score_candidate(tokens: Sequence[str], candidate: SpanCandidate) -> Tuple[f
     usage_l = (candidate.usage_snippet or "").lower()
 
     score = 0.0
-    reasons: List[str] = []
+    reasons: list[str] = []
 
     def bump(reason: str, weight: float) -> None:
         nonlocal score
@@ -204,7 +203,7 @@ def _score_to_confidence(score: float) -> float:
     return min(0.99, score / (score + 4.0))
 
 
-def _append_plan_log(repo_root: Path, payload: Dict[str, object]) -> None:
+def _append_plan_log(repo_root: Path, payload: dict[str, object]) -> None:
     log_path = repo_root / "logs" / "planner_metrics.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
@@ -225,7 +224,7 @@ def generate_plan(
     limit: int = 5,
     min_score: float = 0.4,
     min_confidence: float = 0.6,
-    repo_root: Optional[Path] = None,
+    repo_root: Path | None = None,
     log: bool = True,
 ) -> PlanResult:
     repo_root = repo_root or _resolve_repo_root()
@@ -233,7 +232,7 @@ def generate_plan(
     try:
         tokens = _tokenize(query)
         intent = _derive_intent(tokens)
-        scored: List[PlanSpan] = []
+        scored: list[PlanSpan] = []
 
         for candidate in _fetch_candidates(db):
             score, reasons = _score_candidate(tokens, candidate)
@@ -274,7 +273,7 @@ def generate_plan(
         if len(symbols) >= limit:
             break
 
-    rationale: List[str] = []
+    rationale: list[str] = []
     if selected:
         rationale.extend(selected[0].rationale)
     if fallback:
@@ -306,7 +305,7 @@ def generate_plan(
     return plan
 
 
-def plan_as_dict(result: PlanResult) -> Dict[str, object]:
+def plan_as_dict(result: PlanResult) -> dict[str, object]:
     return {
         "query": result.query,
         "intent": result.intent,

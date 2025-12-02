@@ -1,6 +1,8 @@
-import pytest
 from pathlib import Path
-from llmc.routing.content_type import classify_slice, ClassificationResult
+
+import pytest
+
+from llmc.routing.content_type import classify_slice
 from llmc.routing.query_type import classify_query
 from tools.rag.config import is_query_routing_enabled, load_config
 

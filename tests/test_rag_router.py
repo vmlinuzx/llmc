@@ -9,14 +9,15 @@ mid-tier (MiniMax), and premium (Claude) models. These tests ensure:
 - Error handling is robust
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 from tools.rag_router import (
+    QueryAnalysis,
     RAGRouter,
     RoutingDecision,
-    QueryAnalysis,
     route_query,
 )
 

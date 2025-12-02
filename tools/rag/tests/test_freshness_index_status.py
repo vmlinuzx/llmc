@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag.freshness import IndexStatus, IndexState, FreshnessState
+from tools.rag.freshness import FreshnessState, IndexState, IndexStatus
 
 
 @pytest.mark.rag_freshness

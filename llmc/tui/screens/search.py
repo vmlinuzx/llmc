@@ -3,27 +3,27 @@
 Search Screen - Interactive RAG code search
 """
 import json
-import subprocess
 from pathlib import Path
-from typing import List, Dict, Any
+import subprocess
+from typing import Any
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Container, ScrollableContainer, Grid
-from textual.screen import Screen
-from textual.widgets import Static, Input, Button
+from textual.containers import Container, Grid, ScrollableContainer
 from textual.message import Message
+from textual.screen import Screen
+from textual.widgets import Button, Input, Static
 
 
 class ResultSelected(Message):
     """Message emitted when a result item is clicked."""
 
-    def __init__(self, sender, result: Dict[str, Any]) -> None:
+    def __init__(self, sender, result: dict[str, Any]) -> None:
         self.result = result
         super().__init__()
 
 
-def _format_result_text(result: Dict[str, Any]) -> str:
+def _format_result_text(result: dict[str, Any]) -> str:
     """Render a result summary block."""
     rank = result.get("rank", 0)
     path = result.get("path", "unknown")
@@ -63,7 +63,7 @@ def _format_result_text(result: Dict[str, Any]) -> str:
 class ResultWidget(Static):
     """Clickable result block."""
 
-    def __init__(self, result: Dict[str, Any]) -> None:
+    def __init__(self, result: dict[str, Any]) -> None:
         super().__init__(_format_result_text(result), classes="result-item", expand=True)
         self.result = result
 
@@ -304,7 +304,7 @@ class SearchScreen(Screen):
             
             result = subprocess.run(
                 cmd,
-                cwd=repo_root,
+                check=False, cwd=repo_root,
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -337,7 +337,7 @@ class SearchScreen(Screen):
         results_container.remove_children()
         results_container.mount(Static(message, classes="status-message"))
     
-    def display_results(self, results: List[Dict[str, Any]], query: str) -> None:
+    def display_results(self, results: list[dict[str, Any]], query: str) -> None:
         """Display search results"""
         results_container = self.query_one("#results-container")
         results_container.remove_children()
@@ -352,7 +352,7 @@ class SearchScreen(Screen):
         # Reset details panel prompt for new result set
         self.update_details("Click a result to load its snippet here.")
     
-    def create_result_widget(self, result: Dict[str, Any]) -> Static:
+    def create_result_widget(self, result: dict[str, Any]) -> Static:
         """Create a clickable result widget."""
         return ResultWidget(result)
     
@@ -369,7 +369,7 @@ class SearchScreen(Screen):
         detail_text = self.build_detail_text(result)
         self.update_details(detail_text)
 
-    def build_detail_text(self, result: Dict[str, Any]) -> str:
+    def build_detail_text(self, result: dict[str, Any]) -> str:
         """Build detailed view with snippet and relations."""
         path = result.get("path", "unknown")
         symbol = result.get("symbol", "")
@@ -487,7 +487,7 @@ class SearchScreen(Screen):
 
         return "\n".join(parts)
 
-    def get_snippet(self, path: str, lines: List[int], context: int = 3) -> str:
+    def get_snippet(self, path: str, lines: list[int], context: int = 3) -> str:
         """Load a line span from disk with padding context."""
         try:
             file_path = Path(path)

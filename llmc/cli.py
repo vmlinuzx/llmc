@@ -2,23 +2,23 @@
 """
 LLMC: The Cyberpunk Console - 6 Panel Layout Demo
 """
-import time
-import random
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+import random
+import time
+from typing import Any
 
 # Conditional imports so it doesn't crash if you haven't pip installed yet
 try:
-    import typer
+    from rich.align import Align
     from rich.console import Console
     from rich.layout import Layout
-    from rich.panel import Panel
     from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
     from rich.table import Table
     from rich.text import Text
-    from rich.align import Align
-    from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
+    import typer
 except ImportError:
     print("Please install 'typer' and 'rich' to enable the CLI.")
     print("pip install typer rich")
@@ -27,7 +27,10 @@ except ImportError:
 # Import LLMC core modules
 try:
     from tools.rag_nav.metadata import load_status
-    from tools.rag_nav.tool_handlers import _load_graph, _rag_graph_path # _load_graph is private, but okay for demo
+    from tools.rag_nav.tool_handlers import (  # _load_graph is private, but okay for demo
+        _load_graph,
+        _rag_graph_path,
+    )
 except ImportError as e:
     print("[bold red]ERROR:[/bold red] LLMC core modules not found. Ensure PYTHONPATH is set or you are in the correct directory.")
     print("         Run 'export PYTHONPATH=$(pwd)' from the project root.")
@@ -68,7 +71,7 @@ def make_layout() -> Layout:
     return layout
 
 
-def get_repo_stats(repo_root: Path) -> Dict[str, Any]:
+def get_repo_stats(repo_root: Path) -> dict[str, Any]:
     """Fetch real-time stats from the repo's RAG data."""
     stats = {
         "files_tracked": 0,
@@ -120,12 +123,12 @@ def get_repo_stats(repo_root: Path) -> Dict[str, Any]:
 class DashboardState:
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root
-        self.logs: List[str] = []
+        self.logs: list[str] = []
         self.menu_idx = 0
         self.menu_items = ["Monitor System", "Search Code", "Configuration", "System Doctor", "Agent Status"]
         self.start_time = datetime.now()
         self.last_stats_update = datetime.min # Force immediate update
-        self.current_stats: Dict[str, Any] = {}
+        self.current_stats: dict[str, Any] = {}
 
     def add_log(self, msg: str, level: str = "INF"):
         ts = datetime.now().strftime("%H:%M:%S")

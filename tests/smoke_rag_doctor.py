@@ -1,9 +1,11 @@
 
-import sys
-import asyncio
 from pathlib import Path
+import sys
+
 from textual.app import App
+
 from llmc.tui.screens.rag_doctor import RAGDoctorScreen
+
 
 class SmokeTestApp(App):
     def on_mount(self):

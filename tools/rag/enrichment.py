@@ -7,21 +7,19 @@ with relationship awareness.
 
 from __future__ import annotations
 
-import re
+from collections.abc import Callable
 from dataclasses import dataclass
+import logging
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-
-from .graph import GraphStore, GraphNeighbor
-from .types import SpanRecord
+import re
 
 # Hoisted imports
 from typing import Any
-from collections.abc import Callable
-import logging
 
 from .database import Database
-from .workers import execute_enrichment, enrichment_plan
+from .graph import GraphNeighbor, GraphStore
+from .types import SpanRecord
+from .workers import enrichment_plan, execute_enrichment
 
 
 @dataclass
@@ -31,8 +29,8 @@ class EnrichmentFeatures:
     relation_density: float = 0.0  # Fraction of context from graph (0-1)
     graph_coverage: float = 0.0  # How many detected entities found in graph
     complexity_score: int = 0  # Query complexity estimate (0-10)
-    detected_entities: List[str] = None  # Entities found in query
-    fallback_reason: Optional[str] = None  # Why enrichment failed, if applicable
+    detected_entities: list[str] = None  # Entities found in query
+    fallback_reason: str | None = None  # Why enrichment failed, if applicable
     
     def __post_init__(self):
         if self.detected_entities is None:
@@ -90,7 +88,7 @@ class QueryAnalyzer:
         
         return features
     
-    def _detect_entities(self, query: str) -> List[str]:
+    def _detect_entities(self, query: str) -> list[str]:
         """
         Extract potential entity identifiers from query.
         
@@ -168,10 +166,10 @@ class HybridRetriever:
     def retrieve(
         self,
         query: str,
-        vector_results: List[SpanRecord],
+        vector_results: list[SpanRecord],
         max_graph_results: int = 15,
         max_hops: int = 1
-    ) -> Tuple[List[SpanRecord], EnrichmentFeatures]:
+    ) -> tuple[list[SpanRecord], EnrichmentFeatures]:
         """
         Hybrid retrieval: merge vector results with graph-based results.
         
@@ -222,7 +220,7 @@ class HybridRetriever:
         
         return merged, features
     
-    def _neighbors_to_spans(self, neighbors: List[GraphNeighbor]) -> List[SpanRecord]:
+    def _neighbors_to_spans(self, neighbors: list[GraphNeighbor]) -> list[SpanRecord]:
         """Convert graph neighbors to SpanRecords"""
         # Placeholder implementation
         # In production, this would fetch actual code spans from the paths
@@ -260,9 +258,9 @@ class HybridRetriever:
     
     def _merge_results(
         self,
-        vector_results: List[SpanRecord],
-        graph_results: List[SpanRecord]
-    ) -> List[SpanRecord]:
+        vector_results: list[SpanRecord],
+        graph_results: list[SpanRecord]
+    ) -> list[SpanRecord]:
         """
         Merge and deduplicate vector + graph results.
         
@@ -300,7 +298,7 @@ class EnrichmentBatchResult:
     failed: int
     errors: list[str]
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         return {
             "total_planned": self.total_planned,
             "attempted": self.attempted,
@@ -313,7 +311,7 @@ class EnrichmentBatchResult:
 def enrich_spans(
     db: Database,
     repo_root: Path,
-    llm_call: Callable[[Dict[str, Any]], Dict[str, Any]],
+    llm_call: Callable[[dict[str, Any]], dict[str, Any]],
     *,
     limit: int = 32,
     model: str = "local-llm",
@@ -373,7 +371,7 @@ def enrich_spans(
 def batch_enrich(
     db: Database,
     repo_root: Path,
-    llm_call: Callable[[Dict[str, Any]], Dict[str, Any]],
+    llm_call: Callable[[dict[str, Any]], dict[str, Any]],
     *,
     batch_size: int = 32,
     model: str = "local-llm",

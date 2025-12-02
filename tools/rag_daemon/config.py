@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
     import yaml  # type: ignore[import]
@@ -18,7 +18,7 @@ def _expand(path: str) -> Path:
     return Path(os.path.expanduser(path)).resolve()
 
 
-def load_config(path: Optional[str] = None) -> DaemonConfig:
+def load_config(path: str | None = None) -> DaemonConfig:
     """Load daemon config from YAML."""
     if path is None:
         path = os.environ.get("LLMC_RAG_DAEMON_CONFIG", "~/.llmc/rag-daemon.yml")
@@ -31,7 +31,7 @@ def load_config(path: Optional[str] = None) -> DaemonConfig:
         raise RuntimeError("PyYAML is required to load daemon config")
 
     with cfg_path.open("r", encoding="utf-8") as f:
-        raw: Dict[str, Any] = yaml.safe_load(f) or {}
+        raw: dict[str, Any] = yaml.safe_load(f) or {}
 
     def get_int(key: str, default: int) -> int:
         return int(raw.get(key, default))

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 import argparse
+from collections.abc import Iterable, Sequence
 import hashlib
 import json
 import os
+from pathlib import Path
 import sqlite3
 import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, List
-from collections.abc import Iterable, Sequence
 
 from .config import index_path_for_write
 from .lang import EXTENSION_LANG
@@ -49,7 +48,7 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def load_cached_hashes(index_path: Path) -> Dict[str, str]:
+def load_cached_hashes(index_path: Path) -> dict[str, str]:
     if not index_path.exists():
         return {}
     conn = sqlite3.connect(index_path)
@@ -60,8 +59,8 @@ def load_cached_hashes(index_path: Path) -> Dict[str, str]:
         conn.close()
 
 
-def _extra_patterns(repo_root: Path) -> List[str]:
-    patterns: List[str] = []
+def _extra_patterns(repo_root: Path) -> list[str]:
+    patterns: list[str] = []
     env_raw = os.getenv("LLMC_RAG_EXCLUDE", "").strip()
     if env_raw:
         for part in env_raw.split(","):
@@ -130,8 +129,8 @@ def iter_repo_files(repo_root: Path) -> Iterable[Path]:
             yield rel
 
 
-def current_hashes(repo_root: Path, extra_patterns: List[str]) -> Dict[str, str]:
-    hashes: Dict[str, str] = {}
+def current_hashes(repo_root: Path, extra_patterns: list[str]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
     for rel_path in iter_repo_files(repo_root):
         suffix = rel_path.suffix.lower()
         if suffix and suffix not in SUPPORTED_SUFFIXES:
@@ -149,7 +148,7 @@ def current_hashes(repo_root: Path, extra_patterns: List[str]) -> Dict[str, str]
     return hashes
 
 
-def detect_changes(repo_root: Path, index_path: Path | None = None) -> List[str]:
+def detect_changes(repo_root: Path, index_path: Path | None = None) -> list[str]:
     index_path = index_path or index_path_for_write(repo_root)
     cached = load_cached_hashes(index_path)
     extra = _extra_patterns(repo_root)
@@ -162,7 +161,7 @@ def detect_changes(repo_root: Path, index_path: Path | None = None) -> List[str]
     return sorted(dirty)
 
 
-def _python_env() -> List[str]:
+def _python_env() -> list[str]:
     return [sys.executable]
 
 
@@ -189,7 +188,7 @@ def run_embed(repo_root: Path, limit: int) -> str:
     if env.get("PYTHONPATH"):
         py_paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(py_paths)
-    result = subprocess.run(cmd, cwd=repo_root, capture_output=True, text=True, env=env)
+    result = subprocess.run(cmd, check=False, cwd=repo_root, capture_output=True, text=True, env=env)
 
     stdout = (result.stdout or "").strip()
     stderr = (result.stderr or "").strip()

@@ -9,13 +9,20 @@ Tests cover:
 """
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import Mock, patch
+
 import pytest
 
 # Import the CLI modules
-from tools.rag.cli import cli, _emit_jsonl_line, _emit_start_event, _emit_error_event, _emit_end_event
+from tools.rag.cli import (
+    _emit_end_event,
+    _emit_error_event,
+    _emit_jsonl_line,
+    _emit_start_event,
+    cli,
+)
 
 
 class TestFlagExclusivity:

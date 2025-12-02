@@ -13,8 +13,8 @@ Classifies summaries into exactly one terminal class:
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
+import re
 from typing import Literal, Optional
 
 # Rule version for telemetry and regression tracking
@@ -103,7 +103,7 @@ def count_english_tokens(text: str) -> int:
     return len(tokens)
 
 
-def check_placeholder(text: str) -> Optional[QualityResult]:
+def check_placeholder(text: str) -> QualityResult | None:
     """
     Check if text matches known placeholder patterns.
 
@@ -126,7 +126,7 @@ def check_placeholder(text: str) -> Optional[QualityResult]:
     return None
 
 
-def classify_quality(summary: str, normalized_text: Optional[str] = None) -> QualityResult:
+def classify_quality(summary: str, normalized_text: str | None = None) -> QualityResult:
     """
     Canonical classifier for enrichment quality.
 

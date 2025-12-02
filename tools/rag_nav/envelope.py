@@ -54,7 +54,7 @@ def _error_envelope_from(res: Any) -> RagResult[dict]:
     return error_result(error_code=code, message=str(message))
 
 
-def search_to_rag_result(res: "models.SearchResult") -> "RagResult[models.SearchItem]":
+def search_to_rag_result(res: models.SearchResult) -> RagResult[models.SearchItem]:
     """
     Adapt a concrete SearchResult into a RagResult envelope.
 
@@ -69,7 +69,7 @@ def search_to_rag_result(res: "models.SearchResult") -> "RagResult[models.Search
     return ok_result(items=items, source=source, freshness_state=freshness_state)
 
 
-def where_used_to_rag_result(res: "models.WhereUsedResult") -> "RagResult[models.WhereUsedItem]":
+def where_used_to_rag_result(res: models.WhereUsedResult) -> RagResult[models.WhereUsedItem]:
     """
     Adapt a concrete WhereUsedResult into a RagResult envelope.
     """
@@ -81,7 +81,7 @@ def where_used_to_rag_result(res: "models.WhereUsedResult") -> "RagResult[models
     return ok_result(items=items, source=source, freshness_state=freshness_state)
 
 
-def lineage_to_rag_result(res: "models.LineageResult") -> "RagResult[Any]":
+def lineage_to_rag_result(res: models.LineageResult) -> RagResult[Any]:
     """
     Adapt a concrete LineageResult into a RagResult envelope.
 

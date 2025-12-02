@@ -5,7 +5,6 @@ import pytest
 
 from tests._utils.envelopes import assert_ok_envelope
 
-
 pytestmark = pytest.mark.examples
 
 

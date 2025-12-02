@@ -1,6 +1,7 @@
 
 from llmc.routing.query_type import classify_query
 
+
 def _is_code(result):
     return result.get("route_name") == "code"
 

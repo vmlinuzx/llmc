@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.cli import resolve_workspace_from_cli, resolve_export_dir
+from tools.rag_repo.cli import resolve_export_dir, resolve_workspace_from_cli
 from tools.rag_repo.utils import PathTraversalError
 
 

@@ -8,18 +8,19 @@ Tests cover:
 - Edge cases and error handling
 """
 
+from datetime import datetime, timedelta
 import json
+from pathlib import Path
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
-from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
 
 from tools.rag.analytics import (
-    QueryTracker,
-    QueryRecord,
     AnalyticsSummary,
+    QueryRecord,
+    QueryTracker,
     format_analytics,
     run_analytics,
 )

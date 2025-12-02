@@ -1,8 +1,8 @@
 
+import contextlib
+import random
 import sys
 import time
-import random
-import contextlib
 
 try:
     import socket

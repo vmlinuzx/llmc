@@ -1,9 +1,8 @@
-import pytest
-from pathlib import Path
 import struct
-import sqlite3
-from tools.rag.search import search_spans
+
 from tools.rag.database import Database
+from tools.rag.search import search_spans
+
 
 def create_dummy_embedding(val: float, dim: int = 64) -> bytes:
     vec = [val] * dim

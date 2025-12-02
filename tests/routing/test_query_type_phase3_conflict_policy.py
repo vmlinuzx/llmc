@@ -1,5 +1,5 @@
-import os
 from llmc.routing.query_type import classify_query
+
 
 def test_conflict_prefers_code_by_default(monkeypatch):
     q = '```python\ndef get_invoice(id):\n    return id\n```\nSKU W-44910'

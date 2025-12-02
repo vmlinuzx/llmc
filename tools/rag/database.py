@@ -1,16 +1,14 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager
+import json
+from pathlib import Path
 import sqlite3
 import struct
-from contextlib import contextmanager
 import time
-from pathlib import Path
-from typing import Optional
-from collections.abc import Iterable, Iterator, Sequence
 
-import json
-
-from .types import FileRecord, SpanRecord, SpanWorkItem, EnrichmentRecord
+from .types import EnrichmentRecord, FileRecord, SpanRecord, SpanWorkItem
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
@@ -264,7 +262,7 @@ class Database:
             import sys
             print(f"    📊 Spans: {len(unchanged)} unchanged, {len(to_add)} added, {len(to_delete)} deleted", file=sys.stderr)
 
-    def get_file_hash(self, path: Path) -> Optional[str]:
+    def get_file_hash(self, path: Path) -> str | None:
         """Get the stored file hash for a given path.
         
         Returns:
@@ -556,7 +554,7 @@ class Database:
         ).fetchall()
         return [r for r in (self._row_to_enrichment(row) for row in rows) if r is not None]
 
-    def fetch_enrichment_by_span_hash(self, span_hash: str) -> Optional[EnrichmentRecord]:
+    def fetch_enrichment_by_span_hash(self, span_hash: str) -> EnrichmentRecord | None:
         """Lookup a single enrichment row by span_hash."""
         row = self.conn.execute(
             """
@@ -582,7 +580,7 @@ class Database:
         ).fetchone()
         return self._row_to_enrichment(row) if row is not None else None
 
-    def fetch_enrichment_by_symbol(self, symbol: str) -> Optional[EnrichmentRecord]:
+    def fetch_enrichment_by_symbol(self, symbol: str) -> EnrichmentRecord | None:
         """Lookup a single enrichment row by fully-qualified symbol."""
         row = self.conn.execute(
             """
@@ -654,7 +652,7 @@ class Database:
             ).fetchone()
         return int(row["n"]) if row is not None else 0
 
-    def search_enrichments_fts(self, query: str, limit: int = 10) -> list[tuple[str, Optional[str], Optional[float]]]:
+    def search_enrichments_fts(self, query: str, limit: int = 10) -> list[tuple[str, str | None, float | None]]:
         """Search enrichments text using FTS5.
 
         Returns:
@@ -696,7 +694,7 @@ class Database:
             else:
                 raise
 
-        results: list[tuple[str, Optional[str], Optional[float]]] = []
+        results: list[tuple[str, str | None, float | None]] = []
         for row in rows:
             score_val = row["score"]
             score = float(score_val) if score_val is not None else None

@@ -11,19 +11,19 @@ from __future__ import annotations
 import argparse
 import fnmatch
 import json
-import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+import time
+from typing import Any
 
+from tools.rag.config import load_rerank_weights
 from tools.rag.db_fts import fts_search
 from tools.rag.rerank import RerankHit, rerank_hits
-from tools.rag.config import load_rerank_weights
 from tools.rag_nav.tool_handlers import tool_rag_search
 
 
-def load_queries(path: Path) -> List[Dict[str, Any]]:
+def load_queries(path: Path) -> list[dict[str, Any]]:
     """Load JSONL canary query specs."""
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as handle:
         for line in handle:
             line = line.strip()
@@ -33,7 +33,7 @@ def load_queries(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def precision_at_k_files(files: List[str], gold_globs: List[str], k: int) -> float:
+def precision_at_k_files(files: list[str], gold_globs: list[str], k: int) -> float:
     """Precision@k using filename glob patterns as relevance labels."""
     if not gold_globs:
         return 0.0
@@ -45,7 +45,7 @@ def precision_at_k_files(files: List[str], gold_globs: List[str], k: int) -> flo
     return hits / max(1, k)
 
 
-def precision_at_k_tokens(items: List[Dict[str, Any]], relevant_tokens: List[str], k: int) -> float:
+def precision_at_k_tokens(items: list[dict[str, Any]], relevant_tokens: list[str], k: int) -> float:
     """Precision@k based on token presence in file path + snippet text."""
     tokens = [token.lower() for token in relevant_tokens]
     top = items[:k]
@@ -57,7 +57,7 @@ def precision_at_k_tokens(items: List[Dict[str, Any]], relevant_tokens: List[str
     return hits / max(1, k)
 
 
-def eval_rag(repo: Path, query: str, limit: int) -> List[Dict[str, Any]]:
+def eval_rag(repo: Path, query: str, limit: int) -> list[dict[str, Any]]:
     """Evaluate RAG search using the existing FTS + reranker stack."""
     hits = fts_search(repo, query, limit=max(100, limit * 3))
     rerank_hits_input = [
@@ -83,7 +83,7 @@ def eval_rag(repo: Path, query: str, limit: int) -> List[Dict[str, Any]]:
     ]
 
 
-def eval_fallback(repo: Path, query: str, limit: int) -> List[Dict[str, Any]]:
+def eval_fallback(repo: Path, query: str, limit: int) -> list[dict[str, Any]]:
     """Evaluate the local fallback search (graph disabled)."""
     # Use the nav tool directly with a forced fallback route by pointing at a
     # non-RAG repo root (callers should set up the environment appropriately).
@@ -105,7 +105,7 @@ def run(
     out_dir: Path,
     k: int = 10,
     mode: str = "both",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Run search evaluation over a set of canary queries.
 
@@ -120,24 +120,24 @@ def run(
     rows = load_queries(queries_path)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "k": k,
         "n": len(rows),
         "mode": mode_normalized,
         "by_query": [],
     }
-    rag_scores_tokens: List[float] = []
-    fb_scores_tokens: List[float] = []
-    rag_scores_gold: List[float] = []
-    fb_scores_gold: List[float] = []
+    rag_scores_tokens: list[float] = []
+    fb_scores_tokens: list[float] = []
+    rag_scores_gold: list[float] = []
+    fb_scores_gold: list[float] = []
 
     for row in rows:
         query = row["q"]
         relevant = row.get("relevant", [])
         gold_globs = row.get("gold_globs", [])
 
-        rag_items: Optional[List[Dict[str, Any]]] = None
-        fb_items: Optional[List[Dict[str, Any]]] = None
+        rag_items: list[dict[str, Any]] | None = None
+        fb_items: list[dict[str, Any]] | None = None
 
         if mode_normalized in ("rag", "both"):
             try:
@@ -186,7 +186,7 @@ def run(
             }
         )
 
-    def _avg(values: List[float]) -> float:
+    def _avg(values: list[float]) -> float:
         return sum(values) / len(values) if values else 0.0
 
     macro_tokens = {

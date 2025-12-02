@@ -1,6 +1,7 @@
 
 from llmc.routing.query_type import classify_query
 
+
 def test_fence_positive_language_tag():
     q = '```python\nprint("hi")\n```'
     r = classify_query(q)

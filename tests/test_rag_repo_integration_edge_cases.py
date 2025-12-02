@@ -8,14 +8,17 @@ Tests cover:
 """
 
 from pathlib import Path
+
 import pytest
 import yaml
-
 
 # Legacy RAG repo API surface; skip these integration edge-case tests when the
 # older names are not available in the current implementation.
 try:
-    from tools.rag_repo.utils import validate_repo_paths, PathTraversalError  # type: ignore[attr-defined]
+    from tools.rag_repo.utils import (  # type: ignore[attr-defined]
+        PathTraversalError,
+        validate_repo_paths,
+    )
     _LEGACY_REPO_API_AVAILABLE = True
 except Exception:  # pragma: no cover - compatibility guard
     _LEGACY_REPO_API_AVAILABLE = False

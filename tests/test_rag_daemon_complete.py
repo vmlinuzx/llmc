@@ -1,20 +1,20 @@
 """Comprehensive test suite for LLMC RAG Daemon."""
 
+from datetime import UTC, datetime, timedelta
 import json
-import yaml
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
+import yaml
 
 from tools.rag_daemon.config import load_config
+from tools.rag_daemon.control import read_control_events
 from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
-from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
+from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
-from tools.rag_daemon.control import read_control_events
-
 
 # ==============================================================================
 # 1. Daemon Config & Startup Tests
@@ -122,7 +122,7 @@ def test_directories_created_on_first_run(tmp_path: Path) -> None:
 def test_state_store_round_trip_with_timestamps(tmp_path: Path) -> None:
     """Test round-trip of RepoState with timestamps."""
     store = StateStore(tmp_path)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     state = RepoState(
         repo_id="repo-123",
@@ -357,7 +357,7 @@ def test_scheduler_repo_no_state_is_eligible(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     eligible = scheduler._is_repo_eligible(repo, None, now, force=False)
     assert eligible is True
 
@@ -374,7 +374,7 @@ def test_scheduler_running_state_is_not_eligible(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     state = RepoState(
         repo_id=repo.repo_id,
         last_run_status="running",
@@ -397,7 +397,7 @@ def test_scheduler_failure_backoff(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     state = RepoState(
         repo_id=repo.repo_id,
         consecutive_failures=cfg.max_consecutive_failures,
@@ -425,7 +425,7 @@ def test_scheduler_next_eligible_future(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     state = RepoState(
         repo_id=repo.repo_id,
         last_run_finished_at=now,
@@ -455,7 +455,7 @@ def test_scheduler_min_interval_enforced(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     # Last run was 2 minutes ago (less than 5 minute interval)
     state = RepoState(
         repo_id=repo.repo_id,
@@ -483,7 +483,7 @@ def test_scheduler_force_overrides(tmp_path: Path) -> None:
 
     scheduler = Scheduler(cfg, registry, state_store, workers)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     state = RepoState(
         repo_id=repo.repo_id,
         last_run_finished_at=now - timedelta(seconds=1),  # Just ran
@@ -756,7 +756,7 @@ def test_worker_exponential_backoff(tmp_path: Path) -> None:
         assert state.consecutive_failures == 3
         assert state.next_eligible_at is not None
 
-        backoff_delta = state.next_eligible_at - datetime.now(timezone.utc)
+        backoff_delta = state.next_eligible_at - datetime.now(UTC)
         assert backoff_delta.total_seconds() >= 200  # At least 200 seconds
 
 

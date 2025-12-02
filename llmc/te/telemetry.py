@@ -7,13 +7,13 @@ Captures: command, output size, truncation, handle usage, latency.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 import os
+from pathlib import Path
 import sqlite3
 import time
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 from .config import _find_repo_root, get_te_config
 
@@ -41,10 +41,10 @@ class TeEvent:
 
 def _now_iso() -> str:
     """UTC ISO timestamp."""
-    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
-def _get_telemetry_db_path(cfg: "TeConfig", repo_root: Path | None = None) -> Path:
+def _get_telemetry_db_path(cfg: TeConfig, repo_root: Path | None = None) -> Path:
     """Get telemetry database path from config, creating parent dirs if needed."""
     root = repo_root or _find_repo_root()
     path = root / cfg.telemetry_path
@@ -174,7 +174,7 @@ def log_event(
 
 def log_routing_event(
     mode: str,
-    details: Dict[str, Any],
+    details: dict[str, Any],
     repo_root: Path | None = None,
 ) -> None:
     """Log a routing-specific telemetry event."""
@@ -200,7 +200,7 @@ class TeTimer:
         self.start_ns: int = 0
         self.elapsed_ms: int = 0
 
-    def __enter__(self) -> "TeTimer":
+    def __enter__(self) -> TeTimer:
         self.start_ns = time.perf_counter_ns()
         return self
 

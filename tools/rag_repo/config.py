@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 try:
     import yaml  # type: ignore[import]
@@ -18,7 +18,7 @@ def _expand(path: str) -> Path:
     return Path(os.path.expanduser(path)).resolve()
 
 
-def load_tool_config(path: Optional[str] = None) -> ToolConfig:
+def load_tool_config(path: str | None = None) -> ToolConfig:
     """Load tool config from YAML (or return defaults)."""
     if path is None:
         path = os.environ.get("LLMC_RAG_REPO_CONFIG", "~/.llmc/registry-config.yml")
@@ -32,7 +32,7 @@ def load_tool_config(path: Optional[str] = None) -> ToolConfig:
         )
 
     with cfg_path.open("r", encoding="utf-8") as f:
-        raw: Dict[str, Any] = yaml.safe_load(f) or {}
+        raw: dict[str, Any] = yaml.safe_load(f) or {}
 
     registry_path = _expand(raw.get("registry_path", "~/.llmc/repos.yml"))
     daemon_control = raw.get("daemon_control_path", "~/.llmc/rag-control/")

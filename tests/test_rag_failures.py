@@ -4,10 +4,10 @@ Comprehensive stress tests for LLMC RAG Daemon & Repo Tool.
 This script finds failures - green is suspicious!
 """
 
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -17,7 +17,7 @@ def run_cmd(cmd, cwd=str(REPO_ROOT), timeout=5):
     try:
         result = subprocess.run(
             cmd,
-            shell=True,
+            check=False, shell=True,
             capture_output=True,
             text=True,
             timeout=timeout,

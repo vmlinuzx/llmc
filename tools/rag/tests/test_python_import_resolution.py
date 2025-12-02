@@ -1,4 +1,3 @@
-from typing import List, Tuple
 
 import pytest
 
@@ -19,7 +18,7 @@ def repo_with_files(tmp_path):
     return _create_repo
 
 
-def get_call_relations(graph) -> List[Tuple[str, str]]:
+def get_call_relations(graph) -> list[tuple[str, str]]:
     """Helper to extract (src, dst) of 'calls' relations."""
     return [(rel.src, rel.dst) for rel in graph.relations if rel.edge == "calls"]
 

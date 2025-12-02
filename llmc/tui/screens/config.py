@@ -1,20 +1,29 @@
+import os
+from pathlib import Path
+import sys  # Import sys module
+
 from textual.app import ComposeResult
 from textual.containers import ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
-import os
-import sys # Import sys module
-from pathlib import Path
-
 # Import RAG configuration tools
 from tools.rag.config import (
-    embedding_model_preset, embedding_model_name, embedding_model_dim,
-    embedding_passage_prefix, embedding_query_prefix, embedding_normalize,
-    embedding_device_preference, embedding_wait_for_gpu,
-    embedding_gpu_min_free_mb, embedding_gpu_max_retries, embedding_gpu_retry_seconds,
-    load_rerank_weights, index_path_for_read
+    embedding_device_preference,
+    embedding_gpu_max_retries,
+    embedding_gpu_min_free_mb,
+    embedding_gpu_retry_seconds,
+    embedding_model_dim,
+    embedding_model_name,
+    embedding_model_preset,
+    embedding_normalize,
+    embedding_passage_prefix,
+    embedding_query_prefix,
+    embedding_wait_for_gpu,
+    index_path_for_read,
+    load_rerank_weights,
 )
+
 # We might need to call find_repo_root from tools.rag.utils
 from tools.rag.utils import find_repo_root
 

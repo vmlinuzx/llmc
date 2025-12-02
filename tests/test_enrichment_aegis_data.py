@@ -12,22 +12,21 @@ It tests:
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
-from typing import Any, Dict, List
+import shutil
+from typing import Any
 
 import pytest
 
 from tools.rag.database import Database
+from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
 from tools.rag.indexer import index_repo
-from tools.rag.enrichment import batch_enrich, EnrichmentBatchResult
 from tools.rag.workers import enrichment_plan
-
 
 AEGIS_REPO_PATH = Path("/home/vmlinux/srcwpsg/aegis")
 
 
-def _mock_llm_call(prompt: Dict[str, Any]) -> Dict[str, Any]:
+def _mock_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
     """Mock LLM call for enrichment testing.
 
     Returns a valid enrichment payload based on the prompt content.
@@ -98,7 +97,7 @@ def test_enrich_aegis_repository_basic(tmp_path: Path) -> None:
         os.chdir(test_repo)
         # The DB path is determined inside index_repo using index_path_for_write
         # which looks for .llmc/rag directory relative to the detected repo root
-        print(f"[*] Indexing repository...")
+        print("[*] Indexing repository...")
 
         # Step 1: Index the repository
         stats = index_repo(include_paths=None, since=None)

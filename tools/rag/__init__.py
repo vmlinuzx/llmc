@@ -1,11 +1,12 @@
 # RAG tools module - placeholder for missing functions
-from pathlib import Path
-from typing import Optional
+from datetime import datetime
 import json
 import os
-from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
-def load_status(repo_root: Path) -> Optional[object]:
+
+def load_status(repo_root: Path) -> object | None:
     """Load index status for a repository"""
     status_file = status_path(repo_root)
     if status_file.exists():

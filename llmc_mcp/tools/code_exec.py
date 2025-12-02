@@ -10,12 +10,11 @@ Reference: https://www.anthropic.com/engineering/code-execution-with-mcp
 
 from __future__ import annotations
 
-import json
+from dataclasses import dataclass
+from pathlib import Path
 import subprocess
 import sys
 import textwrap
-from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -247,12 +246,11 @@ def execute_code(
     Returns:
         CodeExecResult with stdout, stderr, return_value, and error
     """
-    import io
-    import contextlib
-
     # Prepare execution namespace
     # Inject _call_tool into builtins so imported stubs can find it
     import builtins
+    import contextlib
+    import io
     _original_call_tool = getattr(builtins, '_call_tool', None)
     builtins._call_tool = tool_caller
     

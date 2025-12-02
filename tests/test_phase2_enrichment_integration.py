@@ -4,12 +4,11 @@ Phase 2 Integration Tests: Enriched Schema Graph Building
 Tests that verify enrichment data flows from database to graph entities.
 """
 
-from pathlib import Path
 import json
-import sys
+from pathlib import Path
 
-from tools.rag.schema import build_enriched_schema_graph, build_graph_for_repo
 from tools.rag.database import Database
+from tools.rag.schema import build_enriched_schema_graph, build_graph_for_repo
 
 
 class TestPhase2EnrichmentIntegration:
@@ -103,7 +102,7 @@ class TestPhase2EnrichmentIntegration:
         enriched = sum(1 for e in graph.entities if "summary" in e.metadata)
         coverage_pct = (enriched / len(graph.entities) * 100) if graph.entities else 0
         
-        print(f"\nFull repo graph:")
+        print("\nFull repo graph:")
         print(f"  Entities: {len(graph.entities)}")
         print(f"  Relations: {len(graph.relations)}")
         print(f"  Enriched: {enriched} ({coverage_pct:.1f}%)")
@@ -177,7 +176,7 @@ class TestPhase2EnrichmentIntegration:
         new_system_enriched = enriched_entities
         
         print(f"\n{'='*80}")
-        print(f"DATA LOSS COMPARISON:")
+        print("DATA LOSS COMPARISON:")
         print(f"  Database enrichments: {total_enrichments}")
         print(f"  Old system (broken): {old_system_enriched} enriched entities (100% loss)")
         print(f"  New system (Phase 2): {new_system_enriched} enriched entities")

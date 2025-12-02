@@ -4,13 +4,12 @@ Unit tests for compute_route - the RAG freshness gateway.
 Tests routing decisions based on index state and git HEAD matching.
 """
 
-import json
-import pytest
-import subprocess
 from pathlib import Path
-from unittest.mock import patch
+import subprocess
 
-from tools.rag_nav.gateway import compute_route, RouteDecision
+import pytest
+
+from tools.rag_nav.gateway import compute_route
 from tools.rag_nav.metadata import save_status, status_path
 from tools.rag_nav.models import IndexStatus
 
@@ -18,12 +17,12 @@ from tools.rag_nav.models import IndexStatus
 def _init_git_repo(repo_path: Path, commit_sha: str = "abc123def456") -> str:
     """Initialize a git repo and return the HEAD SHA."""
     subprocess.run(["git", "init"], cwd=repo_path, capture_output=True, check=True)
-    subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_path, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_path, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "test@test.com"], check=False, cwd=repo_path, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Test"], check=False, cwd=repo_path, capture_output=True)
     (repo_path / "README.md").write_text("# Test")
     subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True, check=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=repo_path, capture_output=True, check=True)
-    result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_path, capture_output=True, text=True)
+    result = subprocess.run(["git", "rev-parse", "HEAD"], check=False, cwd=repo_path, capture_output=True, text=True)
     return result.stdout.strip()
 
 

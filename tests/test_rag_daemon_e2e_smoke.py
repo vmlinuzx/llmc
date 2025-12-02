@@ -1,22 +1,23 @@
 """End-to-end smoke test for LLMC RAG Daemon and Repo Registration Tool."""
 
 import os
-import time
-import yaml
 from pathlib import Path
+import time
 from unittest.mock import patch
+
 import pytest
+import yaml
 
 from tools.rag_daemon.config import load_config
-from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
+from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
 from tools.rag_repo.config import load_tool_config
+from tools.rag_repo.inspect_repo import inspect_repo
 from tools.rag_repo.models import RegistryEntry
 from tools.rag_repo.registry import RegistryAdapter
 from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
-from tools.rag_repo.inspect_repo import inspect_repo
 
 
 @pytest.mark.allow_sleep
@@ -237,8 +238,8 @@ echo '{"status": "success", "spans": 42}' > /tmp/job_summary_$$.json
     print(f"✓ Daemon config loaded from: {daemon_config_path}")
     print(f"✓ Registry has {len(registry_entries)} repo(s)")
     print(f"✓ State store updated with job result: {final_state.last_run_status}")
-    print(f"✓ Control flags working correctly")
-    print(f"✓ Registry lookup by path and ID working")
+    print("✓ Control flags working correctly")
+    print("✓ Registry lookup by path and ID working")
     print("=" * 60)
     print("\nAll end-to-end tests passed! ✓")
 

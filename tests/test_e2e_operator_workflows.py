@@ -13,9 +13,9 @@ Tests cover complete workflows from operator perspective:
    - Verify index status metadata and graph artifacts are updated
 """
 import os
+from pathlib import Path
 import subprocess
 import tempfile
-from pathlib import Path
 
 
 class TestLocalDevWorkflow:
@@ -37,7 +37,7 @@ class TestLocalDevWorkflow:
                 # Try to register the repo
                 result = subprocess.run(
                     [str(llmc_rag_repo), "add", str(repo_path)],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10
                 )
@@ -68,7 +68,7 @@ class TestLocalDevWorkflow:
                 # Try to run with --help or check it fails gracefully
                 result = subprocess.run(
                     [str(cmw), "--repo", str(repo_path), "test"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     env=env,
                     timeout=10
@@ -89,7 +89,7 @@ class TestLocalDevWorkflow:
             if helper_script.exists():
                 result = subprocess.run(
                     [str(helper_script), "--repo", str(repo_path)],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     input="test query",
                     timeout=10
@@ -109,7 +109,7 @@ class TestLocalDevWorkflow:
             env = {}
             result = subprocess.run(
                 [str(cmw), "test"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 env=env,
                 timeout=10
@@ -131,7 +131,7 @@ class TestLocalDevWorkflow:
                 # Test with --repo flag
                 result = subprocess.run(
                     [str(cw), "--repo", str(repo_path), "test query"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10
                 )
@@ -157,7 +157,7 @@ class TestLocalDevWorkflow:
                 for repo in [repo1, repo2]:
                     result = subprocess.run(
                         [str(cmw), "--repo", str(repo), "test"],
-                        capture_output=True,
+                        check=False, capture_output=True,
                         text=True,
                         env=env,
                         timeout=10
@@ -183,7 +183,7 @@ class TestLocalDevWorkflow:
 
                 result = subprocess.run(
                     [str(cmw), "test"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     env=env,
                     timeout=10
@@ -207,7 +207,7 @@ class TestCronDrivenRefreshWorkflow:
                 # Run cron wrapper
                 result = subprocess.run(
                     [str(cron_script), "--repo", str(tmpdir)],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5  # Prevent hanging
                 )
@@ -274,7 +274,7 @@ class TestCronDrivenRefreshWorkflow:
                 # Should require path arguments
                 result = subprocess.run(
                     [str(sync_script)],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=10
                 )

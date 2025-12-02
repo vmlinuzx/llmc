@@ -3,9 +3,9 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import sqlite3
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+import sqlite3
+from typing import Any
 
 
 def _is_truthy(val: object) -> bool:
@@ -15,7 +15,7 @@ def _is_truthy(val: object) -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
-def discover_enrichment_db(repo_root: Path) -> Optional[Path]:
+def discover_enrichment_db(repo_root: Path) -> Path | None:
     """
     Discover an enrichment database for the given repo root.
 
@@ -43,7 +43,7 @@ def compute_span_hash(
     start: int,
     end: int,
     *,
-    text: Optional[str] = None,
+    text: str | None = None,
     with_text: bool = False,
 ) -> str:
     """
@@ -71,7 +71,7 @@ class GraphEnrichmentDB:
 
     def __init__(self, db_path: Path) -> None:
         self.db_path = Path(db_path)
-        self._has_span_hash: Optional[bool] = None
+        self._has_span_hash: bool | None = None
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(str(self.db_path))
@@ -97,8 +97,8 @@ class GraphEnrichmentDB:
         start: int,
         end: int,
         *,
-        text: Optional[str] = None,
-    ) -> Tuple[Optional[Dict[str, Any]], str]:
+        text: str | None = None,
+    ) -> tuple[dict[str, Any] | None, str]:
         """
         Look up enrichment for a given span.
 
@@ -164,16 +164,16 @@ class GraphEnrichmentDB:
         return None, "none"
 
 
-def _row_to_dict(row: tuple) -> Dict[str, Any]:
+def _row_to_dict(row: tuple) -> dict[str, Any]:
     keys = ["summary", "inputs", "outputs", "pitfalls", "evidence"]
-    out: Dict[str, Any] = {}
+    out: dict[str, Any] = {}
     for key, value in zip(keys, row):
         if value is not None:
             out[key] = value
     return out
 
 
-def _entity_path_and_span(entity: Any) -> Tuple[Optional[str], Optional[int], Optional[int]]:
+def _entity_path_and_span(entity: Any) -> tuple[str | None, int | None, int | None]:
     """
     Best-effort extraction of (path, start, end) for a graph entity.
     """
@@ -205,11 +205,11 @@ def _normalize_repo_relative(repo_root: Path, path: str) -> str:
 
 def _merge_into_metadata(
     entity: Any,
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     *,
     strategy: str,
     db_path: Path,
-    span_hash: Optional[str],
+    span_hash: str | None,
 ) -> None:
     """
     Merge enrichment payload into entity.metadata with traceability.
@@ -217,7 +217,7 @@ def _merge_into_metadata(
     metadata = getattr(entity, "metadata", None)
     if metadata is None:
         try:
-            setattr(entity, "metadata", {})
+            entity.metadata = {}
             metadata = entity.metadata
         except Exception:
             return
@@ -269,7 +269,7 @@ def enrich_graph_entities(graph: Any, repo_root: Path, *, max_per_entity: int = 
             payload, strategy = db.find_for_span(rel, int(start), int(end), text=None)
             if not payload:
                 continue
-            span_hash: Optional[str] = None
+            span_hash: str | None = None
             if strategy.startswith("span"):
                 with_text = strategy.endswith("(with_text)")
                 span_hash = compute_span_hash(rel, int(start), int(end), text=None if not with_text else "", with_text=with_text)
@@ -293,7 +293,7 @@ def enrich_graph_file(graph_json_path: Path, repo_root: Path) -> None:
         return
 
     class _EntityWrapper:
-        def __init__(self, payload: Dict[str, Any]) -> None:
+        def __init__(self, payload: dict[str, Any]) -> None:
             self.__dict__.update(payload)
 
     graph = type("GraphWrapper", (object,), {"entities": [ _EntityWrapper(d) for d in entities ]})()

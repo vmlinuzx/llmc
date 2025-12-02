@@ -3,11 +3,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import math
 import os
-from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
 
 
 def estimate_tokens_from_text(text: str) -> int:
@@ -17,7 +16,7 @@ def estimate_tokens_from_text(text: str) -> int:
     return max(1, math.ceil(len(text) / 4))
 
 
-def _walk_json(obj: object, depth: int = 1) -> Tuple[int, int]:
+def _walk_json(obj: object, depth: int = 1) -> tuple[int, int]:
     """Return (node_count, max_depth) for parsed JSON objects."""
     if isinstance(obj, dict):
         count = 1
@@ -38,7 +37,7 @@ def _walk_json(obj: object, depth: int = 1) -> Tuple[int, int]:
     return 1, depth
 
 
-def estimate_json_nodes_and_depth(text: str) -> Tuple[int, int]:
+def estimate_json_nodes_and_depth(text: str) -> tuple[int, int]:
     """Estimate number of JSON nodes and depth from text.
 
     Attempts to parse the text as JSON first; on failure falls back to a
@@ -87,7 +86,7 @@ def estimate_nesting_depth(snippet: str) -> int:
     return max_depth
 
 
-def expected_output_tokens(span: Dict[str, object]) -> int:
+def expected_output_tokens(span: dict[str, object]) -> int:
     """Estimate output tokens for enrichment JSON response."""
     base_fields = 6  # summary, inputs, outputs, side_effects, pitfalls, usage_snippet
     keys = int(span.get("estimated_fields", base_fields) or base_fields)
@@ -97,7 +96,7 @@ def expected_output_tokens(span: Dict[str, object]) -> int:
     return max(estimate, 1200)
 
 
-def detect_truncation(output_text: str, max_tokens_used: Optional[int], finish_reason: Optional[str]) -> bool:
+def detect_truncation(output_text: str, max_tokens_used: int | None, finish_reason: str | None) -> bool:
     """Heuristically detect truncated JSON output."""
     if finish_reason and finish_reason.lower() in {"length", "max_tokens", "token_limit"}:
         return True
@@ -127,7 +126,7 @@ class RouterSettings:
     array_limit: int = 5000
     csv_limit: int = 60
     nesting_limit: int = 3
-    line_thresholds: Tuple[int, int] = None  # type: ignore
+    line_thresholds: tuple[int, int] = None  # type: ignore
 
     def __post_init__(self) -> None:
         def _read_int_env(name: str, current: int) -> int:
@@ -171,7 +170,7 @@ class RouterSettings:
         return min(self.preflight_limit, context_cap)
 
 
-def choose_start_tier(metrics: Dict[str, float], settings: RouterSettings, override: str | None = None) -> str:
+def choose_start_tier(metrics: dict[str, float], settings: RouterSettings, override: str | None = None) -> str:
     """Choose initial tier based on metrics and overrides."""
 
     override = (override or os.getenv("ROUTER_DEFAULT_TIER", "auto")).lower()
@@ -218,10 +217,10 @@ def choose_start_tier(metrics: Dict[str, float], settings: RouterSettings, overr
 def choose_next_tier_on_failure(
     failure_type: str,
     current_tier: str,
-    metrics: Dict[str, float],
+    metrics: dict[str, float],
     settings: RouterSettings,
     promote_once: bool = True,
-) -> Optional[str]:
+) -> str | None:
     failure_type = failure_type.lower()
 
     # When promote_once is False, the caller has opted out of any
@@ -248,12 +247,12 @@ def choose_next_tier_on_failure(
     return None
 
 
-def classify_failure(failure: Tuple[str, object, object]) -> str:
+def classify_failure(failure: tuple[str, object, object]) -> str:
     failure_type = failure[0] if failure else "unknown"
     return str(failure_type)
 
 
-def clamp_usage_snippet(result: Dict[str, object], max_lines: int = 12) -> None:
+def clamp_usage_snippet(result: dict[str, object], max_lines: int = 12) -> None:
     snippet = result.get("usage_snippet")
     if not isinstance(snippet, str):
         return

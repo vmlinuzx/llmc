@@ -3,9 +3,9 @@ Test 5: Graph Building - Node Coverage and Edge Construction
 Test 6: Graph Building - Corrupt Graph Handling
 """
 import json
-import tempfile
 import os
 from pathlib import Path
+import tempfile
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -208,8 +208,8 @@ def test_graph_corrupt_handling():
             graph_store = GraphStore()
             graph_store.load_from_file(Path(corrupt_path))
             print("  ✗ Should have raised an error")
-        except json.JSONDecodeError as e:
-            print(f"  ✓ Correctly raised JSONDecodeError")
+        except json.JSONDecodeError:
+            print("  ✓ Correctly raised JSONDecodeError")
         except Exception as e:
             print(f"  ✓ Raised exception: {type(e).__name__}: {e}")
     finally:
@@ -225,7 +225,7 @@ def test_graph_corrupt_handling():
         try:
             from tools.rag.schema import SchemaGraph
             graph = SchemaGraph.load(Path(invalid_path))
-            print(f"  Result: Loaded with defaults")
+            print("  Result: Loaded with defaults")
             print(f"  Entities: {len(graph.entities)}")
             print(f"  Relations: {len(graph.relations)}")
         except Exception as e:
@@ -246,7 +246,7 @@ def test_existing_graph_artifacts():
     print(f"Testing existing graph: {graph_path}")
 
     # Read and parse
-    with open(graph_path, 'r') as f:
+    with open(graph_path) as f:
         data = json.load(f)
 
     # Check for entities (SchemaGraph format) or nodes (Nav graph format)

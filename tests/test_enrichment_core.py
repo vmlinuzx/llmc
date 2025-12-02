@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Any
-
+from typing import Any
 
 from tools.rag.database import Database
-from tools.rag.enrichment import batch_enrich, EnrichmentBatchResult
+from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
 
 
 def _make_db_with_single_span(tmpdir: Path) -> tuple[Database, Path, str]:
@@ -48,7 +47,7 @@ def test_batch_enrich_happy_path(tmp_path) -> None:
 
     calls: dict[str, Any] = {}
 
-    def fake_llm_call(prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def fake_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
         # Record the prompt for basic sanity checks
         calls["prompt"] = prompt
         assert prompt["span_hash"] == span_hash
@@ -106,7 +105,7 @@ def test_batch_enrich_no_pending_spans(tmp_path) -> None:
     db_path = repo_root / "test.db"
     db = Database(db_path)
 
-    def fake_llm_call(prompt: Dict[str, Any]) -> Dict[str, Any]:  # pragma: no cover - should not be called
+    def fake_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:  # pragma: no cover - should not be called
         raise AssertionError("LLM should not be called when there are no pending spans")
 
     result = batch_enrich(

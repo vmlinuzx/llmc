@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import sys
 from pathlib import Path
+import sys
 
 # Add repo root (parent of scripts dir) to sys.path
 REPO_ROOT = Path(__file__).resolve().parents[1]

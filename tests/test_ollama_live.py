@@ -1,9 +1,10 @@
 
-import pytest
-from tools.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
-from tools.rag.database import Database
 from pathlib import Path
-import os
+
+import pytest
+
+from tools.rag.database import Database
+from tools.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
 
 # We use the IP from llmc.toml
 OLLAMA_URL = "http://192.168.5.20:11434"

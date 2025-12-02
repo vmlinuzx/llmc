@@ -8,10 +8,10 @@ Add complexity when actually needed.
 
 from __future__ import annotations
 
-import time
-import uuid
 from dataclasses import dataclass
+import time
 from typing import Any
+import uuid
 
 
 @dataclass

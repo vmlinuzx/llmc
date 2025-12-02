@@ -1,6 +1,7 @@
 # llmcwrapper/util.py
 import sys
 
+
 def color(code, s): return f"\x1b[{code}m{s}\x1b[0m"
 def red(s): return color("31", s)
 def green(s): return color("32", s)

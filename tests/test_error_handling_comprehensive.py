@@ -10,16 +10,17 @@ Tests cover critical error paths and edge cases across the codebase:
 """
 
 import os
+from pathlib import Path
 import sqlite3
 import tempfile
-from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
 import yaml
 
 from tools.rag.database import Database
-from tools.rag_repo.config import load_tool_config
 from tools.rag_daemon.registry import RegistryClient
+from tools.rag_repo.config import load_tool_config
 
 # Import enrichment functions - these may not exist yet
 try:
@@ -559,8 +560,9 @@ class TestInputValidationHandling:
 
     def test_handles_injection_attempts(self):
         """Test handling of SQL injection attempts."""
-        from tools.rag.database import Database
         from pathlib import Path
+
+        from tools.rag.database import Database
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
@@ -574,8 +576,9 @@ class TestInputValidationHandling:
             # This should NOT execute the DROP TABLE statement
             try:
                 # Try to insert a file with malicious content
-                from tools.rag.types import FileRecord
                 import time
+
+                from tools.rag.types import FileRecord
 
                 record = FileRecord(
                     path=Path(malicious_path),
@@ -603,7 +606,7 @@ class TestInputValidationHandling:
                 # Verify the files table still exists
                 db.conn.execute("SELECT COUNT(*) FROM files").fetchone()
 
-            except Exception as e:
+            except Exception:
                 # If an exception occurs, it should be a database error,
                 # NOT a successful DROP TABLE
                 # Verify the files table still exists
@@ -732,14 +735,14 @@ class TestCommandInjectionHandling:
                     # This is how it SHOULD be done
                     result = subprocess.run(
                         ["echo", user_input],  # List form
-                        shell=False,  # Explicitly not shell
+                        check=False, shell=False,  # Explicitly not shell
                         capture_output=True,
                         text=True,
                         timeout=1  # Prevent DoS
                     )
                     # Command should run without executing injection
                     assert "echo" in result.args[0]
-                except Exception as e:
+                except Exception:
                     # Timeout or other error is OK
                     # As long as it's not executing the malicious code
                     pass
@@ -749,9 +752,10 @@ class TestCommandInjectionHandling:
 
         This tests the actual code in tools/rag/runner.py which uses git ls-files.
         """
-        from tools.rag.runner import iter_repo_files
         from pathlib import Path
         import tempfile
+
+        from tools.rag.runner import iter_repo_files
 
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir) / "repo"
@@ -896,7 +900,7 @@ class TestResourceExhaustionHandling:
                 for i in range(1000):
                     f = open(Path(tmpdir) / f"file{i}.txt", "w")
                     open_files.append(f)
-            except (OSError, IOError) as e:
+            except OSError as e:
                 # Expected - too many open files
                 assert e is not None
             finally:

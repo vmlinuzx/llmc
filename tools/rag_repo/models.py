@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Optional
 
 
 @dataclass
@@ -13,7 +12,7 @@ class ToolConfig:
     registry_path: Path
     default_workspace_folder_name: str = ".llmc/rag"
     default_rag_profile: str = "default"
-    daemon_control_path: Optional[Path] = None
+    daemon_control_path: Path | None = None
     log_level: str = "INFO"
 
 
@@ -22,10 +21,10 @@ class RepoInspection:
     repo_root: Path
     exists: bool
     has_git: bool
-    workspace_path: Optional[Path]
+    workspace_path: Path | None
     workspace_status: str  # missing|ok|incomplete|corrupt
-    config_version: Optional[str] = None
-    issues: List[str] = field(default_factory=list)
+    config_version: str | None = None
+    issues: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -44,8 +43,8 @@ class WorkspacePlan:
 @dataclass
 class WorkspaceValidationResult:
     status: str  # ok|warning|error
-    issues: List[str] = field(default_factory=list)
-    suggested_migrations: List[str] = field(default_factory=list)
+    issues: list[str] = field(default_factory=list)
+    suggested_migrations: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -55,7 +54,7 @@ class RegistryEntry:
     rag_workspace_path: Path
     display_name: str
     rag_profile: str
-    tags: List[str] = field(default_factory=list)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    min_refresh_interval_seconds: Optional[int] = None
+    tags: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    min_refresh_interval_seconds: int | None = None

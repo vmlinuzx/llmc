@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 from pathlib import Path
+import re
 
 # Safety: ONLY rewrite literal 'except:' with no qualifiers.
 PATTERN = re.compile(r"(?m)^([ \t]*)except:\s*$")

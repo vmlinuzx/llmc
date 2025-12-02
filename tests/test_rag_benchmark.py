@@ -10,13 +10,14 @@ Tests cover:
 """
 
 import math
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
 from tools.rag.benchmark import (
-    _cosine,
-    BenchmarkCase,
     CASES,
+    BenchmarkCase,
+    _cosine,
     run_embedding_benchmark,
 )
 
@@ -318,7 +319,7 @@ class TestBenchmarkCasesConstant:
     def test_all_cases_have_names(self):
         """Test that all cases have names."""
         for case in CASES:
-            assert case.name, f"Case has no name"
+            assert case.name, "Case has no name"
             assert len(case.name) > 0
 
     def test_case_names_are_unique(self):

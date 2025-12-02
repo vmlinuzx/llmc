@@ -1,17 +1,30 @@
 #!/usr/bin/env python3
 """LLMC Unified CLI - Main entry point."""
+
 import typer
-from typing import Optional
-from llmc.core import LLMC_VERSION, find_repo_root, load_config
+
+from llmc.commands import service as service_commands
 from llmc.commands.init import init as init_command
 from llmc.commands.rag import (
-    index, search, inspect, plan, stats, doctor,
+    benchmark,
+    doctor,
+    embed,
+    enrich,
+    export,
+    graph,
+    index,
+    inspect,
+    nav_lineage,
+    nav_search,
+    nav_where_used,
+    plan,
+    search,
+    stats,
     # Phase 5: Advanced RAG
-    sync, enrich, embed, graph, export, benchmark,
-    nav_search, nav_where_used, nav_lineage
+    sync,
 )
-from llmc.commands.tui import tui, monitor
-from llmc.commands import service as service_commands
+from llmc.commands.tui import monitor, tui
+from llmc.core import LLMC_VERSION, find_repo_root, load_config
 
 app = typer.Typer(
     name="llmc",

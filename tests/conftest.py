@@ -1,10 +1,10 @@
+from collections.abc import Iterable
+from pathlib import Path
 import shutil
 import sys
-from pathlib import Path
-from typing import Iterable
 
-import pytest
 from _pytest.monkeypatch import MonkeyPatch
+import pytest
 
 pytest_plugins = [
     "tests._plugins.pytest_ruthless",

@@ -6,8 +6,9 @@ This module extends the RAG service to periodically validate data quality.
 Uses canonical language-aware classifier (v1-cjk-aware) for consistent results.
 """
 
-import sys
+from datetime import UTC
 from pathlib import Path
+import sys
 
 from tools.rag.config import index_path_for_read
 
@@ -33,11 +34,11 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
         - rule_version: str
         - checked_at: str
     """
+    from datetime import datetime
     import sqlite3
-    from datetime import datetime, timezone
 
     # Import classifier here to avoid circular import with types.py
-    from tools.rag.quality_check import classify_quality, RULE_VERSION
+    from tools.rag.quality_check import RULE_VERSION, classify_quality
 
     db_path = index_path_for_read(repo_path)
     if not db_path.exists():
@@ -50,7 +51,7 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
             'ok_count': 0,
             'total': 0,
             'rule_version': RULE_VERSION,
-            'checked_at': datetime.now(timezone.utc).isoformat()
+            'checked_at': datetime.now(UTC).isoformat()
         }
 
     conn = sqlite3.connect(db_path)
@@ -72,7 +73,7 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
                 'ok_count': 0,
                 'total': 0,
                 'rule_version': RULE_VERSION,
-                'checked_at': datetime.now(timezone.utc).isoformat()
+                'checked_at': datetime.now(UTC).isoformat()
             }
 
         # Use canonical classifier for each enrichment
@@ -109,7 +110,7 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
             'ok_count': ok_count,
             'total': total,
             'rule_version': RULE_VERSION,
-            'checked_at': datetime.now(timezone.utc).isoformat()
+            'checked_at': datetime.now(UTC).isoformat()
         }
 
         return result

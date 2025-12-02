@@ -8,7 +8,7 @@ from pathlib import Path
 import tomllib
 from typing import Any, cast
 
-from llmc_mcp.tools.linux_ops.config import LinuxOpsConfig, load_linux_ops_config
+from llmc_mcp.tools.linux_ops.config import LinuxOpsConfig
 
 
 @dataclass

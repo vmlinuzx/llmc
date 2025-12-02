@@ -1,10 +1,10 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from tools.rag_daemon.models import RepoDescriptor, RepoState, DaemonConfig
+from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
+from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.registry import RegistryClient
 from tools.rag_daemon.workers import WorkerPool
 
 
@@ -44,7 +44,7 @@ def test_scheduler_eligibility_basics(tmp_path: Path) -> None:
     cfg = make_config(tmp_path)
     state_store = StateStore(cfg.state_store_path)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     repo = RepoDescriptor(
         repo_id="repo-1",

@@ -14,10 +14,10 @@ Design philosophy: Local-first, sub-300ms latency, <1GB memory footprint
 
 from __future__ import annotations
 
-import tiktoken
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict
+
+import tiktoken
 
 
 @dataclass
@@ -30,7 +30,7 @@ class ChunkItem:
     relevance_score: float = 0.0
     bm25_score: float = 0.0
     embedding_score: float = 0.0
-    rerank_score: Optional[float] = None
+    rerank_score: float | None = None
     token_count: int = 0
 
 
@@ -82,9 +82,9 @@ class ContextTrimmer:
     
     def trim_to_budget(
         self,
-        chunks: List[ChunkItem],
+        chunks: list[ChunkItem],
         query: str = ""
-    ) -> Tuple[List[ChunkItem], Dict[str, any]]:
+    ) -> tuple[list[ChunkItem], dict[str, any]]:
         """Trim chunks to fit within token budget.
         
         Args:
@@ -126,10 +126,10 @@ class ContextTrimmer:
     
     def _apply_mmr(
         self,
-        chunks: List[ChunkItem],
+        chunks: list[ChunkItem],
         query: str,
-        top_k: Optional[int] = None
-    ) -> List[ChunkItem]:
+        top_k: int | None = None
+    ) -> list[ChunkItem]:
         """Apply Maximal Marginal Relevance for diversity.
         
         MMR formula: MMR = λ * Relevance - (1-λ) * MaxSimilarity
@@ -146,7 +146,7 @@ class ContextTrimmer:
             return []
         
         lambda_param = self.config.mmr_lambda
-        selected: List[ChunkItem] = []
+        selected: list[ChunkItem] = []
         remaining = chunks.copy()
         
         # Always include the top candidate
@@ -201,8 +201,8 @@ class ContextTrimmer:
     
     def _enforce_budget(
         self,
-        chunks: List[ChunkItem]
-    ) -> Tuple[List[ChunkItem], Dict[str, any]]:
+        chunks: list[ChunkItem]
+    ) -> tuple[list[ChunkItem], dict[str, any]]:
         """Enforce token budget with greedy selection.
         
         Args:
@@ -212,7 +212,7 @@ class ContextTrimmer:
             Tuple of (selected_chunks, budget_stats)
         """
         budget = self.config.budget.available_for_chunks
-        selected: List[ChunkItem] = []
+        selected: list[ChunkItem] = []
         total_tokens = 0
         
         for chunk in chunks:
@@ -266,10 +266,10 @@ def search_with_trimming(
     *,
     max_tokens: int = 8192,
     limit: int = 20,
-    repo_root: Optional[Path] = None,
-    model_override: Optional[str] = None,
-    config: Optional[TrimConfig] = None,
-) -> Tuple[List[ChunkItem], Dict[str, any]]:
+    repo_root: Path | None = None,
+    model_override: str | None = None,
+    config: TrimConfig | None = None,
+) -> tuple[list[ChunkItem], dict[str, any]]:
     """Search and trim results to fit within token budget.
     
     This is the main entry point for smart context window management.
@@ -315,7 +315,7 @@ def search_with_trimming(
     )
     
     # Convert to ChunkItem format
-    chunks: List[ChunkItem] = []
+    chunks: list[ChunkItem] = []
     for result in results:
         # Read chunk content
         chunk_path = repo / result.path

@@ -1,16 +1,16 @@
 
-import sys
-import os
 from pathlib import Path
 import sqlite3
+import sys
 
 # Add src/llmc to pythonpath so we can import the module
 sys.path.append("/home/vmlinux/src/llmc")
 
 try:
-    from llmc.tui.screens.analytics import AnalyticsScreen
     from textual.app import App
     from textual.widgets import Static
+
+    from llmc.tui.screens.analytics import AnalyticsScreen
 except ImportError as e:
     print(f"IMPORT ERROR: {e}")
     sys.exit(1)

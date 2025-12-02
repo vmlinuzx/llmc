@@ -1,6 +1,6 @@
-import typer
 from llmc.core import find_repo_root
 from llmc.tui.app import LLMC_TUI
+
 
 def tui():
     """Launch the interactive TUI."""

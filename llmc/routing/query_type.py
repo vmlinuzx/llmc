@@ -1,17 +1,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
-from pathlib import Path
-import logging
+from typing import Any
 
-from .common import RouteSignal, load_routing_config, record_decision
-from . import code_heuristics as ch
-from . import erp_heuristics as eh
+from . import code_heuristics as ch, erp_heuristics as eh
+from .common import load_routing_config, record_decision
 
-def classify_query(text: Optional[str], tool_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+def classify_query(text: str | None, tool_context: dict[str, Any] | None = None) -> dict[str, Any]:
     """Return a deterministic classification for a query."""
-    reasons: List[str] = []
+    reasons: list[str] = []
     route_name = "docs"
     confidence = 0.5
 
@@ -105,9 +103,3 @@ def classify_query(text: Optional[str], tool_context: Optional[Dict[str, Any]] =
 
 # Backward compatibility exports for legacy test modules
 # TODO: Update legacy tests to use new names and remove these aliases in a future cleanup phase
-from .code_heuristics import (
-    CODE_STRUCT_REGEXES as CODE_STRUCT_REGEX,
-)
-from .erp_heuristics import (
-    ERP_SKU_RE as ERP_SKU_REGEX,
-)

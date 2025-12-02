@@ -1,7 +1,10 @@
-import pytest
-from unittest.mock import MagicMock, patch
 from pathlib import Path
-from tools.rag.search import search_spans, SpanSearchResult
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from tools.rag.search import search_spans
+
 
 @pytest.fixture
 def mock_dependencies():

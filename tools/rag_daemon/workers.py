@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 import subprocess
 import threading
 import uuid
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
-from typing import Dict, Set
-from collections.abc import Iterable
 
 from .logging_utils import get_logger
 from .models import DaemonConfig, Job, JobResult, RepoDescriptor, RepoState, utc_now
@@ -22,23 +21,23 @@ class WorkerPool:
         self.config = config
         self.state_store = state_store
         self._executor = ThreadPoolExecutor(max_workers=config.max_concurrent_jobs)
-        self._running: Set[str] = set()
-        self._last_completion: Dict[str, datetime] = {}
-        self._last_submission: Dict[str, datetime] = {}
+        self._running: set[str] = set()
+        self._last_completion: dict[str, datetime] = {}
+        self._last_submission: dict[str, datetime] = {}
         self._running_ttl = timedelta(seconds=0.75)
         self._resubmit_grace = timedelta(seconds=5)
         self._fresh_guard = timedelta(seconds=5)
         self._lock = threading.Lock()
         self.logger = get_logger("rag_daemon.workers", config)
 
-    def running_repo_ids(self) -> Set[str]:
+    def running_repo_ids(self) -> set[str]:
         now = utc_now()
         with self._lock:
             active = set(self._running)
             recent = dict(self._last_completion)
         if active:
             return active
-        fallback: Set[str] = set()
+        fallback: set[str] = set()
         for repo_id, finished_at in recent.items():
             if now - finished_at <= self._running_ttl:
                 fallback.add(repo_id)

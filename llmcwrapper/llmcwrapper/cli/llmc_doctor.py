@@ -1,8 +1,13 @@
 # llmcwrapper/cli/llmc_doctor.py
 from __future__ import annotations
-import argparse, os, urllib.request
+
+import argparse
+import os
+import urllib.request
+
 from llmcwrapper.config import load_resolved_config
-from llmcwrapper.util import green, yellow, red, info
+from llmcwrapper.util import green, info, red, yellow
+
 
 def _check_url(url: str) -> str:
     try:

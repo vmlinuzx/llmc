@@ -10,6 +10,7 @@ Manages interactive processes (REPLs, shells) with:
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import logging
 import os
 import select
@@ -18,8 +19,6 @@ import signal as sigmod
 import subprocess
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +31,7 @@ SIGNALS = {
 }
 
 # In-memory process registry
-_REGISTRY: Dict[str, "ManagedProcess"] = {}
+_REGISTRY: dict[str, ManagedProcess] = {}
 
 # Default TTL for stale process cleanup (1 hour)
 STALE_TTL_SEC = 3600
@@ -105,8 +104,8 @@ def _cleanup_stale_processes(ttl_sec: float = STALE_TTL_SEC) -> int:
 
 def start_process(
     command: str,
-    cwd: Optional[str] = None,
-    env: Optional[dict] = None,
+    cwd: str | None = None,
+    env: dict | None = None,
 ) -> ManagedProcess:
     """
     Start a managed interactive process.
@@ -192,7 +191,7 @@ def send_input(proc_id: str, data: str) -> None:
         raise KeyError(f"Process not found: {proc_id}")
 
     if not mp.is_running():
-        raise IOError(f"Process {proc_id} has exited")
+        raise OSError(f"Process {proc_id} has exited")
 
     # Append newline if not present
     if not data.endswith("\n"):
@@ -203,7 +202,7 @@ def send_input(proc_id: str, data: str) -> None:
         mp.p.stdin.flush()
         mp.last_activity = time.time()
     except Exception as e:
-        raise IOError(f"Failed to write to process {proc_id}: {e}")
+        raise OSError(f"Failed to write to process {proc_id}: {e}")
 
 
 def read_output(proc_id: str, timeout_sec: float = 1.0) -> tuple[str, str]:
@@ -322,7 +321,7 @@ def list_managed_processes() -> list[ManagedProcess]:
     return list(_REGISTRY.values())
 
 
-def get_process(proc_id: str) -> Optional[ManagedProcess]:
+def get_process(proc_id: str) -> ManagedProcess | None:
     """Get a managed process by ID."""
     return _REGISTRY.get(proc_id)
 

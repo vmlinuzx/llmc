@@ -5,11 +5,12 @@ Inspector Screen - LLM-Optimized Source Viewer
 from typing import Any
 
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, ScrollableContainer
+from textual.containers import Container, ScrollableContainer, Vertical
 from textual.screen import Screen
-from textual.widgets import Static, Input, Button, Checkbox, Label
+from textual.widgets import Button, Checkbox, Input, Label, Static
 
-from tools.rag.inspector import inspect_entity, InspectionResult
+from tools.rag.inspector import InspectionResult, inspect_entity
+
 
 class InspectorScreen(Screen):
     """

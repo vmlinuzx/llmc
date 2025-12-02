@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
 
 
 @dataclass
@@ -25,11 +24,11 @@ class SpanRecord:
     byte_start: int
     byte_end: int
     span_hash: str
-    doc_hint: Optional[str] = None
-    imports: List[str] = field(default_factory=list)
+    doc_hint: str | None = None
+    imports: list[str] = field(default_factory=list)
     # Content routing metadata
     slice_type: str = "other"
-    slice_language: Optional[str] = None
+    slice_language: str | None = None
     classifier_confidence: float = 0.0
     classifier_version: str = ""
 
@@ -65,7 +64,7 @@ class SpanWorkItem:
     byte_start: int
     byte_end: int
     slice_type: str = "other"
-    slice_language: Optional[str] = None
+    slice_language: str | None = None
     classifier_confidence: float = 0.0
 
     def read_bytes(self, repo_root: Path) -> bytes:
@@ -85,19 +84,19 @@ class EnrichmentRecord:
     """
     span_hash: str
     symbol: str
-    summary: Optional[str]
-    evidence: Optional[str]
-    inputs: Optional[str]
-    outputs: Optional[str]
-    side_effects: Optional[str]
-    pitfalls: Optional[str]
-    usage_snippet: Optional[str]
-    tags: Optional[str] = None
-    model: Optional[str] = None
-    created_at: Optional[str] = None
-    schema_ver: Optional[str] = None
+    summary: str | None
+    evidence: str | None
+    inputs: str | None
+    outputs: str | None
+    side_effects: str | None
+    pitfalls: str | None
+    usage_snippet: str | None
+    tags: str | None = None
+    model: str | None = None
+    created_at: str | None = None
+    schema_ver: str | None = None
     # Content routing metadata
-    content_type: Optional[str] = None
-    content_language: Optional[str] = None
-    content_type_confidence: Optional[float] = None
-    content_type_source: Optional[str] = None
+    content_type: str | None = None
+    content_language: str | None = None
+    content_type_confidence: float | None = None
+    content_type_source: str | None = None

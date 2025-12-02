@@ -1,11 +1,12 @@
 import json
-import pytest
 from pathlib import Path
 from unittest.mock import patch
+
 from click.testing import CliRunner
+import pytest
 
 from tools.rag.cli import cli
-from tools.rag.schema import SchemaGraph, Entity, Relation
+from tools.rag.schema import Entity, Relation, SchemaGraph
 
 # We'll import inspect_entity once implemented. For now, assume it will be in tools.rag.inspector
 # from tools.rag.inspector import inspect_entity, InspectionResult

@@ -1,9 +1,9 @@
 """Tests for code execution mode - the Anthropic 'Code Mode' pattern."""
 
-import pytest
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
+
 
 # Mock Tool class to avoid mcp dependency in tests
 @dataclass
@@ -15,7 +15,7 @@ class MockTool:
 # Alias for compatibility
 Tool = MockTool
 
-from llmc_mcp.tools.code_exec import execute_code, generate_stubs, CodeExecResult
+from llmc_mcp.tools.code_exec import execute_code, generate_stubs
 
 
 def make_mock_tool_caller(results: dict):

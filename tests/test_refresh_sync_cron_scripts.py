@@ -13,9 +13,9 @@ Tests cover:
 - Sync operations
 """
 import os
+from pathlib import Path
 import subprocess
 import tempfile
-from pathlib import Path
 
 
 class TestRagRefresh:
@@ -39,7 +39,7 @@ class TestRagRefresh:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh.sh"
         result = subprocess.run(
             ["bash", "-n", str(script_path)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
@@ -94,7 +94,7 @@ class TestRagRefreshCron:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         result = subprocess.run(
             ["bash", "-n", str(script_path)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
@@ -104,7 +104,7 @@ class TestRagRefreshCron:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         result = subprocess.run(
             [str(script_path), "--help"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0
@@ -116,7 +116,7 @@ class TestRagRefreshCron:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # May fail without proper setup, but should accept --repo
@@ -127,7 +127,7 @@ class TestRagRefreshCron:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), f"--repo={tmpdir}"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should accept this syntax
@@ -247,7 +247,7 @@ class TestRagRefreshWatch:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_watch.sh"
         result = subprocess.run(
             ["bash", "-n", str(script_path)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
@@ -384,7 +384,7 @@ class TestRagSync:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
         result = subprocess.run(
             ["bash", "-n", str(script_path)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
@@ -394,7 +394,7 @@ class TestRagSync:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
         result = subprocess.run(
             [str(script_path), "--help"],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True
         )
         assert result.returncode == 0
@@ -416,7 +416,7 @@ class TestRagSync:
             # Test without providing path args (should fail)
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should fail due to missing path args
@@ -428,7 +428,7 @@ class TestRagSync:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), f"--repo={tmpdir}"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True
             )
             # Should fail due to missing path args

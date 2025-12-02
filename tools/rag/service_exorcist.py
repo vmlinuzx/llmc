@@ -5,12 +5,11 @@ Sometimes you need to burn it down and start fresh.
 If there's a spider in there, nukes from orbit are the only way to be sure.
 """
 import json
-import os
+from pathlib import Path
 import shutil
 import sqlite3
 import time
-from pathlib import Path
-from typing import Dict, List, TypedDict
+from typing import TypedDict
 
 
 class FileStat(TypedDict):
@@ -24,7 +23,7 @@ class ExorcistSummary(TypedDict):
     """Structured view of what the exorcist will touch."""
 
     exists: bool
-    files: List[FileStat]
+    files: list[FileStat]
     total_size_bytes: int
     span_count: int
     enrichment_count: int
@@ -140,20 +139,20 @@ class Exorcist:
         self.repo = repo
         self.stats = ExorcistStats(repo)
     
-    def print_warning(self, stats: Dict):
+    def print_warning(self, stats: dict):
         """Print DC's safety ritual."""
         total_mb = stats["total_size_bytes"] / (1024 * 1024)
         
         print("\n🔥 EXORCIST MODE 🔥")
         print("━" * 60)
         print("\nHey. We need to talk about what you're about to do.")
-        print(f"\nYou're about to nuke the RAG database for:")
+        print("\nYou're about to nuke the RAG database for:")
         print(f"  📁 {self.repo}")
         print("\nHere's what that means:")
         print(f"  • {stats['span_count']:,} indexed code spans - gone")
         print(f"  • {stats['enrichment_count']:,} enriched summaries - months of LLM work, vaporized")
         print(f"  • {stats['embedding_count']:,} embeddings - all that vector magic, deleted")
-        print(f"  • Every quality metric, every failure you've tracked - wiped")
+        print("  • Every quality metric, every failure you've tracked - wiped")
         print(f"  • Total: {total_mb:.1f} MB of data")
         print("\nThis is the nuclear option. There's no undo button.")
         print("\nI get it - sometimes you need to burn it down and start fresh.")
@@ -218,19 +217,19 @@ class Exorcist:
         
         if self.stats.enrichments.exists():
             self.stats.enrichments.unlink()
-            print(f"🗑️  Deleted .rag/enrichments.json")
+            print("🗑️  Deleted .rag/enrichments.json")
         
         if self.stats.embeddings_db.exists():
             self.stats.embeddings_db.unlink()
-            print(f"🗑️  Deleted .rag/embeddings.db")
+            print("🗑️  Deleted .rag/embeddings.db")
         
         if self.stats.quality_dir.exists():
             shutil.rmtree(self.stats.quality_dir)
-            print(f"🗑️  Deleted .rag/quality_reports/")
+            print("🗑️  Deleted .rag/quality_reports/")
         
         if self.stats.failures_db.exists():
             self.stats.failures_db.unlink()
-            print(f"🗑️  Deleted .rag/failures.db")
+            print("🗑️  Deleted .rag/failures.db")
         
         print("\n✅ Database exorcised. She's clean.")
         print("\nWant to rebuild? Run: llmc-rag force-cycle")
@@ -248,7 +247,7 @@ class Exorcist:
             return 1
         
         if stats["span_count"] == 0 and stats["enrichment_count"] == 0:
-            print(f"\nℹ️  RAG database exists but is empty.")
+            print("\nℹ️  RAG database exists but is empty.")
             print("Proceeding with cleanup...")
         
         # The Ritual

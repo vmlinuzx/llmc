@@ -4,11 +4,12 @@ Adversarial testing of the routing system - attempting to break it with extreme 
 """
 
 import sys
-import os
+
 sys.path.insert(0, '/home/vmlinux/src/llmc')
 
+
 from tests.test_routing_comprehensive import classify_query
-import json
+
 
 def test_adversarial_inputs():
     """Test with extreme, weird, and malicious inputs."""

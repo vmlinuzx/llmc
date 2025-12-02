@@ -9,11 +9,12 @@ Tests cover:
 
 from pathlib import Path
 from unittest.mock import Mock
+
 import pytest
 
 from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState, utc_now
-from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.registry import RegistryClient
+from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
 

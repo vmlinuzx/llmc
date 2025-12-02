@@ -9,8 +9,8 @@ except ImportError:
     pass
 
 import argparse
-import sys
 from pathlib import Path
+import sys
 
 from tools.rag.config import index_path_for_read
 from tools.rag.planner import generate_plan

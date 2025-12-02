@@ -4,7 +4,6 @@ Basic tests for the RAG indexer.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from tools.rag import indexer

@@ -1,7 +1,7 @@
 
-import pytest
 
 from llmc.routing.query_type import classify_query
+
 
 def test_classify_query_none_returns_docs_low_confidence():
     result = classify_query(None)

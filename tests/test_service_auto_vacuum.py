@@ -1,12 +1,13 @@
 import importlib
 import json
 import time
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 import tools.rag.service as service_module
 from tools.rag.service import RAGService
+
 
 @pytest.fixture
 def service_mod(tmp_path, monkeypatch):

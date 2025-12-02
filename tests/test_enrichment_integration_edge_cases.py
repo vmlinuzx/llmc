@@ -8,9 +8,10 @@ Tests cover:
 """
 
 import os
-import sqlite3
 from pathlib import Path
+import sqlite3
 from unittest.mock import Mock, patch
+
 import pytest
 
 # Import enrichment modules

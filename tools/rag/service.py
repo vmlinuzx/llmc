@@ -29,7 +29,7 @@ import subprocess
 import sys
 import time
 
-from tools.rag.config import load_config, get_vacuum_interval_hours
+from tools.rag.config import get_vacuum_interval_hours, load_config
 
 try:  # Python 3.11+
     import tomllib  # type: ignore
@@ -591,8 +591,8 @@ class RAGService:
             now = time.time()
             if now - last_vacuum > vacuum_interval_hours * 3600:
                 print("  🧹 Running database vacuum...")
-                from tools.rag.database import Database
                 from tools.rag.config import index_path_for_write
+                from tools.rag.database import Database
                 
                 db_path = index_path_for_write(repo)
                 db = Database(db_path)

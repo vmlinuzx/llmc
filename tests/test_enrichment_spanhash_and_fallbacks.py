@@ -1,6 +1,6 @@
 import hashlib
-import sqlite3
 from pathlib import Path
+import sqlite3
 
 from tools.rag_nav import models
 from tools.rag_nav.enrichment import (

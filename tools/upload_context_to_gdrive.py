@@ -28,10 +28,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
-
 
 RCLONE_REMOTE = "dcgoogledrive:"
 DEFAULT_REMOTE_DIR = "llmc_backups"
@@ -126,7 +125,7 @@ def upload_to_gdrive(zip_path: Path, remote_dir: str = DEFAULT_REMOTE_DIR) -> bo
         print(f"✓ Successfully uploaded to {remote_path}/{zip_path.name}")
         return True
     else:
-        print(f"✗ Upload failed", file=sys.stderr)
+        print("✗ Upload failed", file=sys.stderr)
         return False
 
 

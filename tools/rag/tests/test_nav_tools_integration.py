@@ -11,13 +11,11 @@ These tests serve as:
 3. Contract validation tests
 """
 
-import json
-from pathlib import Path
 
 import pytest
 
-from tools.rag.nav_meta import RagResult, RagToolMeta
 from tools.rag.freshness import IndexStatus
+from tools.rag.nav_meta import RagResult, RagToolMeta
 
 
 @pytest.mark.rag_freshness

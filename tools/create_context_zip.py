@@ -13,11 +13,11 @@ Requirements:
 
 from __future__ import annotations
 
+from datetime import datetime
+from pathlib import Path
 import subprocess
 import sys
 import time
-from datetime import datetime
-from pathlib import Path
 import zipfile
 
 
@@ -78,7 +78,7 @@ def list_context_allow_paths(repo_root: Path) -> list[Path]:
 
     included = set()
     try:
-        with open(allow_file, "r") as f:
+        with open(allow_file) as f:
             patterns = [line.strip() for line in f if line.strip() and not line.startswith("#")]
     except Exception as e:
         print(f"Warning: failed to read .contextallow: {e}", file=sys.stderr)

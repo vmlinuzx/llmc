@@ -1,11 +1,11 @@
 """Comprehensive tests for repo add command idempotency."""
 
 import json
-import tempfile
 from pathlib import Path
+import tempfile
 from unittest.mock import Mock
-import yaml
 
+import yaml
 
 from tools.rag_repo.cli import _cmd_add
 from tools.rag_repo.registry import RegistryAdapter
@@ -425,8 +425,8 @@ def test_add_repo_json_output(tmp_path: Path) -> None:
         )
 
         # Capture stdout
-        import io
         from contextlib import redirect_stdout
+        import io
 
         args = Mock(
             path=str(repo_root),

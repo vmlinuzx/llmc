@@ -1,11 +1,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import logging
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 try:
     import tomllib  # py3.11+
@@ -18,8 +18,8 @@ class RouteSignal:
     score: float
     reason: str
 
-def load_routing_config(start_dir: Path | None = None) -> Dict[str, Any]:
-    cfg: Dict[str, Any] = {
+def load_routing_config(start_dir: Path | None = None) -> dict[str, Any]:
+    cfg: dict[str, Any] = {
         "default_route": "docs",
         "code_detection": {},
         "erp_vs_code": {},
@@ -44,7 +44,7 @@ def load_routing_config(start_dir: Path | None = None) -> Dict[str, Any]:
             break
     return cfg
 
-def record_decision(route_name: str, confidence: float, reasons: list[str], flags: Dict[str, Any]) -> None:
+def record_decision(route_name: str, confidence: float, reasons: list[str], flags: dict[str, Any]) -> None:
     logger = logging.getLogger("llmc.routing")
     payload = {
         "event": "routing_decision",

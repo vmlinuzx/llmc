@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 from tools.rag.database import Database
-from tools.rag.enrichment import batch_enrich, EnrichmentBatchResult
+from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
 
 
 def _insert_file_and_span(
@@ -59,7 +59,7 @@ def _make_db(tmp_path: Path) -> tuple[Database, Path]:
     return db, repo_root
 
 
-def _fake_enrichment_payload(summary: str = "Test summary") -> Dict[str, Any]:
+def _fake_enrichment_payload(summary: str = "Test summary") -> dict[str, Any]:
     return {
         "summary_120w": summary,
         "inputs": ["arg"],
@@ -82,7 +82,7 @@ def test_batch_enrich_multiple_spans_respects_limit_and_progresses(tmp_path) -> 
 
     calls: list[str] = []
 
-    def fake_llm_call(prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def fake_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
         calls.append(prompt["span_hash"])
         assert prompt["span_hash"] in span_hashes
         return _fake_enrichment_payload(summary=f"Summary for {prompt['span_hash']}")
@@ -146,7 +146,7 @@ def test_batch_enrich_is_idempotent_for_completed_spans(tmp_path) -> None:
 
     calls: list[str] = []
 
-    def fake_llm_call_first(prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def fake_llm_call_first(prompt: dict[str, Any]) -> dict[str, Any]:
         calls.append(prompt["span_hash"])
         assert prompt["span_hash"] == span_hash
         return _fake_enrichment_payload(summary="First run")
@@ -175,7 +175,7 @@ def test_batch_enrich_is_idempotent_for_completed_spans(tmp_path) -> None:
     # Second run: if pending_enrichments works as intended, there should be no
     # pending spans, and we should not need to call the LLM again. Use a
     # callable that would explode if invoked.
-    def fake_llm_call_second(prompt: Dict[str, Any]) -> Dict[str, Any]:  # pragma: no cover
+    def fake_llm_call_second(prompt: dict[str, Any]) -> dict[str, Any]:  # pragma: no cover
         raise AssertionError("LLM should not be called on already-enriched spans")
 
     result2 = batch_enrich(

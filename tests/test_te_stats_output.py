@@ -1,15 +1,17 @@
-import pytest
+from io import StringIO
+from pathlib import Path
 import sqlite3
 import sys
-from pathlib import Path
-from unittest.mock import patch, MagicMock
-from io import StringIO
+from unittest.mock import patch
+
+import pytest
 
 # Assuming the main function is in llmc.te.cli
 # We need to adjust the path to import it
 sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from llmc.te.cli import _handle_stats
+
 
 @pytest.fixture
 def temp_db_path(tmp_path):

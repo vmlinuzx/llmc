@@ -1,6 +1,8 @@
 import pytest
-from llmc.routing.router import create_router, DeterministicRouter
+
 from llmc.routing.query_type import classify_query
+from llmc.routing.router import DeterministicRouter, create_router
+
 
 def test_router_factory_deterministic():
     config = {"routing": {"options": {"router_mode": "deterministic"}}}

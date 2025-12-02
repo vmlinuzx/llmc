@@ -1,9 +1,10 @@
 """End-to-end tests for daemon operation with dummy job runner."""
 
+from datetime import UTC
 import json
+from pathlib import Path
 import tempfile
 import time
-from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -155,8 +156,8 @@ exit 0
             _cmd_add(args, tool_config, None)
 
         # Create daemon
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -231,8 +232,8 @@ exit 1
         _cmd_add(args, tool_config, None)
 
         # Create daemon
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -307,8 +308,8 @@ exit 0
         _cmd_add(args, tool_config, None)
 
         # First run to set state
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -339,9 +340,9 @@ exit 0
         first_run = state.last_run_finished_at
 
         # Create control flag to force refresh
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         future_time = now + timedelta(seconds=300)
         state.next_eligible_at = future_time
         state_store.upsert(state)
@@ -394,8 +395,8 @@ exit 0
         _cmd_add(args, tool_config, None)
 
         # First daemon instance
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -477,8 +478,8 @@ exit 0
             _cmd_add(args, tool_config, None)
 
         # Create daemon with max 2 concurrent jobs
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -642,8 +643,8 @@ exit 0
         assert result == 0
 
         # Step 4: Start daemon
-        from tools.rag_daemon.registry import RegistryClient
         from tools.rag_daemon.models import DaemonConfig
+        from tools.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,

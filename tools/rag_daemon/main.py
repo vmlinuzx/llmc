@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import argparse
-import os
-import sys
 from dataclasses import asdict, replace
+import os
 from pathlib import Path
-from typing import List, Optional
+import sys
 
 from .config import load_config
 from .logging_utils import get_logger
@@ -21,7 +20,7 @@ from .workers import WorkerPool
 def _print_top_level_help() -> None:
     """Print a tree-style help overview for llmc-rag-daemon."""
     print(
-        (
+        
             "LLMC RAG Daemon\n\n"
             "Run the scheduler + workers that keep RAG workspaces fresh.\n\n"
             "Usage:\n"
@@ -40,7 +39,7 @@ def _print_top_level_help() -> None:
             "  llmc-rag-daemon run --config ~/.llmc/rag-daemon.yml\n"
             "  llmc-rag-daemon tick\n"
             "  llmc-rag-daemon config --json\n"
-        )
+        
     )
 
 
@@ -168,7 +167,7 @@ def _cmd_doctor(config: DaemonConfig) -> int:
     return 0 if ok else 1
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 

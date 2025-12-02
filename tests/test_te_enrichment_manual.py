@@ -1,9 +1,10 @@
-import pytest
-import sqlite3
-import struct
 from pathlib import Path
-from tools.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
+import struct
+
+import pytest
+
 from tools.rag.database import Database
+from tools.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
 
 DB_PATH = Path(".rag/test_integrity.db")
 

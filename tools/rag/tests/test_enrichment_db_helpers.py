@@ -9,8 +9,8 @@ do not depend on any real repository data or long-running pipelines.
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
+import time
 
 from tools.rag.database import Database
 

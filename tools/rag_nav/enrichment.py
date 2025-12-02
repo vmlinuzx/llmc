@@ -8,14 +8,14 @@ search / where-used / lineage results.
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from pathlib import Path
-from typing import Any, List, Optional, Tuple
 from collections.abc import Iterable
+from dataclasses import asdict, dataclass
 import hashlib
 import logging
 import os
+from pathlib import Path
 import sqlite3
+from typing import Any
 
 from tools.rag_nav.models import LineageResult, SearchResult, WhereUsedResult  # type: ignore
 
@@ -26,12 +26,12 @@ log = logging.getLogger("llmc.enrich")
 class EnrichmentSnippet:
     """Single enrichment snippet associated with a source location."""
 
-    summary: Optional[str] = None
-    inputs: Optional[str] = None
-    outputs: Optional[str] = None
-    pitfalls: Optional[str] = None
-    content_type: Optional[str] = None
-    content_language: Optional[str] = None
+    summary: str | None = None
+    inputs: str | None = None
+    outputs: str | None = None
+    pitfalls: str | None = None
+    content_type: str | None = None
+    content_language: str | None = None
 
 
 class SqliteEnrichmentStore:
@@ -47,7 +47,7 @@ class SqliteEnrichmentStore:
 
     def __init__(self, db_path: Path | str) -> None:
         self.db_path = Path(db_path)
-        self._has_span_hash: Optional[bool] = None
+        self._has_span_hash: bool | None = None
 
     def _connect(self) -> sqlite3.Connection:
         """
@@ -72,7 +72,7 @@ class SqliteEnrichmentStore:
         except Exception:
             self._has_span_hash = False
 
-    def snippets_for(self, path: str, line: Optional[int] = None, limit: int = 1) -> List[EnrichmentSnippet]:
+    def snippets_for(self, path: str, line: int | None = None, limit: int = 1) -> list[EnrichmentSnippet]:
         """
         Look up enrichment snippets for the given path and optional line.
 
@@ -106,10 +106,10 @@ class SqliteEnrichmentStore:
         except Exception:
             return []
 
-        snippets: List[EnrichmentSnippet] = []
+        snippets: list[EnrichmentSnippet] = []
         for row in rows:
             # Coerce non-string columns to None for safety.
-            values: List[Optional[str]] = []
+            values: list[str | None] = []
             for value in row:
                 values.append(value if isinstance(value, str) else None)
             snippets.append(EnrichmentSnippet(*values))
@@ -117,11 +117,11 @@ class SqliteEnrichmentStore:
 
     def _compute_span_hash(
         self,
-        file: Optional[str],
-        start: Optional[int],
-        end: Optional[int],
-        text: Optional[str],
-    ) -> Optional[str]:
+        file: str | None,
+        start: int | None,
+        end: int | None,
+        text: str | None,
+    ) -> str | None:
         """Compute a span hash compatible with the core enrichment DB."""
         if file is None or start is None or end is None:
             return None
@@ -140,12 +140,12 @@ class SqliteEnrichmentStore:
 
     def snippets_for_span_or_path(
         self,
-        file: Optional[str],
-        start: Optional[int],
-        end: Optional[int],
-        text: Optional[str],
+        file: str | None,
+        start: int | None,
+        end: int | None,
+        text: str | None,
         limit: int = 1,
-    ) -> Tuple[List[EnrichmentSnippet], str]:
+    ) -> tuple[list[EnrichmentSnippet], str]:
         """
         Lookup using span_hash (if available) → (path, line) → path.
 
@@ -223,7 +223,7 @@ class EnrichStats:
     span_matches: int = 0
 
 
-def _trim_fields(d: dict[str, Any], max_chars: Optional[int], stats: Optional[EnrichStats]) -> dict[str, Any]:
+def _trim_fields(d: dict[str, Any], max_chars: int | None, stats: EnrichStats | None) -> dict[str, Any]:
     """
     Trim string fields in `d` to at most `max_chars`, updating `stats`.
     """
@@ -240,12 +240,12 @@ def _trim_fields(d: dict[str, Any], max_chars: Optional[int], stats: Optional[En
     return out
 
 
-def _item_path_and_line(item: object) -> tuple[Optional[str], Optional[int]]:
+def _item_path_and_line(item: object) -> tuple[str | None, int | None]:
     """
     Best-effort extraction of (path, line) from an item with optional snippet/location.
     """
-    path: Optional[str] = getattr(item, "file", None) or getattr(item, "path", None)
-    line: Optional[int] = getattr(item, "line", None) or getattr(item, "start_line", None)
+    path: str | None = getattr(item, "file", None) or getattr(item, "path", None)
+    line: int | None = getattr(item, "line", None) or getattr(item, "start_line", None)
 
     snippet = getattr(item, "snippet", None)
     location = getattr(snippet, "location", None)
@@ -267,8 +267,8 @@ def _attach_to_items(
     store: SqliteEnrichmentStore,
     max_snippets: int,
     *,
-    max_chars: Optional[int],
-    stats: Optional[EnrichStats],
+    max_chars: int | None,
+    stats: EnrichStats | None,
 ) -> None:
     try:
         max_snippets_int = max(1, int(max_snippets))
@@ -287,7 +287,7 @@ def _attach_to_items(
             data = _trim_fields(data, max_chars, stats)
             if not data:
                 continue
-            setattr(item, "enrichment", data)  # type: ignore[attr-defined]
+            item.enrichment = data  # type: ignore[attr-defined]
             if stats is not None:
                 stats.snippets_attached += 1
                 if line is not None:
@@ -304,8 +304,8 @@ def attach_enrichments_to_search_result(
     store: SqliteEnrichmentStore,
     max_snippets: int = 1,
     *,
-    max_chars: Optional[int] = None,
-    stats: Optional[EnrichStats] = None,
+    max_chars: int | None = None,
+    stats: EnrichStats | None = None,
 ) -> SearchResult:
     """
     Attach at most one enrichment snippet to each search hit in-place.
@@ -314,7 +314,7 @@ def attach_enrichments_to_search_result(
     per hit that has at least one enrichment snippet. Missing databases, query
     errors, or unexpected hit shapes are treated as no-ops.
     """
-    items: Optional[Iterable[object]] = getattr(result, "items", None)
+    items: Iterable[object] | None = getattr(result, "items", None)
     if not items:
         return result
 
@@ -341,7 +341,7 @@ def attach_enrichments_to_search_result(
             if not data:
                 continue
 
-            setattr(hit, "enrichment", data)  # type: ignore[attr-defined]
+            hit.enrichment = data  # type: ignore[attr-defined]
             if stats is not None:
                 stats.snippets_attached += 1
                 if strategy == "span":
@@ -361,13 +361,13 @@ def attach_enrichments_to_where_used(
     store: SqliteEnrichmentStore,
     max_snippets: int = 1,
     *,
-    max_chars: Optional[int] = None,
-    stats: Optional[EnrichStats] = None,
+    max_chars: int | None = None,
+    stats: EnrichStats | None = None,
 ) -> WhereUsedResult:
     """
     Attach enrichment snippets to where-used result items in-place.
     """
-    items: Optional[Iterable[object]] = getattr(result, "items", None)
+    items: Iterable[object] | None = getattr(result, "items", None)
     if not items:
         return result
 
@@ -394,7 +394,7 @@ def attach_enrichments_to_where_used(
             if not data:
                 continue
 
-            setattr(item, "enrichment", data)  # type: ignore[attr-defined]
+            item.enrichment = data  # type: ignore[attr-defined]
             if stats is not None:
                 stats.snippets_attached += 1
                 if strategy == "span":
@@ -413,13 +413,13 @@ def attach_enrichments_to_lineage(
     store: SqliteEnrichmentStore,
     max_snippets: int = 1,
     *,
-    max_chars: Optional[int] = None,
-    stats: Optional[EnrichStats] = None,
+    max_chars: int | None = None,
+    stats: EnrichStats | None = None,
 ) -> LineageResult:
     """
     Attach enrichment snippets to lineage result items in-place.
     """
-    items: Optional[Iterable[object]] = getattr(result, "items", None)
+    items: Iterable[object] | None = getattr(result, "items", None)
     if not items:
         return result
 
@@ -446,7 +446,7 @@ def attach_enrichments_to_lineage(
             if not data:
                 continue
 
-            setattr(item, "enrichment", data)  # type: ignore[attr-defined]
+            item.enrichment = data  # type: ignore[attr-defined]
             if stats is not None:
                 stats.snippets_attached += 1
                 if strategy == "span":
@@ -460,7 +460,7 @@ def attach_enrichments_to_lineage(
     return result
 
 
-def discover_enrichment_db(repo_root: Optional[Path], items: Optional[List[Any]]) -> Optional[Path]:
+def discover_enrichment_db(repo_root: Path | None, items: list[Any] | None) -> Path | None:
     """
     Discover a plausible enrichment DB path based on repo_root or search items.
     """

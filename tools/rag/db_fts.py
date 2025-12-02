@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+import sqlite3
 
 DEFAULT_DB_CANDIDATES = [".rag/index_v2.db", ".rag/index.db", ".rag/index.db3"]
 
@@ -21,7 +20,7 @@ class RagDbNotFound(FileNotFoundError):
     """Raised when no suitable RAG DB file can be found."""
 
 
-def _open_db(repo_root: Path, explicit: Optional[Path] = None) -> Tuple[sqlite3.Connection, Path]:
+def _open_db(repo_root: Path, explicit: Path | None = None) -> tuple[sqlite3.Connection, Path]:
     """Open the RAG SQLite DB; try common locations."""
     if explicit:
         db_path = explicit
@@ -50,7 +49,7 @@ def _detect_fts_table(conn: sqlite3.Connection) -> str:
 
     preference = ["spans", "chunks", "documents", "enrichments"]
 
-    def score(name_sql: Tuple[str, str]) -> int:
+    def score(name_sql: tuple[str, str]) -> int:
         name, _ = name_sql
         pts = 0
         for i, tok in enumerate(preference):
@@ -70,13 +69,13 @@ def _detect_fts_table(conn: sqlite3.Connection) -> str:
     raise RuntimeError("No FTS virtual table detected in SQLite DB")
 
 
-def _column_map(conn: sqlite3.Connection, table: str) -> Dict[str, str]:
+def _column_map(conn: sqlite3.Connection, table: str) -> dict[str, str]:
     """Map logical fields -> physical column names via common-name heuristics."""
     cur = conn.cursor()
     cur.execute(f"PRAGMA table_info({table})")
     cols = [r[1].lower() for r in cur.fetchall()]
 
-    def pick(*candidates: str, default: Optional[str] = None) -> str:
+    def pick(*candidates: str, default: str | None = None) -> str:
         for c in candidates:
             if c in cols:
                 return c
@@ -91,7 +90,7 @@ def _column_map(conn: sqlite3.Connection, table: str) -> Dict[str, str]:
     return {"path": path_col, "start": start_col, "end": end_col, "text": text_col}
 
 
-def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Optional[Path] = None) -> List[FtsHit]:
+def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Path | None = None) -> list[FtsHit]:
     """Run an FTS MATCH search against the enrichment DB with optional bm25 ordering."""
     conn, path = _open_db(repo_root, db_path)
     try:
@@ -126,7 +125,7 @@ def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Optional[P
             cur.execute(sql, (query, int(limit)))
             rows = [(*r, 0.0) for r in cur.fetchall()]
 
-        hits: List[FtsHit] = []
+        hits: list[FtsHit] = []
         for p, s, e, t, sc in rows:
             hits.append(
                 FtsHit(

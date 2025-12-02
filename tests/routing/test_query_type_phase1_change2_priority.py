@@ -1,6 +1,7 @@
 
 from llmc.routing.query_type import classify_query
 
+
 def test_priority_fenced_code_beats_erp():
     q = '```python\ndef get_invoice(i):\n    return i\n```'
     r = classify_query(q)

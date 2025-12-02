@@ -8,8 +8,8 @@ This module defines:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import List, Literal, Optional
+from dataclasses import asdict, dataclass
+from typing import Literal
 
 from tools.rag.freshness import (
     FreshnessState as _FreshnessState,
@@ -60,10 +60,10 @@ class Snippet:
 @dataclass
 class EnrichmentData:
     """Semantic enrichment for a code entity."""
-    summary: Optional[str] = None
-    usage_guide: Optional[str] = None
-    content_type: Optional[str] = None
-    content_language: Optional[str] = None
+    summary: str | None = None
+    usage_guide: str | None = None
+    content_type: str | None = None
+    content_language: str | None = None
     # Extensible for future fields (inputs, outputs, etc.)
     
     def to_dict(self) -> dict:
@@ -76,7 +76,7 @@ class SearchItem:
 
     file: str
     snippet: Snippet
-    enrichment: Optional[EnrichmentData] = None
+    enrichment: EnrichmentData | None = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -90,7 +90,7 @@ class SearchResult:
     """Result envelope for code search queries."""
 
     query: str
-    items: List[SearchItem]
+    items: list[SearchItem]
     truncated: bool = False
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
@@ -111,7 +111,7 @@ class WhereUsedItem:
 
     file: str
     snippet: Snippet
-    enrichment: Optional[EnrichmentData] = None
+    enrichment: EnrichmentData | None = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -125,7 +125,7 @@ class WhereUsedResult:
     """Result envelope for where-used queries."""
 
     symbol: str
-    items: List[WhereUsedItem]
+    items: list[WhereUsedItem]
     truncated: bool = False
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
@@ -146,7 +146,7 @@ class LineageItem:
 
     file: str
     snippet: Snippet
-    enrichment: Optional[EnrichmentData] = None
+    enrichment: EnrichmentData | None = None
 
     def to_dict(self) -> dict:
         d = asdict(self)
@@ -161,7 +161,7 @@ class LineageResult:
 
     symbol: str
     direction: str
-    items: List[LineageItem]
+    items: list[LineageItem]
     truncated: bool = False
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"

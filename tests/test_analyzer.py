@@ -4,10 +4,11 @@ Ruthless Test Analysis Tool
 Analyzes test failures across the entire test suite
 """
 
-import subprocess
+import glob
 import json
 from pathlib import Path
-import glob
+import subprocess
+
 
 def run_test_batch(test_pattern, output_file):
     """Run a batch of tests and capture results"""
@@ -34,7 +35,7 @@ def run_test_batch(test_pattern, output_file):
         "-q"
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=120)
 
     # Parse output
     lines = result.stdout.split('\n') + result.stderr.split('\n')

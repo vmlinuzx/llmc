@@ -4,12 +4,11 @@ Adversarial testing of the enrichment router system
 """
 
 import sys
-import os
+
 sys.path.insert(0, '/home/vmlinux/src/llmc')
 
 from pathlib import Path
-import tempfile
-import sqlite3
+
 
 def test_enrichment_router_edge_cases():
     """Test edge cases in enrichment router."""
@@ -72,8 +71,8 @@ def test_enrichment_router_edge_cases():
     # Test 2: EnrichmentRouteDecision edge cases
     print("\nTest 2: EnrichmentRouteDecision edge cases")
     try:
-        from tools.rag.enrichment_router import EnrichmentRouteDecision, EnrichmentSliceView
         from tools.rag.config_enrichment import EnrichmentBackendSpec
+        from tools.rag.enrichment_router import EnrichmentRouteDecision, EnrichmentSliceView
 
         # Test with None backend
         try:
@@ -173,7 +172,7 @@ def test_enrichment_router_edge_cases():
             classifier_confidence=0.999999,  # Nearly 1
             approx_token_count=10**12,  # Trillion tokens!
         )
-        print(f"  ⚠️  Extreme values accepted")
+        print("  ⚠️  Extreme values accepted")
         print(f"     Token count: {view.approx_token_count:,}")
         print(f"     End line: {view.end_line:,}")
     except Exception as e:

@@ -7,14 +7,20 @@ Usage:
     python watch_workspace.py --project glideclubs  # Watch one project
 """
 
-import time
 import argparse
-from pathlib import Path
 from datetime import datetime
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+from pathlib import Path
+import time
 
-from index_workspace import WorkspaceIndexer, WORKSPACE_ROOT, CHROMA_DB_PATH, CODE_EXTENSIONS, EXCLUDE_DIRS
+from index_workspace import (
+    CHROMA_DB_PATH,
+    CODE_EXTENSIONS,
+    EXCLUDE_DIRS,
+    WORKSPACE_ROOT,
+    WorkspaceIndexer,
+)
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 class CodeFileHandler(FileSystemEventHandler):
@@ -95,7 +101,7 @@ def main():
     
     args = parser.parse_args()
     
-    print(f"🔍 Initializing workspace watcher...")
+    print("🔍 Initializing workspace watcher...")
     indexer = WorkspaceIndexer(WORKSPACE_ROOT, CHROMA_DB_PATH)
     
     watch_path = WORKSPACE_ROOT
@@ -107,7 +113,7 @@ def main():
     
     print(f"👀 Watching: {watch_path}")
     print(f"💾 DB: {CHROMA_DB_PATH}")
-    print(f"⏸️  Press Ctrl+C to stop\n")
+    print("⏸️  Press Ctrl+C to stop\n")
     
     event_handler = CodeFileHandler(indexer, args.project)
     observer = Observer()

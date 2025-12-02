@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
 from collections.abc import Iterable
+from dataclasses import dataclass
 import math
 import re
 
@@ -21,11 +20,11 @@ class RerankHit:
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 
 
-def _tokens(s: str) -> List[str]:
+def _tokens(s: str) -> list[str]:
     return [t.lower() for t in _WORD.findall(s or "") if len(t) > 1]
 
 
-def _bigrams(tokens: List[str]) -> List[Tuple[str, str]]:
+def _bigrams(tokens: list[str]) -> list[tuple[str, str]]:
     return [(tokens[i], tokens[i + 1]) for i in range(len(tokens) - 1)] if len(tokens) > 1 else []
 
 
@@ -55,7 +54,7 @@ def _normalize_bm25(raw: float) -> float:
     return 1.0 / (1.0 + r)
 
 
-DEFAULT_WEIGHTS: Dict[str, float] = {
+DEFAULT_WEIGHTS: dict[str, float] = {
     "bm25": 0.60,
     "uni": 0.20,
     "bi": 0.15,
@@ -64,13 +63,13 @@ DEFAULT_WEIGHTS: Dict[str, float] = {
 }
 
 
-def _normalize_weights(weights: Dict[str, float]) -> Dict[str, float]:
+def _normalize_weights(weights: dict[str, float]) -> dict[str, float]:
     """Normalize a weight mapping, falling back to DEFAULT_WEIGHTS if invalid."""
     base = dict(DEFAULT_WEIGHTS)
     if not isinstance(weights, dict) or not weights:
         return base
     total = 0.0
-    normalized: Dict[str, float] = {}
+    normalized: dict[str, float] = {}
     for key in base.keys():
         try:
             value = float(weights.get(key, base[key]))
@@ -86,17 +85,17 @@ def _normalize_weights(weights: Dict[str, float]) -> Dict[str, float]:
 
 def rerank_hits(
     query: str,
-    hits: List[RerankHit],
+    hits: list[RerankHit],
     top_k: int = 20,
-    weights: Optional[Dict[str, float]] = None,
-) -> List[RerankHit]:
+    weights: dict[str, float] | None = None,
+) -> list[RerankHit]:
     """Combine bm25 and token-overlap signals to rerank FTS hits."""
     w = _normalize_weights(weights or DEFAULT_WEIGHTS)
     q_tokens = _tokens(query)
     q_bigrams = _bigrams(q_tokens)
     joined = " ".join(q_tokens)
 
-    rescored: List[Tuple[float, RerankHit]] = []
+    rescored: list[tuple[float, RerankHit]] = []
     for h in hits:
         t = h.text[:1500]
         h_tokens = _tokens(t)

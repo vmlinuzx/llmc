@@ -10,17 +10,17 @@ Usage:
     python3 test_rag_nav_comprehensive.py --filter="test_index_status"
 """
 
-import os
-import sys
-import json
-import shutil
-import tempfile
-import subprocess
-import time
-from pathlib import Path
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
 import argparse
+from dataclasses import asdict, dataclass
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
 
 # Test framework utilities
 @dataclass
@@ -30,7 +30,7 @@ class NavTestResult:
     passed: bool
     message: str
     duration_ms: float
-    details: Optional[Dict] = None
+    details: dict | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -40,15 +40,15 @@ class NavTestRunner:
     def __init__(self, repo_root: Path, verbose: bool = False):
         self.repo_root = Path(repo_root)
         self.verbose = verbose
-        self.results: List[NavTestResult] = []
-        self.temp_dir: Optional[Path] = None
+        self.results: list[NavTestResult] = []
+        self.temp_dir: Path | None = None
 
     def log(self, msg: str):
         if self.verbose:
             print(msg)
 
-    def run(self, cmd: List[str], cwd: Optional[Path] = None, timeout: int = 30,
-            input_data: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
+    def run(self, cmd: list[str], cwd: Path | None = None, timeout: int = 30,
+            input_data: str | None = None, check: bool = True) -> subprocess.CompletedProcess:
         """Run a command and return the result."""
         self.log(f"Running: {' '.join(cmd)}")
 
@@ -63,7 +63,7 @@ class NavTestRunner:
         try:
             result = subprocess.run(
                 cmd,
-                cwd=cwd or self.repo_root,
+                check=False, cwd=cwd or self.repo_root,
                 env=env,
                 capture_output=True,
                 text=True,
@@ -132,7 +132,7 @@ def complex_usage():
             self.log(f"Cleaned up: {self.temp_dir}")
 
     def add_result(self, name: str, category: str, passed: bool,
-                   message: str, duration_ms: float, details: Optional[Dict] = None):
+                   message: str, duration_ms: float, details: dict | None = None):
         """Record a test result."""
         result = NavTestResult(name, category, passed, message, duration_ms, details)
         self.results.append(result)
@@ -154,7 +154,7 @@ def complex_usage():
         try:
             # Test the metadata module if it exists
             try:
-                from tools.rag_nav.metadata import save_status, load_status, IndexStatus
+                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 status = IndexStatus(
                     repo=str(test_repo),
@@ -292,7 +292,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.metadata import load_status, save_status, IndexStatus
+                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 # Create corrupt file
                 status_file = test_repo / ".llmc" / "rag_index_status.json"
@@ -361,7 +361,7 @@ def complex_usage():
             repo2 = Path(tempfile.mkdtemp(prefix="rag_nav_test_repo2_"))
 
             try:
-                from tools.rag_nav.metadata import save_status, load_status, IndexStatus
+                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 status1 = IndexStatus(
                     repo=str(repo1),
@@ -1002,8 +1002,8 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.metadata import save_status, IndexStatus
                 from tools.rag_nav.gateway import compute_route
+                from tools.rag_nav.metadata import IndexStatus, save_status
 
                 # Create stale status
                 stale_status = IndexStatus(
@@ -1403,7 +1403,7 @@ def complex_usage():
 
         try:
             # Create inconsistent state (status without graph)
-            from tools.rag_nav.metadata import save_status, IndexStatus
+            from tools.rag_nav.metadata import IndexStatus, save_status
             try:
                 status = IndexStatus(
                     repo=str(test_repo),

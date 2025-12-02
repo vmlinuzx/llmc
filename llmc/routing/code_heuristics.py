@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Optional
+from typing import Any
 
 from .common import RouteSignal
 
@@ -45,7 +45,7 @@ CODE_KEYWORDS = {
     "args","kwargs","dict","list","tuple","int","str","bool","None",
 }
 
-def score_all(text: str, cfg: Dict[str, Any] | None = None) -> RouteSignal | None:
+def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | None:
     # 1. Fences
     if has_fenced_code(text):
         return RouteSignal(route="code", score=0.95, reason="heuristic=fenced-code")

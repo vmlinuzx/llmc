@@ -11,11 +11,10 @@ Features:
 
 from __future__ import annotations
 
-import sqlite3
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict
+import sqlite3
 
 
 @dataclass
@@ -24,14 +23,14 @@ class QueryRecord:
     query_text: str
     timestamp: datetime
     results_count: int
-    files_retrieved: List[str]
+    files_retrieved: list[str]
 
 
 @dataclass
 class AnalyticsSummary:
     """Summary of analytics over a time period."""
-    top_queries: List[tuple[str, int]]  # (query, count)
-    top_files: List[tuple[str, int]]  # (file, count)
+    top_queries: list[tuple[str, int]]  # (query, count)
+    top_files: list[tuple[str, int]]  # (file, count)
     total_queries: int
     unique_queries: int
     avg_results_per_query: float
@@ -69,7 +68,7 @@ class QueryTracker:
         self,
         query_text: str,
         results_count: int,
-        files_retrieved: List[str]
+        files_retrieved: list[str]
     ):
         """Log a search query."""
         import json
@@ -120,7 +119,7 @@ class QueryTracker:
             (cutoff_str,)
         )
         
-        file_counts: Dict[str, int] = {}
+        file_counts: dict[str, int] = {}
         for row in cursor:
             try:
                 files = json.loads(row["files_retrieved"])
@@ -156,7 +155,7 @@ class QueryTracker:
             time_range_days=days
         )
     
-    def get_recent_queries(self, limit: int = 20) -> List[QueryRecord]:
+    def get_recent_queries(self, limit: int = 20) -> list[QueryRecord]:
         """Get recent queries."""
         import json
         
@@ -240,6 +239,7 @@ def run_analytics(repo_root: Path, days: int = 7):
 
 if __name__ == "__main__":
     import argparse
+
     from .utils import find_repo_root
     
     parser = argparse.ArgumentParser(description="View query analytics")

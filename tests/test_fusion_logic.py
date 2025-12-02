@@ -1,5 +1,5 @@
-import pytest
 from llmc.routing.fusion import fuse_scores, normalize_scores
+
 
 def test_normalize_scores_basic():
     results = [

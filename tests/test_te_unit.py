@@ -6,15 +6,17 @@ Tests sniffer, config, store, formatter, and grep handler.
 
 from __future__ import annotations
 
-import json
 import os
-import tempfile
 from pathlib import Path
 
-import pytest
-
-from llmc.te.config import DEFAULT_AGENT_BUDGETS, get_output_budget, get_te_config
-from llmc.te.formatter import FormattedOutput, TeMeta, compute_hot_zone, format_breadcrumb, format_meta_header
+from llmc.te.config import DEFAULT_AGENT_BUDGETS, get_output_budget
+from llmc.te.formatter import (
+    FormattedOutput,
+    TeMeta,
+    compute_hot_zone,
+    format_breadcrumb,
+    format_meta_header,
+)
 from llmc.te.sniffer import sniff
 from llmc.te.store import clear, get_entry, list_handles, load, store
 
@@ -208,6 +210,7 @@ class TestGrepHandler:
     def test_grep_no_match(self):
         """Grep handles no matches gracefully."""
         import uuid
+
         from llmc.te.handlers.grep import handle_grep
 
         # Generate a UUID pattern that won't match anything

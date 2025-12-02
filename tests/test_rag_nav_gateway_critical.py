@@ -8,16 +8,17 @@ Tests cover:
 - compute_route handles missing graph when use_rag=True
 """
 
-import tempfile
 import json
 from pathlib import Path
+import tempfile
 from unittest.mock import Mock, patch
+
 import pytest
 
 from tools.rag_nav.gateway import (
-    compute_route,
-    _detect_git_head,
     RouteDecision,
+    _detect_git_head,
+    compute_route,
 )
 
 
@@ -361,7 +362,7 @@ class TestMissingGraphWhenUseRagTrue:
                     # According to current policy, should raise error when trying to use missing graph
                     # In a real implementation, this would be caught when actually loading the graph
                     with pytest.raises(FileNotFoundError):
-                        with open(graph_path, "r") as f:
+                        with open(graph_path) as f:
                             f.read()
 
     def test_missing_graph_directory(self):
@@ -409,7 +410,7 @@ class TestMissingGraphWhenUseRagTrue:
                     # Graph exists but is empty - should be handled gracefully
                     # Actual loading would fail with validation error
                     with pytest.raises((json.JSONDecodeError, ValueError)):
-                        with open(graph_path, "r") as f:
+                        with open(graph_path) as f:
                             json.load(f)
 
     def test_malformed_graph_json(self):
@@ -435,7 +436,7 @@ class TestMissingGraphWhenUseRagTrue:
 
                     # Should fail when loading
                     with pytest.raises(json.JSONDecodeError):
-                        with open(graph_path, "r") as f:
+                        with open(graph_path) as f:
                             json.load(f)
 
 

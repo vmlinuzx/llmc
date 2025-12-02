@@ -12,8 +12,8 @@ import pytest
 
 from scripts.router import (
     RouterSettings,
-    choose_start_tier,
     choose_next_tier_on_failure,
+    choose_start_tier,
     classify_failure,
 )
 

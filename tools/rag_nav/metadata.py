@@ -7,9 +7,9 @@ Implements:
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, Optional, Union
 import json
+from pathlib import Path
+from typing import Any
 
 from tools.rag_nav.models import IndexStatus
 
@@ -20,7 +20,7 @@ def status_path(repo_root: Path) -> Path:
     return repo_root / ".llmc" / "rag" / "index_status.json"
 
 
-def save_status(repo_root: Path, status: Union[IndexStatus, Dict[str, Any]]) -> Path:
+def save_status(repo_root: Path, status: IndexStatus | dict[str, Any]) -> Path:
     """Serialize and write index status to disk, ensuring parent dirs exist."""
     path = status_path(repo_root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -32,7 +32,7 @@ def save_status(repo_root: Path, status: Union[IndexStatus, Dict[str, Any]]) -> 
     return path
 
 
-def load_status(repo_root: Path) -> Optional[IndexStatus]:
+def load_status(repo_root: Path) -> IndexStatus | None:
     """Load index status; return None if file missing or JSON invalid."""
     path = status_path(repo_root)
     if not path.exists():

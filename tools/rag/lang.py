@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import re
-from functools import lru_cache
-from pathlib import Path
-from typing import Any, Dict, List, Optional
 from collections.abc import Callable
+from functools import cache
+from pathlib import Path
+import re
+from typing import Any
 
 from tree_sitter import Node, Parser
 from tree_sitter_languages import get_language
@@ -41,7 +41,7 @@ EXTENSION_LANG = {
 SUPPORTED_LANGS = set(EXTENSION_LANG.values())
 
 
-@lru_cache(maxsize=None)
+@cache
 def _language(name: str):
     try:
         return get_language(name)
@@ -49,7 +49,7 @@ def _language(name: str):
         raise RuntimeError(f"Tree-sitter language '{name}' not available: {exc}")
 
 
-@lru_cache(maxsize=None)
+@cache
 def _parser(name: str) -> Parser:
     parser = Parser()
     language = _language(name)
@@ -60,7 +60,7 @@ def _parser(name: str) -> Parser:
     return parser
 
 
-def language_for_path(path: Path) -> Optional[str]:
+def language_for_path(path: Path) -> str | None:
     return EXTENSION_LANG.get(path.suffix.lower())
 
 
@@ -85,7 +85,7 @@ def _make_span(
     kind: str,
     node: Node,
     source: bytes,
-    doc_hint: Optional[str] = None,
+    doc_hint: str | None = None,
 ) -> SpanRecord:
     start_line, end_line = node.start_point[0] + 1, node.end_point[0] + 1
     return SpanRecord(
@@ -102,7 +102,7 @@ def _make_span(
     )
 
 
-def _python_doc_hint(node: Node, source: bytes) -> Optional[str]:
+def _python_doc_hint(node: Node, source: bytes) -> str | None:
     body = node.child_by_field_name("body")
     if body is None or len(body.children) == 0:
         return None
@@ -117,9 +117,9 @@ def _python_doc_hint(node: Node, source: bytes) -> Optional[str]:
     return text.strip().strip('"\'')
 
 
-def _collect_python(node: Node, source: bytes, file_path: Path, scope: Optional[List[str]] = None) -> List[SpanRecord]:
+def _collect_python(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
     scope = scope or []
-    spans: List[SpanRecord] = []
+    spans: list[SpanRecord] = []
     if node.type == "class_definition":
         name_node = node.child_by_field_name("name")
         if name_node is None:
@@ -165,9 +165,9 @@ def _collect_python(node: Node, source: bytes, file_path: Path, scope: Optional[
     return spans
 
 
-def _collect_js(node: Node, source: bytes, file_path: Path, lang: str, scope: Optional[List[str]] = None) -> List[SpanRecord]:
+def _collect_js(node: Node, source: bytes, file_path: Path, lang: str, scope: list[str] | None = None) -> list[SpanRecord]:
     scope = scope or []
-    spans: List[SpanRecord] = []
+    spans: list[SpanRecord] = []
     if node.type in {"class_declaration", "class"}:
         name_node = node.child_by_field_name("name")
         if name_node is None:
@@ -204,9 +204,9 @@ def _collect_js(node: Node, source: bytes, file_path: Path, lang: str, scope: Op
     return spans
 
 
-def _collect_go(node: Node, source: bytes, file_path: Path, scope: Optional[List[str]] = None) -> List[SpanRecord]:
+def _collect_go(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
     scope = scope or []
-    spans: List[SpanRecord] = []
+    spans: list[SpanRecord] = []
 
     if node.type == "type_declaration":
         for child in node.children:
@@ -252,9 +252,9 @@ def _collect_go(node: Node, source: bytes, file_path: Path, scope: Optional[List
     return spans
 
 
-def _collect_java(node: Node, source: bytes, file_path: Path, scope: Optional[List[str]] = None) -> List[SpanRecord]:
+def _collect_java(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
     scope = scope or []
-    spans: List[SpanRecord] = []
+    spans: list[SpanRecord] = []
 
     if node.type in {"class_declaration", "interface_declaration"}:
         name_node = node.child_by_field_name("name")
@@ -293,7 +293,7 @@ def _slugify(text: str) -> str:
     return slug or "section"
 
 
-def _collect_markdown(file_path: Path, source: bytes) -> List[SpanRecord]:
+def _collect_markdown(file_path: Path, source: bytes) -> list[SpanRecord]:
     if not source:
         return []
 
@@ -301,14 +301,14 @@ def _collect_markdown(file_path: Path, source: bytes) -> List[SpanRecord]:
     if not lines:
         return []
 
-    offsets: List[int] = []
+    offsets: list[int] = []
     offset = 0
     for line in lines:
         offsets.append(offset)
         offset += len(line)
     offsets.append(len(source))
 
-    headings: List[Dict[str, Any]] = []
+    headings: list[dict[str, Any]] = []
     for idx, raw_line in enumerate(lines):
         text = raw_line.decode("utf-8", errors="replace").rstrip("\r\n")
         match = MARKDOWN_HEADING_RE.match(text)
@@ -323,8 +323,8 @@ def _collect_markdown(file_path: Path, source: bytes) -> List[SpanRecord]:
     if not headings:
         return []
 
-    slug_counts: Dict[str, int] = {}
-    spans: List[SpanRecord] = []
+    slug_counts: dict[str, int] = {}
+    spans: list[SpanRecord] = []
     total_lines = len(lines)
 
     for idx, heading in enumerate(headings):
@@ -372,7 +372,7 @@ def _collect_markdown(file_path: Path, source: bytes) -> List[SpanRecord]:
     return spans
 
 
-LANG_EXTRACTORS: Dict[str, Callable[[Path, bytes], List[SpanRecord]]] = {
+LANG_EXTRACTORS: dict[str, Callable[[Path, bytes], list[SpanRecord]]] = {
     "python": lambda path, src: _collect_python(parse_source("python", src), src, path),
     "javascript": lambda path, src: _collect_js(parse_source("javascript", src), src, path, "javascript"),
     "typescript": lambda path, src: _collect_js(parse_source("typescript", src), src, path, "typescript"),
@@ -383,7 +383,7 @@ LANG_EXTRACTORS: Dict[str, Callable[[Path, bytes], List[SpanRecord]]] = {
 }
 
 
-def extract_spans(file_path: Path, lang: str, source: bytes) -> List[SpanRecord]:
+def extract_spans(file_path: Path, lang: str, source: bytes) -> list[SpanRecord]:
     extractor = LANG_EXTRACTORS.get(lang)
     if extractor is None:
         return []

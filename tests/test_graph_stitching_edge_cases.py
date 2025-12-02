@@ -384,7 +384,7 @@ class TestGraphStitchFailures:
         repo_root.mkdir()
 
         # Simulate I/O error
-        with patch("builtins.open", side_effect=IOError("Disk error")):
+        with patch("builtins.open", side_effect=OSError("Disk error")):
             search_items = [Mock(file="file1.py")]
 
             # Should handle I/O error gracefully

@@ -1,6 +1,7 @@
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 # We'll import these inside tests or after creating them to avoid import errors during initial run
 # from tools.rag_nav.models import SearchItem, EnrichmentData
@@ -10,7 +11,7 @@ class TestEnrichedTools:
     def test_model_enrichment_field(self):
         """Test that SearchItem accepts and serializes enrichment data."""
         try:
-            from tools.rag_nav.models import SearchItem, EnrichmentData, Snippet, SnippetLocation
+            from tools.rag_nav.models import EnrichmentData, SearchItem, Snippet, SnippetLocation
         except ImportError:
             pytest.fail("Models not updated yet")
 
@@ -29,8 +30,8 @@ class TestEnrichedTools:
     def test_tool_search_attaches_graph_enrichment(self, tmp_path):
         """Test that tool_rag_search attaches enrichment from graph nodes."""
         try:
+            from tools.rag_nav.models import SearchItem, SearchResult, Snippet, SnippetLocation
             from tools.rag_nav.tool_handlers import tool_rag_search
-            from tools.rag_nav.models import Snippet, SnippetLocation, SearchItem, SearchResult
         except ImportError:
             pytest.fail("Modules not found")
 

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, List
+from typing import Any
 
 import pytest
 
 from tools.rag.config_enrichment import BackendConfig
-from tools.rag.enrichment_backends import BackendError, BackendCascade
+from tools.rag.enrichment_backends import BackendCascade, BackendError
 
 
 class _FakeBackend:
@@ -13,9 +13,9 @@ class _FakeBackend:
         self.config = config
         self._should_fail = should_fail
         self._label = label or config.name
-        self.calls: List[str] = []
+        self.calls: list[str] = []
 
-    def generate(self, prompt: str, *, item: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+    def generate(self, prompt: str, *, item: dict[str, Any]) -> tuple[str, dict[str, Any]]:
         self.calls.append(prompt)
         if self._should_fail:
             raise BackendError(f"{self._label} failed")

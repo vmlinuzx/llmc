@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from llmc_mcp.tools.linux_ops.config import LinuxOpsConfig
 
-from llmc_mcp.tools.linux_ops.errors import FeatureDisabledError, SystemInfoError
+from llmc_mcp.tools.linux_ops.errors import FeatureDisabledError
 from llmc_mcp.tools.linux_ops.types import SysDiskInfo, SysSnapshot
 
 logger = logging.getLogger(__name__)

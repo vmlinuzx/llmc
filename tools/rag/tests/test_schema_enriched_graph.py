@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
 from tools.rag.database import Database
 from tools.rag.schema import build_enriched_schema_graph
 

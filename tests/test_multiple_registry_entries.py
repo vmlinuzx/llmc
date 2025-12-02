@@ -1,8 +1,8 @@
 """Tests for registry with multiple entries and various refresh intervals."""
 
-import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+import tempfile
 from unittest.mock import Mock, patch
 
 import yaml
@@ -13,8 +13,7 @@ from tools.rag_daemon.scheduler import Scheduler
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool
 
-
-UTC = timezone.utc
+UTC = UTC
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]

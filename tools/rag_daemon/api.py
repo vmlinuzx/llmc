@@ -9,7 +9,7 @@ roots using safe_subpath.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
 from tools.rag_repo.fs import SafeFS
 from tools.rag_repo.utils import canonical_repo_path, safe_subpath
@@ -19,7 +19,7 @@ def validate_job_paths(
     config: Any,
     raw_repo_path: str | Path,
     raw_workspace_path: str | Path | None = None,
-) -> Tuple[Path, Optional[Path]]:
+) -> tuple[Path, Path | None]:
     """
     Validate and normalize job paths according to DaemonConfig-like roots.
 
@@ -31,7 +31,7 @@ def validate_job_paths(
     else:
         repo_path = canonical_repo_path(Path(raw_repo_path))
 
-    workspace_path: Optional[Path] = None
+    workspace_path: Path | None = None
     if raw_workspace_path is not None:
         if getattr(config, "workspaces_root", None) is not None:
             workspace_path = safe_subpath(Path(config.workspaces_root), raw_workspace_path)

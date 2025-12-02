@@ -2,9 +2,9 @@
 Test 11: Index Status Metadata - Round-trip and Corruption Handling
 """
 import json
-import tempfile
 import os
 from pathlib import Path
+import tempfile
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -43,7 +43,7 @@ class IndexStatus:
 
     @classmethod
     def load(cls, path):
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
         return cls.from_dict(data)
 
@@ -137,7 +137,7 @@ def test_index_status_missing_fields():
         # Should load with defaults
         status = IndexStatus.load(incomplete_path)
 
-        print(f"  Loaded with defaults:")
+        print("  Loaded with defaults:")
         print(f"    index_state: {status.index_state}")
         print(f"    last_indexed_commit: {status.last_indexed_commit}")
         print(f"    last_error: {status.last_error}")
@@ -164,7 +164,7 @@ def test_existing_status_file():
     # Load and verify
     status = IndexStatus.load(status_path)
 
-    print(f"  Loaded existing status:")
+    print("  Loaded existing status:")
     print(f"    index_state: {status.index_state}")
     print(f"    last_indexed_at: {status.last_indexed_at}")
     print(f"    repo: {status.repo}")

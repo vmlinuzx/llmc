@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
 from collections.abc import Callable
 import logging
+from pathlib import Path
+import sys
+from typing import Any
 
 from jsonschema import Draft7Validator, ValidationError
 
@@ -12,13 +12,13 @@ from .config import (
     embedding_model_dim,
     embedding_model_name,
     embedding_normalize,
+    get_route_for_slice_type,  # Added import
     load_config,
-    get_route_for_slice_type, # Added import
-    resolve_route,             # Added import
+    resolve_route,  # Added import
 )
 from .database import Database
-from .utils import _gitignore_matcher
 from .embeddings import HASH_MODELS, build_embedding_backend
+from .utils import _gitignore_matcher
 
 log = logging.getLogger(__name__) # Initialize logger
 
@@ -31,7 +31,7 @@ def _snippet(text: str, limit: int = MAX_SNIPPET_CHARS) -> str:
     return text[: limit - 1] + "…"
 
 
-ENRICHMENT_SCHEMA: Dict[str, Any] = {
+ENRICHMENT_SCHEMA: dict[str, Any] = {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "required": [
@@ -77,11 +77,11 @@ ENRICHMENT_SCHEMA: Dict[str, Any] = {
 ENRICHMENT_VALIDATOR = Draft7Validator(ENRICHMENT_SCHEMA)
 
 
-def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_seconds: int = 0) -> List[dict]:
+def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_seconds: int = 0) -> list[dict]:
     """Build an enrichment plan, skipping spans touched within the cooldown window."""
     items = db.pending_enrichments(limit=limit, cooldown_seconds=cooldown_seconds)
     matcher = _gitignore_matcher(repo_root)
-    plan: List[dict] = []
+    plan: list[dict] = []
     for item in items:
         # Respect ignores (gitignore + .ragignore + LLMC_RAG_EXCLUDE)
         try:
@@ -127,14 +127,14 @@ def embedding_plan(
     limit: int = 10,
     model: str | None = None,
     dim: int | None = None,
-) -> List[dict]:
+) -> list[dict]:
     config = load_config(repo_root)
     routes = config.get("embeddings", {}).get("routes", {})
     slice_map = config.get("routing", {}).get("slice_type_to_route", {})
     profiles = config.get("embeddings", {}).get("profiles", {})
 
     items = db.pending_embeddings(limit=limit)
-    plan: List[dict] = []
+    plan: list[dict] = []
     for item in items:
         # Resolve routing
         route_name = get_route_for_slice_type(item.slice_type, repo_root)
@@ -202,7 +202,7 @@ def execute_embeddings(
     limit: int = 10,
     model: str | None = None,
     dim: int | None = None,
-) -> Tuple[List[Tuple[str, int]], str, int]:
+) -> tuple[list[tuple[str, int]], str, int]:
     items = db.pending_embeddings(limit=limit)
     if not items:
         fallback_model = model or embedding_model_name()
@@ -228,7 +228,7 @@ def execute_embeddings(
         
         groups[(profile_name, index_name, route_name)].append(item)
 
-    total_created: List[Tuple[str, int]] = []
+    total_created: list[tuple[str, int]] = []
     last_model = "mixed"
     last_dim = 0
 
@@ -255,8 +255,8 @@ def execute_embeddings(
 
         backend = build_embedding_backend(resolved_model, dim=resolved_dim)
 
-        prepared_hashes: List[str] = []
-        texts: List[str] = []
+        prepared_hashes: list[str] = []
+        texts: list[str] = []
         for item in group_items:
             try:
                 code = item.read_source(repo_root)
@@ -295,8 +295,8 @@ def execute_embeddings(
     return total_created, last_model, last_dim
 
 
-def default_enrichment_callable(model: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
-    def _call(prompt: Dict[str, Any]) -> Dict[str, Any]:
+def default_enrichment_callable(model: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+    def _call(prompt: dict[str, Any]) -> dict[str, Any]:
         path = prompt.get("path", "")
         start, end = prompt.get("lines", [0, 0])
         code: str = prompt.get("code", "")
@@ -331,12 +331,12 @@ def _is_latin1_safe(text: str) -> bool:
 def execute_enrichment(
     db: Database,
     repo_root: Path,
-    llm_call: Callable[[Dict[str, Any]], Dict[str, Any]],
+    llm_call: Callable[[dict[str, Any]], dict[str, Any]],
     limit: int = 10,
     model: str = "local-qwen",
     cooldown_seconds: int = 0,
     enforce_latin1: bool = False,
-) -> Tuple[int, List[str]]:
+) -> tuple[int, list[str]]:
     """Run enrichment over pending spans.
 
     Args:
@@ -357,7 +357,7 @@ def execute_enrichment(
         return 0, []
 
     successes = 0
-    errors: List[str] = []
+    errors: list[str] = []
 
     with db.transaction():
         for item in items:
@@ -406,7 +406,7 @@ def execute_enrichment(
             successes += 1
 
     return successes, errors
-def _within_range(lines: List[int], start: int, end: int) -> bool:
+def _within_range(lines: list[int], start: int, end: int) -> bool:
     if len(lines) != 2:
         return False
     a, b = lines
@@ -414,12 +414,12 @@ def _within_range(lines: List[int], start: int, end: int) -> bool:
 
 
 def validate_enrichment(
-    payload: Dict[str, Any], 
+    payload: dict[str, Any], 
     span_start: int, 
     span_end: int,
     enforce_latin1: bool = False,
-) -> Tuple[bool, List[str]]:
-    errors: List[str] = []
+) -> tuple[bool, list[str]]:
+    errors: list[str] = []
     try:
         ENRICHMENT_VALIDATOR.validate(payload)
     except ValidationError as exc:

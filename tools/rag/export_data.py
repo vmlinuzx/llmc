@@ -9,20 +9,20 @@ Usage:
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
+from pathlib import Path
 import sqlite3
 import struct
 import tarfile
 import time
-from datetime import datetime
-from pathlib import Path
-from typing import Optional
+
 import numpy as np
 
 
 def export_all_data(
     repo_root: Path,
-    output_path: Optional[Path] = None
+    output_path: Path | None = None
 ) -> Path:
     """Export all LLMC data to a timestamped tar.gz archive.
     
@@ -195,7 +195,7 @@ def _export_metadata(
         json.dump(metadata, f, indent=2)
 
 
-def run_export(repo_root: Optional[Path] = None, output_path: Optional[Path] = None) -> None:
+def run_export(repo_root: Path | None = None, output_path: Path | None = None) -> None:
     """Run export and print results."""
     from .utils import find_repo_root
     
@@ -211,7 +211,7 @@ def run_export(repo_root: Optional[Path] = None, output_path: Optional[Path] = N
         # Get archive size
         size_mb = archive_path.stat().st_size / (1024 * 1024)
         
-        print(f"\n✅ Export complete!")
+        print("\n✅ Export complete!")
         print(f"   Archive: {archive_path}")
         print(f"   Size: {size_mb:.2f} MB")
         print(f"   Duration: {duration:.2f}s")

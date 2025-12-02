@@ -6,15 +6,20 @@ Wraps ripgrep (rg) with ranking, breadcrumbs, and progressive disclosure.
 
 from __future__ import annotations
 
-import os
-import re
-import subprocess
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+import re
+import subprocess
 
 from ..config import get_output_budget, get_te_config
-from ..formatter import FormattedOutput, TeMeta, compute_hot_zone, format_breadcrumb, format_meta_header
+from ..formatter import (
+    FormattedOutput,
+    TeMeta,
+    compute_hot_zone,
+    format_breadcrumb,
+    format_meta_header,
+)
 from ..sniffer import sniff
 from ..store import store
 

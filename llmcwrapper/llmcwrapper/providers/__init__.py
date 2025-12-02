@@ -1,7 +1,8 @@
 # llmcwrapper/providers/__init__.py
-from .base import ProviderDriver
 from .anthropic import AnthropicDriver
+from .base import ProviderDriver
 from .minimax import MiniMaxDriver
+
 
 def get_provider_driver(name: str) -> ProviderDriver:
     name = (name or "").lower()

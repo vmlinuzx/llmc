@@ -11,9 +11,9 @@ NOTE: The mtime guard functionality is not yet implemented. These tests serve as
 3. A regression test once implemented
 """
 
-import time
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
+import time
 
 import pytest
 
@@ -36,7 +36,7 @@ class TestFileMtimeGuard:
         A file with mtime older than last_indexed_at should allow RAG.
         """
         # Create an index status from 1 hour ago
-        last_indexed = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        last_indexed = datetime.now(UTC).replace(second=0, microsecond=0)
 
         # Create a file from 2 hours ago
         old_file = tmp_path / "old.py"
@@ -56,7 +56,7 @@ class TestFileMtimeGuard:
         A file with mtime newer than last_indexed_at should require fallback.
         """
         # Create an index status from 1 hour ago
-        last_indexed = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        last_indexed = datetime.now(UTC).replace(second=0, microsecond=0)
 
         # Create a file from 30 minutes ago (after indexing)
         new_file = tmp_path / "new.py"
@@ -76,7 +76,7 @@ class TestFileMtimeGuard:
         A file with mtime exactly at last_indexed_at should allow RAG.
         """
         # Create an index status
-        last_indexed = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        last_indexed = datetime.now(UTC).replace(second=0, microsecond=0)
 
         # Create a file with exact same mtime
         exact_file = tmp_path / "exact.py"
@@ -105,7 +105,7 @@ class TestMtimeGuardEdgeCases:
         Checking a non-existent file should handle gracefully.
         """
         nonexistent = tmp_path / "does_not_exist.py"
-        last_indexed = datetime.now(timezone.utc)
+        last_indexed = datetime.now(UTC)
 
         # This might raise FileNotFoundError or return a safe default
         # result = check_file_mtime_guard(nonexistent, last_indexed)
@@ -118,7 +118,7 @@ class TestMtimeGuardEdgeCases:
         """
         dir_path = tmp_path / "subdir"
         dir_path.mkdir()
-        last_indexed = datetime.now(timezone.utc)
+        last_indexed = datetime.now(UTC)
 
         # Directories have mtimes too - should this be allowed?
         # result = check_file_mtime_guard(dir_path, last_indexed)
@@ -139,7 +139,7 @@ class TestMtimeGuardEdgeCases:
         link_file = tmp_path / "link.py"
         # link_file.symlink_to(target_file)
 
-        last_indexed = datetime.fromtimestamp(target_time, timezone.utc)
+        last_indexed = datetime.fromtimestamp(target_time, UTC)
 
         # Should follow symlink and get target's mtime
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -161,7 +161,7 @@ class TestMtimeGuardEdgeCases:
         link_file = tmp_path / "link.py"
         # link_file.symlink_to(target_file)
 
-        last_indexed = datetime.now(timezone.utc)
+        last_indexed = datetime.now(UTC)
 
         # Should follow symlink and detect new mtime
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -177,7 +177,7 @@ class TestMtimeGuardEdgeCases:
         link_file = tmp_path / "broken.py"
         # link_file.symlink_to("nonexistent.py")
 
-        last_indexed = datetime.now(timezone.utc)
+        last_indexed = datetime.now(UTC)
 
         # Should handle the error gracefully
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -232,7 +232,7 @@ class TestMtimeGuardIntegration:
         The guard should work correctly across multiple files.
         """
         # Create an index
-        last_indexed = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+        last_indexed = datetime.now(UTC).replace(second=0, microsecond=0)
 
         # Create files at various times
         files = []

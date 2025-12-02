@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import time
-from typing import Any, Dict, List, Optional, Protocol, Tuple
+from typing import Any, Protocol
 
 
 @dataclass
@@ -13,13 +13,13 @@ class AttemptRecord:
 
     backend_name: str
     provider: str
-    model: Optional[str]
+    model: str | None
     duration_sec: float
     success: bool
-    failure_type: Optional[str]
-    error_message: Optional[str]
-    host: Optional[str]
-    gpu_stats: Optional[Dict[str, Any]]
+    failure_type: str | None
+    error_message: str | None
+    host: str | None
+    gpu_stats: dict[str, Any] | None
 
 
 class BackendError(Exception):
@@ -30,12 +30,12 @@ class BackendError(Exception):
         message: str,
         *,
         failure_type: str | None = None,
-        attempts: List[AttemptRecord] | None = None,
+        attempts: list[AttemptRecord] | None = None,
         failure: Any | None = None,
     ) -> None:
         super().__init__(message)
         self.failure_type: str | None = failure_type
-        self.attempts: List[AttemptRecord] | None = attempts
+        self.attempts: list[AttemptRecord] | None = attempts
         self.failure: Any | None = failure
 
 
@@ -50,8 +50,8 @@ class BackendAdapter(Protocol):
         self,
         prompt: str,
         *,
-        item: Dict[str, Any],
-    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:  # pragma: no cover - interface only
+        item: dict[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, Any]]:  # pragma: no cover - interface only
         """Generate an enrichment result for a single span."""
 
     def describe_host(self) -> str | None:  # pragma: no cover - optional
@@ -62,16 +62,16 @@ class BackendAdapter(Protocol):
 class BackendCascade:
     """Simple ordered cascade of backends."""
 
-    backends: List[BackendAdapter]
+    backends: list[BackendAdapter]
 
     def generate_for_span(
         self,
         prompt: str,
         *,
-        item: Dict[str, Any],
+        item: dict[str, Any],
         start_index: int = 0,
-    ) -> Tuple[Dict[str, Any], Dict[str, Any], List[AttemptRecord]]:
-        attempts: List[AttemptRecord] = []
+    ) -> tuple[dict[str, Any], dict[str, Any], list[AttemptRecord]]:
+        attempts: list[AttemptRecord] = []
         last_error: BackendError | None = None
 
         for idx in range(start_index, len(self.backends)):
@@ -85,8 +85,8 @@ class BackendCascade:
                 backend_name = str(getattr(cfg, "name", f"backend-{idx}"))
                 provider = str(getattr(cfg, "provider", "") or "")
                 model_attr = getattr(cfg, "model", None)
-                model: Optional[str] = model_attr if isinstance(model_attr, str) else None
-                host: Optional[str] = None
+                model: str | None = model_attr if isinstance(model_attr, str) else None
+                host: str | None = None
                 if hasattr(backend, "describe_host"):
                     try:
                         host = backend.describe_host()
@@ -113,7 +113,7 @@ class BackendCascade:
             cfg = getattr(backend, "config", None)
             backend_name = str(getattr(cfg, "name", f"backend-{idx}"))
             provider = str(getattr(cfg, "provider", "") or "")
-            resolved_model: Optional[str] = None
+            resolved_model: str | None = None
             meta_model = meta.get("model")
             if isinstance(meta_model, str) and meta_model:
                 resolved_model = meta_model
@@ -121,7 +121,7 @@ class BackendCascade:
                 cfg_model = getattr(cfg, "model", None)
                 if isinstance(cfg_model, str) and cfg_model:
                     resolved_model = cfg_model
-            resolved_host: Optional[str] = None
+            resolved_host: str | None = None
             if "host" in meta and isinstance(meta.get("host"), str):
                 resolved_host = str(meta["host"])
             elif hasattr(backend, "describe_host"):

@@ -1,6 +1,6 @@
 """Comprehensive tests for scheduler eligibility logic."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -11,8 +11,7 @@ from tools.rag_daemon.models import (
 )
 from tools.rag_daemon.scheduler import Scheduler
 
-
-UTC = timezone.utc
+UTC = UTC
 
 
 class DummyRegistry:

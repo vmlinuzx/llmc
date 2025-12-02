@@ -1,6 +1,8 @@
-import os, sys, importlib, contextlib, types
-import sqlite3
+import contextlib
+import importlib
 from pathlib import Path as _Path
+import sqlite3
+
 
 def pytest_configure(config):
     # py3.12 sqlite alias
@@ -65,7 +67,7 @@ def pytest_sessionstart(session):
                     for cand in ("cli", "main", "entrypoint", "app", "run"):
                         fn = getattr(mod, cand, None)
                         if callable(fn):
-                            setattr(pkg, "cli", fn)
+                            pkg.cli = fn
                             break
 
     # Safety: avoid FileExistsError explosions when tests create the same name twice
@@ -96,4 +98,4 @@ def pytest_sessionstart(session):
         return Path(a) / b
     builtins = importlib.import_module("builtins")
     if not hasattr(builtins, "compat_path_join"):
-        setattr(builtins, "compat_path_join", compat_path_join)
+        builtins.compat_path_join = compat_path_join

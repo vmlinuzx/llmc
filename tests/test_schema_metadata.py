@@ -9,9 +9,8 @@ Covers:
 - Phase 2 Entity location fields (file_path, start_line, end_line)
 """
 
-import sys
 from pathlib import Path
-
+import sys
 
 # Ensure the project root is on sys.path for imports
 REPO_ROOT = Path(__file__).resolve().parents[1]

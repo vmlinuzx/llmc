@@ -15,9 +15,9 @@ Now supports optional TOML configuration via `llmc.toml` with section [logging]:
 """
 
 import argparse
-import time
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+import time
+from typing import Any
 
 try:  # Python 3.11+
     import tomllib  # type: ignore
@@ -25,7 +25,7 @@ except Exception:  # pragma: no cover - older Python
     tomllib = None  # type: ignore
 
 
-def load_logging_config(config_path: Path) -> Dict[str, Any]:
+def load_logging_config(config_path: Path) -> dict[str, Any]:
     """Load [logging] config from a TOML file if present.
 
     Returns an empty dict if file not found or tomllib unavailable.
@@ -56,18 +56,18 @@ class LLMCLogManager:
         self.keep_jsonl_lines = int(keep_jsonl_lines)
         self.enabled = bool(enabled)
     
-    def find_log_files(self, log_dir: Path) -> List[Path]:
+    def find_log_files(self, log_dir: Path) -> list[Path]:
         """Find all log files in directory."""
         if not log_dir.exists():
             return []
         
         patterns = ["*.log", "*.log.*", "*.jsonl"]
-        files: List[Path] = []
+        files: list[Path] = []
         for pattern in patterns:
             files.extend(log_dir.glob(pattern))
         return sorted(files)
     
-    def get_file_size_info(self, file_path: Path) -> Dict[str, Any]:
+    def get_file_size_info(self, file_path: Path) -> dict[str, Any]:
         """Get file size and modification info."""
         if not file_path.exists():
             return {"exists": False}
@@ -81,7 +81,7 @@ class LLMCLogManager:
             "age_hours": round((time.time() - stat.st_mtime) / 3600, 1)
         }
     
-    def truncate_log(self, file_path: Path, keep_lines: Optional[int] = None) -> Dict[str, Any]:
+    def truncate_log(self, file_path: Path, keep_lines: int | None = None) -> dict[str, Any]:
         """Truncate log file to last N lines (JSONL) or by size (others)."""
         if not file_path.exists():
             return {"error": "File doesn't exist"}
@@ -124,7 +124,7 @@ class LLMCLogManager:
         
         return {"truncated": False, "reason": "File within size limit"}
     
-    def check_logs(self, log_dir: Path) -> Dict[str, Any]:
+    def check_logs(self, log_dir: Path) -> dict[str, Any]:
         """Check all logs and return summary."""
         log_files = self.find_log_files(log_dir)
         results = []
@@ -151,7 +151,7 @@ class LLMCLogManager:
             "files": results
         }
     
-    def rotate_logs(self, log_dir: Path) -> Dict[str, Any]:
+    def rotate_logs(self, log_dir: Path) -> dict[str, Any]:
         """Rotate logs that exceed size limit.
 
         Respects the manager's `enabled` flag; returns a no-op summary if disabled.
@@ -241,31 +241,31 @@ def main():
     if args.check:
         result = manager.check_logs(log_dir)
         if not args.quiet:
-            print(f"📊 Log Check Summary")
+            print("📊 Log Check Summary")
             print(f"   Directory: {result['log_directory']}")
             print(f"   Total files: {result['total_files']}")
             print(f"   Total size: {result['total_size_mb']} MB")
             print(f"   Oversized: {result['oversized_count']}")
             
             if result['oversized_count'] > 0:
-                print(f"\n⚠️  Oversized files:")
+                print("\n⚠️  Oversized files:")
                 for file_info in result['files']:
                     if file_info.get('size_bytes', 0) > manager.max_size_bytes:
                         print(f"   {file_info['file']}: {file_info['size_mb']} MB")
             else:
-                print(f"✅ All logs within size limit")
+                print("✅ All logs within size limit")
     elif args.rotate:
         result = manager.rotate_logs(log_dir)
         if not args.quiet:
             if result['rotated_files'] > 0:
-                print(f"🔄 Log Rotation Complete")
+                print("🔄 Log Rotation Complete")
                 print(f"   Rotated: {result['rotated_files']} files")
                 for rotation in result['rotations']:
                     if rotation.get('truncated'):
                         if 'bytes_saved' in rotation:
                             print(f"   {rotation['file']}: saved {round(rotation['bytes_saved']/1024/1024, 1)} MB")
             else:
-                print(f"✅ No logs needed rotation")
+                print("✅ No logs needed rotation")
     else:
         parser.print_help()
 

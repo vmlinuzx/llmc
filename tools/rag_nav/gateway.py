@@ -3,14 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from subprocess import DEVNULL, PIPE, run
-from typing import Optional
 
 from tools.rag_nav.models import FreshnessState, IndexStatus
 
 try:
     from tools.rag_nav.metadata import load_status
 except ImportError:
-    def load_status(repo_root: Path) -> Optional[IndexStatus]:
+    def load_status(repo_root: Path) -> IndexStatus | None:
         return None
 
 
@@ -20,10 +19,10 @@ class RouteDecision:
 
     use_rag: bool
     freshness_state: FreshnessState
-    status: Optional[IndexStatus]
+    status: IndexStatus | None
 
 
-def _detect_git_head(repo_root: Path) -> Optional[str]:
+def _detect_git_head(repo_root: Path) -> str | None:
     """
     Return the current git HEAD SHA for the given repo, or None on error.
     """

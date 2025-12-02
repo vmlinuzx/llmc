@@ -1,7 +1,12 @@
 # llmcwrapper/cli/llmc_yolo.py
 from __future__ import annotations
-import argparse, os, json
+
+import argparse
+import json
+import os
+
 from llmcwrapper.adapter import send
+
 
 def main():
     ap = argparse.ArgumentParser(description="LLMC YOLO mode (no RAG/tools).")

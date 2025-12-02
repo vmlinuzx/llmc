@@ -5,12 +5,13 @@ This module tests the routing decision logic that determines whether to use
 RAG or fall back to deterministic methods based on freshness state.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 # Actual implementation
-from tools.rag_nav.gateway import compute_route, RouteDecision
+from tools.rag_nav.gateway import RouteDecision, compute_route
 from tools.rag_nav.metadata import status_path
 
 

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
-from typing import Generic, Literal, Optional, TypeVar
 from collections.abc import Sequence
+from dataclasses import asdict, dataclass, field
+from typing import Generic, Literal, TypeVar
 
 from .freshness import FreshnessState, IndexStatus
 
@@ -20,14 +20,14 @@ class RagToolMeta:
     """
 
     status: RagToolStatus = "OK"
-    error_code: Optional[str] = None
-    message: Optional[str] = None
+    error_code: str | None = None
+    message: str | None = None
 
     source: RagToolSource = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
 
     # Optional snapshot of the index status used for this decision.
-    index_status: Optional[IndexStatus] = None
+    index_status: IndexStatus | None = None
 
     def to_dict(self) -> dict:
         data = asdict(self)
@@ -67,8 +67,8 @@ def ok_result(
     *,
     source: RagToolSource = "RAG_GRAPH",
     freshness_state: FreshnessState = "FRESH",
-    index_status: Optional[IndexStatus] = None,
-    message: Optional[str] = None,
+    index_status: IndexStatus | None = None,
+    message: str | None = None,
 ) -> RagResult[T]:
     return RagResult(
         meta=RagToolMeta(
@@ -87,8 +87,8 @@ def fallback_result(
     items: Sequence[T],
     *,
     freshness_state: FreshnessState = "STALE",
-    index_status: Optional[IndexStatus] = None,
-    message: Optional[str] = None,
+    index_status: IndexStatus | None = None,
+    message: str | None = None,
 ) -> RagResult[T]:
     return RagResult(
         meta=RagToolMeta(
@@ -108,7 +108,7 @@ def error_result(
     error_code: str,
     message: str,
     freshness_state: FreshnessState = "UNKNOWN",
-    index_status: Optional[IndexStatus] = None,
+    index_status: IndexStatus | None = None,
 ) -> RagResult[dict]:
     """
     Represent an error as a RagResult with no items and a structured error meta.

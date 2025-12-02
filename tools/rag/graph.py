@@ -7,11 +7,10 @@ Provides in-memory adjacency list for O(1) neighbor lookups,
 
 from __future__ import annotations
 
-import json
 from collections import defaultdict
 from dataclasses import dataclass
+import json
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
 from .schema import Entity, Relation, SchemaGraph
 
@@ -37,10 +36,10 @@ class GraphStore:
     """
     
     def __init__(self):
-        self.adjacency: Dict[str, Dict[str, Dict[str, List[str]]]] = defaultdict(
+        self.adjacency: dict[str, dict[str, dict[str, list[str]]]] = defaultdict(
             lambda: {"outgoing": defaultdict(list), "incoming": defaultdict(list)}
         )
-        self.entities: Dict[str, Entity] = {}  # entity_id -> Entity
+        self.entities: dict[str, Entity] = {}  # entity_id -> Entity
         self.indexed_at: str = ""
         self.repo: str = ""
     
@@ -92,7 +91,7 @@ class GraphStore:
         )
         graph.save(path)
     
-    def _extract_relations(self) -> List[Relation]:
+    def _extract_relations(self) -> list[Relation]:
         """Reconstruct relations from adjacency list"""
         relations = []
         seen = set()
@@ -111,9 +110,9 @@ class GraphStore:
         self,
         entity_id: str,
         max_hops: int = 1,
-        edge_filter: Optional[Set[str]] = None,
+        edge_filter: set[str] | None = None,
         max_neighbors: int = 50
-    ) -> List[GraphNeighbor]:
+    ) -> list[GraphNeighbor]:
         """
         Traverse graph from entity_id up to max_hops.
         
@@ -129,9 +128,9 @@ class GraphStore:
         if entity_id not in self.adjacency:
             return []
         
-        visited: Set[str] = {entity_id}
-        neighbors: List[GraphNeighbor] = []
-        queue: List[Tuple[str, int]] = [(entity_id, 0)]
+        visited: set[str] = {entity_id}
+        neighbors: list[GraphNeighbor] = []
+        queue: list[tuple[str, int]] = [(entity_id, 0)]
         
         while queue and len(neighbors) < max_neighbors:
             current_id, distance = queue.pop(0)
@@ -172,11 +171,11 @@ class GraphStore:
         
         return neighbors[:max_neighbors]
     
-    def get_entity(self, entity_id: str) -> Optional[Entity]:
+    def get_entity(self, entity_id: str) -> Entity | None:
         """Get entity by ID"""
         return self.entities.get(entity_id)
     
-    def find_entities_by_pattern(self, pattern: str, kind: Optional[str] = None) -> List[Entity]:
+    def find_entities_by_pattern(self, pattern: str, kind: str | None = None) -> list[Entity]:
         """
         Find entities matching a pattern (substring search).
         
@@ -199,7 +198,7 @@ class GraphStore:
         
         return matches
     
-    def get_statistics(self) -> Dict:
+    def get_statistics(self) -> dict:
         """Get graph statistics for monitoring"""
         return {
             "total_entities": len(self.entities),
@@ -214,14 +213,14 @@ class GraphStore:
             "indexed_at": self.indexed_at,
         }
     
-    def _count_entity_kinds(self) -> Dict[str, int]:
+    def _count_entity_kinds(self) -> dict[str, int]:
         """Count entities by kind"""
         counts = defaultdict(int)
         for entity in self.entities.values():
             counts[entity.kind] += 1
         return dict(counts)
     
-    def _count_edge_types(self) -> Dict[str, int]:
+    def _count_edge_types(self) -> dict[str, int]:
         """Count edges by type"""
         counts = defaultdict(int)
         for entity_data in self.adjacency.values():

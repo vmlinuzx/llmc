@@ -19,15 +19,14 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 import subprocess
 import sys
-from pathlib import Path
 
 from .config import _find_repo_root, get_te_config
 from .handlers import handle_grep
 from .store import get_entry, list_handles, load
 from .telemetry import TeTimer, log_event
-
 
 # Commands that have enriched handlers
 ENRICHED_COMMANDS = {"grep", "cat", "find"}

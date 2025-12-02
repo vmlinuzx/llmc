@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import asdict, dataclass, field
 import json
-import subprocess
-from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Dict, List, Optional, Literal, Tuple, Any
+import subprocess
+from typing import Any, Literal
 
-from .schema import SchemaGraph
 from . import database as rag_database
 from .config import index_path_for_read
+from .schema import SchemaGraph
 
 SourceMode = Literal["symbol", "file"]
 
@@ -22,7 +22,7 @@ class DefinedSymbol:
     name: str
     line: int
     type: str
-    summary: Optional[str] = None
+    summary: str | None = None
 
 @dataclass
 class InspectionResult:
@@ -30,25 +30,25 @@ class InspectionResult:
     source_mode: SourceMode
     
     snippet: str
-    full_source: Optional[str]
-    primary_span: Optional[Tuple[int, int]]
-    file_summary: Optional[str]
+    full_source: str | None
+    primary_span: tuple[int, int] | None
+    file_summary: str | None
     
     graph_status: str = "unknown"  # graph_missing, file_not_indexed, isolated, connected
     
-    defined_symbols: List[DefinedSymbol] = field(default_factory=list)
+    defined_symbols: list[DefinedSymbol] = field(default_factory=list)
     
-    parents: List[RelatedEntity] = field(default_factory=list)
-    children: List[RelatedEntity] = field(default_factory=list)
-    incoming_calls: List[RelatedEntity] = field(default_factory=list)
-    outgoing_calls: List[RelatedEntity] = field(default_factory=list)
-    related_tests: List[RelatedEntity] = field(default_factory=list)
-    related_docs: List[RelatedEntity] = field(default_factory=list)
+    parents: list[RelatedEntity] = field(default_factory=list)
+    children: list[RelatedEntity] = field(default_factory=list)
+    incoming_calls: list[RelatedEntity] = field(default_factory=list)
+    outgoing_calls: list[RelatedEntity] = field(default_factory=list)
+    related_tests: list[RelatedEntity] = field(default_factory=list)
+    related_docs: list[RelatedEntity] = field(default_factory=list)
     
-    enrichment: Dict[str, Any] = field(default_factory=dict)
-    provenance: Dict[str, Any] = field(default_factory=dict)
+    enrichment: dict[str, Any] = field(default_factory=dict)
+    provenance: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 def _normalize_path(repo_root: Path, target: str) -> Path:
@@ -96,7 +96,7 @@ def _read_file_content(repo_root: Path, rel_path: Path) -> str:
         return ""
     return full_path.read_text(encoding="utf-8", errors="replace")
 
-def _extract_snippet(lines: List[str], span: Optional[Tuple[int, int]], context: int = 5, max_lines: int = 50) -> str:
+def _extract_snippet(lines: list[str], span: tuple[int, int] | None, context: int = 5, max_lines: int = 50) -> str:
     """Extract a focused snippet around the span."""
     if not lines:
         return ""
@@ -118,7 +118,7 @@ def _extract_snippet(lines: List[str], span: Optional[Tuple[int, int]], context:
         
     return "\n".join(snippet_lines)
 
-def _get_provenance(repo_root: Path, rel_path: Path) -> Dict[str, Any]:
+def _get_provenance(repo_root: Path, rel_path: Path) -> dict[str, Any]:
     prov = {
         "kind": "code", # simplistic default
         "last_commit": None,
@@ -137,7 +137,7 @@ def _get_provenance(repo_root: Path, rel_path: Path) -> Dict[str, Any]:
     try:
         res = subprocess.run(
             ["git", "log", "-1", "--format=%h %cs", "--", str(rel_path)],
-            cwd=repo_root, capture_output=True, text=True, timeout=1
+            check=False, cwd=repo_root, capture_output=True, text=True, timeout=1
         )
         if res.returncode == 0 and res.stdout.strip():
             parts = res.stdout.strip().split()
@@ -151,10 +151,10 @@ def _get_provenance(repo_root: Path, rel_path: Path) -> Dict[str, Any]:
 
 def _fetch_enrichment(
     db_path: Path, 
-    span_hash: Optional[str], 
-    symbol: Optional[str] = None, 
-    file_path: Optional[Path] = None
-) -> Dict[str, Any]:
+    span_hash: str | None, 
+    symbol: str | None = None, 
+    file_path: Path | None = None
+) -> dict[str, Any]:
     data = {
         "summary": None, "inputs": None, "outputs": None, 
         "side_effects": None, "pitfalls": None, "evidence_count": None
@@ -217,9 +217,9 @@ def _fetch_enrichment(
 def inspect_entity(
     repo_root: Path,
     *,
-    symbol: Optional[str] = None,
-    path: Optional[str] = None,
-    line: Optional[int] = None,
+    symbol: str | None = None,
+    path: str | None = None,
+    line: int | None = None,
     include_full_source: bool = False,
     max_neighbors: int = 3,
 ) -> InspectionResult:
@@ -346,7 +346,7 @@ def inspect_entity(
             s_docs = set()
             
             # Helper to resolving entity ID to (symbol, path)
-            def resolve_ent(eid: str) -> Tuple[str, str]:
+            def resolve_ent(eid: str) -> tuple[str, str]:
                 e = next((x for x in graph.entities if x.id == eid), None)
                 if e:
                     # Clean symbol name

@@ -1,5 +1,7 @@
 from pathlib import Path
+
 from llmc.routing.content_type import classify_slice
+
 
 def test_classify_python():
     res = classify_slice(Path("foo.py"), None, "print('hello')")

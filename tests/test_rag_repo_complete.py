@@ -1,18 +1,18 @@
 """Comprehensive test suite for LLMC RAG Repo Registration Tool."""
 
-import yaml
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
+import yaml
 
 from tools.rag_repo.config import load_tool_config
-from tools.rag_repo.models import ToolConfig, RepoInspection, RegistryEntry
-from tools.rag_repo.registry import RegistryAdapter
-from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 from tools.rag_repo.inspect_repo import inspect_repo
-from tools.rag_repo.utils import generate_repo_id, canonical_repo_path
+from tools.rag_repo.models import RegistryEntry, RepoInspection, ToolConfig
 from tools.rag_repo.notifier import notify_refresh, notify_refresh_all
-
+from tools.rag_repo.registry import RegistryAdapter
+from tools.rag_repo.utils import canonical_repo_path, generate_repo_id
+from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 
 # ==============================================================================
 # 7. Repo Registration Tool Tests

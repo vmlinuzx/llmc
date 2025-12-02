@@ -10,17 +10,17 @@ This builds on top of the existing lang.py infrastructure.
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass, field
 import hashlib
 import json
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 # tree_sitter import deferred to v2 - not needed for Python AST parsing
 # from tree_sitter import Node
 
 # Minimal language detection without tree-sitter dependency
-def language_for_path(path: Path) -> Optional[str]:
+def language_for_path(path: Path) -> str | None:
     """Simple file extension-based language detection"""
     ext = path.suffix.lower()
     lang_map = {
@@ -45,14 +45,14 @@ class Entity:
     id: str  # Unique identifier (e.g., "sym:auth.login")
     kind: str  # "function", "class", "table", "variable"
     path: str  # File path with line numbers (e.g., "src/auth.py:10-15")
-    metadata: Dict = field(default_factory=dict)
-    span_hash: Optional[str] = None # Phase 2: Link to enrichment record
-    file_path: Optional[str] = None
-    start_line: Optional[int] = None
-    end_line: Optional[int] = None
+    metadata: dict = field(default_factory=dict)
+    span_hash: str | None = None # Phase 2: Link to enrichment record
+    file_path: str | None = None
+    start_line: int | None = None
+    end_line: int | None = None
     
     def to_dict(self) -> dict:
-        base: Dict[str, Any] = {
+        base: dict[str, Any] = {
             "id": self.id,
             "kind": self.kind,
             "path": self.path,
@@ -90,8 +90,8 @@ class SchemaGraph:
     version: int = 1
     indexed_at: str = ""
     repo: str = ""
-    entities: List[Entity] = field(default_factory=list)
-    relations: List[Relation] = field(default_factory=list)
+    entities: list[Entity] = field(default_factory=list)
+    relations: list[Relation] = field(default_factory=list)
     
     def to_dict(self) -> dict:
         return {
@@ -108,7 +108,7 @@ class SchemaGraph:
             json.dump(self.to_dict(), f, indent=2)
     
     @classmethod
-    def from_dict(cls, data: dict) -> "SchemaGraph":
+    def from_dict(cls, data: dict) -> SchemaGraph:
         """Reconstruct a SchemaGraph from a plain dict payload."""
         graph = cls(
             version=data.get("version", 1),
@@ -144,7 +144,7 @@ class SchemaGraph:
     @classmethod
     def load(cls, path: Path) -> SchemaGraph:
         """Load graph from JSON file"""
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
         
         graph = cls(
@@ -182,12 +182,12 @@ class PythonSchemaExtractor:
         self.file_path = file_path
         self.source = source
         self.module_name = file_path.stem
-        self.entities: List[Entity] = []
-        self.relations: List[Relation] = []
-        self.current_scope: List[str] = [self.module_name]
-        self.import_map: Dict[str, str] = {}
+        self.entities: list[Entity] = []
+        self.relations: list[Relation] = []
+        self.current_scope: list[str] = [self.module_name]
+        self.import_map: dict[str, str] = {}
     
-    def extract(self) -> Tuple[List[Entity], List[Relation]]:
+    def extract(self) -> tuple[list[Entity], list[Relation]]:
         """Main extraction entry point"""
         try:
             tree = ast.parse(self.source)
@@ -199,7 +199,7 @@ class PythonSchemaExtractor:
         
         return self.entities, self.relations
     
-    def _module_stem(self, module: Optional[str]) -> Optional[str]:
+    def _module_stem(self, module: str | None) -> str | None:
         if not module:
             return None
         return module.rsplit(".", 1)[-1]
@@ -277,7 +277,7 @@ class PythonSchemaExtractor:
             elif isinstance(item, ast.ClassDef):
                 self.visit_class(item)
     
-    def visit_function(self, node: ast.FunctionDef, class_name: Optional[str] = None):
+    def visit_function(self, node: ast.FunctionDef, class_name: str | None = None):
         """Extract function entity and its relationships"""
         # Build qualified name
         if class_name:
@@ -377,7 +377,7 @@ class PythonSchemaExtractor:
             )
 
 
-def extract_schema_from_file(file_path: Path) -> Tuple[List[Entity], List[Relation]]:
+def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relation]]:
     """
     Extract entities and relations from a single file.
     
@@ -410,7 +410,7 @@ def extract_schema_from_file(file_path: Path) -> Tuple[List[Entity], List[Relati
     return [], []
 
 
-def build_schema_graph(repo_root: Path, file_paths: List[Path]) -> SchemaGraph:
+def build_schema_graph(repo_root: Path, file_paths: list[Path]) -> SchemaGraph:
     """
     Build complete schema graph from list of files.
     
@@ -459,7 +459,7 @@ def build_schema_graph(repo_root: Path, file_paths: List[Path]) -> SchemaGraph:
 # Phase 2: Enriched Schema Graph Builder
 # ============================================================================
 
-def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List[Path]) -> SchemaGraph:
+def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: list[Path]) -> SchemaGraph:
     """Build schema graph with enrichment metadata merged from database.
     
     This is the Phase 2 integration function that:
@@ -491,7 +491,7 @@ def build_enriched_schema_graph(repo_root: Path, db_path: Path, file_paths: List
     
     # Step 3: Build mapping index for fast lookup.
     # Key: (normalized_file_path, symbol) -> EnrichmentRecord
-    enrich_by_symbol: Dict[Tuple[str, str], Any] = {}
+    enrich_by_symbol: dict[tuple[str, str], Any] = {}
 
     for enrich in enrichments:
         symbol = enrich.symbol
@@ -591,7 +591,7 @@ def _attach_enrichment_to_entity(entity: Entity, enrich: Any) -> None:
     # Parse JSON fields if they're stored as strings
     import json
     
-    def safe_json_load(value: Optional[str]) -> Optional[list]:
+    def safe_json_load(value: str | None) -> list | None:
         if not value:
             return None
         try:
@@ -638,7 +638,7 @@ def _attach_enrichment_to_entity(entity: Entity, enrich: Any) -> None:
 def build_graph_for_repo(
     repo_root: Path,
     require_enrichment: bool = True,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> SchemaGraph:
     """Orchestration function to build a schema graph for a repository.
 
@@ -729,7 +729,7 @@ def build_graph_for_repo(
 
 
 
-def _discover_source_files(repo_root: Path, max_files: int = 10000) -> List[Path]:
+def _discover_source_files(repo_root: Path, max_files: int = 10000) -> list[Path]:
     """Discover Python source files in a repository.
 
     This helper is intentionally conservative:
@@ -750,7 +750,7 @@ def _discover_source_files(repo_root: Path, max_files: int = 10000) -> List[Path
     Returns:
         List[Path]: Absolute paths to discovered Python source files.
     """
-    files: List[Path] = []
+    files: list[Path] = []
     exclude_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", ".pytest_cache", "patches"}
     
     for path in repo_root.rglob("*.py"):

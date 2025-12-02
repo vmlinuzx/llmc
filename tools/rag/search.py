@@ -1,22 +1,21 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
+from dataclasses import asdict, dataclass, field
 import json
 import math
-import struct
-from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-from collections.abc import Iterable, Sequence
+import struct
+from typing import Any
 
 from .config import (
+    embedding_model_dim,
+    embedding_model_name,
+    get_multi_route_config,
     index_path_for_read,
     is_query_routing_enabled,
     load_config,
-    embedding_model_name,
-    embedding_model_dim,
     resolve_route,
-    get_multi_route_config,
-    is_multi_route_enabled,
 )
 
 # Conditional import for telemetry - allows the module to work without llmc dependency
@@ -24,7 +23,7 @@ try:
     from llmc.te.telemetry import log_routing_event
 except ImportError:
     # No-op fallback when llmc module is not available
-    def log_routing_event(mode: str, details: Dict[str, Any], repo_root: Optional[Path] = None, **kwargs) -> None:
+    def log_routing_event(mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass
 
@@ -33,7 +32,7 @@ try:
     from llmc.routing.fusion import fuse_scores
 except ImportError:
     # No-op fallback when llmc module is not available
-    def fuse_scores(results_by_route: Dict[str, List[Any]], route_weights: Dict[str, float]) -> List[Any]:
+    def fuse_scores(results_by_route: dict[str, list[Any]], route_weights: dict[str, float]) -> list[Any]:
         """No-op fallback for score fusion when llmc module is unavailable."""
         return []
 
@@ -41,15 +40,17 @@ try:
     from llmc.routing.router import create_router
 except ImportError:
     # No-op fallback when llmc module is not available
-    def create_router(config: Dict[str, Any]) -> Any:
+    def create_router(config: dict[str, Any]) -> Any:
         """No-op fallback for router creation when llmc module is unavailable."""
         return None
 
-from .database import Database
-from .embeddings import build_embedding_backend, HASH_MODELS
-from .utils import find_repo_root
 import logging
-from tools.rag.config import ConfigError # Added import
+
+from tools.rag.config import ConfigError  # Added import
+
+from .database import Database
+from .embeddings import HASH_MODELS, build_embedding_backend
+from .utils import find_repo_root
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,7 @@ def _dot(a: Sequence[float], b: Sequence[float]) -> float:
     return sum(x * y for x, y in zip(a, b))
 
 
-def _unpack_vector(blob: bytes) -> List[float]:
+def _unpack_vector(blob: bytes) -> list[float]:
     dim = len(blob) // 4
     return list(struct.unpack(f"<{dim}f", blob))
 
@@ -106,7 +107,7 @@ class SpanSearchResult:
     score: float
     summary: str | None
     normalized_score: float = 0.0
-    debug_info: Optional[Dict[str, Any]] = field(default=None)
+    debug_info: dict[str, Any] | None = field(default=None)
 
 
 def _score_candidates(
@@ -114,8 +115,8 @@ def _score_candidates(
     query_norm: float,
     rows: Iterable,
     query_text: str | None = None,
-) -> List[SpanSearchResult]:
-    results: List[SpanSearchResult] = []
+) -> list[SpanSearchResult]:
+    results: list[SpanSearchResult] = []
     for row in rows:
         vector = _unpack_vector(row["vec"])
         vector_norm = _norm(vector)
@@ -148,10 +149,10 @@ def _score_candidates(
 
 
 def _enrich_debug_info(
-    results: List[SpanSearchResult],
+    results: list[SpanSearchResult],
     repo_root: Path,
     db_path: Path,
-) -> List[SpanSearchResult]:
+) -> list[SpanSearchResult]:
     """Attach debug metadata (graph, enrichment, provenance) to results."""
     # 1. Load Enrichment Data
     enrich_map = {}
@@ -336,8 +337,8 @@ def search_spans(
     repo_root: Path | None = None,
     model_override: str | None = None,
     debug: bool = False,
-    tool_context: Optional[Dict[str, Any]] = None,
-) -> List[SpanSearchResult]:
+    tool_context: dict[str, Any] | None = None,
+) -> list[SpanSearchResult]:
     """Execute a simple cosine-similarity search over the local `.rag` index."""
     repo = repo_root or find_repo_root()
     db_path = index_path_for_read(repo)

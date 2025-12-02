@@ -3,18 +3,17 @@ Service management commands for LLMC RAG service.
 
 Delegates to existing tools.rag.service_daemon infrastructure.
 """
-import typer
-import sys
 from pathlib import Path
-from typing import Optional
+
+import typer
 
 from llmc.core import find_repo_root
 
 # Import existing service infrastructure
 try:
-    from tools.rag.service_daemon import SystemdManager
     from tools.rag.service import ServiceState
-except ImportError as e:
+    from tools.rag.service_daemon import SystemdManager
+except ImportError:
     # Graceful degradation if imports fail
     SystemdManager = None
     ServiceState = None

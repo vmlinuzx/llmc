@@ -1,5 +1,5 @@
-import pytest
 from llmc.routing.query_type import classify_query
+
 
 def test_classify_query_code_snippet():
     query = """

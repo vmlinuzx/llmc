@@ -1,13 +1,13 @@
-import sqlite3
 from pathlib import Path
+import sqlite3
 from unittest.mock import patch
 
 # We will need to import these after we create/modify them, but for now 
 # we can mock or reference them to define the test structure.
 # Ideally these imports would work once the code is written.
 try:
+    from tools.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
     from tools.rag.schema import Entity, SchemaGraph
-    from tools.rag.enrichment_db_helpers import load_enrichment_data, EnrichmentRecord
     from tools.rag_nav.tool_handlers import build_enriched_schema_graph
 except ImportError:
     pass # Allow test collection to fail gracefully if modules don't exist yet
@@ -58,7 +58,7 @@ class TestGraphEnrichment:
 
     def test_load_enrichment_data_valid(self, tmp_path):
         """Test 1.2: Load from valid DB."""
-        from tools.rag.enrichment_db_helpers import load_enrichment_data, EnrichmentRecord
+        from tools.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
         
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -92,7 +92,7 @@ class TestGraphEnrichment:
         
         # 2. Mock base graph building
         # We'll patch the internal builder to return a known graph
-        from tools.rag.schema import SchemaGraph, Entity
+        from tools.rag.schema import Entity, SchemaGraph
         from tools.rag_nav.tool_handlers import build_enriched_schema_graph
         
         base_entity = Entity(
@@ -136,7 +136,7 @@ class TestGraphEnrichment:
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
         
-        from tools.rag.schema import SchemaGraph, Entity
+        from tools.rag.schema import Entity, SchemaGraph
         from tools.rag_nav.tool_handlers import build_enriched_schema_graph
         
         base_entity = Entity(

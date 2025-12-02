@@ -320,7 +320,7 @@ def mcp_linux_proc_start(
     Returns:
         dict with proc_id, pid, first_output, state
     """
-    from llmc_mcp.te.process import start_process, read_output, count_processes
+    from llmc_mcp.te.process import count_processes, read_output, start_process
 
     # Check feature flag
     if not config.features.repl_enabled:
@@ -380,7 +380,7 @@ def mcp_linux_proc_send(
         return {"acknowledged": True}
     except KeyError:
         raise ProcessNotFoundError(f"Process not found: {proc_id}")
-    except IOError as e:
+    except OSError as e:
         return {"acknowledged": False, "error": str(e)}
 
 

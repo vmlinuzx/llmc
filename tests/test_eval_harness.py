@@ -1,9 +1,12 @@
 import json
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
+
 from tools.rag.eval.routing_eval import evaluate_routing
 from tools.rag.search import SpanSearchResult
-from pathlib import Path
+
 
 @pytest.fixture
 def mock_dataset(tmp_path):

@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Dict, List, Set
 from collections.abc import Iterable
+from dataclasses import dataclass
+import json
+from pathlib import Path
 
 
 @dataclass
@@ -28,17 +27,17 @@ def _normalize_path(p: str) -> str:
     return str(Path(p).as_posix())
 
 
-def _index_edges(graph: dict) -> Dict[str, Set[str]]:
+def _index_edges(graph: dict) -> dict[str, set[str]]:
     """Heuristic neighbor index from a generic node/edge JSON graph."""
     nodes = graph.get("nodes") or graph.get("vertices") or []
-    id_to_path: Dict[str, str] = {}
+    id_to_path: dict[str, str] = {}
     for n in nodes:
         nid = str(n.get("id") or n.get("nid") or n.get("name") or "")
         p = n.get("path") or n.get("file") or n.get("filepath") or ""
         if nid and p:
             id_to_path[nid] = _normalize_path(p)
 
-    neighbors: Dict[str, Set[str]] = {}
+    neighbors: dict[str, set[str]] = {}
     edges = graph.get("edges") or graph.get("links") or []
     for e in edges:
         et = (e.get("type") or e.get("label") or "").upper()
@@ -64,7 +63,7 @@ def _index_edges(graph: dict) -> Dict[str, Set[str]]:
     return neighbors
 
 
-def load_neighbor_index(repo_root: Path) -> Dict[str, Set[str]]:
+def load_neighbor_index(repo_root: Path) -> dict[str, set[str]]:
     graph_path = repo_root / ".llmc" / "rag_graph.json"
     if not graph_path.exists():
         raise GraphNotFound(str(graph_path))
@@ -72,15 +71,15 @@ def load_neighbor_index(repo_root: Path) -> Dict[str, Set[str]]:
     return _index_edges(graph)
 
 
-def stitch_neighbors(repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1) -> List[Neighbor]:
+def stitch_neighbors(repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1) -> list[Neighbor]:
     """Return neighbor file paths (1..hops) for given seed paths, unique and capped."""
     idx = load_neighbor_index(repo_root)
-    seen: Set[str] = set(seed_paths)
-    frontier: Set[str] = set(seed_paths)
-    out: List[Neighbor] = []
+    seen: set[str] = set(seed_paths)
+    frontier: set[str] = set(seed_paths)
+    out: list[Neighbor] = []
 
     for _ in range(max(1, hops)):
-        next_frontier: Set[str] = set()
+        next_frontier: set[str] = set()
         for p in list(frontier):
             for n in idx.get(p, ()):
                 if n in seen:
@@ -96,7 +95,7 @@ def stitch_neighbors(repo_root: Path, seed_paths: Iterable[str], limit: int, hop
     return out
 
 
-def expand_search_items(repo_root: Path, items: List, max_expansion: int = 20, hops: int = 1):
+def expand_search_items(repo_root: Path, items: list, max_expansion: int = 20, hops: int = 1):
     """Expand search results with neighbor files from the graph.
 
     - If the graph is missing/unreadable, returns the original items.
@@ -104,7 +103,7 @@ def expand_search_items(repo_root: Path, items: List, max_expansion: int = 20, h
     """
     try:
         raw_seed = [getattr(it, "file", None) for it in items]
-        seed: List[str] = [str(s) for s in raw_seed if s]
+        seed: list[str] = [str(s) for s in raw_seed if s]
         neighbors = stitch_neighbors(repo_root, seed_paths=seed, limit=max_expansion, hops=hops)
     except Exception:
         return items

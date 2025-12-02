@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import os
 import random
 import signal
-import time
 import threading
-from datetime import timedelta
-from pathlib import Path
-from typing import List, Optional
+import time
 
 from .control import read_control_events
 from .logging_utils import get_logger
@@ -26,7 +24,7 @@ class Scheduler:
         self,
         config: DaemonConfig,
         registry: RegistryClient,
-        state_store: Optional[StateStore],
+        state_store: StateStore | None,
         workers: WorkerPool,
     ) -> None:
         self.config = config
@@ -84,8 +82,9 @@ class Scheduler:
         """
         # Load config from llmc.toml to get cleanup setting
         try:
-            import tomli
             from pathlib import Path
+
+            import tomli
             
             # Find repo root by walking up from this file
             repo_root = Path(__file__).parent.parent.parent.resolve()
@@ -150,7 +149,7 @@ class Scheduler:
         states = self.state_store.load_all()
         running = self.workers.running_repo_ids()
 
-        eligible_jobs: List[Job] = []
+        eligible_jobs: list[Job] = []
 
         for repo_id, desc in registry_entries.items():
             state = states.get(repo_id)
@@ -199,7 +198,6 @@ class Scheduler:
         if state.last_run_finished_at is None:
             return True
 
-        from datetime import timedelta
 
         min_interval = repo.min_refresh_interval or timedelta(
             seconds=self.config.tick_interval_seconds

@@ -1,6 +1,6 @@
 """Comprehensive tests for worker pool job execution and state transitions."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -13,8 +13,7 @@ from tools.rag_daemon.models import DaemonConfig, Job, RepoDescriptor
 from tools.rag_daemon.state_store import StateStore
 from tools.rag_daemon.workers import WorkerPool, make_job_id
 
-
-UTC = timezone.utc
+UTC = UTC
 
 
 def make_config(tmp_path: Path, max_concurrent_jobs: int = 2) -> DaemonConfig:

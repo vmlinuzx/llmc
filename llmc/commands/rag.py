@@ -1,21 +1,22 @@
-import typer
-from typing import Optional, List
-from pathlib import Path
 import json
-import sys
+from pathlib import Path
+
+import typer
+
+from llmc.core import find_repo_root
+from tools.rag.config import get_est_tokens_per_span, index_path_for_read
+from tools.rag.database import Database
+from tools.rag.doctor import run_rag_doctor as run_doctor
 
 # Imports from existing tools
 from tools.rag.indexer import index_repo as run_index_repo
-from tools.rag.search import search_spans as run_search_spans
 from tools.rag.inspector import inspect_entity as run_inspect_entity
 from tools.rag.planner import generate_plan as run_generate_plan
-from tools.rag.doctor import run_rag_doctor as run_doctor
-from tools.rag.database import Database
-from tools.rag.config import index_path_for_read, get_est_tokens_per_span
-from llmc.core import find_repo_root
+from tools.rag.search import search_spans as run_search_spans
+
 
 def index(
-    since: Optional[str] = typer.Option(None, help="Only parse files changed since the given commit"),
+    since: str | None = typer.Option(None, help="Only parse files changed since the given commit"),
     no_export: bool = typer.Option(False, help="Skip JSONL span export"),
 ):
     """Index the repository (full or incremental)."""
@@ -59,9 +60,9 @@ def search(
         raise typer.Exit(code=1)
 
 def inspect(
-    symbol: Optional[str] = typer.Option(None, "--symbol", "-s", help="Symbol to inspect"),
-    path: Optional[str] = typer.Option(None, "--path", "-p", help="File path"),
-    line: Optional[int] = typer.Option(None, "--line", "-l", help="Line number"),
+    symbol: str | None = typer.Option(None, "--symbol", "-s", help="Symbol to inspect"),
+    path: str | None = typer.Option(None, "--path", "-p", help="File path"),
+    line: int | None = typer.Option(None, "--line", "-l", help="Line number"),
     full: bool = typer.Option(False, "--full", help="Include full source code"),
 ):
     """Deep dive into symbol/file."""
@@ -151,8 +152,8 @@ def doctor(
 # Phase 5: Advanced RAG Commands
 
 def sync(
-    paths: Optional[List[str]] = typer.Option(None, "--path", help="Specific file paths to sync"),
-    since: Optional[str] = typer.Option(None, help="Sync files changed since commit"),
+    paths: list[str] | None = typer.Option(None, "--path", help="Specific file paths to sync"),
+    since: str | None = typer.Option(None, help="Sync files changed since commit"),
     stdin: bool = typer.Option(False, "--stdin", help="Read paths from stdin"),
 ):
     """Incrementally update spans for selected files."""
@@ -197,7 +198,7 @@ def enrich(
     cooldown: int = typer.Option(0, help="Skip spans changed within N seconds"),
 ):
     """Preview or execute enrichment tasks (summary/tags)."""
-    from tools.rag.workers import enrichment_plan, execute_enrichment, default_enrichment_callable
+    from tools.rag.workers import default_enrichment_callable, enrichment_plan, execute_enrichment
     
     repo_root = find_repo_root()
     db_file = index_path_for_read(repo_root)
@@ -277,7 +278,7 @@ def embed(
 
 def graph(
     require_enrichment: bool = typer.Option(True, help="Require enrichment data in index"),
-    output: Optional[Path] = typer.Option(None, help="Output path (default: .llmc/rag_graph.json)"),
+    output: Path | None = typer.Option(None, help="Output path (default: .llmc/rag_graph.json)"),
 ):
     """Build a schema graph for the current repository."""
     from tools.rag.schema import build_graph_for_repo as schema_build_graph_for_repo
@@ -307,7 +308,7 @@ def graph(
 
 
 def export(
-    output: Optional[str] = typer.Option(None, "-o", "--output", help="Output archive path"),
+    output: str | None = typer.Option(None, "-o", "--output", help="Output archive path"),
 ):
     """Export all RAG data to tar.gz archive."""
     from tools.rag.export_data import run_export

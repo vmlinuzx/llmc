@@ -4,17 +4,19 @@ LLMC TUI - Main Application
 A cyberpunk-styled terminal UI for LLMC
 """
 from pathlib import Path
+
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Vertical, ScrollableContainer
-from textual.widgets import Static, Button
+from textual.containers import ScrollableContainer, Vertical
 from textual.screen import Screen
+from textual.widgets import Button, Static
+
+from llmc.tui.screens.config import ConfigScreen
+from llmc.tui.screens.inspector import InspectorScreen
 
 # Import our custom screens
 from llmc.tui.screens.monitor import MonitorScreen
 from llmc.tui.screens.search import SearchScreen
-from llmc.tui.screens.inspector import InspectorScreen
-from llmc.tui.screens.config import ConfigScreen
 
 
 class MenuScreen(Screen):
@@ -143,8 +145,8 @@ class LLMC_TUI(App):
 
 def main():
     """Entry point for the TUI"""
-    import sys
     from pathlib import Path
+    import sys
     
     # Determine repo root
     if len(sys.argv) > 1:

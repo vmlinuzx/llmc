@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from tools.rag_repo import cli_entry
 
 

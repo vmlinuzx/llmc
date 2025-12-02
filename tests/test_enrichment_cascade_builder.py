@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -19,7 +19,7 @@ class _FakeOllamaAdapter:
         args: SimpleNamespace,
         host_url: str,
         host_label: str | None,
-        tier_preset: Dict[str, Any],
+        tier_preset: dict[str, Any],
         tier_for_attempt: str,
     ) -> None:
         self.config = config

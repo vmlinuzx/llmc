@@ -18,11 +18,10 @@ The router uses RAG to:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import pathlib
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
 
 # Import your existing RAG tools
 from tools.rag.planner import generate_plan
@@ -34,11 +33,11 @@ class RoutingDecision:
     tier: str  # "local", "mid", "premium"
     model: str  # Specific model name
     confidence: float  # 0-1, how confident in this decision
-    rationale: List[str]  # Why this tier was chosen
+    rationale: list[str]  # Why this tier was chosen
     context_needed: bool  # Does query need codebase context
     estimated_tokens: int  # Estimated total tokens
     cost_estimate: float  # Estimated cost in USD
-    rag_results: Optional[Dict] = None  # RAG context if needed
+    rag_results: dict | None = None  # RAG context if needed
     
 
 @dataclass
@@ -61,11 +60,11 @@ class RAGRouter:
     with intelligent RAG-powered routing.
     """
     
-    def __init__(self, repo_root: Path, config: Optional[Dict] = None):
+    def __init__(self, repo_root: Path, config: dict | None = None):
         self.repo_root = Path(repo_root)
         self.config = config or self._default_config()
         
-    def _default_config(self) -> Dict:
+    def _default_config(self) -> dict:
         """Default routing configuration."""
         return {
             # Model definitions with costs (per 1M tokens)
@@ -124,7 +123,7 @@ class RAGRouter:
             }
         }
     
-    def route(self, query: str, repo_root: Optional[Path] = None) -> RoutingDecision:
+    def route(self, query: str, repo_root: Path | None = None) -> RoutingDecision:
         """
         Main routing decision point.
         
@@ -150,7 +149,7 @@ class RAGRouter:
         
         return decision
     
-    def _check_forced_routing(self, query: str) -> Optional[str]:
+    def _check_forced_routing(self, query: str) -> str | None:
         """Check if query matches forced routing patterns."""
         query_lower = query.lower()
         
@@ -221,7 +220,7 @@ class RAGRouter:
                 confidence=confidence
             )
             
-        except Exception as e:
+        except Exception:
             # Fallback to conservative analysis
             return QueryAnalysis(
                 intent="unknown",
@@ -233,7 +232,7 @@ class RAGRouter:
                 confidence=0.3
             )
     
-    def _estimate_complexity(self, plan: Dict) -> str:
+    def _estimate_complexity(self, plan: dict) -> str:
         """Estimate task complexity from RAG plan."""
         confidence = plan.get("confidence", 0.5)
         spans = plan.get("spans", [])
@@ -249,7 +248,7 @@ class RAGRouter:
         
         return "medium"
     
-    def _requires_reasoning(self, query: str, plan: Dict) -> bool:
+    def _requires_reasoning(self, query: str, plan: dict) -> bool:
         """Check if query needs deep reasoning."""
         reasoning_keywords = [
             "why", "how", "explain", "design", "architecture",
@@ -258,7 +257,7 @@ class RAGRouter:
         query_lower = query.lower()
         return any(kw in query_lower for kw in reasoning_keywords)
     
-    def _requires_validation(self, query: str, plan: Dict) -> bool:
+    def _requires_validation(self, query: str, plan: dict) -> bool:
         """Check if query needs senior engineer validation."""
         validation_keywords = [
             "validate", "review", "correct", "check my",
@@ -352,7 +351,7 @@ class RAGRouter:
         )
 
 
-def route_query(query: str, repo_root: Optional[Path] = None) -> RoutingDecision:
+def route_query(query: str, repo_root: Path | None = None) -> RoutingDecision:
     """
     Convenience function for routing a single query.
     
@@ -367,8 +366,8 @@ def route_query(query: str, repo_root: Optional[Path] = None) -> RoutingDecision
     if repo_root is None:
         # Try to detect repo root
         current = Path.cwd()
-        detected_root: Optional[Path] = None
-        current_path: Optional[Path] = None
+        detected_root: Path | None = None
+        current_path: Path | None = None
         visited = set()
         while True:
             marker = current / ".git"

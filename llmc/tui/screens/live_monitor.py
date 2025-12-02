@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 """Live Monitor Screen - Real-time TE telemetry feed, Matrix-style."""
-import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
+import sqlite3
+from typing import Any
 
 from rich.text import Text
 from textual.app import ComposeResult
-from textual.containers import Container, Vertical, ScrollableContainer
+from textual.containers import Container, ScrollableContainer
 from textual.screen import Screen
-from textual.widgets import Static, DataTable
 from textual.timer import Timer
-
+from textual.widgets import DataTable, Static
 
 # Agent color mapping
 AGENT_COLORS = {
@@ -109,8 +108,8 @@ class LiveMonitorScreen(Screen):
         self._agents_seen: set = set()
         self._total_latency: float = 0.0
         self._enriched_count: int = 0
-        self._refresh_timer: Optional[Timer] = None
-        self._row_data: Dict[str, Dict[str, Any]] = {}  # row_key -> full event data
+        self._refresh_timer: Timer | None = None
+        self._row_data: dict[str, dict[str, Any]] = {}  # row_key -> full event data
         self._max_rows: int = 100
 
     def compose(self) -> ComposeResult:
@@ -147,7 +146,7 @@ class LiveMonitorScreen(Screen):
         if self._refresh_timer:
             self._refresh_timer.stop()
 
-    def _get_db_connection(self) -> Optional[sqlite3.Connection]:
+    def _get_db_connection(self) -> sqlite3.Connection | None:
         """Get connection to telemetry DB."""
         repo_root = Path(__file__).resolve().parents[3]
         db_path = repo_root / ".llmc" / "te_telemetry.db"

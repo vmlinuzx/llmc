@@ -10,7 +10,7 @@ implementation module layout.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional
+from typing import Literal
 
 IndexState = Literal["fresh", "stale", "rebuilding", "error"]
 FreshnessState = Literal["FRESH", "STALE", "UNKNOWN"]
@@ -23,9 +23,9 @@ class IndexStatus:
     repo: str
     index_state: IndexState
     last_indexed_at: str  # ISO 8601 timestamp in UTC
-    last_indexed_commit: Optional[str]
+    last_indexed_commit: str | None
     schema_version: str
-    last_error: Optional[str] = None
+    last_error: str | None = None
 
     def to_dict(self) -> dict:
         data = {

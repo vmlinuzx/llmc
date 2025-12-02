@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import os
-import subprocess
-from functools import lru_cache
-from fnmatch import fnmatchcase
-from pathlib import Path
-from typing import List, Optional
 from collections.abc import Callable, Iterable, Iterator
+from fnmatch import fnmatchcase
+from functools import lru_cache
+import os
+from pathlib import Path
+import subprocess
 
 from .config import get_exclude_dirs
 from .lang import is_supported, language_for_path
 
 
-def find_repo_root(start: Optional[Path] = None) -> Path:
+def find_repo_root(start: Path | None = None) -> Path:
     start = start or Path.cwd()
     current = start.resolve()
     for ancestor in [current, *current.parents]:
@@ -21,7 +20,7 @@ def find_repo_root(start: Optional[Path] = None) -> Path:
     return start
 
 
-def iter_source_files(repo_root: Path, include_paths: Optional[Iterable[Path]] = None) -> Iterator[Path]:
+def iter_source_files(repo_root: Path, include_paths: Iterable[Path] | None = None) -> Iterator[Path]:
     matcher = _gitignore_matcher(repo_root)
     if include_paths:
         for path in include_paths:
@@ -61,7 +60,7 @@ def _iter_directory(repo_root: Path, directory: Path, matcher: Callable[[Path], 
                 yield rel
 
 
-def git_commit_sha(repo_root: Path) -> Optional[str]:
+def git_commit_sha(repo_root: Path) -> str | None:
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -75,7 +74,7 @@ def git_commit_sha(repo_root: Path) -> Optional[str]:
         return None
 
 
-def git_changed_paths(repo_root: Path, since: str) -> List[Path]:
+def git_changed_paths(repo_root: Path, since: str) -> list[Path]:
     try:
         result = subprocess.run(
             ["git", "diff", "--name-only", since, "HEAD"],
@@ -94,7 +93,7 @@ def git_changed_paths(repo_root: Path, since: str) -> List[Path]:
         return []
 
 
-def language_from_path(path: Path) -> Optional[str]:
+def language_from_path(path: Path) -> str | None:
     return language_for_path(path)
 
 

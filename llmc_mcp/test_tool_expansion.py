@@ -1,16 +1,16 @@
-import asyncio
 import json
+from pathlib import Path
 import sys
 from unittest.mock import Mock, patch
-from pathlib import Path
 
 import pytest
 
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parents[1]))
 
-from llmc_mcp.server import LlmcMcpServer
 from llmc_mcp.config import load_config
+from llmc_mcp.server import LlmcMcpServer
+
 
 @pytest.mark.asyncio
 async def test_rag_where_used_handler():

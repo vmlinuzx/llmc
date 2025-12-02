@@ -1,13 +1,12 @@
+from dataclasses import dataclass
 import json
 import logging
-import sys
-from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any
 
-from tools.rag.search import search_spans
 from llmc.routing.router import create_router
 from tools.rag.config import load_config
+from tools.rag.search import search_spans
 from tools.rag.utils import find_repo_root
 
 log = logging.getLogger(__name__)
@@ -16,19 +15,19 @@ log = logging.getLogger(__name__)
 class EvalResult:
     query_id: str
     query: str
-    expected_route: Optional[str]
+    expected_route: str | None
     predicted_route: str
-    route_correct: Optional[bool]
-    relevant_slice_ids: List[str]
-    retrieved_slice_ids: List[str]
-    hit_at_k: Optional[bool]
-    rank_of_first_hit: Optional[int]
+    route_correct: bool | None
+    relevant_slice_ids: list[str]
+    retrieved_slice_ids: list[str]
+    hit_at_k: bool | None
+    rank_of_first_hit: int | None
 
 def evaluate_routing(
     dataset_path: Path, 
     top_k: int = 10, 
-    repo_root: Optional[Path] = None
-) -> Dict[str, Any]:
+    repo_root: Path | None = None
+) -> dict[str, Any]:
     
     repo = repo_root or find_repo_root()
     if not dataset_path.exists():
@@ -38,9 +37,9 @@ def evaluate_routing(
     cfg = load_config(repo)
     router = create_router(cfg)
     
-    results: List[EvalResult] = []
+    results: list[EvalResult] = []
     
-    with open(dataset_path, "r") as f:
+    with open(dataset_path) as f:
         for line in f:
             line = line.strip()
             if not line: continue

@@ -1,8 +1,10 @@
-import sys
 import argparse
 import json
 from pathlib import Path
+import sys
+
 from tools.rag.eval.routing_eval import evaluate_routing
+
 
 def main():
     parser = argparse.ArgumentParser(description="LLMC Routing Evaluation")

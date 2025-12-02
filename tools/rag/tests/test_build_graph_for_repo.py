@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag.schema import build_graph_for_repo
 from tools.rag.database import Database
+from tools.rag.schema import build_graph_for_repo
 
 
 def _make_repo_with_single_function(tmp_path: Path) -> Path:

@@ -3,6 +3,7 @@
 
 import urllib.request
 
+
 class NullRAG:
     def head(self, url): return True
 

@@ -1,8 +1,11 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from llmc.routing.content_type import classify_slice
 from llmc.routing.query_type import classify_query
-from tools.rag.config import get_route_for_slice_type, load_config
+from tools.rag.config import get_route_for_slice_type
+
 
 def test_classify_slice_erp_path():
     # Simulate a path in an ERP import directory

@@ -7,8 +7,8 @@ The response stream IS the teaching. No hand-holding.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
+import json
 from typing import Any
 
 

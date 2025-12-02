@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
-from typing import Any, Dict
+import subprocess
+from typing import Any
 
 BASE_PATH = Path(".llmc/quality/ruff_baseline.json")
 
 
-def _run_ruff_counts() -> Dict[str, int]:
+def _run_ruff_counts() -> dict[str, int]:
     """
     Run Ruff and aggregate violation counts by code.
 
@@ -26,7 +26,7 @@ def _run_ruff_counts() -> Dict[str, int]:
     except Exception:
         data = []
 
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for entry in data:
         code = (entry.get("code") or "").strip()
         if not code:
@@ -55,10 +55,10 @@ def check() -> None:
         raise SystemExit(2)
 
     with BASE_PATH.open("r", encoding="utf-8") as handle:
-        base: Dict[str, Any] = json.load(handle).get("counts", {})
+        base: dict[str, Any] = json.load(handle).get("counts", {})
 
     current = _run_ruff_counts()
-    regressions: Dict[str, Dict[str, int]] = {}
+    regressions: dict[str, dict[str, int]] = {}
     for code, current_count in current.items():
         baseline_count = int(base.get(code, 0))
         if current_count > baseline_count:

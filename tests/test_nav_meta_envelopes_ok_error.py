@@ -1,7 +1,7 @@
 """Validate we can create OK and ERROR envelopes via nav_meta."""
 
 from tools.rag import nav_meta as core_nav_meta
-from tools.rag_nav.envelope import RagToolMeta, ok_result, error_result
+from tools.rag_nav.envelope import RagToolMeta, error_result, ok_result
 
 
 def test_ok_error_factories():

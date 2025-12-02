@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Analytics Screen - Tool Envelope telemetry visualization."""
-import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple, Any
+import sqlite3
 
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.containers import Container, Grid
 from textual.screen import Screen
-from textual.widgets import DataTable, Static, Header, Footer, Button
+from textual.widgets import DataTable, Static
+
 
 class AnalyticsScreen(Screen):
     """Dashboard for TE telemetry analytics."""

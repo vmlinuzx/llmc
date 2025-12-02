@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Set
 
 from .models import ControlEvents
 
@@ -11,7 +10,7 @@ from .models import ControlEvents
 def read_control_events(control_dir: Path) -> ControlEvents:
     """Scan control directory and return control events."""
     refresh_all = False
-    refresh_repo_ids: Set[str] = set()
+    refresh_repo_ids: set[str] = set()
     shutdown = False
 
     if not control_dir.exists():

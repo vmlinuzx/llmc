@@ -5,18 +5,19 @@ These tests validate the shared result envelope used by RAG navigation tools,
 ensuring stable JSON contracts and correct metadata handling.
 """
 
-import pytest
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from tools.rag.nav_meta import (
-    RagToolMeta,
-    RagResult,
-    ok_result,
-    fallback_result,
-    error_result,
-)
+import pytest
+
 from tools.rag.freshness import IndexStatus
+from tools.rag.nav_meta import (
+    RagResult,
+    RagToolMeta,
+    error_result,
+    fallback_result,
+    ok_result,
+)
 
 
 @pytest.mark.rag_freshness

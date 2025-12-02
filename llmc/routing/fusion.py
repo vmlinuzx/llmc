@@ -1,5 +1,6 @@
-from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass
+from typing import Any
+
 
 @dataclass
 class SearchResult:
@@ -11,9 +12,9 @@ class SearchResult:
     # Let's assume for this helper we work with the raw objects returned by search
     # and assume they have 'slice_id' and 'score' keys/attributes.
     # To be safe/generic, let's work with dictionaries for the input results.
-    original_result: Dict[str, Any]
+    original_result: dict[str, Any]
 
-def normalize_scores(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def normalize_scores(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Normalize scores in the list of results to [0, 1] range using min-max normalization.
     Returns a new list of results with 'normalized_score' added.
@@ -45,9 +46,9 @@ def normalize_scores(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return normalized
 
 def fuse_scores(
-    route_results: Dict[str, List[Dict[str, Any]]], 
-    route_weights: Dict[str, float]
-) -> List[Dict[str, Any]]:
+    route_results: dict[str, list[dict[str, Any]]], 
+    route_weights: dict[str, float]
+) -> list[dict[str, Any]]:
     """
     Fuse results from multiple routes.
     
@@ -63,13 +64,13 @@ def fuse_scores(
     """
     
     # 1. Normalize scores per route
-    normalized_results: Dict[str, List[Dict[str, Any]]] = {}
+    normalized_results: dict[str, list[dict[str, Any]]] = {}
     for route_name, results in route_results.items():
         normalized_results[route_name] = normalize_scores(results)
         
     # 2. Apply weights and merge
     # Map slice_id -> (best_score, best_result_object)
-    merged_map: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+    merged_map: dict[str, tuple[float, dict[str, Any]]] = {}
     
     for route_name, results in normalized_results.items():
         weight = route_weights.get(route_name, 0.0)

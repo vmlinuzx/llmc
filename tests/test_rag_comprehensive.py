@@ -10,18 +10,18 @@ Usage:
     python3 test_rag_comprehensive.py --filter="test_cli_help"
 """
 
-import os
-import sys
-import json
-import sqlite3
-import shutil
-import tempfile
-import subprocess
-import time
-from pathlib import Path
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
 import argparse
+from dataclasses import asdict, dataclass
+import json
+import os
+from pathlib import Path
+import shutil
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import time
+
 
 # Test framework utilities
 @dataclass
@@ -31,7 +31,7 @@ class RagTestResult:
     passed: bool
     message: str
     duration_ms: float
-    details: Optional[Dict] = None
+    details: dict | None = None
 
     def to_dict(self):
         return asdict(self)
@@ -41,15 +41,15 @@ class RagTestRunner:
     def __init__(self, repo_root: Path, verbose: bool = False):
         self.repo_root = Path(repo_root)
         self.verbose = verbose
-        self.results: List[RagTestResult] = []
-        self.temp_dir: Optional[Path] = None
+        self.results: list[RagTestResult] = []
+        self.temp_dir: Path | None = None
 
     def log(self, msg: str):
         if self.verbose:
             print(msg)
 
-    def run(self, cmd: List[str], cwd: Optional[Path] = None, timeout: int = 30,
-            input_data: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
+    def run(self, cmd: list[str], cwd: Path | None = None, timeout: int = 30,
+            input_data: str | None = None, check: bool = True) -> subprocess.CompletedProcess:
         """Run a command and return the result."""
         self.log(f"Running: {' '.join(cmd)}")
 
@@ -64,7 +64,7 @@ class RagTestRunner:
         try:
             result = subprocess.run(
                 cmd,
-                cwd=cwd or self.repo_root,
+                check=False, cwd=cwd or self.repo_root,
                 env=env,
                 capture_output=True,
                 text=True,
@@ -109,7 +109,7 @@ class TestClass:
             self.log(f"Cleaned up: {self.temp_dir}")
 
     def add_result(self, name: str, category: str, passed: bool,
-                   message: str, duration_ms: float, details: Optional[Dict] = None):
+                   message: str, duration_ms: float, details: dict | None = None):
         """Record a test result."""
         result = RagTestResult(name, category, passed, message, duration_ms, details)
         self.results.append(result)

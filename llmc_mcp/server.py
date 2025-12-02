@@ -17,15 +17,16 @@ M0-M3 Tools:
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import inspect
 import json
 import logging
+from pathlib import Path
 import shlex
 import subprocess
 import sys
 import time
-from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 from llmc_mcp.config import McpConfig, load_config
 from llmc_mcp.observability import ObservabilityContext, setup_logging
@@ -868,8 +869,8 @@ class LlmcMcpServer:
                 if handler:
                     assert handler is not None # Mypy: handler can be None
                     # Handle args being optional for some handlers
+                    from collections.abc import Callable  # Added for Callable type hint
                     import inspect
-                    from typing import Callable # Added for Callable type hint
 
                     sig = inspect.signature(cast(Callable[..., Any], handler))
                     if "args" in sig.parameters:
@@ -1060,6 +1061,7 @@ class LlmcMcpServer:
 
     async def _handle_rag_where_used(self, args: dict) -> list[TextContent]:
         import json
+
         from tools.rag_nav.tool_handlers import tool_rag_where_used
 
         symbol = args.get("symbol", "")
@@ -1082,6 +1084,7 @@ class LlmcMcpServer:
 
     async def _handle_rag_lineage(self, args: dict) -> list[TextContent]:
         import json
+
         from tools.rag_nav.tool_handlers import tool_rag_lineage
 
         symbol = args.get("symbol", "")
@@ -1105,6 +1108,7 @@ class LlmcMcpServer:
 
     async def _handle_inspect(self, args: dict) -> list[TextContent]:
         import json
+
         from tools.rag.inspector import inspect_entity
 
         path = args.get("path")
@@ -1136,6 +1140,7 @@ class LlmcMcpServer:
 
     async def _handle_rag_stats(self, args: dict) -> list[TextContent]:
         import json
+
         from tools.rag_nav.tool_handlers import tool_rag_stats
 
         llmc_root = (
@@ -1465,8 +1470,8 @@ class LlmcMcpServer:
     # L2 LinuxOps handlers
     async def _handle_proc_list(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_list tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_list
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_list
 
         max_results = args.get("max_results", 200)
         user = args.get("user")
@@ -1483,8 +1488,8 @@ class LlmcMcpServer:
 
     async def _handle_proc_kill(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_kill tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_kill
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_kill
 
         pid = args.get("pid")
         signal = args.get("signal", "TERM")
@@ -1504,8 +1509,8 @@ class LlmcMcpServer:
 
     async def _handle_sys_snapshot(self, args: dict) -> list[TextContent]:
         """Handle linux_sys_snapshot tool."""
-        from llmc_mcp.tools.linux_ops.sysinfo import mcp_linux_sys_snapshot
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.sysinfo import mcp_linux_sys_snapshot
 
         try:
             result = mcp_linux_sys_snapshot(config=self.config.linux_ops)
@@ -1516,8 +1521,8 @@ class LlmcMcpServer:
     # L3 LinuxOps - REPL handlers
     async def _handle_proc_start(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_start tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_start
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_start
 
         command = args.get("command")
         cwd = args.get("cwd")
@@ -1539,8 +1544,8 @@ class LlmcMcpServer:
 
     async def _handle_proc_send(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_send tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_send
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_send
 
         proc_id = args.get("proc_id")
         input_text = args.get("input")
@@ -1560,8 +1565,8 @@ class LlmcMcpServer:
 
     async def _handle_proc_read(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_read tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_read
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_read
 
         proc_id = args.get("proc_id")
         timeout_ms = args.get("timeout_ms", 1000)
@@ -1581,8 +1586,8 @@ class LlmcMcpServer:
 
     async def _handle_proc_stop(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_stop tool."""
-        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_stop
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
+        from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_stop
 
         proc_id = args.get("proc_id")
         signal = args.get("signal", "TERM")

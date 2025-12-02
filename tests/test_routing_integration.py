@@ -1,21 +1,19 @@
-import pytest
-from pathlib import Path
-import sqlite3
-import struct
-from tools.rag.indexer import index_repo
-from tools.rag.database import Database
-from tools.rag.workers import execute_embeddings, execute_enrichment
-from tools.rag.types import SpanRecord
-from tools.rag.config import (
-    get_route_for_slice_type,
-    resolve_route,
-    ConfigError,
-    load_config,
-    is_query_routing_enabled,
-)
 import logging
-from llmc.te.config import get_te_config, TeConfig
+import struct
+
+import pytest
+
 from llmc.routing import router as routing_router
+from tools.rag.config import (
+    ConfigError,
+    get_route_for_slice_type,
+    load_config,
+    resolve_route,
+)
+from tools.rag.database import Database
+from tools.rag.indexer import index_repo
+from tools.rag.workers import execute_embeddings, execute_enrichment
+
 
 @pytest.fixture
 def create_llmc_toml(tmp_path):

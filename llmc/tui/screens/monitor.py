@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Monitor Screen - real-time system dashboard with analytics."""
+from datetime import datetime
 import os
+from pathlib import Path
 import random
 import subprocess
 import sys
 import threading
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from textual.app import ComposeResult
-from textual.widgets import Button, Static
 from textual.containers import Container, Grid, ScrollableContainer
 from textual.screen import Screen
+from textual.widgets import Button, Static
 
-from tools.rag.analytics import QueryTracker
 from llmc.tui.screens.config import ConfigScreen
+from tools.rag.analytics import QueryTracker
 
 
 class MonitorScreen(Screen):
@@ -131,8 +131,8 @@ class MonitorScreen(Screen):
     def __init__(self):
         super().__init__()
         self.logs = []
-        self._log_proc: Optional[subprocess.Popen] = None
-        self._log_thread: Optional[threading.Thread] = None
+        self._log_proc: subprocess.Popen | None = None
+        self._log_thread: threading.Thread | None = None
         self._log_stream_error: bool = False
         self._max_log_lines: int = 200
         self.start_time = datetime.now()
@@ -349,9 +349,9 @@ class MonitorScreen(Screen):
         color = color_map.get(level, "white")
         self.logs.append(f"[dim]{ts}[/dim] [{color}]{level}[/{color}] {msg}")
 
-    def get_repo_stats(self, repo_root: Path) -> Dict[str, Any]:
+    def get_repo_stats(self, repo_root: Path) -> dict[str, Any]:
         """Fetch real repo stats."""
-        stats: Dict[str, Any] = {
+        stats: dict[str, Any] = {
             "files_tracked": 0,
             "graph_nodes": 0,
             "token_usage": 0,

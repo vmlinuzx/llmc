@@ -8,22 +8,22 @@ Usage:
     python index_workspace.py --reindex          # Force reindex all
 """
 
-import os
-import sys
-import hashlib
-from pathlib import Path
-from datetime import datetime
-from typing import List, Dict, Optional, Tuple
 import argparse
+from datetime import datetime
+import hashlib
+import os
+from pathlib import Path
+import sys
 
 import chromadb
 from chromadb.config import Settings
+import git
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
-import git
 
 try:
     from ast_chunker import ASTChunker
+
     from tools.rag.config import get_exclude_dirs
 except ImportError:
     # Fallback for direct execution without PYTHONPATH
@@ -31,6 +31,7 @@ except ImportError:
     if str(REPO_ROOT) not in sys.path:
         sys.path.insert(0, str(REPO_ROOT))
     from ast_chunker import ASTChunker
+
     from tools.rag.config import get_exclude_dirs
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -155,7 +156,7 @@ class WorkspaceIndexer:
         except:
             return "unknown"
     
-    def get_git_info(self, file_path: Path) -> Optional[Dict]:
+    def get_git_info(self, file_path: Path) -> dict | None:
         """Get git info for file if available"""
         try:
             repo = git.Repo(file_path, search_parent_directories=True)
@@ -168,7 +169,7 @@ class WorkspaceIndexer:
         except:
             return None
     
-    def chunk_text(self, text: str, file_path: str) -> List[Tuple[str, Dict]]:
+    def chunk_text(self, text: str, file_path: str) -> list[tuple[str, dict]]:
         """Delegate to AST-aware chunker with fallback."""
         try:
             chunks = self.chunker.chunk_text(text, file_path)
@@ -193,7 +194,7 @@ class WorkspaceIndexer:
         """Index a single file, return number of chunks added"""
         try:
             # Read file
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding='utf-8', errors='ignore') as f:
                 content = f.read()
             
             if not content.strip():
@@ -266,7 +267,7 @@ class WorkspaceIndexer:
             print(f"❌ Error indexing {file_path}: {e}")
             return 0
     
-    def index_workspace(self, project_filter: Optional[str] = None, reindex: bool = False):
+    def index_workspace(self, project_filter: str | None = None, reindex: bool = False):
         """Index entire workspace or specific project"""
         print(f"\n🔍 Scanning workspace: {self.workspace_root}")
         
@@ -323,12 +324,12 @@ class WorkspaceIndexer:
                     "chunks": total_chunks
                 })
         
-        print(f"\n✅ Indexing complete!")
+        print("\n✅ Indexing complete!")
         print(f"   Files indexed: {indexed_files}")
         print(f"   Total chunks: {total_chunks}")
         print(f"   DB location: {self.db_path}")
     
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get collection statistics"""
         count = self.collection.count()
         
@@ -362,11 +363,11 @@ def main():
     
     if args.stats:
         stats = indexer.get_stats()
-        print(f"\n📊 Collection Statistics")
+        print("\n📊 Collection Statistics")
         print(f"   Total chunks: {stats['total_chunks']}")
         print(f"   Projects indexed: {stats['projects']}")
         print(f"   Project list: {', '.join(stats['project_list'])}")
-        print(f"\n   File types:")
+        print("\n   File types:")
         for ext, count in sorted(stats['file_types'].items(), key=lambda x: -x[1])[:10]:
             print(f"     {ext}: {count}")
     else:

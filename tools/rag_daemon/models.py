@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -25,8 +25,8 @@ class DaemonConfig:
     log_path: Path
     control_dir: Path
     # Optional roots to constrain repo/workspace locations when set.
-    repos_root: Optional[Path] = None
-    workspaces_root: Optional[Path] = None
+    repos_root: Path | None = None
+    workspaces_root: Path | None = None
     job_runner_cmd: str = "llmc-rag-job"
     log_level: str = "INFO"
 
@@ -38,9 +38,9 @@ class RepoDescriptor:
     repo_id: str
     repo_path: Path
     rag_workspace_path: Path
-    display_name: Optional[str] = None
-    rag_profile: Optional[str] = None
-    min_refresh_interval: Optional[timedelta] = None
+    display_name: str | None = None
+    rag_profile: str | None = None
+    min_refresh_interval: timedelta | None = None
 
 
 @dataclass
@@ -48,13 +48,13 @@ class RepoState:
     """Daemon-maintained state for a repo."""
 
     repo_id: str
-    last_run_started_at: Optional[datetime] = None
-    last_run_finished_at: Optional[datetime] = None
+    last_run_started_at: datetime | None = None
+    last_run_finished_at: datetime | None = None
     last_run_status: str = "never"  # never|success|error|skipped|running
-    last_error_reason: Optional[str] = None
+    last_error_reason: str | None = None
     consecutive_failures: int = 0
-    next_eligible_at: Optional[datetime] = None
-    last_job_summary: Optional[Dict[str, Any]] = None
+    next_eligible_at: datetime | None = None
+    last_job_summary: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -72,10 +72,10 @@ class JobResult:
 
     success: bool
     exit_code: int
-    error_reason: Optional[str] = None
-    summary: Optional[Dict[str, Any]] = None
-    stdout_tail: Optional[str] = None
-    stderr_tail: Optional[str] = None
+    error_reason: str | None = None
+    summary: dict[str, Any] | None = None
+    stdout_tail: str | None = None
+    stderr_tail: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,11 +83,11 @@ class ControlEvents:
     """Control signals read from the control surface."""
 
     refresh_all: bool = False
-    refresh_repo_ids: Set[str] = field(default_factory=set)
+    refresh_repo_ids: set[str] = field(default_factory=set)
     shutdown: bool = False
 
 
-UTC = timezone.utc
+UTC = UTC
 
 
 def utc_now() -> datetime:

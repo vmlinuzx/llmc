@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 from .cli import resolve_export_dir, resolve_workspace_from_cli
 
@@ -10,7 +10,7 @@ def doctor_paths(
     repo_root: Path | str,
     workspace_arg: Path | str | None = None,
     export_arg: Path | str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Quick checks for repo/workspace/export path sanity."""
     repo_root_path = Path(repo_root).expanduser().resolve()
     workspace_root = resolve_workspace_from_cli(repo_root_path, workspace_arg)

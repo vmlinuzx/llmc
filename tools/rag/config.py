@@ -5,20 +5,19 @@ and reranker weights for RAG Nav search.
 
 from __future__ import annotations
 
+from functools import lru_cache
 import logging
-import warnings
 import os
-from typing import Any, Dict, Optional, Set, Tuple
 from pathlib import Path
 import tomllib
-from functools import lru_cache
+from typing import Any
 
 # Conditional import for telemetry - allows the module to work without llmc dependency
 try:
     from llmc.te.telemetry import log_routing_event
 except ImportError:
     # No-op fallback when llmc module is not available
-    def log_routing_event(mode: str, details: Dict[str, Any], repo_root: Optional[Path] = None, **kwargs) -> None:
+    def log_routing_event(mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass
 
@@ -55,7 +54,7 @@ DEFAULT_SPANS_NAME = "spans.jsonl"
 DEFAULT_EST_TOKENS_PER_SPAN = 350
 
 
-def _find_repo_root(start: Optional[Path] = None) -> Path:
+def _find_repo_root(start: Path | None = None) -> Path:
     start = start or Path.cwd()
     current = start.resolve()
     for ancestor in [current, *current.parents]:
@@ -64,7 +63,7 @@ def _find_repo_root(start: Optional[Path] = None) -> Path:
     return start
 
 
-def find_repo_root(start: Optional[Path] = None) -> Path:
+def find_repo_root(start: Path | None = None) -> Path:
     """
     Public wrapper for repository root detection.
 
@@ -76,7 +75,7 @@ def find_repo_root(start: Optional[Path] = None) -> Path:
 
 
 @lru_cache
-def load_config(repo_root: Optional[Path] = None) -> Dict:
+def load_config(repo_root: Path | None = None) -> dict:
     root = repo_root or _find_repo_root()
     path = root / "llmc.toml"
     if not path.exists():
@@ -88,7 +87,7 @@ def load_config(repo_root: Optional[Path] = None) -> Dict:
         return {}
 
 
-def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
+def get_est_tokens_per_span(repo_root: Path | None = None) -> int:
     """
     Return the estimated number of tokens per enriched span.
 
@@ -122,7 +121,7 @@ def get_est_tokens_per_span(repo_root: Optional[Path] = None) -> int:
     return DEFAULT_EST_TOKENS_PER_SPAN
 
 
-def get_vacuum_interval_hours(repo_root: Optional[Path] = None) -> int:
+def get_vacuum_interval_hours(repo_root: Path | None = None) -> int:
     """
     Return the vacuum interval in hours. Default is 24.
     
@@ -155,7 +154,7 @@ def get_vacuum_interval_hours(repo_root: Optional[Path] = None) -> int:
 
 
 @lru_cache(maxsize=128) # Cache to avoid log spam for repeated missing slice types
-def get_route_for_slice_type(slice_type: str, repo_root: Optional[Path] = None) -> str:
+def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> str:
     """
     Determines the route_name for a given slice_type.
     Defaults to "docs" if the slice_type is not explicitly mapped.
@@ -183,7 +182,7 @@ def get_route_for_slice_type(slice_type: str, repo_root: Optional[Path] = None) 
     return route_name
 
 @lru_cache(maxsize=128)
-def resolve_route(route_name: str, operation_type: str, repo_root: Optional[Path] = None) -> Tuple[str, str]:
+def resolve_route(route_name: str, operation_type: str, repo_root: Path | None = None) -> tuple[str, str]:
     """
     Resolves the embedding profile and index for a given route name.
     Handles missing route configurations and missing profile references with fallbacks or errors.
@@ -351,7 +350,7 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Optional[Path
     return profile_name, index_name
 
 
-def get_exclude_dirs(repo_root: Optional[Path] = None) -> Set[str]:
+def get_exclude_dirs(repo_root: Path | None = None) -> set[str]:
     cfg = load_config(repo_root)
     dirs = cfg.get("indexing", {}).get("exclude_dirs")
     if dirs:
@@ -426,7 +425,7 @@ def rag_dir(repo_root: Path) -> Path:
     return repo_root / RAG_DIR_NAME
 
 
-def _env_index_path(repo_root: Path) -> Optional[Path]:
+def _env_index_path(repo_root: Path) -> Path | None:
     explicit = os.getenv("LLMC_RAG_INDEX_PATH") or os.getenv("EMBEDDING_INDEX_PATH")
     if explicit:
         return _to_path(repo_root, explicit)
@@ -556,7 +555,7 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def embedding_gpu_min_free_mb(repo_root: Optional[Path] = None) -> int:
+def embedding_gpu_min_free_mb(repo_root: Path | None = None) -> int:
     cfg = load_config(repo_root)
     val = cfg.get("embeddings", {}).get("gpu_min_free_mb")
     if val is not None:
@@ -564,18 +563,18 @@ def embedding_gpu_min_free_mb(repo_root: Optional[Path] = None) -> int:
     return _env_int("EMBEDDINGS_GPU_MIN_FREE_MB", DEFAULT_GPU_MIN_FREE_MB)
 
 
-def is_query_routing_enabled(repo_root: Optional[Path] = None) -> bool:
+def is_query_routing_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
     # Default to False if the flag is omitted (backwards-compatible behavior)
     return cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
 
 
-def is_multi_route_enabled(repo_root: Optional[Path] = None) -> bool:
+def is_multi_route_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
     return cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False)
 
 
-def get_multi_route_config(primary_route: str, repo_root: Optional[Path] = None) -> list[tuple[str, float]]:
+def get_multi_route_config(primary_route: str, repo_root: Path | None = None) -> list[tuple[str, float]]:
     """
     Returns a list of (route_name, weight) tuples for the given primary route.
     Always includes the primary route itself with weight 1.0.
@@ -627,7 +626,7 @@ def embedding_gpu_retry_seconds() -> int:
 
 # --- Reranker configuration for RAG Nav --------------------------------------
 
-DEFAULT_WEIGHTS: Dict[str, float] = {
+DEFAULT_WEIGHTS: dict[str, float] = {
     "bm25": 0.60,
     "uni": 0.20,
     "bi": 0.15,
@@ -635,7 +634,7 @@ DEFAULT_WEIGHTS: Dict[str, float] = {
     "lit": 0.02,
 }
 
-ENV_KEYS: Dict[str, str] = {
+ENV_KEYS: dict[str, str] = {
     "bm25": "RAG_RERANK_W_BM25",
     "uni": "RAG_RERANK_W_UNI",
     "bi": "RAG_RERANK_W_BI",
@@ -654,7 +653,7 @@ def _parse_float(value: str, default: float) -> float:
         return default
 
 
-def _normalize(weights: Dict[str, float]) -> Dict[str, float]:
+def _normalize(weights: dict[str, float]) -> dict[str, float]:
     """Normalize non-negative weights so they sum to 1.0."""
     total = sum(max(0.0, v) for v in weights.values())
     if total <= 0.0:
@@ -662,7 +661,7 @@ def _normalize(weights: Dict[str, float]) -> Dict[str, float]:
     return {key: max(0.0, value) / total for key, value in weights.items()}
 
 
-def load_rerank_weights(repo_root: Path | None = None) -> Dict[str, float]:
+def load_rerank_weights(repo_root: Path | None = None) -> dict[str, float]:
     """
     Load reranker weights from `.llmc/rag_nav.ini` and environment overrides.
 
@@ -671,7 +670,7 @@ def load_rerank_weights(repo_root: Path | None = None) -> Dict[str, float]:
     - Values from `[rerank]` section in `.llmc/rag_nav.ini` under repo_root
     - Environment variables (RAG_RERANK_W_*)
     """
-    weights: Dict[str, float] = dict(DEFAULT_WEIGHTS)
+    weights: dict[str, float] = dict(DEFAULT_WEIGHTS)
 
     # INI file (if present)
     if repo_root is not None:

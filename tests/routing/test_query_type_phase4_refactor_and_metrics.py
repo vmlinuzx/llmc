@@ -1,8 +1,7 @@
 
-import os
-from pathlib import Path
 
 from llmc.routing.query_type import classify_query
+
 
 def test_phase4_refactor_keeps_behavior_simple_code():
     r = classify_query("x = 5")

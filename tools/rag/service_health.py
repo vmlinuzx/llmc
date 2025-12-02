@@ -3,12 +3,11 @@ Health checking for LLMC RAG Service.
 
 Checks Ollama endpoint availability and latency.
 """
+from dataclasses import dataclass
 import json
+import os
 import time
 import urllib.request
-from dataclasses import dataclass
-from typing import List, Dict
-import os
 
 
 @dataclass
@@ -70,11 +69,11 @@ class HealthChecker:
                 error=str(e)
             )
     
-    def check_all(self, endpoints: List[OllamaEndpoint]) -> List[HealthStatus]:
+    def check_all(self, endpoints: list[OllamaEndpoint]) -> list[HealthStatus]:
         """Check all endpoints."""
         return [self.check_endpoint(ep) for ep in endpoints]
     
-    def format_results(self, results: List[HealthStatus]) -> str:
+    def format_results(self, results: list[HealthStatus]) -> str:
         """Format health check results for display."""
         output = []
         output.append("LLMC RAG Health Check")
@@ -103,13 +102,13 @@ class HealthChecker:
 
 
 
-def parse_ollama_hosts_from_env() -> List[OllamaEndpoint]:
+def parse_ollama_hosts_from_env() -> list[OllamaEndpoint]:
     """Parse ENRICH_OLLAMA_HOSTS environment variable."""
     raw = os.getenv("ENRICH_OLLAMA_HOSTS", "")
     if not raw:
         return []
     
-    endpoints: List[OllamaEndpoint] = []
+    endpoints: list[OllamaEndpoint] = []
     model = os.getenv("ENRICH_MODEL", "qwen2.5:7b-instruct")
     
     for chunk in raw.split(","):

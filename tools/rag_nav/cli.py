@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
-from typing import Optional, Any
+import sys
+from typing import Any
 
-from tools.rag_nav import metadata, tool_handlers
 from tools.rag.nav_meta import RagResult, RagToolMeta
+from tools.rag_nav import metadata, tool_handlers
 
 
 def _wrap_in_envelope(res: Any) -> dict:
@@ -36,7 +36,7 @@ def _wrap_in_envelope(res: Any) -> dict:
     return envelope.to_dict()
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
 

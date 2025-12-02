@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from tools.rag_repo.models import ToolConfig
 from tools.rag_repo.inspect_repo import inspect_repo
+from tools.rag_repo.models import ToolConfig
 from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 
 

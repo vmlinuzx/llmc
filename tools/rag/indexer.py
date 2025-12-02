@@ -1,26 +1,31 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 import hashlib
 import json
 import os
-import time
 from pathlib import Path
-from typing import List, Optional
-from collections.abc import Iterable
+import time
 
-from .database import Database
+# Import classification logic
+from llmc.routing.content_type import classify_slice
+
 from .config import (
     ensure_rag_storage,
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
 )
+from .database import Database
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
-from .utils import find_repo_root, git_changed_paths, git_commit_sha, iter_source_files, _gitignore_matcher
-
-# Import classification logic
-from llmc.routing.content_type import classify_slice
+from .utils import (
+    _gitignore_matcher,
+    find_repo_root,
+    git_changed_paths,
+    git_commit_sha,
+    iter_source_files,
+)
 
 # Import sidecar generator (optional dependency)
 try:
@@ -70,7 +75,7 @@ def compute_hash(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def populate_span_hashes(spans: List[SpanRecord], source: bytes, lang: str) -> None:
+def populate_span_hashes(spans: list[SpanRecord], source: bytes, lang: str) -> None:
     for span in spans:
         span_bytes = source[span.byte_start : span.byte_end]
         h = hashlib.sha256()
@@ -96,7 +101,7 @@ def generate_sidecar_if_enabled(
     lang: str,
     source: bytes,
     repo_root: Path
-) -> Optional[Path]:
+) -> Path | None:
     """Generate .md sidecar file if enabled via environment variable.
     
     Args:
@@ -136,8 +141,8 @@ def generate_sidecar_if_enabled(
 
 
 def index_repo(
-    include_paths: Optional[Iterable[Path]] = None,
-    since: Optional[str] = None,
+    include_paths: Iterable[Path] | None = None,
+    since: str | None = None,
     export_json: bool = True,
 ) -> IndexStats:
     repo_root = find_repo_root()

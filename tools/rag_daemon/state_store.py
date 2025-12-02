@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import datetime
+import json
 from pathlib import Path
-from typing import Dict, Optional
-from collections.abc import Callable
 
 from .models import RepoState
 
@@ -22,8 +21,8 @@ class StateStore:
     def _path_for(self, repo_id: str) -> Path:
         return self.root / f"{repo_id}.json"
 
-    def load_all(self) -> Dict[str, RepoState]:
-        states: Dict[str, RepoState] = {}
+    def load_all(self) -> dict[str, RepoState]:
+        states: dict[str, RepoState] = {}
         for path in self.root.glob("*.json"):
             try:
                 state = self._load_path(path)
@@ -33,7 +32,7 @@ class StateStore:
                 continue
         return states
 
-    def get(self, repo_id: str) -> Optional[RepoState]:
+    def get(self, repo_id: str) -> RepoState | None:
         path = self._path_for(repo_id)
         if not path.exists():
             return None
@@ -61,7 +60,7 @@ class StateStore:
     def _serialize(self, state: RepoState) -> str:
         data = asdict(state)
 
-        def encode_dt(dt: Optional[datetime]) -> Optional[str]:
+        def encode_dt(dt: datetime | None) -> str | None:
             return dt.isoformat() if dt is not None else None
 
         data["last_run_started_at"] = encode_dt(state.last_run_started_at)
@@ -69,7 +68,7 @@ class StateStore:
         data["next_eligible_at"] = encode_dt(state.next_eligible_at)
         return json.dumps(data, sort_keys=True)
 
-    def _deserialize(self, data: Dict) -> RepoState:
+    def _deserialize(self, data: dict) -> RepoState:
         def parse_dt(value):
             if not value:
                 return None

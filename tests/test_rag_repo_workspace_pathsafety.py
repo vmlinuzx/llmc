@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import types
 from pathlib import Path
+import types
 
 import pytest
 
@@ -14,9 +14,9 @@ def _extract_root(result) -> Path:
     if isinstance(result, dict) and "workspace_root" in result:
         return Path(result["workspace_root"])
     if hasattr(result, "workspace_root"):
-        return Path(getattr(result, "workspace_root"))
+        return Path(result.workspace_root)
     if hasattr(result, "root"):
-        return Path(getattr(result, "root"))
+        return Path(result.root)
     if isinstance(result, (tuple, list)) and result:
         return Path(result[0])
     if isinstance(result, (str, Path)):

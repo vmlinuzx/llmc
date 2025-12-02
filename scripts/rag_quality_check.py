@@ -15,16 +15,16 @@ import argparse
 import json
 import sqlite3
 import sys
+
 try:
     import _setup_path
 except ImportError:
     pass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List
 
 from tools.rag.config import index_path_for_read
-from tools.rag.quality_check import classify_quality, RULE_VERSION
+from tools.rag.quality_check import RULE_VERSION, classify_quality
 
 
 class QualityChecker:
@@ -38,7 +38,7 @@ class QualityChecker:
     def close(self):
         self.conn.close()
 
-    def get_enrichment_stats(self) -> Dict:
+    def get_enrichment_stats(self) -> dict:
         """Get basic statistics."""
         cursor = self.conn.cursor()
 
@@ -65,7 +65,7 @@ class QualityChecker:
 
         return stats
 
-    def check_all_issues(self) -> Dict[str, List]:
+    def check_all_issues(self) -> dict[str, list]:
         """Check for all quality issues using canonical classifier."""
         cursor = self.conn.cursor()
 
@@ -119,7 +119,7 @@ class QualityChecker:
         self.conn.commit()
         return deleted
 
-    def generate_report(self) -> Dict:
+    def generate_report(self) -> dict:
         """Generate comprehensive quality report."""
         stats = self.get_enrichment_stats()
         issues = self.check_all_issues()
@@ -134,7 +134,7 @@ class QualityChecker:
         quality_score = (ok / total * 100) if total > 0 else 0
 
         report = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'timestamp': datetime.now(UTC).isoformat(),
             'database': str(self.db_path),
             'rule_version': RULE_VERSION,
             'stats': stats,
@@ -151,7 +151,7 @@ class QualityChecker:
         return report
 
 
-def print_report(report: Dict, verbose: bool = True):
+def print_report(report: dict, verbose: bool = True):
     """Print human-readable report."""
     print("=" * 70)
     print("RAG DATA QUALITY REPORT")
@@ -160,7 +160,7 @@ def print_report(report: Dict, verbose: bool = True):
     print()
 
     stats = report['stats']
-    print(f"📊 Statistics:")
+    print("📊 Statistics:")
     print(f"  Total enrichments: {stats['total']}")
     print(f"  Recent (24h): {stats['recent_24h']}")
     print()
@@ -169,7 +169,7 @@ def print_report(report: Dict, verbose: bool = True):
     print()
 
     # Model distribution
-    print(f"🤖 Model Distribution:")
+    print("🤖 Model Distribution:")
     for model, count in stats['by_model'].items():
         pct = (count / stats['total'] * 100) if stats['total'] > 0 else 0
         print(f"  {model}: {count} ({pct:.1f}%)")
@@ -180,7 +180,7 @@ def print_report(report: Dict, verbose: bool = True):
     empty = report['issues']['empty_count']
     short = report['issues']['short_count']
 
-    print(f"🚨 Issues Found:")
+    print("🚨 Issues Found:")
     print(f"  Placeholder/fake data: {placeholder}")
     print(f"  Empty fields: {empty}")
     print(f"  Short summaries: {short}")
