@@ -1,5 +1,8 @@
 import pytest
 
+# Skip entire module if mcp is not installed
+pytest.importorskip("mcp.server")
+
 from llmc_mcp.config import McpConfig
 from llmc_mcp.server import LlmcMcpServer
 
