@@ -4,6 +4,7 @@ from llmc.core import LLMC_VERSION, find_repo_root, load_config
 from llmc.commands.init import init as init_command
 from llmc.commands.rag import index, search, inspect, plan, stats, doctor
 from llmc.commands.tui import tui, monitor
+from llmc.commands import service as service_commands
 
 app = typer.Typer(
     name="llmc",
@@ -12,6 +13,7 @@ app = typer.Typer(
     no_args_is_help=True
 )
 
+# Core commands
 app.command(name="init")(init_command)
 app.command()(index)
 app.command()(search)
@@ -21,6 +23,25 @@ app.command()(stats)
 app.command()(doctor)
 app.command()(tui)
 app.command()(monitor)
+
+# Service management subcommand group
+service_app = typer.Typer(help="Manage RAG service daemon")
+service_app.command()(service_commands.start)
+service_app.command()(service_commands.stop)
+service_app.command()(service_commands.restart)
+service_app.command()(service_commands.status)
+service_app.command()(service_commands.logs)
+service_app.command()(service_commands.enable)
+service_app.command()(service_commands.disable)
+
+# Nested repo management under service
+repo_app = typer.Typer(help="Manage registered repositories")
+repo_app.command(name="add")(service_commands.repo_add)
+repo_app.command(name="remove")(service_commands.repo_remove)
+repo_app.command(name="list")(service_commands.repo_list)
+service_app.add_typer(repo_app, name="repo")
+
+app.add_typer(service_app, name="service")
 
 def version_callback(value: bool):
     if value:
