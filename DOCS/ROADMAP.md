@@ -49,6 +49,45 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
     - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
   - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto‑refactor).
 
+### 1.5 Database Maintenance (Auto-Vacuum)
+
+**Goal:** Keep the RAG SQLite database size under control automatically.
+
+- Implement a periodic `VACUUM` maintenance task in the enrichment loop:
+  - Run frequency configurable via `llmc.toml` (e.g., `vacuum_interval_hours = 24`).
+  - Ensure it only runs if the interval has passed to avoid performance hits.
+  - Helps reclaim disk space from deleted vectors/enrichments (currently ~16% fragmentation).
+
+### 1.6 System Friendliness (Idle Loop Throttling)
+
+**Goal:** Prevent the daemon from burning CPU when there is no work to do.
+
+- Audit the main `llmc-rag-service` loop and worker polls.
+- Implement exponential backoff or smarter sleep cycles when the work queue is empty.
+- Ensure the daemon is "quiet" (low CPU/IO) when the repo is static.
+
+### 1.7 MCP Server Experience (CLI Wrapper)
+
+**Goal:** Make `llmc_mcp.server` as friendly and manageable as the RAG service.
+
+- Create a proper CLI wrapper (`llmc-mcp`) with standard commands:
+  - `start` (daemonize), `stop`, `restart`, `status`, `logs`.
+- Add an interactive mode or TUI status screen when run directly.
+- Ensure it handles process management cleanly (pidfiles, signal handling) so users don't need `pkill`.
+
+### 1.8 MCP Tool Expansion
+
+**Goal:** Expose critical navigation and inspection tools through MCP.
+
+- Add missing RAG navigation tools (P0):
+  - `rag_where_used` - Find all usages of a symbol across the codebase.
+  - `rag_lineage` - Traverse dependency lineage (upstream/downstream).
+  - `inspect` - Fast file/symbol inspection with graph + enrichment context.
+- Add observability tools (P1):
+  - `rag_stats` - RAG index statistics and health metrics.
+  - `rag_plan` - Heuristic retrieval planning for queries.
+- Update code execution stubs to include new tools.
+
 ---
 
 ## 2. Next (Post‑Launch P1)
@@ -68,6 +107,13 @@ These are things that make LLMC nicer to live with once the core system is “go
   - `pip install -e .`
   - `llmc init && llmc index && llmc-tui`
   with minimal extra steps.
+
+### 2.2 Refactor MCP bootstrap prompt
+
+**Goal:** Clean up `server.py` by moving the large bootstrap prompt to a separate file.
+
+- Move `BOOTSTRAP` constant from `llmc_mcp/server.py` to `llmc_mcp/prompts.py` (or similar).
+- Ensure it remains easily editable but doesn't clutter the main server logic.
 
 ### 2.2 Polyglot RAG support
 
@@ -111,10 +157,26 @@ These are the “this would be awesome” items that are worth doing, but not at
 **Goal:** Reduce token bloat and make `inspect` more LLM‑friendly.
 
 - Add a ranking scheme for symbols in a file:
-  - Heuristics like “public API functions”, “classes”, and “callers with many edges” score higher.
+  - Heuristics like "public API functions", "classes", and "callers with many edges" score higher.
 - Update `rag inspect` / `inspect_entity` to:
   - Return a compact, ranked subset for LLMs by default.
   - Expose the full symbol list only on explicit request.
+
+### 3.3 MCP Telemetry & Observability
+
+**Goal:** Enable deep-dive analysis and monitoring while respecting user privacy.
+
+- Implement privacy-aware telemetry system:
+  - Configurable privacy tiers (none/metrics/metadata/arguments/full).
+  - SQLite storage for queryable telemetry (`.llmc/mcp_telemetry.db`).
+  - Automatic redaction of sensitive data (credentials, paths).
+  - **Default: OFF** for public distribution (security-first).
+- Add TUI dashboard integration:
+  - Real-time metrics display (call counts, latencies, error rates).
+  - Top tools and recent errors tracking.
+  - Code execution trace viewer (privacy-gated).
+- Implement retention policies with auto-cleanup.
+- Add `get_telemetry` MCP tool for LLM self-analysis.
 
 ---
 

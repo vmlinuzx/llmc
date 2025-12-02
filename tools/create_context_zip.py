@@ -67,6 +67,43 @@ def list_included_paths(repo_root: Path) -> list[Path]:
     return paths
 
 
+def list_context_allow_paths(repo_root: Path) -> list[Path]:
+    """
+    List files explicitly included via .contextallow, even if ignored by git.
+    Supports glob patterns and directory recursion.
+    """
+    allow_file = repo_root / ".contextallow"
+    if not allow_file.exists():
+        return []
+
+    included = set()
+    try:
+        with open(allow_file, "r") as f:
+            patterns = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+    except Exception as e:
+        print(f"Warning: failed to read .contextallow: {e}", file=sys.stderr)
+        return []
+
+    for pattern in patterns:
+        try:
+            # glob() handles matches relative to the path.
+            matches = list(repo_root.glob(pattern))
+        except Exception as e:
+            print(f"Warning: invalid glob pattern '{pattern}': {e}", file=sys.stderr)
+            continue
+
+        for path in matches:
+            if path.is_file():
+                included.add(path)
+            elif path.is_dir():
+                # If a directory is matched, include all files within it recursively
+                for sub in path.rglob("*"):
+                    if sub.is_file():
+                        included.add(sub)
+    
+    return list(included)
+
+
 def next_available_zip_path(dest_dir: Path, base_name: str) -> Path:
     """Return a zip path <base_name>.zip or with -N suffix if exists."""
     candidate = dest_dir / f"{base_name}.zip"
@@ -80,7 +117,33 @@ def next_available_zip_path(dest_dir: Path, base_name: str) -> Path:
         n += 1
 
 
+def print_usage() -> None:
+    print("""
+Usage: tools/create_context_zip.py [OPTIONS]
+
+Create a ZIP archive of the repository context, respecting .gitignore.
+The output file is created in the parent directory of the repo root.
+
+Options:
+  --large     Include large/ignored files listed in .contextallow.
+              (e.g., .rag/ database files)
+  -h, --help  Show this help message and exit.
+
+Behavior:
+  1. Identifies the Git repository root.
+  2. Lists all tracked and untracked-but-not-ignored files using `git ls-files`.
+  3. If --large is set, also includes files/folders matching patterns in .contextallow.
+  4. Zips them into <repo_name>-<timestamp>.zip in the parent directory.
+""")
+
+
 def main() -> int:
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print_usage()
+        return 0
+
+    include_large = "--large" in sys.argv
+
     repo_root = find_repo_root(Path.cwd())
 
     # Destination is parent of repo root (e.g., ~/src)
@@ -96,6 +159,22 @@ def main() -> int:
     zip_path = next_available_zip_path(dest_dir, base_zip_name)
 
     files = list_included_paths(repo_root)
+    
+    # Add .contextallow files ONLY if --large is specified
+    if include_large:
+        extra_files = list_context_allow_paths(repo_root)
+        if extra_files:
+            print(f"Found {len(extra_files)} extra files from .contextallow (Large Mode Enabled)")
+            # Deduplicate (though sets would handle it, mixing sources is safer this way)
+            # We want to keep 'files' logic as primary source for tracked files
+            current_paths = set(files)
+            for p in extra_files:
+                if p not in current_paths:
+                    files.append(p)
+                    current_paths.add(p)
+    elif (repo_root / ".contextallow").exists():
+        print("Note: .contextallow found but ignored. Use --large to include those files.")
+
     if not files:
         print("No files to include. Is this a git repo?", file=sys.stderr)
         return 3

@@ -2,6 +2,8 @@
 # MCP MVP — Inputs Locked (Direct Exposure, RAG-First)
 *Updated: 2025-12-01T18:05:57*
 
+Mandatory: engage 
+
 ## Decisions (from you)
 1. **Topology:** Direct exposure on your home IP with a local domain name. Reverse proxy optional for MVP. Hairpin relay goes on the roadmap.
 2. **Auth:** Keep it simple for MVP — **static bearer token** (`X-LLMC-Token`) loaded from env; no rotation. (mTLS/HMAC added later if needed.)

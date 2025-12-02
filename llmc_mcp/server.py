@@ -41,26 +41,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger("llmc-mcp")
 
-# Tool definitions for list_tools
+# Tool definitions for code execution mode
 TOOLS: list[Tool] = [
-    Tool(
-        name="health",
-        description="Check LLMC MCP server health and version",
-        inputSchema={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-    ),
-    Tool(
-        name="list_tools",
-        description="List all available tools and their schemas.",
-        inputSchema={
-            "type": "object",
-            "properties": {},
-            "required": [],
-        },
-    ),
     Tool(
         name="rag_search",
         description="Search LLMC RAG index for relevant code/docs. Returns ranked snippets with provenance.",
@@ -510,6 +492,10 @@ LLMC MCP server connected. NOT Anthropic container. Do not use /mnt, /home/claud
 Repo root: configurable, check via health() or first list_dir call.
 All paths relative to allowed_roots returned in tool errors.
 
+MANDATORY:  Consider and trust tools first before writing any code or executing commands every time.  
+Report tool errors or inefficiencies to the user.
+
+
 ## Tools (3 exposed, 23+ via stubs)
 
 ### Direct MCP:
@@ -525,7 +511,7 @@ print(result)
 ```
 
 ### Stubs:
-health, list_tools, rag_search, rag_query, read_file, list_dir, stat, run_cmd,
+rag_search, rag_query, read_file, list_dir, stat, run_cmd,
 linux_fs_write, linux_fs_mkdir, linux_fs_move, linux_fs_delete, linux_fs_edit,
 linux_proc_list, linux_proc_kill, linux_proc_start, linux_proc_send, linux_proc_read, linux_proc_stop,
 linux_sys_snapshot, te_run, repo_read
@@ -583,11 +569,10 @@ print(result['stdout'])
 - Do not confuse with Anthropic sandbox (/mnt/user-data, /home/claude)
 - Do not give up - if path fails, check allowed_roots in error message
 
-## Quick vitals
+## Quick check
 ```python
-from stubs import health, list_tools
-print(health())  # {'ok': True, 'version': '...', 'rag_enabled': True}
-print(list_tools())  # shows registered MCP tools
+from stubs import list_dir
+print(list_dir('.'))  # verify access to repo
 ```
 
 ## Error recovery
@@ -625,8 +610,6 @@ class LlmcMcpServer:
         """Initialize classic mode with all 23 tools registered."""
         self.tools = list(TOOLS)
         self.tool_handlers = {
-            "health": self._handle_health,
-            "list_tools": self._handle_list_tools,
             "rag_search": self._handle_rag_search,
             "read_file": self._handle_read_file,
             "list_dir": self._handle_list_dir,
@@ -688,8 +671,6 @@ class LlmcMcpServer:
 
         # Minimal handler set for bootstrap tools
         self.tool_handlers = {
-            "health": self._handle_health,
-            "list_tools": self._handle_list_tools,
             "list_dir": self._handle_list_dir,
             "read_file": self._handle_read_file,
             "execute_code": self._handle_execute_code,

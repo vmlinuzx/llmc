@@ -16,10 +16,10 @@ from llmc_mcp.server import TOOLS, LlmcMcpServer
 async def test_tools_list():
     """Test that tools are properly defined."""
     print("Testing tool definitions...")
-    assert len(TOOLS) >= 5, f"Expected at least 5 tools, got {len(TOOLS)}"
+    assert len(TOOLS) >= 3, f"Expected at least 3 tools, got {len(TOOLS)}"
 
     tool_names = {t.name for t in TOOLS}
-    expected = {"health", "rag_search", "read_file", "list_dir", "stat"}
+    expected = {"rag_search", "read_file", "list_dir"}
     assert expected.issubset(tool_names), f"Missing tools: {expected - tool_names}"
 
     print(f"  ✓ Found {len(TOOLS)} tools: {tool_names}")
@@ -131,7 +131,6 @@ async def main():
     try:
         await test_config_load()
         await test_tools_list()
-        await test_health_handler()
         await test_read_file_handler()
         await test_read_file_security()
         await test_list_dir_handler()
