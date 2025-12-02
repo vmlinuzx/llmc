@@ -2,14 +2,29 @@ THE LARGE LANGUAGE MODEL COMPRESSOR
 
 **Current Release:** v0.5.5 "Modular Mojo"
 
-For the impatient quick start:
+## Quick Start
 
 ```bash
+# Install
 pip install -e ".[rag]"
-llmc-rag-repo add /path/to/repo
-llmc-rag-service register /path/to/repo
-llmc-rag-service start --interval 300 --daemon
+
+# Initialize and index your project
+cd /path/to/your/project
+llmc init
+llmc index
+
+# Register with service and start daemon
+llmc service repo add .
+llmc service start
+
+# Search your codebase
+llmc search "authentication middleware"
+
+# Launch TUI dashboard
+llmc tui
 ```
+
+**See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
 
 ### What's New in v0.6.0 "Modular Mojo"
 - **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
