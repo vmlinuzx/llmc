@@ -25,12 +25,14 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 import sys
 import time
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
+from tools.rag.config_enrichment import EnrichmentBackendSpec
 from tools.rag.database import Database
 from tools.rag.enrichment_backends import (
     AttemptRecord,
@@ -39,11 +41,10 @@ from tools.rag.enrichment_backends import (
     BackendError,
 )
 from tools.rag.enrichment_router import (
-    EnrichmentRouter,
     EnrichmentRouteDecision,
+    EnrichmentRouter,
     EnrichmentSliceView,
 )
-from tools.rag.config_enrichment import EnrichmentBackendSpec
 
 
 class BackendFactory(Protocol):

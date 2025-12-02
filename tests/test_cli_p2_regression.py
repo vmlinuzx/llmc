@@ -1,10 +1,10 @@
 
-import pytest
-from typer.testing import CliRunner
-from llmc.main import app
-from llmc.cli import make_layout
 from pathlib import Path
-import inspect
+
+from typer.testing import CliRunner
+
+from llmc.cli import make_layout
+from llmc.main import app
 
 runner = CliRunner()
 

@@ -7,8 +7,8 @@ import json
 import re
 from typing import Any
 
-from tools.rag.enrichment_backends import BackendAdapter, BackendError
 from tools.rag.config_enrichment import EnrichmentBackendSpec
+from tools.rag.enrichment_backends import BackendError
 
 try:
     import httpx

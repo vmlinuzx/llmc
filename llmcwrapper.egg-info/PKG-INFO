@@ -25,6 +25,7 @@ Requires-Dist: watchdog>=3.0.0; extra == "rag"
 Requires-Dist: gitpython>=3.1.40; extra == "rag"
 Requires-Dist: pyyaml>=6.0.1; extra == "rag"
 Requires-Dist: tqdm>=4.66.1; extra == "rag"
+Requires-Dist: mcp>=0.9.0; extra == "rag"
 Provides-Extra: tui
 Requires-Dist: typer>=0.9.0; extra == "tui"
 Requires-Dist: rich>=13.0.0; extra == "tui"
@@ -35,13 +36,43 @@ THE LARGE LANGUAGE MODEL COMPRESSOR
 
 **Current Release:** v0.5.5 "Modular Mojo"
 
-For the impatient quick start:
+## Quick Start
 
 ```bash
+# Install
 pip install -e ".[rag]"
-llmc-rag-repo add /path/to/repo
-llmc-rag-service register /path/to/repo
-llmc-rag-service start --interval 300 --daemon
+
+# Initialize and index your project
+cd /path/to/your/project
+llmc init
+llmc index
+
+# Register with service and start daemon
+llmc service repo add .
+llmc service start
+
+# Search your codebase
+llmc search "authentication middleware"
+
+# Launch TUI dashboard
+llmc tui
+```
+
+**See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
+
+### Development Mode (No Install)
+
+If you're developing and don't want to install, use the wrapper script in the repo root:
+
+```bash
+# From repo root
+./llmc-cli --help
+./llmc-cli index
+./llmc-cli search "query"
+
+# Or add to your PATH
+export PATH="$PWD:$PATH"
+llmc-cli --help
 ```
 
 ### What's New in v0.6.0 "Modular Mojo"

@@ -20,13 +20,20 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 **Goal:** Bring the enrichment pipeline closer to the design in the docs without over‑engineering.
 
-- Align current `enrichment_backends.py` with the intended “pipeline” shape:
-  - Make the interface for a single backend and a chain explicit and well‑typed.
-  - Capture per‑backend attempt statistics (already mostly there) in a stable struct.
-- Decide whether you still want a dedicated `enrichment_pipeline` module:
-  - If **yes**: create a thin pipeline module that orchestrates:
-    - span selection → backend chain → DB writes.
-  - If **no**: update roadmap/docs to bless the current layout as the supported design.
+**📄 Design:** [`planning/SDD_Enrichment_Pipeline_Tidy.md`](planning/SDD_Enrichment_Pipeline_Tidy.md)
+
+**Summary:**
+- Extract `OllamaBackend` as proper `BackendAdapter` implementation
+- Create `EnrichmentPipeline` class to orchestrate: pending spans → router → cascade → DB writes
+- Wire `service.py` to use pipeline directly (no more subprocess to 2,271-line script)
+- Sets foundation for remote providers (3.6)
+
+**Phases:** 3 phases, ~4-6 hours total
+| Phase | Effort | Deliverable |
+|-------|--------|-------------|
+| Extract OllamaBackend | 1-2h | `enrichment_adapters/ollama.py` |
+| Create EnrichmentPipeline | 2-3h | `enrichment_pipeline.py` |
+| Wire into Service | 1-2h | Direct calls, no subprocess |
 
 ### 1.3 Surface enriched data everywhere it matters
 
@@ -53,18 +60,39 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
 
 **Goal:** Prevent the daemon from burning CPU when there is no work to do.
 
-- Audit the main `llmc-rag-service` loop and worker polls.
-- Implement exponential backoff or smarter sleep cycles when the work queue is empty.
-- Ensure the daemon is "quiet" (low CPU/IO) when the repo is static.
+**📄 Design:** [`planning/SDD_Idle_Loop_Throttling.md`](planning/SDD_Idle_Loop_Throttling.md)
 
-### 1.7 MCP Server Experience (CLI Wrapper)
+**Summary:**
+- Set process nice level (+10) so daemon doesn't compete with your IDE
+- Track "work done" per cycle to detect idle state  
+- Exponential backoff when idle (180s → 360s → 720s → ... → 30min cap)
+- Instant reset to normal interval when changes detected
+- Interruptible sleep for responsive signal handling
 
-**Goal:** Make `llmc_mcp.server` as friendly and manageable as the RAG service.
+**Effort:** 2-3 hours | **Difficulty:** 🟢 Easy
 
-- Create a proper CLI wrapper (`llmc-mcp`) with standard commands:
-  - `start` (daemonize), `stop`, `restart`, `status`, `logs`.
-- Add an interactive mode or TUI status screen when run directly.
-- Ensure it handles process management cleanly (pidfiles, signal handling) so users don't need `pkill`.
+### 1.7 MCP Daemon with Network Transport
+
+**Goal:** Enable external systems (Codex, Gemini, custom agents) to connect to LLMC's MCP server over HTTP.
+
+**📄 Design:** [`planning/SDD_MCP_Daemon_Architecture.md`](planning/SDD_MCP_Daemon_Architecture.md)
+
+**Summary:**
+- Add HTTP/SSE and WebSocket transport modes (MCP SDK already has the plumbing)
+- API key authentication middleware for security
+- Proper daemon management with pidfiles and signal handling
+- CLI wrapper (`llmc-mcp start/stop/status/logs`)
+- Preserves existing stdio transport for Claude Desktop (no breaking changes)
+
+**Phases:** 6 phases, ~15-22 hours total
+| Phase | Difficulty |
+|-------|------------|
+| HTTP + SSE Transport | 🟡 Medium |
+| WebSocket Transport | 🟢 Easy |
+| Auth Middleware | 🟢 Easy |
+| Daemon Manager | 🟡 Medium |
+| CLI Wrapper | 🟢 Easy |
+| Testing & Docs | 🟢 Easy |
 
 ### 1.8 MCP Tool Expansion
 
@@ -208,6 +236,32 @@ These are the “this would be awesome” items that are worth doing, but not at
 **Priority:** Low (blocked on documentation agent completion)
 
 **Estimated Effort:** 4-6 hours
+
+### 3.6 Remote LLM Provider Support for Enrichment
+
+**Goal:** Enable remote API providers (Gemini, OpenAI, Anthropic, Groq) in the enrichment cascade with production-grade reliability.
+
+**📄 Design:** [`planning/SDD_Remote_LLM_Providers.md`](planning/SDD_Remote_LLM_Providers.md)
+
+**Summary:**
+- Add `RemoteBackend` adapter supporting multiple providers
+- Implement reliability middleware: exponential backoff, rate limiting, circuit breaker
+- Cost tracking with configurable daily/monthly caps
+- Provider registry with auth, endpoints, and rate limits per provider
+
+**Phases:** 8 phases, ~17-25 hours total
+| Phase | Difficulty |
+|-------|------------|
+| RemoteBackend base class | 🟡 Medium |
+| Gemini adapter | 🟢 Easy |
+| Retry middleware (backoff) | 🟢 Easy |
+| Rate limiter (token bucket) | 🟡 Medium |
+| Circuit breaker | 🟢 Easy |
+| Cost tracking + caps | 🟢 Easy |
+| More providers (OpenAI, Anthropic, Groq) | 🟢 Easy |
+| Testing | 🟡 Medium |
+
+**Why Later:** Local Ollama works fine for now. This becomes important when you want to use cheaper/better remote models as fallback or for quality tiers.
 
 ---
 

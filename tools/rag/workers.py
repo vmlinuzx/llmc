@@ -9,6 +9,7 @@ from typing import Any
 from jsonschema import Draft7Validator, ValidationError
 
 from .config import (
+    ConfigError,
     embedding_model_dim,
     embedding_model_name,
     embedding_normalize,
@@ -139,8 +140,8 @@ def embedding_plan(
     dim: int | None = None,
 ) -> list[dict]:
     config = load_config(repo_root)
-    routes = config.get("embeddings", {}).get("routes", {})
-    slice_map = config.get("routing", {}).get("slice_type_to_route", {})
+    # routes = config.get("embeddings", {}).get("routes", {})
+    # slice_map = config.get("routing", {}).get("slice_type_to_route", {})
     profiles = config.get("embeddings", {}).get("profiles", {})
 
     items = db.pending_embeddings(limit=limit)
@@ -294,7 +295,7 @@ def execute_embeddings(
 
         with db.transaction():
             db.ensure_embedding_meta(backend.model_name, backend.dim, profile=profile_name)
-            for span_hash, vector in zip(prepared_hashes, vectors):
+            for span_hash, vector in zip(prepared_hashes, vectors, strict=False):
                 db.store_embedding(
                     span_hash,
                     vector,

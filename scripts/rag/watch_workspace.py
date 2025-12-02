@@ -15,16 +15,18 @@ import time
 from index_workspace import (
     CHROMA_DB_PATH,
     CODE_EXTENSIONS,
-    EXCLUDE_DIRS,
+    # EXCLUDE_DIRS,
     WORKSPACE_ROOT,
     WorkspaceIndexer,
 )
+
+EXCLUDE_DIRS = {".git", "__pycache__", ".venv", "node_modules", "dist", "build", ".rag", ".llmc"}
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 
 class CodeFileHandler(FileSystemEventHandler):
-    def __init__(self, indexer: WorkspaceIndexer, project_filter: Optional[str] = None):
+    def __init__(self, indexer: WorkspaceIndexer, project_filter: str | None = None):
         self.indexer = indexer
         self.project_filter = project_filter
         self.last_indexed = {}  # Debounce rapid changes

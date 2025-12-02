@@ -3,7 +3,15 @@ from datetime import datetime
 import json
 import os
 from pathlib import Path
+import sys
 from typing import Optional
+
+# Add repo root to sys.path to enable llmc imports even when not installed
+# This fixes ModuleNotFoundError when running RAG tools from arbitrary directories
+_RAG_MODULE_DIR = Path(__file__).parent
+_REPO_ROOT = _RAG_MODULE_DIR.parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 
 def load_status(repo_root: Path) -> object | None:

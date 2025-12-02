@@ -5,13 +5,13 @@ and reranker weights for RAG Nav search.
 
 from __future__ import annotations
 
+import configparser
 from functools import lru_cache
 import logging
 import os
 from pathlib import Path
 import tomllib
 from typing import Any
-import configparser
 
 # Conditional import for telemetry - allows the module to work without llmc dependency
 try:

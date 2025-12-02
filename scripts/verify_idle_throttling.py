@@ -7,14 +7,14 @@ This script verifies:
 2. Configuration is loaded properly
 3. No syntax errors in the modified code
 """
-import sys
 from pathlib import Path
+import sys
 
 # Add repo to path
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root))
 
-from tools.rag.service import ServiceState, FailureTracker, RAGService
+from tools.rag.service import FailureTracker, RAGService, ServiceState
 
 
 def main():

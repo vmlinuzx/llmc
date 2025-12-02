@@ -37,6 +37,21 @@ def search(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
 ):
     """Semantic search."""
+    # Input validation
+    if limit <= 0:
+        typer.echo("Error: --limit must be a positive integer", err=True)
+        raise typer.Exit(code=1)
+    
+    # Prevent excessively long queries that cause timeout
+    MAX_QUERY_LENGTH = 5000  # Reasonable limit for semantic search
+    if len(query) > MAX_QUERY_LENGTH:
+        typer.echo(
+            f"Error: Query too long ({len(query)} chars). Maximum allowed: {MAX_QUERY_LENGTH} chars",
+            err=True
+        )
+        typer.echo("Consider using a shorter, more focused query", err=True)
+        raise typer.Exit(code=1)
+    
     repo_root = find_repo_root()
     try:
         results = run_search_spans(query, limit=limit, repo_root=repo_root)
@@ -44,18 +59,20 @@ def search(
             data = [
                 {
                     "score": r.score,
-                    "file": str(r.file_path),
+                    "file": str(r.path),
                     "line": r.start_line,
-                    "text": r.text,
                     "symbol": r.symbol,
+                    "kind": r.kind,
+                    "summary": r.summary,
                 }
                 for r in results
             ]
             typer.echo(json.dumps(data, indent=2))
         else:
             for r in results:
-                typer.echo(f"[{r.score:.2f}] {r.file_path}:{r.start_line} {r.symbol or ''}")
-                typer.echo(f"    {r.text[:100]}...")
+                typer.echo(f"[{r.score:.2f}] {r.path}:{r.start_line} {r.symbol or '(no symbol)'}")
+                if r.summary:
+                    typer.echo(f"    {r.summary[:100]}...")
     except Exception as e:
         typer.echo(f"Error searching: {e}", err=True)
         raise typer.Exit(code=1)

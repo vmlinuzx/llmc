@@ -229,8 +229,8 @@ def _handle_stats(repo_root: Path) -> int:
         """)
         slice_ingest_events = slice_ingest_cursor.fetchall()
 
-        slice_types: Dict[str, int] = {}
-        slice_routes: Dict[str, int] = {}
+        slice_types: dict[str, int] = {}
+        slice_routes: dict[str, int] = {}
         for event in slice_ingest_events:
             cmd_str = event[0]
             # Example: [routing_ingest_slice] slice_type=code, route_name=code, profile_name=code_jina
@@ -264,7 +264,7 @@ def _handle_stats(repo_root: Path) -> int:
         """)
         query_classify_events = query_classify_cursor.fetchall()
 
-        query_routes: Dict[str, int] = {}
+        query_routes: dict[str, int] = {}
         for event in query_classify_events:
             cmd_str = event[0]
             # Example: [routing_query_classify] route_name=docs, confidence=0.8
@@ -282,7 +282,7 @@ def _handle_stats(repo_root: Path) -> int:
         """)
         fallback_events = fallback_cursor.fetchall()
 
-        fallbacks: Dict[str, int] = {}
+        fallbacks: dict[str, int] = {}
         for event in fallback_events:
             cmd_str = event[0]
             # Example: [routing_fallback] type=missing_slice_type_mapping, slice_type=weird_type, fallback_to=docs
@@ -300,7 +300,7 @@ def _handle_stats(repo_root: Path) -> int:
         """)
         error_events = error_cursor.fetchall()
 
-        routing_errors: Dict[str, int] = {}
+        routing_errors: dict[str, int] = {}
         for event in error_events:
             cmd_str = event[0]
             # Example: [routing_error] type=critical_missing_docs_route, missing_route=docs, operation=ingest

@@ -1,6 +1,7 @@
 LICENSE
 README.md
 pyproject.toml
+llmc/__main__.py
 llmc/cli.py
 llmc/client.py
 llmc/core.py

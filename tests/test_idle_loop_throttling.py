@@ -8,15 +8,14 @@ Verifies that:
 3. Idle backoff logic calculates correctly
 4. Interruptible sleep works
 """
-import os
-import sys
 from pathlib import Path
+import sys
 
 # Add repo to path
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root))
 
-from tools.rag.service import ServiceState, FailureTracker, RAGService
+from tools.rag.service import FailureTracker, RAGService, ServiceState
 
 
 def test_daemon_config_loading():
@@ -109,7 +108,7 @@ def test_process_repo_return_type():
     print(f"  Type: {type(result).__name__}")
     
     if isinstance(result, bool):
-        print(f"  ✓ Returns boolean as expected")
+        print("  ✓ Returns boolean as expected")
     else:
         print(f"  ✗ Expected bool, got {type(result).__name__}")
     

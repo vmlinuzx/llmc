@@ -61,15 +61,19 @@ def cli() -> None:
 @cli.command()
 @click.option("--since", metavar="SHA", help="Only parse files changed since the given commit")
 @click.option("--no-export", is_flag=True, default=False, help="Skip JSONL span export")
-def index(since: str | None, no_export: bool) -> None:
+@click.option("--json", "as_json", is_flag=True, help="Emit output as JSON.")
+def index(since: str | None, no_export: bool, as_json: bool) -> None:
     """Index the repository (full or incremental)."""
     from .indexer import index_repo
 
     stats = index_repo(since=since, export_json=not no_export)
-    click.echo(
-        f"Indexed {stats['files']} files, {stats['spans']} spans in {stats['duration_sec']}s "
-        f"(skipped={stats.get('skipped', 0)}, unchanged={stats.get('unchanged', 0)})"
-    )
+    if as_json:
+        click.echo(json.dumps(stats, indent=2))
+    else:
+        click.echo(
+            f"Indexed {stats['files']} files, {stats['spans']} spans in {stats['duration_sec']}s "
+            f"(skipped={stats.get('skipped', 0)}, unchanged={stats.get('unchanged', 0)})"
+        )
 
 
 def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
@@ -100,7 +104,8 @@ def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
     default=False,
     help="Read newline-delimited paths from stdin",
 )
-def sync(paths: Iterable[str], since: str | None, use_stdin: bool) -> None:
+@click.option("--json", "as_json", is_flag=True, help="Emit output as JSON.")
+def sync(paths: Iterable[str], since: str | None, use_stdin: bool, as_json: bool) -> None:
     """Incrementally update spans for selected files."""
     from .indexer import sync_paths
     from .utils import git_changed_paths
@@ -113,14 +118,20 @@ def sync(paths: Iterable[str], since: str | None, use_stdin: bool) -> None:
         path_list = _collect_paths(paths, use_stdin)
 
     if not path_list:
-        click.echo("No paths to sync.")
+        if as_json:
+            click.echo(json.dumps({"error": "No paths to sync"}, indent=2))
+        else:
+            click.echo("No paths to sync.")
         return
 
     stats = sync_paths(path_list)
-    click.echo(
-        f"Synced {stats['files']} files, {stats['spans']} spans, "
-        f"deleted={stats.get('deleted', 0)}, unchanged={stats.get('unchanged', 0)} in {stats['duration_sec']}s"
-    )
+    if as_json:
+        click.echo(json.dumps(stats, indent=2))
+    else:
+        click.echo(
+            f"Synced {stats['files']} files, {stats['spans']} spans, "
+            f"deleted={stats.get('deleted', 0)}, unchanged={stats.get('unchanged', 0)} in {stats['duration_sec']}s"
+        )
 
 
 @cli.command()
@@ -243,6 +254,10 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
 )
 def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
     """Preview or execute enrichment tasks (summary/tags) for spans."""
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     repo_root = _find_repo_root()
     db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
@@ -301,6 +316,10 @@ def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
 )
 def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
     """Preview or execute embedding jobs for spans."""
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     repo_root = _find_repo_root()
     db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
@@ -343,6 +362,10 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
     if not phrase:
         click.echo('Provide a query, e.g. `rag search "How do we verify JWTs?"`')
         return
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     try:
         results = search_spans(phrase, limit=limit, debug=debug)
     except FileNotFoundError as err:
@@ -462,6 +485,9 @@ def plan(
     question = " ".join(query).strip()
     if not question:
         click.echo('Provide a query, e.g. `rag plan "Where do we validate JWTs?"`')
+        raise SystemExit(1)
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
         raise SystemExit(1)
 
     repo_root = _find_repo_root()
@@ -852,6 +878,10 @@ def nav_search(
     color: bool,
 ) -> None:
     """Semantic/structural search using graph when fresh, else local fallback."""
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     from tools.rag import tool_rag_search
 
     phrase = " ".join(query).strip()
@@ -997,6 +1027,10 @@ def nav_where_used(
     color: bool,
 ) -> None:
     """Find usage sites of a symbol via graph edges or fallback grep."""
+    if limit < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     from tools.rag import tool_rag_where_used
 
     if as_json and (as_jsonl or as_jsonl_compact):
@@ -1144,6 +1178,10 @@ def nav_lineage(
     color: bool,
 ) -> None:
     """One-hop lineage over CALLS edges (downstream=callees, upstream=callers) or fallback callsite grep."""
+    if max_results < 1:
+        click.echo("Limit must be at least 1.", err=True)
+        raise SystemExit(1)
+
     from tools.rag import tool_rag_lineage
 
     if as_json and (as_jsonl or as_jsonl_compact):
@@ -1257,6 +1295,9 @@ def routing() -> None:
 @click.option("--json", "as_json", is_flag=True, help="Output results as JSON")
 def eval(dataset: str, top_k: int, as_json: bool) -> None:
     """Evaluate routing and retrieval quality."""
+    if top_k < 1:
+        click.echo("Top-k must be at least 1.", err=True)
+        raise SystemExit(1)
     from tools.rag.eval.routing_eval import evaluate_routing
 
     try:

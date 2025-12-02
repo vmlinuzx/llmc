@@ -8,8 +8,8 @@ Verifies that:
 3. All required methods exist
 4. Type annotations are correct
 """
-import sys
 from pathlib import Path
+import sys
 
 # Add repo to path
 repo_root = Path(__file__).resolve().parents[1]
@@ -27,9 +27,9 @@ def main():
         print("1. Testing imports...")
         from tools.rag.enrichment_adapters.ollama import OllamaBackend
         from tools.rag.enrichment_pipeline import (
+            EnrichmentBatchResult,
             EnrichmentPipeline,
             EnrichmentResult,
-            EnrichmentBatchResult,
             build_enrichment_prompt,
         )
         print("   ✓ All modules imported successfully")
