@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import tomllib
 from typing import Any
+import configparser
 
 # Conditional import for telemetry - allows the module to work without llmc dependency
 try:
@@ -18,7 +19,7 @@ try:
 except ImportError:
     # No-op fallback when llmc module is not available
     def log_routing_event(
-        mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs
+        mode: str, details: dict[str, Any], repo_root: Path | None = None
     ) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass

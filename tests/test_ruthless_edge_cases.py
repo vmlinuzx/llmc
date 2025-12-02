@@ -8,7 +8,9 @@ Every green check is suspicious until proven otherwise.
 
 import pytest
 
-from llmc.routing.query_type import CODE_STRUCT_REGEX, ERP_SKU_REGEX, classify_query
+from llmc.routing.code_heuristics import CODE_STRUCT_REGEXES as CODE_STRUCT_REGEX
+from llmc.routing.erp_heuristics import ERP_SKU_RE as ERP_SKU_REGEX
+from llmc.routing.query_type import classify_query
 
 # ==============================================================================
 # EDGE CASE 1: None and Empty Inputs

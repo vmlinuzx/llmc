@@ -208,7 +208,7 @@ Treat every green check as **unproven** until you have tried hard to break it.
 - **Make assumptions**: If something is ambiguous, state your assumption and proceed
 - **No questions**: Don't ask for permission, just test ruthlessly
 - **Report findings**: Document everything in ./tests/REPORTS/
-- **Fix test scripts**: If a test script has a simple bug, fix it and rerun
+- **Fix test scripts**: If a test script has a simple bug, or linting error attempt to fix it and rerun the test.
 - **Don't fix production code**: Report bugs, don't patch them
 
 ## Testing Procedure

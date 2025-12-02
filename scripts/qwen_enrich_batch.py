@@ -44,6 +44,10 @@ _cfg_mod = importlib.import_module("tools.rag.config")
 get_est_tokens_per_span = _cfg_mod.get_est_tokens_per_span
 index_path_for_write = _cfg_mod.index_path_for_write
 
+_enrich_router_mod = importlib.import_module("tools.rag.enrichment_router")
+build_router_from_toml = _enrich_router_mod.build_router_from_toml
+EnrichmentSliceView = _enrich_router_mod.EnrichmentSliceView
+
 if TYPE_CHECKING:
     from tools.rag.config_enrichment import (
         EnrichmentBackendSpec as EnrichmentBackendSpecT,
