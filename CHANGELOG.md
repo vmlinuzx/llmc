@@ -5,7 +5,7 @@ All notable changes to LLMC will be documented in this file.
 ## [Unreleased]
 
 ### Summary
-This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomous testing and remediation effort that identified and fixed 7 bugs (1 critical, 1 high, 3 medium, 2 low) discovered through autonomous agent testing. All bugs fixed, test suite improved, and codebase cleaned up. See [ROSWAAL_BUG_FIX_COMPLETE.md](DOCS/planning/ROSWAAL_BUG_FIX_COMPLETE.md) for full details.
+This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomous testing and remediation effort that identified and fixed 7 bugs (1 critical, 1 high, 3 medium, 2 low) discovered through autonomous agent testing. All bugs fixed, test suite improved, and codebase cleaned up. Additionally, major infrastructure improvements with intelligent daemon throttling and clean enrichment architecture. See [ROSWAAL_BUG_FIX_COMPLETE.md](DOCS/planning/ROSWAAL_BUG_FIX_COMPLETE.md) for full details.
 
 ### Added
 - **RAG Service Idle Loop Throttling:**
@@ -18,6 +18,25 @@ This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomo
   - **Impact:** 90% reduction in CPU cycles when idle (480/day → 50/day), lower fan noise, better battery life
   - Based on SDD: `DOCS/planning/SDD_Idle_Loop_Throttling.md`
   - Implementation: `DOCS/planning/IMPL_Idle_Loop_Throttling.md`
+
+- **Enrichment Pipeline Architecture Refactor (Phases 1 & 2):**
+  - Extracted clean, testable architecture from 2,271-line monolithic script
+  - **OllamaBackend adapter** (186 lines) implementing `BackendAdapter` protocol
+    - HTTP client with proper timeout handling
+    - JSON response parsing with markdown fence support
+    - Error handling for timeout, HTTP, and backend failures
+    - Context manager support for resource cleanup
+  - **EnrichmentPipeline orchestrator** (406 lines) for batch enrichment
+    - Clean separation: span selection → routing → backend execution → DB writes
+    - Integrates with existing `enrichment_plan()` helper
+    - Uses `EnrichmentRouter` for chain selection
+    - `BackendCascade` for multi-tier LLM generation
+    - Failure tracking and cooldown support
+  - Full typing throughout with protocols (`BackendFactory`, `BackendAdapter`)
+  - Foundation for remote LLM providers (Roadmap 3.6)
+  - **Impact:** From monolith → clean typed modules, easy to test and extend
+  - Based on SDD: `DOCS/planning/SDD_Enrichment_Pipeline_Tidy.md`
+  - Implementation: `DOCS/planning/IMPL_Enrichment_Pipeline_Tidy.md`
 
 ### Fixed
 - **P0 Bug Fix:** Search command AttributeError crash
