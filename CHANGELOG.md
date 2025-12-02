@@ -38,6 +38,36 @@ This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomo
   - Based on SDD: `DOCS/planning/SDD_Enrichment_Pipeline_Tidy.md`
   - Implementation: `DOCS/planning/IMPL_Enrichment_Pipeline_Tidy.md`
 
+- **Remote LLM Provider Support (Phase 3):**
+  - Production-grade support for commercial API providers (Gemini, OpenAI, Anthropic, Groq)
+  - **Reliability Middleware:**
+    - Exponential backoff with jitter for automatic retries (1s → 2s → 4s → 8s → 16s → 32s → 60s capped)
+    - Token bucket rate limiting (RPM and TPM) prevents quota violations
+    - Circuit breaker fails fast after 5 consecutive failures, auto-recovers after 60s
+    - Cost tracking with daily/monthly budget caps ($0.001 precision)
+  - **Multi-Provider Adapters:**
+    - `GeminiBackend` - Google Gemini (Flash, Pro)
+    - `OpenAICompatBackend` - OpenAI, Groq, and OpenAI-compatible APIs
+    - `AnthropicBackend` - Claude (Haiku, Sonnet, Opus)
+    - `RemoteBackend` - Base class with shared HTTP client and middleware integration
+  - **Unified Backend Factory:**
+    - Single factory function `create_backend_from_spec()` supports all providers
+    - Backwards compatible with existing `OllamaBackend.from_spec()` usage
+    - Automatic middleware initialization (rate limiter, circuit breaker, cost tracker)
+  - **Configuration:**
+    - Provider registry with sensible defaults for each API
+    - Per-provider rate limits, pricing, and retry config in `llmc.toml`
+    - Environment variable resolution for API keys (`GOOGLE_API_KEY`, `OPENAI_API_KEY`, etc.)
+    - Tiered cascade support: local → cheap cloud → premium
+  - **Testing:**
+    - Comprehensive unit tests (backoff, rate limit, circuit breaker, cost tracking)
+    - All tests passing (7/7)
+    - Manual testing requires real API keys (deferred to user)
+  - **Impact:** Use commercial APIs as intelligent failover when local models fail, with production-grade reliability and cost controls
+  - Based on SDD: `DOCS/planning/SDD_Remote_LLM_Providers.md`
+  - Implementation: `DOCS/planning/IMPL_Remote_LLM_Providers.md`
+  - Usage Guide: `DOCS/Remote_LLM_Providers_Usage.md`
+
 ### Fixed
 - **P0 Bug Fix:** Search command AttributeError crash
   - Fixed `AttributeError: 'SpanSearchResult' object has no attribute 'file_path'` in `llmc search` command

@@ -102,6 +102,15 @@ Capabilities:
     - Latin 1 safety: Supports enforcing latin 1 safe enrichment so weird unicode or binary junk does not poison the index.
     - Cost awareness: Encourages using small, cheap models for most work and reserving bigger, slower models for special or complex chains.
 
+- Remote LLM Provider Support: Production-grade support for commercial API providers with reliability patterns.
+    - Multi-provider support: Works with Gemini, OpenAI, Anthropic Claude, Groq, and any OpenAI-compatible API.
+    - Intelligent failover: Configure tiered cascades (local → cheap cloud → premium) for maximum reliability and cost efficiency.
+    - Rate limiting: Token bucket implementation respects RPM and TPM limits automatically, preventing quota violations.
+    - Circuit breaker: Fails fast after repeated errors, with automatic recovery testing.
+    - Cost tracking: Track daily and monthly API spending with hard budget caps to prevent surprise bills.
+    - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).
+    - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.
+
 - TUI and console UX: A second monitor experience for watching LLMC do its thing.
     - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.
     - Monitor screen: Shows repo status, graph stats, enrichment counts, and daemon health at a glance.
