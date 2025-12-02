@@ -410,6 +410,7 @@ class RAGService:
         self._repo_root = Path(__file__).resolve().parents[2]
         self._logging_cfg = self._load_logging_cfg(self._repo_root)
         self._toml_cfg = self._load_full_toml(self._repo_root)
+        self._daemon_cfg = self._toml_cfg.get("daemon", {})
         self._last_rotate: float = 0.0
         self._log_manager = None
         if LLMCLogManager is not None:
@@ -478,14 +479,19 @@ class RAGService:
         except Exception as e:
             return False, str(e)
 
-    def process_repo(self, repo_path: str):
-        """Process one repo: sync, enrich, embed with REAL LLMs."""
+    def process_repo(self, repo_path: str) -> bool:
+        """Process one repo: sync, enrich, embed with REAL LLMs.
+        
+        Returns:
+            bool: True if any work was done (changes synced, spans enriched, etc.), False otherwise.
+        """
         repo = Path(repo_path)
         if not repo.exists():
             print(f"⚠️  Repo not found: {repo_path}")
-            return
+            return False
 
         print(f"🔄 Processing {repo.name}...")
+        work_done = False
 
         # Import proper runner functions
         import sys
@@ -498,7 +504,7 @@ class RAGService:
             from tools.rag.runner import detect_changes, run_embed, run_enrich, run_sync
         except ImportError as e:
             print(f"  ⚠️  Failed to import RAG runner: {e}")
-            return
+            return False
 
         # Step 1: Detect and sync changed files
         try:
@@ -507,6 +513,7 @@ class RAGService:
             if changes:
                 run_sync(repo, changes)
                 print(f"  ✅ Synced {len(changes)} changed files")
+                work_done = True
             else:
                 print("  ℹ️  No file changes detected")
         except Exception as e:
@@ -527,7 +534,7 @@ class RAGService:
             cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
 
             print(f"  🤖 Enriching with: backend={backend}, router={router}, tier={start_tier}")
-            run_enrich(
+            enrich_result = run_enrich(
                 repo,
                 backend=backend,
                 router=router,
@@ -536,7 +543,16 @@ class RAGService:
                 max_spans=max_spans,
                 cooldown=cooldown,
             )
-            print("  ✅ Enriched pending spans with real LLM summaries")
+            # Check if enrichment actually did work (returns dict with stats)
+            if enrich_result and isinstance(enrich_result, dict):
+                enriched = enrich_result.get("enriched", 0)
+                if enriched > 0:
+                    work_done = True
+                    print(f"  ✅ Enriched {enriched} spans with real LLM summaries")
+                else:
+                    print("  ℹ️  No spans pending enrichment")
+            else:
+                print("  ✅ Enrichment complete")
         except Exception as e:
             print(f"  ⚠️  Enrichment failed: {e}")
 
@@ -552,8 +568,17 @@ class RAGService:
         # Step 3: Generate embeddings for enriched spans
         try:
             embed_limit = int(os.getenv("ENRICH_EMBED_LIMIT", "100"))
-            run_embed(repo, limit=embed_limit)
-            print(f"  ✅ Generated embeddings (limit={embed_limit})")
+            embed_result = run_embed(repo, limit=embed_limit)
+            # Check if embedding actually did work
+            if embed_result and isinstance(embed_result, dict):
+                embedded = embed_result.get("embedded", 0)
+                if embedded > 0:
+                    work_done = True
+                    print(f"  ✅ Generated {embedded} embeddings")
+                else:
+                    print("  ℹ️  No spans pending embedding")
+            else:
+                print(f"  ✅ Embedding complete (limit={embed_limit})")
         except Exception as e:
             print(f"  ⚠️  Embedding failed: {e}")
 
@@ -604,10 +629,16 @@ class RAGService:
 
                 self.state.update_last_vacuum(str(repo))
                 print("  ✅ Database vacuum complete")
+                work_done = True
         except Exception as e:
             print(f"  ⚠️  Database vacuum failed: {e}")
 
-        print(f"  ✅ {repo.name} processing complete")
+        if not work_done:
+            print(f"  ℹ️  {repo.name}: Nothing to do")
+        else:
+            print(f"  ✅ {repo.name} processing complete")
+        
+        return work_done
 
     def get_repo_stats(self, repo_path: str) -> dict:
         """Get stats for a repo."""
@@ -624,35 +655,59 @@ class RAGService:
         return {}
 
     def run_loop(self, interval: int):
-        """Main service loop."""
+        """Main service loop with idle throttling."""
         signal.signal(signal.SIGTERM, self.handle_signal)
         signal.signal(signal.SIGINT, self.handle_signal)
+
+        # Set process nice level to lower priority
+        nice_level = self._daemon_cfg.get("nice_level", 10)
+        try:
+            current = os.nice(0)
+            os.nice(nice_level - current)  # Adjust relative to current
+            print(f"   Nice level: +{nice_level}")
+        except (OSError, PermissionError) as e:
+            print(f"   ⚠️  Could not set nice level: {e}")
 
         self.state.set_running(os.getpid())
         print(f"🚀 RAG service started (PID {os.getpid()})")
         print(f"   Tracking {len(self.state.state['repos'])} repos")
         print(f"   Interval: {interval}s")
+        print(f"   Idle backoff: enabled (max {self._daemon_cfg.get('idle_backoff_max', 10)}x)")
         print()
+
+        # Idle tracking
+        idle_cycles = 0
+        max_mult = self._daemon_cfg.get("idle_backoff_max", 10)
+        base = self._daemon_cfg.get("idle_backoff_base", 2)
 
         while self.running:
             cycle_start = time.time()
+            work_done = False
 
             for repo in self.state.state["repos"]:
                 if not self.running:
                     break
-                self.process_repo(repo)
+                if self.process_repo(repo):
+                    work_done = True
 
             self.state.update_cycle()
+            
+            # Backoff logic
+            if work_done:
+                idle_cycles = 0  # Reset on any work
+            else:
+                idle_cycles += 1
+            
             # Optional: auto-rotate service logs based on config
             try:
                 if self._log_manager is not None:
-                    interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
+                    rotation_interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
                     log_dir_val = self._logging_cfg.get("log_directory", "logs")
                     log_dir = Path(str(log_dir_val))
                     if not log_dir.is_absolute():
                         log_dir = (self._repo_root / log_dir).resolve()
                     now = time.time()
-                    if interval == 0 or now - self._last_rotate >= interval:
+                    if rotation_interval == 0 or now - self._last_rotate >= rotation_interval:
                         result = self._log_manager.rotate_logs(log_dir)
                         self._last_rotate = now
                         if result.get("rotated_files", 0) > 0:
@@ -660,16 +715,29 @@ class RAGService:
             except Exception as e:
                 print(f"  ⚠️  Log rotation check failed: {e}")
 
-            # Sleep for remaining interval
+            # Calculate sleep with exponential backoff when idle
+            multiplier = min(base ** idle_cycles, max_mult)
+            target_sleep = interval * multiplier
             elapsed = time.time() - cycle_start
-            sleep_time = max(0, interval - elapsed)
+            sleep_time = max(0, target_sleep - elapsed)
 
             if sleep_time > 0 and self.running:
-                print(f"💤 Sleeping {int(sleep_time)}s until next cycle...\n")
-                time.sleep(sleep_time)
+                if idle_cycles > 0:
+                    print(f"💤 Idle x{idle_cycles} → sleeping {int(sleep_time)}s...\n")
+                else:
+                    print(f"💤 Sleeping {int(sleep_time)}s...\n")
+                self._interruptible_sleep(sleep_time)
 
         self.state.set_stopped()
         print("👋 RAG service stopped")
+    def _interruptible_sleep(self, seconds: float):
+        """Sleep in 5s chunks so signals are handled promptly."""
+        chunk = 5.0
+        remaining = seconds
+        while remaining > 0 and self.running:
+            time.sleep(min(chunk, remaining))
+            remaining -= chunk
+
 
 
 def cmd_start(args, state: ServiceState, tracker: FailureTracker):

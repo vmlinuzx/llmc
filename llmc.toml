@@ -94,6 +94,11 @@ gpu_min_free_mb = 1536
 # Prevents unbounded file accumulation from long-running daemon processes
 pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
 
+# Idle Loop Throttling - reduce CPU usage when no work to do
+nice_level = 10                    # Process priority (0-19, higher = lower priority)
+idle_backoff_max = 10              # Max multiplier when idle (10x = 30min at default interval)
+idle_backoff_base = 2              # Exponential base (2^n)
+
 
 
 # ==============================================================================

@@ -2,6 +2,49 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [Unreleased]
+
+### Summary
+This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomous testing and remediation effort that identified and fixed 7 bugs (1 critical, 1 high, 3 medium, 2 low) discovered through autonomous agent testing. All bugs fixed, test suite improved, and codebase cleaned up. See [ROSWAAL_BUG_FIX_COMPLETE.md](DOCS/planning/ROSWAAL_BUG_FIX_COMPLETE.md) for full details.
+
+### Added
+- **RAG Service Idle Loop Throttling:**
+  - Implemented intelligent CPU throttling when RAG daemon has no work to do
+  - Sets process nice level (+10) to run at lower priority and not compete with interactive work
+  - Exponential backoff: sleep time increases from 3min → 6min → 12min → 24min → 30min (capped) when idle
+  - Instant reset to normal cycle on any work detected (file changes, pending enrichment, etc.)
+  - Interruptible sleep in 5s chunks for responsive signal handling
+  - Configurable via `llmc.toml` `[daemon]` section: `nice_level`, `idle_backoff_max`, `idle_backoff_base`
+  - **Impact:** 90% reduction in CPU cycles when idle (480/day → 50/day), lower fan noise, better battery life
+  - Based on SDD: `DOCS/planning/SDD_Idle_Loop_Throttling.md`
+  - Implementation: `DOCS/planning/IMPL_Idle_Loop_Throttling.md`
+
+### Fixed
+- **P0 Bug Fix:** Search command AttributeError crash
+  - Fixed `AttributeError: 'SpanSearchResult' object has no attribute 'file_path'` in `llmc search` command
+  - Changed `.file_path` → `.path` and `.text` → `.summary` to match SpanSearchResult dataclass
+  - Added improved JSON output with `kind` and `summary` fields
+  - Created regression test in `tests/test_search_command_regression.py`
+  - Identified and fixed by Roswaal autonomous testing agent
+  - **Impact:** Search command (`llmc search "query"`) now works correctly with both text and JSON output
+- **P1 Bug Fix:** Module import error when running RAG tools from outside repository
+  - Fixed `ModuleNotFoundError: No module named 'llmc'` when running `tools.rag.cli` from arbitrary directories
+  - Added automatic sys.path resolution in `tools/rag/__init__.py` to add repo root to path
+  - Reinstalled package in editable mode with updated mapping to include `llmc` module
+  - Created comprehensive usage documentation in `tools/rag/USAGE.md`
+  - Identified and fixed by Roswaal autonomous testing agent
+  - **Impact:** RAG CLI tools now work from any directory with proper venv activation
+- **P2 Bug Fixes:** Code quality improvements in CLI
+  - Removed duplicate `make_layout` function in `llmc/cli.py` (Bug #3)
+  - Cleaned up 5 unused rich imports: `Align`, `BarColumn`, `Progress`, `SpinnerColumn`, `TextColumn` (Bug #4)
+  - Fixed B008 mutable default argument in `llmc/commands/init.py` using `Annotated[Optional[Path], ...]` (Bug #5)
+  - Fixed B904 exception chaining issue in init.py
+  - Created regression test in `tests/test_cli_p2_regression.py`
+  - All ruff linting issues resolved (7 total)
+  - Identified by Roswaal, fixed by Gemini
+  - **Impact:** Cleaner codebase, better performance, no linting errors
+
+
 ## [0.5.7] - "Enterprise Rocky Road" - 2025-11-30
 
 ### Purple Flavor: **Enterprise Rocky Road**
