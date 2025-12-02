@@ -33,11 +33,19 @@ def snapshot_workspace_cmd(
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         name = f"snapshot-{ts}.tar.gz"
     out_rel = str(Path(export_dir) / name)
-    tar_path = create_snapshot_tar(fs=SafeFS(ws_root), root_rel=".", out_rel=out_rel, include_hidden=include_hidden, force=force)
+    tar_path = create_snapshot_tar(
+        fs=SafeFS(ws_root),
+        root_rel=".",
+        out_rel=out_rel,
+        include_hidden=include_hidden,
+        force=force,
+    )
     return {"snapshot": tar_path}
 
 
-def clean_workspace_cmd(repo_root: Path, workspace: str | None = None, force: bool = False) -> dict[str, Any]:
+def clean_workspace_cmd(
+    repo_root: Path, workspace: str | None = None, force: bool = False
+) -> dict[str, Any]:
     return clean_workspace(repo_root, workspace, force=force)
 
 
@@ -113,4 +121,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

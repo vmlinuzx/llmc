@@ -27,4 +27,3 @@ def test_safefs_dry_run_rm_tree_returns_plan(tmp_path: Path) -> None:
     assert plan["would_delete"]
     # Ensure nothing was actually deleted
     assert (base / "a" / "x.txt").exists()
-

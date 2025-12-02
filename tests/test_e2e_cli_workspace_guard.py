@@ -21,4 +21,3 @@ def test_cli_helpers_e2e_block_escape(tmp_path: Path) -> None:
     (repo / ".llmc" / "workspace").mkdir(parents=True)
     with pytest.raises(PathTraversalError):
         resolve_workspace_from_cli(repo, "../outside")
-

@@ -8,6 +8,7 @@ Tests cover:
 - Env var validation
 - Command construction
 """
+
 import os
 from pathlib import Path
 import subprocess
@@ -28,11 +29,7 @@ class TestWrapperScripts:
         env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
         result = subprocess.run(
-            [str(wrapper_path)],
-            check=False, capture_output=True,
-            text=True,
-            timeout=10,
-            env=env
+            [str(wrapper_path)], check=False, capture_output=True, text=True, timeout=10, env=env
         )
 
         # Script should succeed in validate-only mode
@@ -46,10 +43,11 @@ class TestWrapperScripts:
         # Run without any env vars set
         result = subprocess.run(
             [str(wrapper_path), "test prompt"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             env={},
-            timeout=10
+            timeout=10,
         )
 
         # Should fail with clear error about missing token
@@ -70,10 +68,11 @@ class TestWrapperScripts:
             # Test with --repo flag pointing to existing directory
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, "test prompt"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
 
             # Script will try to run but may fail on other checks
@@ -94,10 +93,11 @@ class TestWrapperScripts:
             # Test with --yolo flag
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, "--yolo", "test prompt"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
 
             # Verify flag is accepted (won't assert success due to missing CLI)
@@ -116,10 +116,11 @@ class TestWrapperScripts:
 
         result = subprocess.run(
             [str(wrapper_path), "test prompt"],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             env=env,
-            timeout=10
+            timeout=10,
         )
 
         # May fail because codex CLI is not available
@@ -137,10 +138,11 @@ class TestWrapperScripts:
             env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, "test prompt"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
 
             # Verify repo flag is parsed
@@ -158,10 +160,11 @@ class TestWrapperScripts:
             env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
             result = subprocess.run(
                 [str(wrapper_path), f"--repo={tmpdir}", "test prompt"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
 
             # Verify this syntax works
@@ -207,10 +210,11 @@ class TestWrapperScripts:
 
             result = subprocess.run(
                 [str(wrapper_path), "--repo", tmpdir, test_prompt],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 env=env,
-                timeout=10
+                timeout=10,
             )
 
             # The script should accept the prompt with special characters

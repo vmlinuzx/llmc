@@ -18,7 +18,7 @@ def _wrap_in_envelope(res: Any) -> dict:
     status = "OK"
     if getattr(res, "source", "") == "LOCAL_FALLBACK":
         status = "FALLBACK"
-    
+
     # Determine message (e.g. truncation warning)
     message = None
     if getattr(res, "truncated", False):
@@ -28,9 +28,9 @@ def _wrap_in_envelope(res: Any) -> dict:
         status=status,
         source=getattr(res, "source", "RAG_GRAPH"),
         freshness_state=getattr(res, "freshness_state", "UNKNOWN"),
-        message=message
+        message=message,
     )
-    
+
     items = getattr(res, "items", [])
     envelope = RagResult(meta=meta, items=items)
     return envelope.to_dict()
@@ -70,7 +70,11 @@ def main(argv: list[str] | None = None) -> int:
     p_lineage = sub.add_parser("lineage", help="Find upstream/downstream lineage")
     p_lineage.add_argument("--repo", required=True, help="Repository root path")
     p_lineage.add_argument("symbol", help="Symbol name")
-    p_lineage.add_argument("--direction", choices=["upstream", "downstream", "callers", "callees"], default="downstream")
+    p_lineage.add_argument(
+        "--direction",
+        choices=["upstream", "downstream", "callers", "callees"],
+        default="downstream",
+    )
     p_lineage.add_argument("--limit", type=int, default=50, help="Max results")
     p_lineage.add_argument("--json", action="store_true", help="Output as JSON")
 
@@ -135,7 +139,9 @@ def main(argv: list[str] | None = None) -> int:
 
         elif args.command == "lineage":
             direction = "upstream" if args.direction in ("upstream", "callers") else "downstream"
-            res = tool_handlers.tool_rag_lineage(str(repo), args.symbol, direction, limit=args.limit)
+            res = tool_handlers.tool_rag_lineage(
+                str(repo), args.symbol, direction, limit=args.limit
+            )
             if args.json:
                 print(json.dumps(_wrap_in_envelope(res), indent=2))
             else:
@@ -145,9 +151,10 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         import traceback
+
         traceback.print_exc()
         return 1
-    
+
     return 0
 
 
@@ -158,7 +165,7 @@ def _print_search(res):
         return
     for i, item in enumerate(res.items, 1):
         enrich_tag = " [ENRICHED]" if item.enrichment else ""
-        
+
         # Phase 4: Content Type Annotation
         type_str = ""
         if item.enrichment and item.enrichment.content_type:
@@ -170,7 +177,7 @@ def _print_search(res):
                 type_str = f" [TYPE: {ct}]"
 
         print(f"{i}. {item.file}{enrich_tag}{type_str}")
-        
+
         if item.enrichment:
             if item.enrichment.summary:
                 print(f"   💡 Summary: {item.enrichment.summary}")
@@ -195,7 +202,9 @@ def _print_where_used(res):
 
 
 def _print_lineage(res):
-    print(f"Lineage ({res.direction}): '{res.symbol}' (Source: {res.source}, Freshness: {res.freshness_state})")
+    print(
+        f"Lineage ({res.direction}): '{res.symbol}' (Source: {res.source}, Freshness: {res.freshness_state})"
+    )
     if not res.items:
         print("  No lineage found.")
         return

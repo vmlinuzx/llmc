@@ -165,7 +165,6 @@ class TestFormatter:
         assert "file.py:1:" in rendered
         assert "# TE: more results available" in rendered
 
-
     def test_compute_hot_zone_dominant(self):
         """Hot zone shows when >50% in one area."""
         file_counts = {
@@ -217,7 +216,6 @@ class TestGrepHandler:
         unique_pattern = f"nomatch_{uuid.uuid4().hex}"
         result = handle_grep(unique_pattern, repo_root=Path("/home/vmlinux/src/llmc"))
         assert '"matches": 0' in result.header or '"matches":0' in result.header
-
 
     def test_grep_raw_bypass(self):
         """Raw mode skips enrichment."""

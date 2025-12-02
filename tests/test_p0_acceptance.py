@@ -1,4 +1,3 @@
-
 import json
 from pathlib import Path
 import sqlite3
@@ -77,4 +76,6 @@ def test_search_attaches_enrichment(hermetic_env: Path, monkeypatch: pytest.Monk
 
     res = tool_rag_search(repo_root=str(repo), query="foo", limit=5)
     if res.items:
-        assert any(getattr(it, "enrichment", None) and "summary" in it.enrichment for it in res.items)
+        assert any(
+            getattr(it, "enrichment", None) and "summary" in it.enrichment for it in res.items
+        )

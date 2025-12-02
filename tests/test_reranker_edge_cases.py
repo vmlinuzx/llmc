@@ -84,16 +84,16 @@ class TestRerankerWeightsConfiguration:
     def test_weights_all_factors(self, tmp_path: Path):
         """Test weights for all reranking factors."""
         all_factors = [
-            "exact_match",       # Exact string match
-            "fuzzy_match",       # Fuzzy string similarity
-            "token_overlap",     # Shared tokens
-            "semantic_match",    # Semantic similarity
-            "file_similarity",   # Similar files
-            "path_relevance",    # Path matches
-            "freshness",         # Recently modified
-            "popularity",        # Frequently accessed
-            "type_match",        # File type match
-            "location_proximity", # Code location
+            "exact_match",  # Exact string match
+            "fuzzy_match",  # Fuzzy string similarity
+            "token_overlap",  # Shared tokens
+            "semantic_match",  # Semantic similarity
+            "file_similarity",  # Similar files
+            "path_relevance",  # Path matches
+            "freshness",  # Recently modified
+            "popularity",  # Frequently accessed
+            "type_match",  # File type match
+            "location_proximity",  # Code location
         ]
 
         weights = {factor: 5.0 for factor in all_factors}
@@ -192,7 +192,7 @@ class TestRerankerWeightsConfiguration:
             "exact_match": 10.0,
             "token_overlap": 5.0,
             "my_custom_factor": 7.0,  # Custom
-            "another_custom": 3.0,     # Custom
+            "another_custom": 3.0,  # Custom
         }
 
         config_path = self.create_weights_config(tmp_path, weights)
@@ -237,10 +237,10 @@ class TestRerankerWeightsConfiguration:
             # Attempt to load - implementation logic should handle PermissionError
             # and return sensible defaults or raise specific error
             # We'll mock load_rerank_weights here to simulate behavior if not imported
-            
+
             # In actual implementation, this would be:
             # weights = load_rerank_weights(tmp_path)
-            
+
             # For this test, we verify that if we TRY to read, we get PermissionError
             # This confirms the setup works
             with open(config_path) as f:
@@ -390,6 +390,7 @@ class TestRerankerFailureHandling:
         import threading
 
         results = []
+
         def rerank():
             hits = create_test_hits(tmp_path)
             # Run reranking
@@ -453,8 +454,8 @@ class TestLightweightReranker:
 
         hits = [
             Mock(file="file1.py", text="def function_a(): return 42"),  # All tokens
-            Mock(file="file2.py", text="def function_b(): return 1"),    # Partial
-            Mock(file="file3.py", text="class Test: pass"),              # None
+            Mock(file="file2.py", text="def function_b(): return 1"),  # Partial
+            Mock(file="file3.py", text="class Test: pass"),  # None
         ]
 
         # Score based on token count
@@ -466,8 +467,8 @@ class TestLightweightReranker:
 
         hits = [
             Mock(file="file1.py", text="def function_a(): ..."),  # Exact
-            Mock(file="file2.py", text="function_a is called"),   # Contains
-            Mock(file="file3.py", text="function_b"),             # Different
+            Mock(file="file2.py", text="function_a is called"),  # Contains
+            Mock(file="file3.py", text="function_b"),  # Different
         ]
 
         # Exact match should get highest score
@@ -478,8 +479,8 @@ class TestLightweightReranker:
 
         hits = [
             Mock(file="file1.py", text="function_a"),  # Starts with
-            Mock(file="file2.py", text="my_function"), # Contains
-            Mock(file="file3.py", text="diff"),        # No match
+            Mock(file="file2.py", text="my_function"),  # Contains
+            Mock(file="file3.py", text="diff"),  # No match
         ]
 
         # Prefix match > contains > no match
@@ -501,9 +502,9 @@ class TestLightweightReranker:
         query = "test"
 
         hits = [
-            Mock(file="file1.py", text="test at start"),      # Early
-            Mock(file="file2.py", text="middle test word"),   # Middle
-            Mock(file="file3.py", text="at end test"),        # Late
+            Mock(file="file1.py", text="test at start"),  # Early
+            Mock(file="file2.py", text="middle test word"),  # Middle
+            Mock(file="file3.py", text="at end test"),  # Late
         ]
 
         # Earlier matches may score higher
@@ -514,7 +515,7 @@ class TestLightweightReranker:
 
         hits = [
             Mock(file="file1.py", text="def def def"),  # Frequent
-            Mock(file="file2.py", text="def once"),     # Less frequent
+            Mock(file="file2.py", text="def once"),  # Less frequent
         ]
 
         # May boost or penalize frequency
@@ -524,8 +525,8 @@ class TestLightweightReranker:
         query = "class"
 
         hits = [
-            Mock(file="file1.py", text="class Test"),    # Match + .py
-            Mock(file="file2.md", text="class Test"),    # Match + .md
+            Mock(file="file1.py", text="class Test"),  # Match + .py
+            Mock(file="file2.md", text="class Test"),  # Match + .md
         ]
 
         # May prefer certain file types
@@ -537,7 +538,7 @@ class TestLightweightReranker:
 
         hits = [
             Mock(file="test_file.py", text="func"),  # In filename
-            Mock(file="other.py", text="test"),      # In content
+            Mock(file="other.py", text="test"),  # In content
         ]
 
         # Filename matches may score higher
@@ -712,7 +713,7 @@ class TestRerankingAlgorithm:
     def test_rerank_nan_scores(self, tmp_path: Path):
         """Test handling of NaN scores."""
         hits = [
-            Mock(file="file1.py", text="test", score=float('nan')),
+            Mock(file="file1.py", text="test", score=float("nan")),
             Mock(file="file2.py", text="test", score=0.5),
         ]
 
@@ -722,7 +723,7 @@ class TestRerankingAlgorithm:
     def test_rerank_inf_scores(self, tmp_path: Path):
         """Test handling of infinite scores."""
         hits = [
-            Mock(file="file1.py", text="test", score=float('inf')),
+            Mock(file="file1.py", text="test", score=float("inf")),
             Mock(file="file2.py", text="test", score=0.5),
         ]
 

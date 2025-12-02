@@ -42,14 +42,19 @@ def create_test_db(tmp_path: Path, db_name: str = "rag.db") -> Path:
     """)
 
     # Add sample data
-    conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
-                ("file1.py", "def function_a(): return 42"))
-    conn.execute("INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
-                ("file2.py", "def function_b(): return function_a()"))
+    conn.execute(
+        "INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
+        ("file1.py", "def function_a(): return 42"),
+    )
+    conn.execute(
+        "INSERT OR IGNORE INTO files (path, content) VALUES (?, ?)",
+        ("file2.py", "def function_b(): return function_a()"),
+    )
     conn.commit()
     conn.close()
 
     return db_path
+
 
 def create_fts_db(tmp_path: Path, db_name: str = "rag_fts.db") -> Path:
     """Create a test FTS database."""
@@ -61,9 +66,11 @@ def create_fts_db(tmp_path: Path, db_name: str = "rag_fts.db") -> Path:
             pass
 
     conn = sqlite3.connect(str(db_path))
-    
+
     # Create base table for external content FTS
-    conn.execute("CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, path TEXT, content TEXT)")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, path TEXT, content TEXT)"
+    )
 
     conn.execute("""
         CREATE VIRTUAL TABLE IF NOT EXISTS fts_files USING fts5(
@@ -139,6 +146,7 @@ class TestFTSFallback:
 
         # Make database read-only
         import stat
+
         fts_db.chmod(stat.S_IRUSR)
 
         # Should handle permission error
@@ -236,6 +244,7 @@ class TestGracefulDegradation:
 
         # Make database read-only
         import stat
+
         main_db.chmod(stat.S_IRUSR)
 
         # Should still be able to read/search

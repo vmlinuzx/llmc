@@ -14,6 +14,7 @@ def test_classify_slice_erp_path():
     assert res.slice_type == "erp_product"
     assert "erp path" in res.reasons[0]
 
+
 def test_classify_slice_erp_content():
     # Simulate a random JSON file with ERP keys
     p = Path("temp/some_file.json")
@@ -22,11 +23,13 @@ def test_classify_slice_erp_content():
     assert res.slice_type == "erp_product"
     assert "erp keys" in res.reasons[0]
 
+
 def test_classify_query_sku():
     q = "Why is SKU W-44910 failing?"
     res = classify_query(q)
     assert res["route_name"] == "erp"
     assert "erp:sku" in res["reasons"][0]
+
 
 def test_classify_query_keywords():
     q = "Check inventory of model number X100"
@@ -34,17 +37,19 @@ def test_classify_query_keywords():
     assert res["route_name"] == "erp"
     assert "erp:" in res["reasons"][0] or "conflict-policy" in res["reasons"][0]
 
+
 def test_classify_query_tool_context():
     res = classify_query("some query", tool_context={"tool_id": "product_lookup"})
     assert res["route_name"] == "erp"
     assert res["confidence"] == 1.0
+
 
 def test_config_mapping():
     # Verify that the config correctly maps erp_product -> erp
     # pytest changes CWD to a temp dir, so we must find the real repo root
     # This test file is at <repo>/tests/test_erp_routing.py
     repo_root = Path(__file__).resolve().parent.parent
-    
+
     # Sanity check
     if not (repo_root / "llmc.toml").exists():
         pytest.skip("Cannot find llmc.toml at resolved repo root")

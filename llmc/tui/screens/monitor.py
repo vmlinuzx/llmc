@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Monitor Screen - real-time system dashboard with analytics."""
+
 from datetime import datetime
 import os
 from pathlib import Path
@@ -175,9 +176,7 @@ class MonitorScreen(Screen):
 
     def on_mount(self) -> None:
         """Start timers when mounted."""
-        self.query_one("#header", Static).update(
-            f"LLMC Monitor :: repo {self.app.repo_root}"
-        )
+        self.query_one("#header", Static).update(f"LLMC Monitor :: repo {self.app.repo_root}")
         # Start log streaming from the RAG service (falls back to simulation if unavailable).
         self._start_log_stream()
         self.update_menu()
@@ -367,9 +366,7 @@ class MonitorScreen(Screen):
 
                 nodes, _ = _load_graph(repo_root)
                 stats["graph_nodes"] = len(nodes)
-                stats["files_tracked"] = len(
-                    {n.get("path", "") for n in nodes if n.get("path")}
-                )
+                stats["files_tracked"] = len({n.get("path", "") for n in nodes if n.get("path")})
 
                 total_content = sum(
                     len(str(n.get("metadata", {}).get("summary", ""))) for n in nodes
@@ -426,6 +423,7 @@ class MonitorScreen(Screen):
         """Go to search screen."""
         try:
             from llmc.tui.screens.search import SearchScreen
+
             self.app.push_screen(SearchScreen())
         except Exception as exc:
             self.add_log(f"Open search failed: {exc}", "ERR")
@@ -434,6 +432,7 @@ class MonitorScreen(Screen):
         """Go to inspector screen."""
         try:
             from llmc.tui.screens.inspector import InspectorScreen
+
             self.app.push_screen(InspectorScreen())
         except Exception as exc:
             self.add_log(f"Open inspector failed: {exc}", "ERR")
@@ -449,6 +448,7 @@ class MonitorScreen(Screen):
         """Switch to analytics dashboard."""
         try:
             from llmc.tui.screens.analytics import AnalyticsScreen
+
             self.app.push_screen(AnalyticsScreen())
         except Exception as exc:
             self.add_log(f"Open analytics failed: {exc}", "ERR")
@@ -457,6 +457,7 @@ class MonitorScreen(Screen):
         """Switch to live TE monitor."""
         try:
             from llmc.tui.screens.live_monitor import LiveMonitorScreen
+
             self.app.push_screen(LiveMonitorScreen())
         except Exception as exc:
             self.add_log(f"Open live monitor failed: {exc}", "ERR")
@@ -465,6 +466,7 @@ class MonitorScreen(Screen):
         """Switch to RAG Doctor screen."""
         try:
             from llmc.tui.screens.rag_doctor import RAGDoctorScreen
+
             self.app.push_screen(RAGDoctorScreen())
         except Exception as exc:
             self.add_log(f"Open RAG Doctor failed: {exc}", "ERR")

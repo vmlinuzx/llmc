@@ -47,4 +47,3 @@ def test_get_est_tokens_per_span_defaults_when_missing(tmp_path, monkeypatch) ->
     monkeypatch.delenv("LLMC_EST_TOKENS_PER_SPAN", raising=False)
 
     assert get_est_tokens_per_span(repo_root) == DEFAULT_EST_TOKENS_PER_SPAN
-

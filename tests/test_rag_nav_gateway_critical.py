@@ -46,7 +46,9 @@ class TestComputeRoute:
             (repo_root / ".git").mkdir()
 
             # Mock load_status to raise exception
-            with patch("tools.rag_nav.gateway.load_status", side_effect=Exception("Module not found")):
+            with patch(
+                "tools.rag_nav.gateway.load_status", side_effect=Exception("Module not found")
+            ):
                 decision = compute_route(repo_root)
 
                 assert decision.use_rag is False

@@ -74,6 +74,7 @@ class SpanWorkItem:
     def read_source(self, repo_root: Path) -> str:
         return self.read_bytes(repo_root).decode("utf-8", errors="replace")
 
+
 @dataclass
 class EnrichmentRecord:
     """Lightweight projection of an enrichment row joined with its span symbol.
@@ -82,6 +83,7 @@ class EnrichmentRecord:
     by the schema graph builder, search adapters, and tests without
     depending on SQLite row objects.
     """
+
     span_hash: str
     symbol: str
     summary: str | None

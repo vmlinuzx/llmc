@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pytest
@@ -26,4 +25,3 @@ def test_nav_search_happy_path(hermetic_env: Path):
 
     res = Res()
     assert_ok_envelope(res)
-

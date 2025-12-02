@@ -30,4 +30,3 @@ if __name__ == "__main__":
     root = Path(".").resolve()
     count = rewrite_repo(root)
     print(f"Rewrote {count} files (bare 'except:' -> 'except Exception:').")
-

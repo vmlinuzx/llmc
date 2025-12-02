@@ -5,7 +5,8 @@ from typing import Any
 
 from .common import RouteSignal
 
-FENCE_OPEN_RE = re.compile(r'(^|[\s:,\(\)\{\}\[\]])```[\w-]*\s*\n', re.MULTILINE)
+FENCE_OPEN_RE = re.compile(r"(^|[\s:,\(\)\{\}\[\]])```[\w-]*\s*\n", re.MULTILINE)
+
 
 def count_fenced_code_blocks(text: str) -> int:
     count = 0
@@ -23,8 +24,10 @@ def count_fenced_code_blocks(text: str) -> int:
             break
     return count
 
+
 def has_fenced_code(text: str) -> bool:
     return count_fenced_code_blocks(text) >= 1
+
 
 # Regexes with non-capturing groups for anchors
 CODE_STRUCT_REGEXES = [
@@ -39,17 +42,49 @@ CODE_STRUCT_REGEXES = [
 ]
 
 CODE_KEYWORDS = {
-    "if","elif","else","for","while","return","def","class","import","from",
-    "try","except","with","lambda","yield","self","cls","print",
-    "function","var","const","let","console.log","=>","async","await",
-    "args","kwargs","dict","list","tuple","int","str","bool","None",
+    "if",
+    "elif",
+    "else",
+    "for",
+    "while",
+    "return",
+    "def",
+    "class",
+    "import",
+    "from",
+    "try",
+    "except",
+    "with",
+    "lambda",
+    "yield",
+    "self",
+    "cls",
+    "print",
+    "function",
+    "var",
+    "const",
+    "let",
+    "console.log",
+    "=>",
+    "async",
+    "await",
+    "args",
+    "kwargs",
+    "dict",
+    "list",
+    "tuple",
+    "int",
+    "str",
+    "bool",
+    "None",
 }
+
 
 def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | None:
     # 1. Fences
     if has_fenced_code(text):
         return RouteSignal(route="code", score=0.95, reason="heuristic=fenced-code")
-    
+
     # 2. Structure
     matches = []
     for regex in CODE_STRUCT_REGEXES:
@@ -58,21 +93,27 @@ def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | Non
             s = f[0] if isinstance(f, tuple) else f
             if s.strip():
                 matches.append(s.strip())
-                if len(matches) >= 3: break
-        if len(matches) >= 3: break
-    
+                if len(matches) >= 3:
+                    break
+        if len(matches) >= 3:
+            break
+
     if matches:
-        return RouteSignal(route="code", score=0.85, reason=f"code-structure={','.join(matches[:3])}")
+        return RouteSignal(
+            route="code", score=0.85, reason=f"code-structure={','.join(matches[:3])}"
+        )
 
     # 3. Keywords
     # Use word boundaries to avoid substring false positives (e.g. "shift" -> "if")
     words = set(re.findall(r"\b\w+\b", text))
     found = words.intersection(CODE_KEYWORDS)
-    
+
     if len(found) >= 1:
         # Score: 0.8 for 2+ keywords, 0.6 for 1 (beats single ERP keyword at 0.55)
         # This ensures code keywords like 'return', 'def', etc. take priority
         score = 0.8 if len(found) >= 2 else 0.6
-        return RouteSignal(route="code", score=score, reason=f"code-keywords={','.join(list(found)[:3])}")
+        return RouteSignal(
+            route="code", score=score, reason=f"code-keywords={','.join(list(found)[:3])}"
+        )
 
     return None

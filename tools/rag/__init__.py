@@ -23,6 +23,7 @@ def load_status(repo_root: Path) -> object | None:
         )
     return None
 
+
 def save_status(repo_root: Path, status: object) -> None:
     """Save index status for a repository"""
     status_file = status_path(repo_root)
@@ -37,74 +38,83 @@ def save_status(repo_root: Path, status: object) -> None:
     }
     status_file.write_text(json.dumps(payload))
 
+
 def status_path(repo_root: Path) -> Path:
     """Get path to status file for a repository"""
     return repo_root / ".llmc" / "rag" / "index_status.json"
 
+
 def compute_route(repo_root: Path) -> object:
     """Compute routing decision for a repository"""
+
     class Route:
         use_rag = True
         freshness_state = "FRESH"
-    
+
     return Route()
+
 
 def build_graph_for_repo(repo_root: Path) -> object:
     """Build schema graph for a repository"""
+
     class Status:
         index_state = "fresh"
         schema_version = "2"
-    
+
     status = Status()
     save_status(repo_root, status)
-    
+
     # Scan for Python files
     files = []
     entities = []
     relations = []
-    
+
     for root, dirs, filenames in os.walk(repo_root):
         # Skip hidden directories and __pycache__
-        dirs[:] = [d for d in dirs if not d.startswith('.') and d != '__pycache__']
-        
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d != "__pycache__"]
+
         for filename in filenames:
-            if filename.endswith('.py'):
+            if filename.endswith(".py"):
                 file_path = Path(root) / filename
                 relative_path = file_path.relative_to(repo_root)
                 files.append(str(relative_path))
-                
+
                 # Create entity for this file
-                entities.append({
-                    "id": str(relative_path).replace('/', '.').replace('.py', ''),
-                    "name": filename,
-                    "type": "file",
-                    "path": str(relative_path)
-                })
-    
+                entities.append(
+                    {
+                        "id": str(relative_path).replace("/", ".").replace(".py", ""),
+                        "name": filename,
+                        "type": "file",
+                        "path": str(relative_path),
+                    }
+                )
+
     # Look for inheritance relationships
     for file_path_str in files:
-        if file_path_str.endswith('.py'):
+        if file_path_str.endswith(".py"):
             full_path = repo_root / file_path_str
             try:
                 content = full_path.read_text()
                 # Look for class inheritance patterns
-                for line in content.split('\n'):
+                for line in content.split("\n"):
                     line = line.strip()
-                    if line.startswith('class ') and '(' in line:
+                    if line.startswith("class ") and "(" in line:
                         # Extract base class
-                        parts = line.split('(', 1)
+                        parts = line.split("(", 1)
                         if len(parts) > 1:
-                            base_part = parts[1].split(')')[0].strip()
-                            if base_part and not base_part.startswith('_'):
+                            base_part = parts[1].split(")")[0].strip()
+                            if base_part and not base_part.startswith("_"):
                                 # Add relation
-                                relations.append({
-                                    "from": file_path_str.replace('/', '.').replace('.py', ''),
-                                    "to": base_part,
-                                    "edge": "extends"
-                                })
+                                relations.append(
+                                    {
+                                        "from": file_path_str.replace("/", ".").replace(".py", ""),
+                                        "to": base_part,
+                                        "edge": "extends",
+                                    }
+                                )
             except Exception:
                 pass  # Skip files that can't be read
-    
+
     # Create graph data
     graph_path = _graph_path(repo_root)
     graph_path.parent.mkdir(parents=True, exist_ok=True)
@@ -112,18 +122,17 @@ def build_graph_for_repo(repo_root: Path) -> object:
         "repo": str(repo_root.resolve()),
         "schema_version": "2",
         "files": files,
-        "schema_graph": {
-            "entities": entities,
-            "relations": relations
-        }
+        "schema_graph": {"entities": entities, "relations": relations},
     }
     graph_path.write_text(json.dumps(graph_data))
-    
+
     return status
+
 
 def _graph_path(repo_root: Path) -> Path:
     """Get path to graph file for a repository"""
     return repo_root / ".llmc" / "rag" / "schema_graph.json"
+
 
 def tool_rag_search(
     query: str,

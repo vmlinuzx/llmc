@@ -17,6 +17,7 @@ import pytest
 # Import enrichment modules
 # Note: These imports should work after enrichment is properly integrated
 
+
 def create_test_db(tmp_path: Path, db_name: str = "enrichment.db") -> Path:
     """Helper to create a test enrichment database."""
     db_path = tmp_path / db_name
@@ -25,7 +26,7 @@ def create_test_db(tmp_path: Path, db_name: str = "enrichment.db") -> Path:
             db_path.unlink()
         except Exception:
             pass
-            
+
     conn = sqlite3.connect(str(db_path))
 
     # Create basic enrichment schema
@@ -324,6 +325,7 @@ class TestEnrichmentDatabaseDiscovery:
 
         # Make file read-only
         import stat
+
         db_path.chmod(stat.S_IRUSR)
 
         # Should handle read-only DB gracefully
@@ -393,7 +395,7 @@ class TestEnrichmentAttachment:
         for i in range(10):
             conn.execute(
                 "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-                ("test.py", f"Enrichment {i}")
+                ("test.py", f"Enrichment {i}"),
             )
         conn.commit()
         conn.close()
@@ -409,8 +411,7 @@ class TestEnrichmentAttachment:
         conn = sqlite3.connect(str(db_path))
         large_content = "x" * 10000
         conn.execute(
-            "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-            ("test.py", large_content)
+            "INSERT INTO enrichments (file_path, content) VALUES (?, ?)", ("test.py", large_content)
         )
         conn.commit()
         conn.close()
@@ -433,7 +434,7 @@ class TestEnrichmentAttachment:
         conn = sqlite3.connect(str(db_path))
         conn.execute(
             "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-            ("other.py", "Content for other.py")
+            ("other.py", "Content for other.py"),
         )
         conn.commit()
         conn.close()
@@ -485,7 +486,7 @@ class TestEnrichmentAttachment:
         conn = sqlite3.connect(str(db_path))
         conn.execute(
             "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-            ("test.py", special_content)
+            ("test.py", special_content),
         )
         conn.commit()
         conn.close()
@@ -589,18 +590,19 @@ class TestEnrichmentMetrics:
 
         # Record metrics
         conn = sqlite3.connect(str(db_path))
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO metrics (operation, items_count, attached_count)
             VALUES (?, ?, ?)
-        """, ("search", 10, 5))
+        """,
+            ("search", 10, 5),
+        )
         conn.commit()
         conn.close()
 
         # Verify persisted
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute(
-            "SELECT operation, items_count, attached_count FROM metrics"
-        )
+        cursor = conn.execute("SELECT operation, items_count, attached_count FROM metrics")
         row = cursor.fetchone()
         conn.close()
 
@@ -615,10 +617,13 @@ class TestEnrichmentMetrics:
 
         # Record multiple enrichment operations
         for i in range(5):
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO metrics (operation, items_count, attached_count)
                 VALUES (?, ?, ?)
-            """, ("search", 10 + i, 5 + i))
+            """,
+                ("search", 10 + i, 5 + i),
+            )
 
         conn.commit()
         conn.close()
@@ -669,17 +674,12 @@ class TestEnrichmentMetrics:
 
     def test_metrics_logging_format(self, tmp_path: Path):
         """Test that log format is consistent."""
-        log_format = "enrich attach (operation): db={} items={} attached={} line={} path={} truncated={}"
+        log_format = (
+            "enrich attach (operation): db={} items={} attached={} line={} path={} truncated={}"
+        )
 
         # Test format with placeholders
-        msg = log_format.format(
-            "/path/db.db",
-            10,
-            5,
-            20,
-            10,
-            3
-        )
+        msg = log_format.format("/path/db.db", 10, 5, 20, 10, 3)
 
         assert "enrich attach" in msg
         assert "items=10" in msg
@@ -732,7 +732,7 @@ class TestEnrichmentEdgeCases:
         conn = sqlite3.connect(str(db_path))
         conn.execute(
             "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-            ("binary.py", binary_content)
+            ("binary.py", binary_content),
         )
         conn.commit()
         conn.close()
@@ -758,7 +758,7 @@ class TestEnrichmentEdgeCases:
         conn = sqlite3.connect(str(db_path))
         conn.execute(
             "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-            ("test.py", "Initial content")
+            ("test.py", "Initial content"),
         )
         conn.commit()
         conn.close()
@@ -766,18 +766,14 @@ class TestEnrichmentEdgeCases:
         # Update existing enrichment
         conn = sqlite3.connect(str(db_path))
         conn.execute(
-            "UPDATE enrichments SET content = ? WHERE file_path = ?",
-            ("Updated content", "test.py")
+            "UPDATE enrichments SET content = ? WHERE file_path = ?", ("Updated content", "test.py")
         )
         conn.commit()
         conn.close()
 
         # Verify updated
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute(
-            "SELECT content FROM enrichments WHERE file_path = ?",
-            ("test.py",)
-        )
+        cursor = conn.execute("SELECT content FROM enrichments WHERE file_path = ?", ("test.py",))
         content = cursor.fetchone()[0]
         conn.close()
 
@@ -789,10 +785,13 @@ class TestEnrichmentEdgeCases:
 
         # Add old timestamp data
         conn = sqlite3.connect(str(db_path))
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO enrichments (file_path, content, created_at)
             VALUES (?, ?, datetime('now', '-30 days'))
-        """, ("old.py", "Old content"))
+        """,
+            ("old.py", "Old content"),
+        )
         conn.commit()
         conn.close()
 
@@ -808,17 +807,14 @@ class TestEnrichmentEdgeCases:
         for _ in range(3):
             conn.execute(
                 "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
-                ("test.py", "Same content")
+                ("test.py", "Same content"),
             )
         conn.commit()
         conn.close()
 
         # Should deduplicate or handle gracefully
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute(
-            "SELECT COUNT(*) FROM enrichments WHERE file_path = ?",
-            ("test.py",)
-        )
+        cursor = conn.execute("SELECT COUNT(*) FROM enrichments WHERE file_path = ?", ("test.py",))
         count = cursor.fetchone()[0]
         conn.close()
 

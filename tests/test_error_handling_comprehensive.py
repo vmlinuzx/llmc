@@ -25,6 +25,7 @@ from tools.rag_repo.config import load_tool_config
 # Import enrichment functions - these may not exist yet
 try:
     from tools.rag.enrichment import enrich_spans
+
     ENRICHMENT_AVAILABLE = True
 except ImportError:
     ENRICHMENT_AVAILABLE = False
@@ -65,8 +66,10 @@ class TestDatabaseErrorHandling:
 
             try:
                 # Try to write to database
-                db.conn.execute("INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                               ("test.py", "python", "hash123", 100, 123456.0))
+                db.conn.execute(
+                    "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
+                    ("test.py", "python", "hash123", 100, 123456.0),
+                )
                 db.conn.commit()
 
                 # If we got here, either:
@@ -93,7 +96,7 @@ class TestDatabaseErrorHandling:
                 large_data = "x" * (1024 * 1024 * 100)  # 100MB string
                 db.conn.execute(
                     "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                    (large_data, "python", "hash", 999999, 123456.0)
+                    (large_data, "python", "hash", 999999, 123456.0),
                 )
                 db.conn.commit()
 
@@ -115,13 +118,13 @@ class TestDatabaseErrorHandling:
             # Both should be able to read/write
             db1.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("file1.py", "python", "hash1", 100, 123456.0)
+                ("file1.py", "python", "hash1", 100, 123456.0),
             )
             db1.conn.commit()
 
             db2.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("file2.py", "python", "hash2", 200, 123456.0)
+                ("file2.py", "python", "hash2", 200, 123456.0),
             )
             db2.conn.commit()
 
@@ -168,7 +171,7 @@ class TestDatabaseErrorHandling:
             try:
                 db.conn.execute(
                     "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                    ("test.py", "python", "hash", 100, "invalid")  # Invalid mtime
+                    ("test.py", "python", "hash", 100, "invalid"),  # Invalid mtime
                 )
                 db.conn.commit()
 
@@ -191,7 +194,7 @@ class TestDatabaseErrorHandling:
             # Insert same path twice
             db.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("test.py", "python", "hash1", 100, 123456.0)
+                ("test.py", "python", "hash1", 100, 123456.0),
             )
             db.conn.commit()
 
@@ -199,7 +202,7 @@ class TestDatabaseErrorHandling:
             with pytest.raises(sqlite3.IntegrityError):
                 db.conn.execute(
                     "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                    ("test.py", "python", "hash2", 200, 123456.0)
+                    ("test.py", "python", "hash2", 200, 123456.0),
                 )
                 db.conn.commit()
 
@@ -227,13 +230,13 @@ class TestDatabaseErrorHandling:
             # but we can test multiple sequential operations
             db.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("test1.py", "python", "hash1", 100, 123456.0)
+                ("test1.py", "python", "hash1", 100, 123456.0),
             )
             db.conn.commit()
 
             db.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("test2.py", "python", "hash2", 200, 123456.0)
+                ("test2.py", "python", "hash2", 200, 123456.0),
             )
             db.conn.commit()
 
@@ -426,9 +429,13 @@ class TestConfigurationErrorHandling:
         """Test registry handles missing required fields."""
         with tempfile.TemporaryDirectory() as tmpdir:
             registry_file = Path(tmpdir) / "invalid.yml"
-            registry_file.write_text(yaml.dump([
-                {"repo_path": "/tmp/repo"}  # Missing repo_id
-            ]))
+            registry_file.write_text(
+                yaml.dump(
+                    [
+                        {"repo_path": "/tmp/repo"}  # Missing repo_id
+                    ]
+                )
+            )
 
             client = RegistryClient(path=registry_file)
 
@@ -443,13 +450,17 @@ class TestConfigurationErrorHandling:
         with tempfile.TemporaryDirectory() as tmpdir:
             registry_file = Path(tmpdir) / "paths.yml"
             # Use a path that will fail expanduser
-            registry_file.write_text(yaml.dump([
-                {
-                    "repo_id": "test",
-                    "repo_path": "/nonexistent/\x00invalid",
-                    "rag_workspace_path": "~/workspace"
-                }
-            ]))
+            registry_file.write_text(
+                yaml.dump(
+                    [
+                        {
+                            "repo_id": "test",
+                            "repo_path": "/nonexistent/\x00invalid",
+                            "rag_workspace_path": "~/workspace",
+                        }
+                    ]
+                )
+            )
 
             client = RegistryClient(path=registry_file)
 
@@ -463,10 +474,22 @@ class TestConfigurationErrorHandling:
         """Test registry handles duplicate repo IDs."""
         with tempfile.TemporaryDirectory() as tmpdir:
             registry_file = Path(tmpdir) / "duplicates.yml"
-            registry_file.write_text(yaml.dump([
-                {"repo_id": "duplicate", "repo_path": "/tmp/first", "rag_workspace_path": "/tmp/first/.llmc/rag"},
-                {"repo_id": "duplicate", "repo_path": "/tmp/second", "rag_workspace_path": "/tmp/second/.llmc/rag"},
-            ]))
+            registry_file.write_text(
+                yaml.dump(
+                    [
+                        {
+                            "repo_id": "duplicate",
+                            "repo_path": "/tmp/first",
+                            "rag_workspace_path": "/tmp/first/.llmc/rag",
+                        },
+                        {
+                            "repo_id": "duplicate",
+                            "repo_path": "/tmp/second",
+                            "rag_workspace_path": "/tmp/second/.llmc/rag",
+                        },
+                    ]
+                )
+            )
 
             client = RegistryClient(path=registry_file)
 
@@ -494,9 +517,13 @@ class TestConfigurationErrorHandling:
         """Test config handles invalid field types."""
         with tempfile.TemporaryDirectory() as tmpdir:
             config_file = Path(tmpdir) / "config.yml"
-            config_file.write_text(yaml.dump({
-                "registry_path": 123  # Should be string
-            }))
+            config_file.write_text(
+                yaml.dump(
+                    {
+                        "registry_path": 123  # Should be string
+                    }
+                )
+            )
 
             # Should handle type mismatch
             try:
@@ -585,7 +612,7 @@ class TestInputValidationHandling:
                     lang=malicious_lang,
                     file_hash="hash123",
                     size=1000,
-                    mtime=time.time()
+                    mtime=time.time(),
                 )
 
                 # This should work without executing the DROP TABLE
@@ -594,8 +621,7 @@ class TestInputValidationHandling:
                 # Verify the file was inserted with safe values
                 # The malicious SQL should be treated as data, not code
                 row = db.conn.execute(
-                    "SELECT path, lang FROM files WHERE id = ?",
-                    (file_id,)
+                    "SELECT path, lang FROM files WHERE id = ?", (file_id,)
                 ).fetchone()
 
                 assert row is not None, "File should be inserted"
@@ -654,8 +680,9 @@ class TestInputValidationHandling:
             if vulnerabilities_found:
                 # This test reveals that path traversal is possible
                 # In production, paths MUST be validated before use
-                assert len(vulnerabilities_found) > 0, \
+                assert len(vulnerabilities_found) > 0, (
                     "Path traversal vulnerability detected: " + ", ".join(vulnerabilities_found)
+                )
 
             # Verify legitimate paths still work
             legitimate = repo_root / "src" / "main.py"
@@ -735,10 +762,11 @@ class TestCommandInjectionHandling:
                     # This is how it SHOULD be done
                     result = subprocess.run(
                         ["echo", user_input],  # List form
-                        check=False, shell=False,  # Explicitly not shell
+                        check=False,
+                        shell=False,  # Explicitly not shell
                         capture_output=True,
                         text=True,
-                        timeout=1  # Prevent DoS
+                        timeout=1,  # Prevent DoS
                     )
                     # Command should run without executing injection
                     assert "echo" in result.args[0]
@@ -799,7 +827,7 @@ class TestCommandInjectionHandling:
         """Test handling of Unicode-based attacks."""
         with tempfile.TemporaryDirectory():
             # Unicode null, control characters, etc.
-            unicode_attack = "test\u0000\u200B\u2060\uFEFF"
+            unicode_attack = "test\u0000\u200b\u2060\ufeff"
 
             try:
                 # Should handle or reject Unicode attacks
@@ -848,7 +876,7 @@ class TestConcurrencyErrorHandling:
                 try:
                     db.conn.execute(
                         "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                        (f"file{i}.py", "python", f"hash{i}", i, float(i))
+                        (f"file{i}.py", "python", f"hash{i}", i, float(i)),
                     )
                     if i % 10 == 0:
                         db.conn.commit()
@@ -872,7 +900,7 @@ class TestConcurrencyErrorHandling:
                 # Start a transaction
                 db.conn.execute(
                     "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                    ("file.py", "python", "hash", 100, 123.0)
+                    ("file.py", "python", "hash", 100, 123.0),
                 )
 
                 # Simulate crash before commit
@@ -954,7 +982,7 @@ class TestDataIntegrityHandling:
             # Insert file with one hash
             db.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("test.py", "python", "expected_hash", 100, 123.0)
+                ("test.py", "python", "expected_hash", 100, 123.0),
             )
             db.conn.commit()
 
@@ -982,7 +1010,7 @@ class TestDataIntegrityHandling:
             try:
                 db.conn.execute(
                     "INSERT INTO spans (file_id, symbol, kind, start_line, end_line, byte_start, byte_end, span_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                    (999, "test_symbol", "function", 1, 10, 0, 100, "span_hash_123")
+                    (999, "test_symbol", "function", 1, 10, 0, 100, "span_hash_123"),
                 )
                 db.conn.commit()
 
@@ -1007,7 +1035,7 @@ class TestRecoveryScenarios:
             # Insert data
             db.conn.execute(
                 "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-                ("test.py", "python", "hash", 100, 123.0)
+                ("test.py", "python", "hash", 100, 123.0),
             )
             db.conn.commit()
 

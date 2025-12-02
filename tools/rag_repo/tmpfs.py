@@ -38,4 +38,3 @@ class SafeTmp:
         # Ensure path is under the temporary root; ValueError if outside.
         _ = path.relative_to(tmp_root)
         shutil.rmtree(path, ignore_errors=True)
-

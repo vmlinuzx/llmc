@@ -36,7 +36,7 @@ def _get_snapshot_psutil() -> SysSnapshot:
     # Disks - filter to real partitions
     disks: list[SysDiskInfo] = []
     seen_mounts: set[str] = set()
-    
+
     for part in psutil.disk_partitions(all=False):
         # Skip pseudo/virtual filesystems
         if part.fstype in ("squashfs", "tmpfs", "devtmpfs", "overlay"):
@@ -44,7 +44,7 @@ def _get_snapshot_psutil() -> SysSnapshot:
         if part.mountpoint in seen_mounts:
             continue
         seen_mounts.add(part.mountpoint)
-        
+
         try:
             usage = psutil.disk_usage(part.mountpoint)
             disks.append(
@@ -115,12 +115,12 @@ def _get_snapshot_shell() -> SysSnapshot:
                     key = parts[0].rstrip(":")
                     val = int(parts[1])  # kB
                     meminfo[key] = val
-            
+
             mem_total_kb = meminfo.get("MemTotal", 0)
             mem_free_kb = meminfo.get("MemFree", 0)
             mem_buffers_kb = meminfo.get("Buffers", 0)
             mem_cached_kb = meminfo.get("Cached", 0)
-            
+
             mem_total_mb = mem_total_kb // 1024
             mem_used_mb = (mem_total_kb - mem_free_kb - mem_buffers_kb - mem_cached_kb) // 1024
     except Exception:
@@ -152,12 +152,14 @@ def _get_snapshot_shell() -> SysSnapshot:
                     used_pct = float(used_pct_str)
                     total_kb = int(parts[2])
                     free_kb = int(parts[4])
-                    disks.append(SysDiskInfo(
-                        mount=mount,
-                        used_percent=used_pct,
-                        total_gb=round(total_kb / (1024**2), 1),
-                        free_gb=round(free_kb / (1024**2), 1),
-                    ))
+                    disks.append(
+                        SysDiskInfo(
+                            mount=mount,
+                            used_percent=used_pct,
+                            total_gb=round(total_kb / (1024**2), 1),
+                            free_gb=round(free_kb / (1024**2), 1),
+                        )
+                    )
                 except ValueError:
                     continue
     except Exception:
@@ -191,7 +193,7 @@ def _get_snapshot_shell() -> SysSnapshot:
 def mcp_linux_sys_snapshot(*, config: LinuxOpsConfig) -> dict:
     """
     Get a system resource snapshot.
-    
+
     Returns:
         dict with CPU, memory, disk usage and summary
     """
@@ -202,6 +204,7 @@ def mcp_linux_sys_snapshot(*, config: LinuxOpsConfig) -> dict:
     # Try psutil first
     try:
         import psutil
+
         snapshot = _get_snapshot_psutil()
     except ImportError:
         logger.info("psutil not available, using shell fallback")

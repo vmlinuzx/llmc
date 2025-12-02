@@ -30,4 +30,3 @@ def test_copy_respects_readonly(tmp_path: Path) -> None:
     fs = SafeFS(base, policy=PathSafetyPolicy(readonly=True))
     with pytest.raises(PathPolicyError):
         fs.copy_into("a.txt", "b.txt")
-

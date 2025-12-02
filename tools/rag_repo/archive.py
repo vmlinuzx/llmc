@@ -41,4 +41,3 @@ def create_snapshot_tar(
             tar.add(path, arcname=str(rel))
 
     return out_path
-

@@ -1,4 +1,3 @@
-
 import contextlib
 import random
 import sys
@@ -12,8 +11,14 @@ except Exception:
 
 def pytest_addoption(parser):
     grp = parser.getgroup("ruthless")
-    grp.addoption("--allow-network", action="store_true", help="Allow network sockets in tests (default: blocked)")
-    grp.addoption("--allow-sleep", action="store_true", help="Allow time.sleep in tests (default: blocked)")
+    grp.addoption(
+        "--allow-network",
+        action="store_true",
+        help="Allow network sockets in tests (default: blocked)",
+    )
+    grp.addoption(
+        "--allow-sleep", action="store_true", help="Allow time.sleep in tests (default: blocked)"
+    )
 
 
 def pytest_configure(config):
@@ -25,7 +30,9 @@ def pytest_configure(config):
 
 class _NoNetSocket:
     def __init__(self, *a, **k):
-        raise RuntimeError("Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network")
+        raise RuntimeError(
+            "Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network"
+        )
 
 
 def _block_requests():
@@ -36,7 +43,9 @@ def _block_requests():
     orig = requests.Session.request
 
     def _deny(self, *a, **k):
-        raise RuntimeError("HTTP is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network")
+        raise RuntimeError(
+            "HTTP is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network"
+        )
 
     requests.Session.request = _deny
     return ("requests.Session.request", orig)
@@ -47,7 +56,9 @@ def _patched_sleep():
     orig = time.sleep
 
     def _deny_sleep(secs):
-        raise RuntimeError("time.sleep blocked by pytest_ruthless. Use --allow-sleep or @pytest.mark.allow_sleep")
+        raise RuntimeError(
+            "time.sleep blocked by pytest_ruthless. Use --allow-sleep or @pytest.mark.allow_sleep"
+        )
 
     time.sleep = _deny_sleep
     try:
@@ -73,8 +84,12 @@ import pytest
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_call(item):
-    allow_net = item.config.getoption("--allow-network") or bool(item.get_closest_marker("allow_network"))
-    allow_sleep = item.config.getoption("--allow-sleep") or bool(item.get_closest_marker("allow_sleep"))
+    allow_net = item.config.getoption("--allow-network") or bool(
+        item.get_closest_marker("allow_network")
+    )
+    allow_sleep = item.config.getoption("--allow-sleep") or bool(
+        item.get_closest_marker("allow_sleep")
+    )
 
     # Network guard
     restores = []

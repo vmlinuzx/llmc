@@ -22,4 +22,3 @@ def test_symlink_escape_blocked(tmp_path) -> None:
     with pytest.raises(PathTraversalError):
         # attempt to read via symlinked path should resolve outside and be blocked
         fs.open_read("link/file.txt")
-

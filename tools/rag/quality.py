@@ -43,15 +43,15 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
     db_path = index_path_for_read(repo_path)
     if not db_path.exists():
         return {
-            'quality_score': 0,
-            'status': 'NO_DB',
-            'placeholder_count': 0,
-            'empty_count': 0,
-            'short_count': 0,
-            'ok_count': 0,
-            'total': 0,
-            'rule_version': RULE_VERSION,
-            'checked_at': datetime.now(UTC).isoformat()
+            "quality_score": 0,
+            "status": "NO_DB",
+            "placeholder_count": 0,
+            "empty_count": 0,
+            "short_count": 0,
+            "ok_count": 0,
+            "total": 0,
+            "rule_version": RULE_VERSION,
+            "checked_at": datetime.now(UTC).isoformat(),
         }
 
     conn = sqlite3.connect(db_path)
@@ -61,19 +61,19 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
     try:
         # Get total count
         cursor.execute("SELECT COUNT(*) as total FROM enrichments")
-        total = cursor.fetchone()['total']
+        total = cursor.fetchone()["total"]
 
         if total == 0:
             return {
-                'quality_score': 0,
-                'status': 'EMPTY',
-                'placeholder_count': 0,
-                'empty_count': 0,
-                'short_count': 0,
-                'ok_count': 0,
-                'total': 0,
-                'rule_version': RULE_VERSION,
-                'checked_at': datetime.now(UTC).isoformat()
+                "quality_score": 0,
+                "status": "EMPTY",
+                "placeholder_count": 0,
+                "empty_count": 0,
+                "short_count": 0,
+                "ok_count": 0,
+                "total": 0,
+                "rule_version": RULE_VERSION,
+                "checked_at": datetime.now(UTC).isoformat(),
             }
 
         # Use canonical classifier for each enrichment
@@ -87,30 +87,30 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
         cursor.execute("SELECT span_hash, summary FROM enrichments")
 
         for row in cursor.fetchall():
-            quality_result = classify_quality(row['summary'])
+            quality_result = classify_quality(row["summary"])
 
-            if quality_result.classification == 'PLACEHOLDER':
+            if quality_result.classification == "PLACEHOLDER":
                 placeholder_count += 1
-            elif quality_result.classification == 'EMPTY':
+            elif quality_result.classification == "EMPTY":
                 empty_count += 1
-            elif quality_result.classification == 'SHORT':
+            elif quality_result.classification == "SHORT":
                 short_count += 1
-            elif quality_result.classification == 'OK':
+            elif quality_result.classification == "OK":
                 ok_count += 1
 
         # Calculate quality score (OK / total)
         quality_score = (ok_count / total * 100) if total > 0 else 0
 
         result = {
-            'quality_score': quality_score,
-            'status': 'PASS' if quality_score >= 90 else 'FAIL',
-            'placeholder_count': placeholder_count,
-            'empty_count': empty_count,
-            'short_count': short_count,
-            'ok_count': ok_count,
-            'total': total,
-            'rule_version': RULE_VERSION,
-            'checked_at': datetime.now(UTC).isoformat()
+            "quality_score": quality_score,
+            "status": "PASS" if quality_score >= 90 else "FAIL",
+            "placeholder_count": placeholder_count,
+            "empty_count": empty_count,
+            "short_count": short_count,
+            "ok_count": ok_count,
+            "total": total,
+            "rule_version": RULE_VERSION,
+            "checked_at": datetime.now(UTC).isoformat(),
         }
 
         return result
@@ -121,20 +121,20 @@ def run_quality_check(repo_path: Path, verbose: bool = False) -> dict:
 
 def format_quality_summary(result: dict, repo_name: str) -> str:
     """Format quality check result for console output."""
-    if result['status'] == 'NO_DB':
+    if result["status"] == "NO_DB":
         return f"  ℹ️  {repo_name}: No RAG database yet"
 
-    if result['status'] == 'EMPTY':
+    if result["status"] == "EMPTY":
         return f"  ℹ️  {repo_name}: Database empty (no enrichments)"
 
-    score = result['quality_score']
-    total = result['total']
-    placeholder = result['placeholder_count']
-    empty = result['empty_count']
-    short = result['short_count']
-    ok = result['ok_count']
+    score = result["quality_score"]
+    total = result["total"]
+    placeholder = result["placeholder_count"]
+    empty = result["empty_count"]
+    short = result["short_count"]
+    ok = result["ok_count"]
 
-    if result['status'] == 'PASS':
+    if result["status"] == "PASS":
         emoji = "✅"
     else:
         emoji = "⚠️"
@@ -159,12 +159,12 @@ def format_quality_summary(result: dict, repo_name: str) -> str:
 if __name__ == "__main__":
     # Can be used standalone for testing
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Run quality check")
     parser.add_argument("repo", type=Path, help="Repository path")
     args = parser.parse_args()
-    
+
     result = run_quality_check(args.repo)
     print(format_quality_summary(result, args.repo.name))
-    
-    sys.exit(0 if result['status'] == 'PASS' else 1)
+
+    sys.exit(0 if result["status"] == "PASS" else 1)

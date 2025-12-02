@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pytest
@@ -15,10 +14,7 @@ def _make_repo_with_single_function(tmp_path: Path) -> Path:
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
     source = repo_root / "foo.py"
-    source.write_text(
-        "def bar():\n"
-        "    return 42\n"
-    )
+    source.write_text("def bar():\n    return 42\n")
     return repo_root
 
 
@@ -213,7 +209,17 @@ def test_build_graph_for_repo_exports_enriched_metadata_to_json(tmp_path: Path) 
             INSERT INTO spans(file_id, symbol, kind, start_line, end_line, byte_start, byte_end, span_hash, doc_hint)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (file_id, "foo.bar", "function", 1, 2, 0, len(source_text.encode("utf-8")), span_hash, None),
+            (
+                file_id,
+                "foo.bar",
+                "function",
+                1,
+                2,
+                0,
+                len(source_text.encode("utf-8")),
+                span_hash,
+                None,
+            ),
         )
 
         # Insert enrichment row with rich metadata
@@ -257,9 +263,7 @@ def test_build_graph_for_repo_exports_enriched_metadata_to_json(tmp_path: Path) 
     assert "relations" in graph_data, "Expected 'relations' key in graph JSON"
 
     # Find the foo.bar entity in the exported data
-    foo_bar_entities = [
-        e for e in graph_data["entities"] if e["id"] == "sym:foo.bar"
-    ]
+    foo_bar_entities = [e for e in graph_data["entities"] if e["id"] == "sym:foo.bar"]
     assert len(foo_bar_entities) == 1, "Expected exactly one foo.bar entity in JSON"
 
     foo_bar = foo_bar_entities[0]

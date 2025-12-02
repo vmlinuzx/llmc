@@ -2,6 +2,7 @@
 """
 Inspector Screen - LLM-Optimized Source Viewer
 """
+
 from typing import Any
 
 from textual.app import ComposeResult
@@ -17,14 +18,14 @@ class InspectorScreen(Screen):
     Screen for fast inspection of files/symbols with graph + enrichment context.
     Uses the LLM-optimized 'rag inspect' logic.
     """
-    
+
     def _format_entity_id(self, entity_id: str) -> str:
         """Formats internal entity ID to human-readable string, handling prefixes like 'Extends: '."""
         # Handle "Extends: type:some_id" or "Calls: type:some_id"
         if ": " in entity_id and entity_id.split(": ", 1)[0] in ("Extends", "Calls"):
             prefix, actual_id = entity_id.split(": ", 1)
             return f"{prefix}: {self._format_entity_id(actual_id)}"
-            
+
         if ":" in entity_id:
             kind, name = entity_id.split(":", 1)
             # For 'type' and 'sym', strip module path
@@ -32,7 +33,7 @@ class InspectorScreen(Screen):
                 return name.rsplit(".", 1)[-1]
             return name
         return entity_id
-    
+
     CSS = """
     InspectorScreen {
         layout: grid;
@@ -108,7 +109,7 @@ class InspectorScreen(Screen):
         color: $text;
     }
     """
-    
+
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
         ("1", "nav_monitor", "Monitor"),
@@ -125,8 +126,12 @@ class InspectorScreen(Screen):
                 yield Input(placeholder="e.g. src/main.py", id="path-input")
                 yield Checkbox("Full Source", id="full-source-check")
                 yield Button("Inspect", id="inspect-btn", variant="primary")
-            
-            yield Static("Tips:\n• Enter a file path or a symbol name.\n• Graph & Enrichment data will appear on the right.\n• Fast & Token-optimized.", classes="data-row", id="tips-box")
+
+            yield Static(
+                "Tips:\n• Enter a file path or a symbol name.\n• Graph & Enrichment data will appear on the right.\n• Fast & Token-optimized.",
+                classes="data-row",
+                id="tips-box",
+            )
 
         # Right Main Content
         with Vertical(id="main-content"):
@@ -151,50 +156,50 @@ class InspectorScreen(Screen):
         """Perform inspection using tools.rag.inspector."""
         target = self.query_one("#path-input", Input).value.strip()
         full_source = self.query_one("#full-source-check", Checkbox).value
-        
+
         if not target:
             self._show_error("Please enter a path or symbol.")
             return
-            
+
         container = self.query_one("#results-container")
         container.remove_children()
         container.mount(Static(f"Inspecting '{target}'...", classes="data-row"))
-        
+
         try:
             # Direct call to the logic we just built
             repo_root = self.app.repo_root
             # Heuristic: if it looks like a path, pass path. If it looks like a symbol, pass symbol.
             # The inspector logic handles fallback, but let's try to be smart.
             is_path = "/" in target or target.endswith(".py") or target.endswith(".md")
-            
+
             if is_path:
                 result = inspect_entity(repo_root, path=target, include_full_source=full_source)
             else:
                 result = inspect_entity(repo_root, symbol=target, include_full_source=full_source)
-            
+
             self._render_result(result)
-            
+
         except Exception as e:
             self._show_error(f"Inspection failed: {str(e)}")
 
     def _render_result(self, res: InspectionResult) -> None:
         container = self.query_one("#results-container")
         container.remove_children()
-        
+
         # Header
         container.mount(Static(f"FILE: {res.path} ({res.source_mode})", classes="section-header"))
-        
+
         # Summary
         summary = res.file_summary or res.enrichment.get("summary")
         if summary:
-             container.mount(Static(f"[italic]{summary}[/italic]", classes="data-row"))
-        
+            container.mount(Static(f"[italic]{summary}[/italic]", classes="data-row"))
+
         # Defined Symbols (Brief)
         if res.defined_symbols:
             container.mount(Static("Defined Symbols:", classes="section-header"))
             lines = [f"- {s.name} ([blue]{s.type}[/blue])" for s in res.defined_symbols[:5]]
             if len(res.defined_symbols) > 5:
-                lines.append(f"... ({len(res.defined_symbols)-5} more)")
+                lines.append(f"... ({len(res.defined_symbols) - 5} more)")
             container.mount(Static("\n".join(lines), classes="data-row"))
 
         # Relationships
@@ -207,28 +212,28 @@ class InspectorScreen(Screen):
         # Enrichment (Pitfalls/Side Effects)
         enrich = res.enrichment
         if enrich.get("pitfalls"):
-             container.mount(Static("⚠️  Pitfalls:", classes="section-header"))
-             container.mount(Static(str(enrich["pitfalls"])), classes="data-row")
+            container.mount(Static("⚠️  Pitfalls:", classes="section-header"))
+            container.mount(Static(str(enrich["pitfalls"])), classes="data-row")
 
         # Update Tips Box with Enrichment
         enrich_lines = []
         if enrich.get("summary"):
             enrich_lines.append(f"[bold]Summary[/bold]: {enrich['summary']}")
-        
+
         def _format_list_field(val: Any) -> str | None:
             if not val:
                 return None
             if val == "[]":
                 return None
-            
+
             generic_placeholders = {"params", "returns", "args", "kwargs", "none"}
-            
+
             if isinstance(val, list):
                 filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
                 if not filtered_list:
                     return None
                 return ", ".join(filtered_list)
-            
+
             if isinstance(val, str) and val.lower() in generic_placeholders:
                 return None
             return str(val)
@@ -239,12 +244,14 @@ class InspectorScreen(Screen):
                 enrich_lines.append(f"[bold]{key.capitalize()}[/bold]: {val_str}")
 
         if enrich.get("evidence_count"):
-             enrich_lines.append(f"[dim]Evidence spans: {enrich['evidence_count']}[/dim]")
+            enrich_lines.append(f"[dim]Evidence spans: {enrich['evidence_count']}[/dim]")
 
         if enrich_lines:
             self.query_one("#tips-box", Static).update("\n\n".join(enrich_lines))
         else:
-            self.query_one("#tips-box", Static).update("No enrichment data available for this entity.")
+            self.query_one("#tips-box", Static).update(
+                "No enrichment data available for this entity."
+            )
 
         # Snippet
         container.mount(Static("Source:", classes="section-header"))
@@ -267,11 +274,13 @@ class InspectorScreen(Screen):
     # Navigation Actions
     def action_nav_monitor(self) -> None:
         from llmc.tui.screens.monitor import MonitorScreen
+
         self.app.push_screen(MonitorScreen())
-        
+
     def action_nav_search(self) -> None:
         from llmc.tui.screens.search import SearchScreen
+
         self.app.push_screen(SearchScreen())
-        
+
     def action_nav_inspect(self) -> None:
-        pass # Already here
+        pass  # Already here

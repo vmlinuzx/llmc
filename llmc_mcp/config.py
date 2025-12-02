@@ -1,4 +1,4 @@
-"""MCP configuration loader - reads from llmc.toml with ENV overrides.""" # noqa: I001
+"""MCP configuration loader - reads from llmc.toml with ENV overrides."""  # noqa: I001
 
 from __future__ import annotations
 

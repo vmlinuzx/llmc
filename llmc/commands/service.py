@@ -3,6 +3,7 @@ Service management commands for LLMC RAG service.
 
 Delegates to existing tools.rag.service_daemon infrastructure.
 """
+
 from pathlib import Path
 
 import typer
@@ -24,7 +25,7 @@ def _get_manager():
     if SystemdManager is None:
         typer.echo("Error: Service infrastructure not available", err=True)
         raise typer.Exit(code=1)
-    
+
     repo_root = find_repo_root()
     return SystemdManager(repo_root)
 
@@ -34,7 +35,7 @@ def _get_state():
     if ServiceState is None:
         typer.echo("Error: Service state management not available", err=True)
         raise typer.Exit(code=1)
-    
+
     return ServiceState()
 
 
@@ -44,44 +45,45 @@ def start(
     """Start the RAG service daemon."""
     manager = _get_manager()
     state = _get_state()
-    
+
     # Check if repos are registered
     if not state.state.get("repos"):
         typer.echo("❌ No repos registered. Use 'llmc service repo add <path>' first.")
         raise typer.Exit(code=1)
-    
+
     # Check if systemd is available
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available - service management requires systemd")
         typer.echo("   Run 'llmc-rag start' for fallback fork() mode")
         raise typer.Exit(code=1)
-    
+
     # Check if already running
     status = manager.status()
     if status["running"]:
         typer.echo(f"✅ Service already running (PID {status['pid']})")
         return
-    
+
     # Update interval in state
     state.state["interval"] = interval
     state.save()
-    
+
     # Start via systemd
     success, message = manager.start()
     if not success:
         typer.echo(f"❌ Failed to start: {message}", err=True)
         raise typer.Exit(code=1)
-    
+
     # Verify startup (give it 2 seconds)
     import time
+
     time.sleep(2)
     status = manager.status()
-    
+
     if not status["running"]:
         typer.echo("❌ Service failed to start", err=True)
         typer.echo("📋 Check logs: llmc service logs")
         raise typer.Exit(code=1)
-    
+
     typer.echo(f"🚀 Service started (PID {status['pid']})")
     typer.echo(f"   Tracking {len(state.state['repos'])} repos")
     typer.echo(f"   Interval: {interval}s")
@@ -91,17 +93,17 @@ def start(
 def stop():
     """Stop the RAG service daemon."""
     manager = _get_manager()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available")
         typer.echo("   Use 'llmc-rag stop' for fallback mode")
         raise typer.Exit(code=1)
-    
+
     status = manager.status()
     if not status["running"]:
         typer.echo("Service is not running")
         return
-    
+
     success, message = manager.stop()
     if success:
         typer.echo(f"✅ {message}")
@@ -116,23 +118,24 @@ def restart(
     """Restart the RAG service daemon."""
     manager = _get_manager()
     state = _get_state()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available")
         raise typer.Exit(code=1)
-    
+
     # Update interval if provided
     if interval is not None:
         state.state["interval"] = interval
         state.save()
         typer.echo(f"Updated interval to {interval}s")
-    
+
     success, message = manager.restart()
     if success:
         typer.echo(f"✅ {message}")
-        
+
         # Show status after restart
         import time
+
         time.sleep(1)
         status = manager.status()
         if status["running"]:
@@ -146,7 +149,7 @@ def status():
     """Show service status and registered repos."""
     manager = _get_manager()
     state = _get_state()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available")
         # Still show state info
@@ -154,9 +157,9 @@ def status():
         for repo in state.state.get("repos", []):
             typer.echo(f"  • {repo}")
         return
-    
+
     svc_status = manager.status()
-    
+
     # Service status
     if svc_status["running"]:
         typer.echo(f"✅ Service: RUNNING (PID {svc_status['pid']})")
@@ -164,20 +167,20 @@ def status():
         typer.echo("⚠️  Service: ACTIVE but not running")
     else:
         typer.echo("❌ Service: STOPPED")
-    
+
     # Repo info
     repos = state.state.get("repos", [])
     typer.echo(f"\n📂 Registered repos: {len(repos)}")
     for repo in repos:
         typer.echo(f"   • {repo}")
-    
+
     # Cycle info
     interval = state.state.get("interval", 180)
     last_cycle = state.state.get("last_cycle")
     typer.echo(f"\n⏱️  Interval: {interval}s")
     if last_cycle:
         typer.echo(f"   Last cycle: {last_cycle}")
-    
+
     # Show brief systemctl status if running
     if svc_status["running"] and "status_text" in svc_status:
         typer.echo("\n📊 Systemd Status:")
@@ -193,12 +196,12 @@ def logs(
 ):
     """View service logs via journalctl."""
     manager = _get_manager()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available - no journal logs")
         typer.echo("   Check ~/.llmc/logs/rag-daemon/rag-service.log for fallback logs")
         raise typer.Exit(code=1)
-    
+
     if follow:
         # Stream logs (blocking)
         proc = manager.get_logs(lines=lines, follow=True)
@@ -216,11 +219,11 @@ def logs(
 def enable():
     """Enable service to start on user login."""
     manager = _get_manager()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available")
         raise typer.Exit(code=1)
-    
+
     success, message = manager.enable()
     if success:
         typer.echo(f"✅ {message}")
@@ -232,11 +235,11 @@ def enable():
 def disable():
     """Disable service from starting on user login."""
     manager = _get_manager()
-    
+
     if not manager.is_systemd_available():
         typer.echo("⚠️  Systemd not available")
         raise typer.Exit(code=1)
-    
+
     success, message = manager.disable()
     if success:
         typer.echo(f"✅ {message}")
@@ -250,15 +253,15 @@ def repo_add(
 ):
     """Register a repository for enrichment."""
     state = _get_state()
-    
+
     repo_path = Path(path).resolve()
     if not repo_path.exists():
         typer.echo(f"❌ Path does not exist: {path}", err=True)
         raise typer.Exit(code=1)
-    
+
     if not (repo_path / ".git").exists():
         typer.echo(f"⚠️  Warning: {path} is not a git repository")
-    
+
     if state.add_repo(str(repo_path)):
         typer.echo(f"✅ Registered: {repo_path}")
         typer.echo(f"   Total repos: {len(state.state['repos'])}")
@@ -271,9 +274,9 @@ def repo_remove(
 ):
     """Unregister a repository from enrichment."""
     state = _get_state()
-    
+
     repo_path = Path(path).resolve()
-    
+
     if state.remove_repo(str(repo_path)):
         typer.echo(f"✅ Unregistered: {repo_path}")
         typer.echo(f"   Total repos: {len(state.state['repos'])}")
@@ -285,13 +288,13 @@ def repo_remove(
 def repo_list():
     """List all registered repositories."""
     state = _get_state()
-    
+
     repos = state.state.get("repos", [])
     if not repos:
         typer.echo("No repositories registered")
         typer.echo("\nAdd a repo: llmc service repo add <path>")
         return
-    
+
     typer.echo(f"Registered repositories ({len(repos)}):\n")
     for i, repo in enumerate(repos, 1):
         typer.echo(f"{i}. {repo}")

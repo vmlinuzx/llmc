@@ -11,6 +11,7 @@ Tests cover:
 - Query context generation
 - Workspace indexing
 """
+
 import os
 from pathlib import Path
 import subprocess
@@ -42,9 +43,7 @@ class TestRagPlanHelper:
         """Test that script has valid bash syntax."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)],
-            check=False, capture_output=True,
-            text=True
+            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -52,9 +51,7 @@ class TestRagPlanHelper:
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            [str(script_path), "--help"],
-            check=False, capture_output=True,
-            text=True
+            [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         assert result.returncode == 0
         assert "Usage:" in result.stdout
@@ -66,9 +63,10 @@ class TestRagPlanHelper:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
-                input=""  # Empty input
+                input="",  # Empty input
             )
             # Should exit 0 (no query provided)
             assert result.returncode == 0
@@ -79,9 +77,10 @@ class TestRagPlanHelper:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), f"--repo={tmpdir}"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
-                input=""
+                input="",
             )
             assert result.returncode == 0
 
@@ -89,10 +88,7 @@ class TestRagPlanHelper:
         """Test that empty query is handled gracefully."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            [str(script_path)],
-            check=False, capture_output=True,
-            text=True,
-            input=""
+            [str(script_path)], check=False, capture_output=True, text=True, input=""
         )
         # Should exit 0 for empty query
         assert result.returncode == 0
@@ -101,10 +97,7 @@ class TestRagPlanHelper:
         """Test that query from stdin is read correctly."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            [str(script_path)],
-            check=False, capture_output=True,
-            text=True,
-            input="test query"
+            [str(script_path)], check=False, capture_output=True, text=True, input="test query"
         )
         # May fail without proper setup, but should process the query
         # This tests stdin handling
@@ -115,9 +108,10 @@ class TestRagPlanHelper:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
-                input="test query"
+                input="test query",
             )
             # Should handle missing index gracefully (exit 0)
             assert result.returncode == 0
@@ -130,10 +124,11 @@ class TestRagPlanHelper:
 
         result = subprocess.run(
             [str(script_path)],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             input="test query",
-            env=env
+            env=env,
         )
         # Should exit 0 when RAG is disabled
         assert result.returncode == 0
@@ -146,10 +141,11 @@ class TestRagPlanHelper:
 
         result = subprocess.run(
             [str(script_path)],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
             input="test query",
-            env=env
+            env=env,
         )
         # Should exit 0 when RAG is disabled
         assert result.returncode == 0
@@ -158,9 +154,7 @@ class TestRagPlanHelper:
         """Test that unknown options produce error."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            [str(script_path), "--unknown-flag"],
-            check=False, capture_output=True,
-            text=True
+            [str(script_path), "--unknown-flag"], check=False, capture_output=True, text=True
         )
         assert result.returncode != 0
         assert "unknown option" in result.stderr or "Usage" in result.stderr
@@ -185,9 +179,7 @@ class TestRagPlanSnippet:
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
-            [str(script_path), "--help"],
-            check=False, capture_output=True,
-            text=True
+            [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         assert result.returncode == 0
         assert "usage:" in result.stdout.lower() or "help" in result.stdout.lower()
@@ -199,8 +191,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "test", "query", "string"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # May fail without proper RAG setup, but should parse args
         # This tests argument parsing
@@ -210,9 +203,10 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path)],
-            check=False, capture_output=True,
+            check=False,
+            capture_output=True,
             text=True,
-            input="test query from stdin"
+            input="test query from stdin",
         )
         # May fail without RAG setup, but should read stdin
 
@@ -222,8 +216,9 @@ class TestRagPlanSnippet:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir, "test query"],
-                check=False, capture_output=True,
-                text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should handle repo flag
 
@@ -232,8 +227,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "--limit", "10", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should accept limit flag
 
@@ -242,8 +238,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "--min-score", "0.5", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should accept min-score flag
 
@@ -252,8 +249,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "--min-confidence", "0.7", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should accept min-confidence flag
 
@@ -262,8 +260,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "--no-log", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should accept no-log flag
 
@@ -272,8 +271,9 @@ class TestRagPlanSnippet:
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
             [str(script_path), "--repo", "/nonexistent/path", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should handle missing repo gracefully
 
@@ -281,10 +281,7 @@ class TestRagPlanSnippet:
         """Test behavior with empty query."""
         script_path = scripts_dir / "rag_plan_snippet.py"
         result = subprocess.run(
-            [str(script_path)],
-            check=False, capture_output=True,
-            text=True,
-            input=""
+            [str(script_path)], check=False, capture_output=True, text=True, input=""
         )
         # Should exit 0 for empty query
         assert result.returncode == 0
@@ -295,8 +292,9 @@ class TestRagPlanSnippet:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir, "test query"],
-                check=False, capture_output=True,
-                text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should handle missing db gracefully (exit 0)
             assert result.returncode == 0
@@ -321,9 +319,7 @@ class TestIndexWorkspace:
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag" / "index_workspace.py"
         result = subprocess.run(
-            [str(script_path), "--help"],
-            check=False, capture_output=True,
-            text=True
+            [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         # May fail on import, but let's check if help is defined
         # This documents expected behavior
@@ -334,9 +330,7 @@ class TestIndexWorkspace:
         with tempfile.TemporaryDirectory() as tmpdir:
             # May fail due to missing dependencies, but should accept args
             result = subprocess.run(
-                [str(script_path), tmpdir],
-                check=False, capture_output=True,
-                text=True
+                [str(script_path), tmpdir], check=False, capture_output=True, text=True
             )
             # Test documents that args are parsed
 
@@ -360,9 +354,7 @@ class TestQueryContext:
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag" / "query_context.py"
         result = subprocess.run(
-            [str(script_path), "--help"],
-            check=False, capture_output=True,
-            text=True
+            [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         # Should display help
 
@@ -372,8 +364,9 @@ class TestQueryContext:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir, "test query"],
-                check=False, capture_output=True,
-                text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should accept query and repo args
 
@@ -382,8 +375,9 @@ class TestQueryContext:
         script_path = scripts_dir / "rag" / "query_context.py"
         result = subprocess.run(
             [str(script_path), "--repo", "/nonexistent", "test query"],
-            check=False, capture_output=True,
-            text=True
+            check=False,
+            capture_output=True,
+            text=True,
         )
         # Should handle invalid path gracefully with error
 
@@ -393,19 +387,16 @@ class TestQueryContext:
         with tempfile.TemporaryDirectory() as tmpdir:
             result = subprocess.run(
                 [str(script_path), "--repo", tmpdir],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
-                input=""
+                input="",
             )
             # Should handle empty query
 
     def test_validates_required_args(self):
         """Test that required args are validated."""
         script_path = scripts_dir / "rag" / "query_context.py"
-        result = subprocess.run(
-            [str(script_path)],
-            check=False, capture_output=True,
-            text=True
-        )
+        result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
         # Should require query/repo args
         # Exit code may vary

@@ -98,4 +98,3 @@ if __name__ == "__main__":
     k_arg = int(sys.argv[3]) if len(sys.argv) > 3 else 10
     result = run(root, queries_arg, k_arg)
     print(json.dumps(result, indent=2))
-

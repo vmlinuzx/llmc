@@ -133,30 +133,17 @@ def _index_nodes(graph: dict) -> dict[str, Node]:
         if not isinstance(raw, dict):
             continue
 
-        nid = str(
-            raw.get("id")
-            or raw.get("nid")
-            or raw.get("name")
-            or ""
-        )
+        nid = str(raw.get("id") or raw.get("nid") or raw.get("name") or "")
 
         # Prefer explicit file-relative paths; fall back to generic path fields.
         path = _norm_path(
-            raw.get("file_path")
-            or raw.get("path")
-            or raw.get("file")
-            or raw.get("filepath")
-            or ""
+            raw.get("file_path") or raw.get("path") or raw.get("file") or raw.get("filepath") or ""
         )
 
         # Prefer explicit symbol/name fields including metadata.symbol when available.
         metadata = raw.get("metadata") or {}
         name = str(
-            raw.get("symbol")
-            or metadata.get("symbol")
-            or raw.get("name")
-            or raw.get("label")
-            or ""
+            raw.get("symbol") or metadata.get("symbol") or raw.get("name") or raw.get("label") or ""
         )
 
         if not nid and name:

@@ -17,4 +17,3 @@ def test_enforce_allows_ok(tmp_path: Path) -> None:
     policy = PathSafetyPolicy()
     path = enforce_policy(tmp_path / "ok", policy)
     assert str(path).endswith("ok")
-

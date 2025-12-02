@@ -20,6 +20,7 @@ from tools.rag_daemon.workers import WorkerPool
 # 1. Daemon Config & Startup Tests
 # ==============================================================================
 
+
 def test_load_config_default_path(tmp_path: Path) -> None:
     """Test loading config from default path."""
     config_file = tmp_path / "rag-daemon.yml"
@@ -118,6 +119,7 @@ def test_directories_created_on_first_run(tmp_path: Path) -> None:
 # ==============================================================================
 # 2. State Store Tests
 # ==============================================================================
+
 
 def test_state_store_round_trip_with_timestamps(tmp_path: Path) -> None:
     """Test round-trip of RepoState with timestamps."""
@@ -221,6 +223,7 @@ def test_state_store_update_function(tmp_path: Path) -> None:
 # 3. Registry Client Tests
 # ==============================================================================
 
+
 def test_registry_load_empty(tmp_path: Path) -> None:
     """Test loading empty registry."""
     registry_file = tmp_path / "repos.yml"
@@ -296,6 +299,7 @@ def test_registry_invalid_paths(tmp_path: Path) -> None:
 # ==============================================================================
 # 4. Scheduler Eligibility Logic Tests
 # ==============================================================================
+
 
 def make_test_config(tmp_path: Path) -> DaemonConfig:
     """Create a test DaemonConfig."""
@@ -504,6 +508,7 @@ def test_scheduler_force_overrides(tmp_path: Path) -> None:
 # 5. Control Surface Tests
 # ==============================================================================
 
+
 def test_control_refresh_all_flag(tmp_path: Path) -> None:
     """Test refresh_all.flag leads to refresh_all=True."""
     control_dir = tmp_path / "control"
@@ -598,6 +603,7 @@ def test_control_best_effort_delete(tmp_path: Path) -> None:
 # 6. Worker Pool & Job Runner Tests
 # ==============================================================================
 
+
 @pytest.mark.allow_sleep
 def test_worker_marks_repo_running(tmp_path: Path) -> None:
     """Test that worker marks repo as running at job start."""
@@ -620,6 +626,7 @@ def test_worker_marks_repo_running(tmp_path: Path) -> None:
 
         # Give the async worker time to run
         import time
+
         time.sleep(0.1)
 
         # Check that state was updated to running
@@ -647,6 +654,7 @@ def test_worker_success_updates_state(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(0.1)
 
         # Verify success state
@@ -676,6 +684,7 @@ def test_worker_failure_updates_state(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(0.1)
 
         # Verify failure state
@@ -713,6 +722,7 @@ def test_worker_max_concurrent_jobs(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(0.2)
 
         # All jobs should complete successfully
@@ -749,6 +759,7 @@ def test_worker_exponential_backoff(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(0.1)
 
         # Verify backoff (should be base * 2^(3-1) = 60 * 4 = 240 seconds)

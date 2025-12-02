@@ -171,7 +171,6 @@ def test_filter_chain_for_tier_respects_routing_tier() -> None:
     assert [s.name for s in tier_14b] == ["s3"]
 
 
-
 # -----------------------------------------------------------------------------
 # Phase 3 Tests - Router config fields (SDD 4.2)
 # -----------------------------------------------------------------------------

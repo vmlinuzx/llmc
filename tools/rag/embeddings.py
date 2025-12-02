@@ -40,6 +40,7 @@ class EmbeddingSpec:
 # Hash backend (pure Python, deterministic; great for tests / cheap runs)
 # ---------------------------------------------------------------------------
 
+
 def _hash_to_vector(text: str, dim: int) -> list[float]:
     """Map text deterministically to a vector in [-1, 1]^dim.
 
@@ -130,6 +131,7 @@ class HashEmbeddingBackend:
 # Manager-backed backend (real models: SentenceTransformers, Ollama, ...)
 # ---------------------------------------------------------------------------
 
+
 class ManagerEmbeddingBackend:
     """Thin adapter around EmbeddingManager for non-hash models.
 
@@ -178,6 +180,7 @@ class ManagerEmbeddingBackend:
 # Public factory + helper functions
 # ---------------------------------------------------------------------------
 
+
 def build_embedding_backend(
     model_override: str | None = None,
     *,
@@ -222,6 +225,7 @@ def build_embedding_backend(
 
 
 # Convenience helpers for simple callers -----------------------------------
+
 
 def embedding_model_spec() -> EmbeddingSpec:
     """Return the EmbeddingSpec for the current configuration.

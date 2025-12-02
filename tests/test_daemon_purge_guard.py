@@ -32,4 +32,3 @@ def test_purge_with_force(tmp_path: Path) -> None:
     result = dapi.purge_workspace(cfg, "wsA", force=True)
     assert not any(ws.iterdir())
     assert "workspace_root" in result
-

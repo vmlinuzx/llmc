@@ -37,4 +37,3 @@ def enforce_policy(candidate: Path, policy: PathSafetyPolicy) -> Path:
         if str(cand).startswith(prefix):
             raise PathPolicyError(f"Path '{cand}' is denied by policy prefix '{prefix}'")
     return cand
-

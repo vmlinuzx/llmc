@@ -1,4 +1,3 @@
-
 import textwrap
 
 # We will create tools.rag.locator later
@@ -7,8 +6,8 @@ try:
 except ImportError:
     pass
 
+
 class TestFuzzyLinking:
-    
     def test_identify_simple_function(self):
         source = textwrap.dedent("""
         def foo():
@@ -18,7 +17,7 @@ class TestFuzzyLinking:
         # Line 1: def foo():
         symbol = identify_symbol_at_line(source, 1)
         assert symbol == "foo"
-        
+
         # Line 3: return 1
         symbol = identify_symbol_at_line(source, 3)
         assert symbol == "foo"
@@ -32,7 +31,7 @@ class TestFuzzyLinking:
         # Line 1: class
         symbol = identify_symbol_at_line(source, 1)
         assert symbol == "MyClass"
-        
+
         # Line 2: def method
         symbol = identify_symbol_at_line(source, 2)
         assert symbol == "MyClass.method"
@@ -57,6 +56,7 @@ class TestFuzzyLinking:
         """).strip()
         symbol = identify_symbol_at_line(source, 2)
         assert symbol == "outer.inner"
+
     def test_resilient_matching_integration_logic(self):
         """
         Simulates the tool handler logic:
@@ -66,31 +66,27 @@ class TestFuzzyLinking:
         """
         # Mock Graph Node (Old state)
         # Graph thinks 'login' is at line 10
-        graph_node = {
-            "id": "auth.login", 
-            "metadata": {"summary": "Authenticates"}
-        }
+        graph_node = {"id": "auth.login", "metadata": {"summary": "Authenticates"}}
         graph_index = {"auth.login": graph_node}
-        
+
         # Real File (New state)
         # 'login' is actually at line 20 because we added comments
         source = "\n" * 19 + "def login(): pass"
-        
+
         # We have a search hit at line 20
         hit_line = 20
-        
+
         # Action: Identify symbol at line 20
         symbol_id = identify_symbol_at_line(source, hit_line)
-        
-        # Expectation: We find "login" (or "auth.login" if we provided context, 
+
+        # Expectation: We find "login" (or "auth.login" if we provided context,
         # but unit test just parses string so it sees "login")
         assert symbol_id == "login"
-        
+
         # Then we construct the full ID (in the handler)
         full_id = f"auth.{symbol_id}"
-        
+
         # And find the node
         found = graph_index.get(full_id)
         assert found is not None
         assert found["metadata"]["summary"] == "Authenticates"
-

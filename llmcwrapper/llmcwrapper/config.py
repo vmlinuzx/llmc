@@ -25,23 +25,37 @@ DEFAULTS = {
             "model": "claude-3-5-sonnet-latest",
             "temperature": 0.3,
             "rag": {"enabled": True, "server": "http://127.0.0.1:8077"},
-            "tools": {"enabled": True}
+            "tools": {"enabled": True},
         },
         "yolo": {
             "provider": "minimax",
             "model": "m2-lite",
             "temperature": 0.2,
             "rag": {"enabled": False},
-            "tools": {"enabled": False}
-        }
+            "tools": {"enabled": False},
+        },
     },
     "providers": {
-        "anthropic": {"base_url": "https://api.anthropic.com/v1/messages", "env_key": "ANTHROPIC_API_KEY", "wire_api": "messages", "anthropic_version": "2023-06-01"},
-        "minimax": {"base_url": "https://api.minimax.chat", "env_key": "MINIMAX_API_KEY", "wire_api": "chat"}
+        "anthropic": {
+            "base_url": "https://api.anthropic.com/v1/messages",
+            "env_key": "ANTHROPIC_API_KEY",
+            "wire_api": "messages",
+            "anthropic_version": "2023-06-01",
+        },
+        "minimax": {
+            "base_url": "https://api.minimax.chat",
+            "env_key": "MINIMAX_API_KEY",
+            "wire_api": "chat",
+        },
     },
-    "constraints": {"max_input_tokens": 16000, "budget_daily_usd": 10.0, "fallback_profile": "yolo"},
-    "pricing": {}
+    "constraints": {
+        "max_input_tokens": 16000,
+        "budget_daily_usd": 10.0,
+        "fallback_profile": "yolo",
+    },
+    "pricing": {},
 }
+
 
 def _read_toml(path: str) -> DICT:
     if not os.path.exists(path):
@@ -53,6 +67,7 @@ def _read_toml(path: str) -> DICT:
             return tomli.load(f)
         raise RuntimeError("No TOML parser available. Install tomli on Python <3.11")
 
+
 def deep_merge(a: DICT, b: DICT) -> DICT:
     out = copy.deepcopy(a)
     for k, v in (b or {}).items():
@@ -61,6 +76,7 @@ def deep_merge(a: DICT, b: DICT) -> DICT:
         else:
             out[k] = copy.deepcopy(v)
     return out
+
 
 def set_dotted(d: DICT, dotted: str, value):
     parts = dotted.split(".")
@@ -71,19 +87,25 @@ def set_dotted(d: DICT, dotted: str, value):
         cur = cur[p]
     cur[parts[-1]] = value
 
+
 def unset_dotted(d: DICT, dotted: str):
     parts = dotted.split(".")
     cur = d
     for p in parts[:-1]:
-        if p not in cur: return
+        if p not in cur:
+            return
         cur = cur[p]
-    if isinstance(cur, dict): cur.pop(parts[-1], None)
+    if isinstance(cur, dict):
+        cur.pop(parts[-1], None)
+
 
 def _parse_scalar(s: str):
     s_strip = s.strip()
     low = s_strip.lower()
-    if low in ("true","false"): return low == "true"
-    if low in ("null","none"): return None
+    if low in ("true", "false"):
+        return low == "true"
+    if low in ("null", "none"):
+        return None
     try:
         if s_strip.isdigit() or (s_strip.startswith("-") and s_strip[1:].isdigit()):
             return int(s_strip)
@@ -95,25 +117,31 @@ def _parse_scalar(s: str):
     except Exception:
         return s
 
+
 def _env_set_list() -> list:
-    s = os.environ.get("LLMC_SET","").strip()
-    if not s: return []
+    s = os.environ.get("LLMC_SET", "").strip()
+    if not s:
+        return []
     return [p.strip() for p in s.split(",") if p.strip()]
+
 
 def apply_sets_unsets(cfg: DICT, sets: list[str], unsets: list[str]) -> DICT:
     out = copy.deepcopy(cfg)
     for item in sets or []:
-        if "=" not in item: continue
+        if "=" not in item:
+            continue
         k, v = item.split("=", 1)
         set_dotted(out, k, _parse_scalar(v))
     for k in unsets or []:
         unset_dotted(out, k)
     return out
 
+
 def _read_user_and_project() -> tuple[DICT, DICT]:
     user_cfg = os.path.expanduser("~/.config/llmc/config.toml")
     proj_cfg = os.path.join(os.getcwd(), ".llmc", "config.toml")
     return _read_toml(user_cfg), _read_toml(proj_cfg)
+
 
 def apply_overlays(base: DICT, overlay_paths: list[str]) -> DICT:
     cur = copy.deepcopy(base)
@@ -121,7 +149,10 @@ def apply_overlays(base: DICT, overlay_paths: list[str]) -> DICT:
         cur = deep_merge(cur, _read_toml(p))
     return cur
 
-def load_resolved_config(profile: str, mode: str, overlays=None, sets=None, unsets=None, strict=False) -> DICT:
+
+def load_resolved_config(
+    profile: str, mode: str, overlays=None, sets=None, unsets=None, strict=False
+) -> DICT:
     base = copy.deepcopy(DEFAULTS)
     user_cfg, proj_cfg = _read_user_and_project()
     merged = deep_merge(base, user_cfg)
@@ -136,6 +167,7 @@ def load_resolved_config(profile: str, mode: str, overlays=None, sets=None, unse
     merged["defaults"]["mode"] = mode
     merged["defaults"]["profile"] = profile
     return merged
+
 
 def ensure_run_snapshot(cfg: DICT, corr_id: str) -> str:
     runs_dir = os.path.join(os.getcwd(), ".llmc", "runs", corr_id)

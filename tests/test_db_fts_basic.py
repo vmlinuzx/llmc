@@ -15,9 +15,7 @@ def _make_fts_db(tmp_path: Path) -> Path:
     db_path = tmp_path / "index_v2.db"
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute(
-            "CREATE VIRTUAL TABLE spans USING fts5(path, start_line, end_line, text)"
-        )
+        conn.execute("CREATE VIRTUAL TABLE spans USING fts5(path, start_line, end_line, text)")
         conn.executemany(
             "INSERT INTO spans(path, start_line, end_line, text) VALUES (?, ?, ?, ?)",
             [
@@ -62,4 +60,3 @@ def test_fts_search_raises_when_db_missing(tmp_path: Path) -> None:
     except RagDbNotFound:
         return
     assert False, "Expected RagDbNotFound when no RAG DB exists"
-

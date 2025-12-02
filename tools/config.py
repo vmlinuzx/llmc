@@ -14,4 +14,3 @@ def get_llmc_config(repo_root: Path | None = None) -> dict[str, Any]:
     EmbeddingManager and other components that expect a global config loader.
     """
     return load_config(repo_root)
-

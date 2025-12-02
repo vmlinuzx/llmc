@@ -13,8 +13,7 @@ def _make_repo_with_single_function(tmp_path: Path) -> Path:
     repo_root.mkdir()
     source = repo_root / "foo.py"
     source.write_text(
-        "def bar():\n"
-        "    return 42\n",
+        "def bar():\n    return 42\n",
         encoding="utf-8",
     )
     return repo_root

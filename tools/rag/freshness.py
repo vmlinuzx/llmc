@@ -41,4 +41,3 @@ class IndexStatus:
 
 
 __all__ = ["IndexState", "FreshnessState", "IndexStatus"]
-

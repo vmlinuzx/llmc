@@ -749,6 +749,7 @@ def test_registry_force_specific_repo(tmp_path: Path) -> None:
 
 if __name__ == "__main__":
     import sys
+
     sys.path.insert(0, str(REPO_ROOT))
 
     tests = [
@@ -778,6 +779,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"✗ {test.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

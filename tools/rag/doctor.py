@@ -217,7 +217,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run RAG doctor diagnostics.")
     parser.add_argument("repo", type=Path, nargs="?", default=Path("."), help="Repository path")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Show extra details in JSON output")
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Show extra details in JSON output"
+    )
     args = parser.parse_args()
 
     report = run_rag_doctor(args.repo, verbose=args.verbose)

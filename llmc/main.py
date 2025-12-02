@@ -30,7 +30,7 @@ app = typer.Typer(
     name="llmc",
     help="LLMC: LLM Cost Compression & RAG Tooling",
     add_completion=True,
-    no_args_is_help=True
+    no_args_is_help=True,
 )
 
 # Core commands
@@ -83,6 +83,7 @@ nav_app.command(name="lineage")(nav_lineage)
 
 app.add_typer(nav_app, name="nav")
 
+
 def version_callback(value: bool):
     if value:
         root = find_repo_root()
@@ -92,21 +93,19 @@ def version_callback(value: bool):
         typer.echo(f"Config: {'Found' if config else 'Missing'}")
         raise typer.Exit()
 
+
 @app.callback()
 def common(
     ctx: typer.Context,
     version: bool = typer.Option(
-        None, 
-        "--version", 
-        "-v", 
-        callback=version_callback, 
-        help="Show version and exit."
+        None, "--version", "-v", callback=version_callback, help="Show version and exit."
     ),
 ):
     """
     LLMC Unified CLI
     """
     pass
+
 
 if __name__ == "__main__":
     app()

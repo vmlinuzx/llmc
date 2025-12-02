@@ -20,7 +20,7 @@ from .database import Database
 from .embeddings import HASH_MODELS, build_embedding_backend
 from .utils import _gitignore_matcher
 
-log = logging.getLogger(__name__) # Initialize logger
+log = logging.getLogger(__name__)  # Initialize logger
 
 MAX_SNIPPET_CHARS = 800
 
@@ -77,7 +77,9 @@ ENRICHMENT_SCHEMA: dict[str, Any] = {
 ENRICHMENT_VALIDATOR = Draft7Validator(ENRICHMENT_SCHEMA)
 
 
-def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_seconds: int = 0) -> list[dict]:
+def enrichment_plan(
+    db: Database, repo_root: Path, limit: int = 10, cooldown_seconds: int = 0
+) -> list[dict]:
     """Build an enrichment plan, skipping spans touched within the cooldown window."""
     items = db.pending_enrichments(limit=limit, cooldown_seconds=cooldown_seconds)
     matcher = _gitignore_matcher(repo_root)
@@ -112,7 +114,15 @@ def enrichment_plan(db: Database, repo_root: Path, limit: int = 10, cooldown_sec
                 "code_snippet": _snippet(code),
                 "llm_contract": {
                     "schema_version": "enrichment.v1",
-                    "fields": ["summary_120w", "inputs", "outputs", "side_effects", "pitfalls", "usage_snippet", "evidence"],
+                    "fields": [
+                        "summary_120w",
+                        "inputs",
+                        "outputs",
+                        "side_effects",
+                        "pitfalls",
+                        "usage_snippet",
+                        "evidence",
+                    ],
                     "word_caps": {"summary_120w": 120, "usage_snippet": 12},
                     "instructions": "Return ONLY valid JSON per schema. Cite exact line ranges for every claim. If unsure, use null.",
                 },
@@ -148,7 +158,7 @@ def embedding_plan(
             f"Embed Plan: Span {item.span_hash} (slice_type={item.slice_type}) "
             f"routed to: route='{route_name}', profile='{profile_name}', index='{index_name}'"
         )
-        
+
         # Resolve model/dim from the resolved profile
         profile_cfg = profiles.get(profile_name, {})
 
@@ -162,7 +172,7 @@ def embedding_plan(
                 resolved_dim = 64
             else:
                 resolved_dim = profile_cfg.get("dim") or embedding_model_dim()
-                
+
         normalize = False if resolved_model in HASH_MODELS else embedding_normalize()
 
         code = item.read_source(repo_root)
@@ -216,6 +226,7 @@ def execute_embeddings(
 
     # Group items by (profile_name, index_name, route_name)
     from collections import defaultdict
+
     groups = defaultdict(list)
 
     for item in items:
@@ -225,7 +236,7 @@ def execute_embeddings(
         except ConfigError as e:
             log.warning(f"Skipping span {item.span_hash} due to config error: {e}")
             continue
-        
+
         groups[(profile_name, index_name, route_name)].append(item)
 
     total_created: list[tuple[str, int]] = []
@@ -237,21 +248,25 @@ def execute_embeddings(
             f"Execute Embeddings: Processing {len(group_items)} spans for "
             f"route='{route_name}', profile='{profile_name}', index='{index_name}'"
         )
-        
+
         profile_cfg = config.get("embeddings", {}).get("profiles", {})
-        profile_details = profile_cfg.get(profile_name, {}) # Get details for the resolved profile
-        
+        profile_details = profile_cfg.get(profile_name, {})  # Get details for the resolved profile
+
         # Resolve model/dim (CLI overrides apply to all)
         resolved_model = model
         if not resolved_model or resolved_model == "auto":
-            resolved_model = profile_details.get("model") or embedding_model_name() # Use profile_details
-            
+            resolved_model = (
+                profile_details.get("model") or embedding_model_name()
+            )  # Use profile_details
+
         resolved_dim = dim
         if not resolved_dim or resolved_dim <= 0:
             if resolved_model in HASH_MODELS:
                 resolved_dim = 64
             else:
-                resolved_dim = profile_details.get("dim") or embedding_model_dim() # Use profile_details
+                resolved_dim = (
+                    profile_details.get("dim") or embedding_model_dim()
+                )  # Use profile_details
 
         backend = build_embedding_backend(resolved_model, dim=resolved_dim)
 
@@ -276,19 +291,19 @@ def execute_embeddings(
             raise RuntimeError(
                 f"Embedding backend returned {len(vectors)} vectors for {len(prepared_hashes)} spans"
             )
-        
+
         with db.transaction():
             db.ensure_embedding_meta(backend.model_name, backend.dim, profile=profile_name)
             for span_hash, vector in zip(prepared_hashes, vectors):
                 db.store_embedding(
-                    span_hash, 
-                    vector, 
-                    route_name=route_name, 
-                    profile_name=profile_name, 
-                    table_name=index_name
+                    span_hash,
+                    vector,
+                    route_name=route_name,
+                    profile_name=profile_name,
+                    table_name=index_name,
                 )
                 total_created.append((span_hash, backend.dim))
-        
+
         last_model = backend.model_name
         last_dim = backend.dim
 
@@ -322,7 +337,7 @@ def default_enrichment_callable(model: str) -> Callable[[dict[str, Any]], dict[s
 def _is_latin1_safe(text: str) -> bool:
     """Return True if text contains only Latin-1 characters."""
     try:
-        text.encode('latin-1')
+        text.encode("latin-1")
         return True
     except UnicodeEncodeError:
         return False
@@ -362,12 +377,12 @@ def execute_enrichment(
     with db.transaction():
         for item in items:
             code = item.read_source(repo_root)
-            
+
             # Add content type header
             header_lines = [f"[CONTENT_TYPE: {item.slice_type}]"]
             if item.slice_language:
                 header_lines.append(f"[LANGUAGE: {item.slice_language}]")
-            
+
             code_with_header = "\n".join(header_lines) + "\n\n" + code
 
             prompt = {
@@ -406,6 +421,8 @@ def execute_enrichment(
             successes += 1
 
     return successes, errors
+
+
 def _within_range(lines: list[int], start: int, end: int) -> bool:
     if len(lines) != 2:
         return False
@@ -414,8 +431,8 @@ def _within_range(lines: list[int], start: int, end: int) -> bool:
 
 
 def validate_enrichment(
-    payload: dict[str, Any], 
-    span_start: int, 
+    payload: dict[str, Any],
+    span_start: int,
     span_end: int,
     enforce_latin1: bool = False,
 ) -> tuple[bool, list[str]]:

@@ -72,7 +72,9 @@ class SqliteEnrichmentStore:
         except Exception:
             self._has_span_hash = False
 
-    def snippets_for(self, path: str, line: int | None = None, limit: int = 1) -> list[EnrichmentSnippet]:
+    def snippets_for(
+        self, path: str, line: int | None = None, limit: int = 1
+    ) -> list[EnrichmentSnippet]:
         """
         Look up enrichment snippets for the given path and optional line.
 
@@ -126,7 +128,12 @@ class SqliteEnrichmentStore:
         if file is None or start is None or end is None:
             return None
         algo = os.getenv("LLMC_ENRICH_HASH_ALGO", "sha1").lower()
-        with_text = str(os.getenv("LLMC_ENRICH_HASH_WITH_TEXT", "1")).lower() in {"1", "true", "yes", "on"}
+        with_text = str(os.getenv("LLMC_ENRICH_HASH_WITH_TEXT", "1")).lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         key_parts = [str(Path(file).as_posix()).lower(), str(int(start)), str(int(end))]
         if with_text and text:
             norm = " ".join(str(text).split())
@@ -174,7 +181,9 @@ class SqliteEnrichmentStore:
                         rows = cur.fetchall()
                         if rows:
                             snippets = [
-                                EnrichmentSnippet(*[(val if isinstance(val, str) else None) for val in row])
+                                EnrichmentSnippet(
+                                    *[(val if isinstance(val, str) else None) for val in row]
+                                )
                                 for row in rows
                             ]
                             return snippets, "span"
@@ -188,7 +197,9 @@ class SqliteEnrichmentStore:
                     rows = cur.fetchall()
                     if rows:
                         snippets = [
-                            EnrichmentSnippet(*[(val if isinstance(val, str) else None) for val in row])
+                            EnrichmentSnippet(
+                                *[(val if isinstance(val, str) else None) for val in row]
+                            )
                             for row in rows
                         ]
                         return snippets, "line"
@@ -202,7 +213,9 @@ class SqliteEnrichmentStore:
                     rows = cur.fetchall()
                     if rows:
                         snippets = [
-                            EnrichmentSnippet(*[(val if isinstance(val, str) else None) for val in row])
+                            EnrichmentSnippet(
+                                *[(val if isinstance(val, str) else None) for val in row]
+                            )
                             for row in rows
                         ]
                         return snippets, "path"
@@ -223,7 +236,9 @@ class EnrichStats:
     span_matches: int = 0
 
 
-def _trim_fields(d: dict[str, Any], max_chars: int | None, stats: EnrichStats | None) -> dict[str, Any]:
+def _trim_fields(
+    d: dict[str, Any], max_chars: int | None, stats: EnrichStats | None
+) -> dict[str, Any]:
     """
     Trim string fields in `d` to at most `max_chars`, updating `stats`.
     """
@@ -332,7 +347,9 @@ def attach_enrichments_to_search_result(
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
-            snippets, strategy = store.snippets_for_span_or_path(path, start, end, text, limit=max_snippets_int)
+            snippets, strategy = store.snippets_for_span_or_path(
+                path, start, end, text, limit=max_snippets_int
+            )
             if not snippets:
                 continue
 
@@ -385,7 +402,9 @@ def attach_enrichments_to_where_used(
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
-            snippets, strategy = store.snippets_for_span_or_path(path, start, end, text, limit=max_snippets_int)
+            snippets, strategy = store.snippets_for_span_or_path(
+                path, start, end, text, limit=max_snippets_int
+            )
             if not snippets:
                 continue
 
@@ -437,7 +456,9 @@ def attach_enrichments_to_lineage(
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
-            snippets, strategy = store.snippets_for_span_or_path(path, start, end, text, limit=max_snippets_int)
+            snippets, strategy = store.snippets_for_span_or_path(
+                path, start, end, text, limit=max_snippets_int
+            )
             if not snippets:
                 continue
 

@@ -11,7 +11,6 @@ These tests serve as:
 3. Contract validation tests
 """
 
-
 import pytest
 
 from tools.rag.freshness import IndexStatus
@@ -241,12 +240,14 @@ class TestToolIntegrationScenarios:
     These simulate how the navigation tools would use the envelope system.
     """
 
+
 class TestCliOutput:
     """
     Test CLI output contracts (when CLI tools are implemented).
 
     This ensures that command-line tools produce stable JSON output.
     """
+
 
 class TestMcpContract:
     """
@@ -347,9 +348,7 @@ class TestContractBackwardCompatibility:
         ]
 
         for field in required_fields:
-            assert field in meta_dict, (
-                f"Required field '{field}' was removed from meta contract"
-            )
+            assert field in meta_dict, f"Required field '{field}' was removed from meta contract"
 
     def test_status_literal_values_stable(self):
         """

@@ -2,6 +2,7 @@
 Test 5: Graph Building - Node Coverage and Edge Construction
 Test 6: Graph Building - Corrupt Graph Handling
 """
+
 import json
 import os
 from pathlib import Path
@@ -10,13 +11,14 @@ import tempfile
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 def test_graph_node_coverage():
     """Test that graph includes all indexed files"""
     from tools.rag.graph import GraphStore
     from tools.rag.schema import SchemaGraph
 
     # Create a temporary graph file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
@@ -26,16 +28,11 @@ def test_graph_node_coverage():
                     "id": "file1:function_a",
                     "kind": "function",
                     "path": "file1.py:1-10",
-                    "metadata": {}
+                    "metadata": {},
                 },
-                {
-                    "id": "file2:class_b",
-                    "kind": "class",
-                    "path": "file2.py:5-20",
-                    "metadata": {}
-                }
+                {"id": "file2:class_b", "kind": "class", "path": "file2.py:5-20", "metadata": {}},
             ],
-            "relations": []
+            "relations": [],
         }
         json.dump(graph_data, f)
         graph_path = f.name
@@ -60,12 +57,13 @@ def test_graph_node_coverage():
     finally:
         os.unlink(graph_path)
 
+
 def test_graph_edge_construction():
     """Test that edges are created for references"""
     from tools.rag.graph import GraphStore
     from tools.rag.schema import SchemaGraph
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
@@ -75,33 +73,20 @@ def test_graph_edge_construction():
                     "id": "module:func_a",
                     "kind": "function",
                     "path": "module.py:1-10",
-                    "metadata": {}
+                    "metadata": {},
                 },
                 {
                     "id": "module:func_b",
                     "kind": "function",
                     "path": "module.py:15-25",
-                    "metadata": {}
+                    "metadata": {},
                 },
-                {
-                    "id": "module:ClassA",
-                    "kind": "class",
-                    "path": "module.py:30-50",
-                    "metadata": {}
-                }
+                {"id": "module:ClassA", "kind": "class", "path": "module.py:30-50", "metadata": {}},
             ],
             "relations": [
-                {
-                    "src": "module:func_a",
-                    "edge": "calls",
-                    "dst": "module:func_b"
-                },
-                {
-                    "src": "module:func_b",
-                    "edge": "instantiates",
-                    "dst": "module:ClassA"
-                }
-            ]
+                {"src": "module:func_a", "edge": "calls", "dst": "module:func_b"},
+                {"src": "module:func_b", "edge": "instantiates", "dst": "module:ClassA"},
+            ],
         }
         json.dump(graph_data, f)
         graph_path = f.name
@@ -126,32 +111,28 @@ def test_graph_edge_construction():
     finally:
         os.unlink(graph_path)
 
+
 def test_graph_self_consistency():
     """Test that graph references only known entities"""
     from tools.rag.graph import GraphStore
     from tools.rag.schema import SchemaGraph
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         # Graph with dangling reference
         graph_data = {
             "version": 1,
             "indexed_at": "2025-11-16T00:00:00",
             "repo": str(REPO_ROOT),
             "entities": [
-                {
-                    "id": "known:entity",
-                    "kind": "function",
-                    "path": "test.py:1-10",
-                    "metadata": {}
-                }
+                {"id": "known:entity", "kind": "function", "path": "test.py:1-10", "metadata": {}}
             ],
             "relations": [
                 {
                     "src": "known:entity",
                     "edge": "calls",
-                    "dst": "unknown:entity"  # This should be flagged
+                    "dst": "unknown:entity",  # This should be flagged
                 }
-            ]
+            ],
         }
         json.dump(graph_data, f)
         graph_path = f.name
@@ -182,6 +163,7 @@ def test_graph_self_consistency():
     finally:
         os.unlink(graph_path)
 
+
 def test_graph_corrupt_handling():
     """Test handling of corrupt or missing graph file"""
     from tools.rag.graph import GraphStore
@@ -198,7 +180,7 @@ def test_graph_corrupt_handling():
         print(f"  ✓ Raised exception: {type(e).__name__}: {e}")
 
     # Test 2: Corrupt JSON
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write("{ this is not valid json }")
         corrupt_path = f.name
 
@@ -216,7 +198,7 @@ def test_graph_corrupt_handling():
         os.unlink(corrupt_path)
 
     # Test 3: Valid JSON but invalid schema
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"invalid": "schema", "missing": "fields"}')
         invalid_path = f.name
 
@@ -224,6 +206,7 @@ def test_graph_corrupt_handling():
         print("\nTest 3: Valid JSON but invalid schema")
         try:
             from tools.rag.schema import SchemaGraph
+
             graph = SchemaGraph.load(Path(invalid_path))
             print("  Result: Loaded with defaults")
             print(f"  Entities: {len(graph.entities)}")
@@ -234,6 +217,7 @@ def test_graph_corrupt_handling():
         os.unlink(invalid_path)
 
     print("\n✓ Corrupt handling tests complete\n")
+
 
 def test_existing_graph_artifacts():
     """Test the actual graph artifacts in the repo"""
@@ -250,8 +234,8 @@ def test_existing_graph_artifacts():
         data = json.load(f)
 
     # Check for entities (SchemaGraph format) or nodes (Nav graph format)
-    entities = data.get('entities') or data.get('nodes', [])
-    
+    entities = data.get("entities") or data.get("nodes", [])
+
     print(f"  Entities indexed: {len(entities)}")
     print(f"  Sample entities: {entities[:2]}")
 

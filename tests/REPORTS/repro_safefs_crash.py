@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import sys
 
@@ -8,22 +7,23 @@ sys.path.insert(0, str(repo_root))
 
 try:
     from tools.rag_repo.cli_entry import snapshot_workspace_cmd
+
     print("Successfully imported snapshot_workspace_cmd")
-    
+
     # create dummy args
     try:
         # This should crash because SafeFS is missing
         snapshot_workspace_cmd(
-            repo_root=repo_root, 
-            workspace=None, 
-            export=None, 
-            name="test.tar.gz", 
-            include_hidden=False, 
-            force=True
+            repo_root=repo_root,
+            workspace=None,
+            export=None,
+            name="test.tar.gz",
+            include_hidden=False,
+            force=True,
         )
     except NameError as e:
         print(f"Caught expected error: {e}")
-        exit(0) # Success - we found the bug
+        exit(0)  # Success - we found the bug
     except Exception as e:
         print(f"Caught unexpected error: {e}")
         exit(1)

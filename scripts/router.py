@@ -96,7 +96,9 @@ def expected_output_tokens(span: dict[str, object]) -> int:
     return max(estimate, 1200)
 
 
-def detect_truncation(output_text: str, max_tokens_used: int | None, finish_reason: str | None) -> bool:
+def detect_truncation(
+    output_text: str, max_tokens_used: int | None, finish_reason: str | None
+) -> bool:
     """Heuristically detect truncated JSON output."""
     if finish_reason and finish_reason.lower() in {"length", "max_tokens", "token_limit"}:
         return True
@@ -139,19 +141,13 @@ class RouterSettings:
                 return current
 
         self.context_limit = _read_int_env("ROUTER_CONTEXT_LIMIT", self.context_limit)
-        self.headroom = _read_int_env(
-            "ROUTER_MAX_TOKENS_HEADROOM", self.headroom
-        )
-        self.preflight_limit = _read_int_env(
-            "ROUTER_PRE_FLIGHT_LIMIT", self.preflight_limit
-        )
+        self.headroom = _read_int_env("ROUTER_MAX_TOKENS_HEADROOM", self.headroom)
+        self.preflight_limit = _read_int_env("ROUTER_PRE_FLIGHT_LIMIT", self.preflight_limit)
         self.node_limit = _read_int_env("ROUTER_NODE_LIMIT", self.node_limit)
         self.depth_limit = _read_int_env("ROUTER_DEPTH_LIMIT", self.depth_limit)
         self.array_limit = _read_int_env("ROUTER_ARRAY_LIMIT", self.array_limit)
         self.csv_limit = _read_int_env("ROUTER_CSV_LIMIT", self.csv_limit)
-        self.nesting_limit = _read_int_env(
-            "ROUTER_NESTING_LIMIT", self.nesting_limit
-        )
+        self.nesting_limit = _read_int_env("ROUTER_NESTING_LIMIT", self.nesting_limit)
 
         thresholds = os.getenv("ROUTER_LINE_THRESHOLDS", "60,100")
         try:
@@ -170,7 +166,9 @@ class RouterSettings:
         return min(self.preflight_limit, context_cap)
 
 
-def choose_start_tier(metrics: dict[str, float], settings: RouterSettings, override: str | None = None) -> str:
+def choose_start_tier(
+    metrics: dict[str, float], settings: RouterSettings, override: str | None = None
+) -> str:
     """Choose initial tier based on metrics and overrides."""
 
     override = (override or os.getenv("ROUTER_DEFAULT_TIER", "auto")).lower()

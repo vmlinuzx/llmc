@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,11 +11,13 @@ try:
 except Exception:  # pragma: no cover
     tomllib = None
 
+
 @dataclass
 class RouteSignal:
     route: str
     score: float
     reason: str
+
 
 def load_routing_config(start_dir: Path | None = None) -> dict[str, Any]:
     cfg: dict[str, Any] = {
@@ -34,17 +35,23 @@ def load_routing_config(start_dir: Path | None = None) -> dict[str, Any]:
                 with cand.open("rb") as f:
                     data = tomllib.load(f) or {}
                 routing = data.get("routing", {})
-                cfg.update({
-                    "default_route": routing.get("default_route", cfg["default_route"]),
-                    "code_detection": routing.get("code_detection", cfg["code_detection"]) or {},
-                    "erp_vs_code": routing.get("erp_vs_code", cfg["erp_vs_code"]) or {},
-                })
+                cfg.update(
+                    {
+                        "default_route": routing.get("default_route", cfg["default_route"]),
+                        "code_detection": routing.get("code_detection", cfg["code_detection"])
+                        or {},
+                        "erp_vs_code": routing.get("erp_vs_code", cfg["erp_vs_code"]) or {},
+                    }
+                )
             except Exception:
                 pass
             break
     return cfg
 
-def record_decision(route_name: str, confidence: float, reasons: list[str], flags: dict[str, Any]) -> None:
+
+def record_decision(
+    route_name: str, confidence: float, reasons: list[str], flags: dict[str, Any]
+) -> None:
     logger = logging.getLogger("llmc.routing")
     payload = {
         "event": "routing_decision",

@@ -135,7 +135,8 @@ def {name}({params_str}) -> dict[str, Any]:
     generated["__init__"] = str(init_path)
 
     # Write a README for Claude
-    readme_content = textwrap.dedent("""
+    readme_content = (
+        textwrap.dedent("""
         # LLMC Tool Stubs
 
         This directory contains Python stubs for all LLMC MCP tools.
@@ -166,7 +167,9 @@ def {name}({params_str}) -> dict[str, Any]:
         Process data in your code before printing output.
         Only printed output goes back to the conversation context.
         This dramatically reduces token usage.
-    """).strip() + "\n"
+    """).strip()
+        + "\n"
+    )
 
     readme_path = full_stubs_dir / "README.md"
     readme_path.write_text(readme_content)
@@ -251,9 +254,10 @@ def execute_code(
     import builtins
     import contextlib
     import io
-    _original_call_tool = getattr(builtins, '_call_tool', None)
+
+    _original_call_tool = getattr(builtins, "_call_tool", None)
     builtins._call_tool = tool_caller
-    
+
     namespace = {
         "__builtins__": builtins,
         "_call_tool": tool_caller,  # Also in namespace for inline code
@@ -305,7 +309,7 @@ def execute_code(
             sys.path.remove(str(stubs_dir.parent))
         # Restore original builtins._call_tool (or remove if didn't exist)
         if _original_call_tool is None:
-            if hasattr(builtins, '_call_tool'):
-                delattr(builtins, '_call_tool')
+            if hasattr(builtins, "_call_tool"):
+                delattr(builtins, "_call_tool")
         else:
             builtins._call_tool = _original_call_tool

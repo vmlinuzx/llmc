@@ -49,9 +49,7 @@ def _build_metadata(
 ) -> EmbeddingMetadata:
     """Helper to construct EmbeddingMetadata with basic validation."""
     if dimension < 0:
-        raise EmbeddingConfigError(
-            f"Profile '{profile_name}' has negative dimension {dimension!r}"
-        )
+        raise EmbeddingConfigError(f"Profile '{profile_name}' has negative dimension {dimension!r}")
     return EmbeddingMetadata(
         provider=provider_name,
         model=model,
@@ -78,9 +76,7 @@ def create_provider_from_config(
     try:
         provider_name = cfg["provider"]
     except KeyError as exc:  # pragma: no cover - config error path
-        raise EmbeddingConfigError(
-            f"Profile '{profile_name}' is missing 'provider'"
-        ) from exc
+        raise EmbeddingConfigError(f"Profile '{profile_name}' is missing 'provider'") from exc
 
     provider_cls = PROVIDER_REGISTRY.get(provider_name)
     if provider_cls is None:
@@ -113,12 +109,8 @@ def create_provider_from_config(
         kwargs["model_name"] = provider_cfg.get("model_name")
         kwargs["device"] = provider_cfg.get("device")
         kwargs["batch_size"] = int(provider_cfg.get("batch_size", 32))
-        kwargs["normalize_embeddings"] = bool(
-            provider_cfg.get("normalize_embeddings", True)
-        )
-        kwargs["trust_remote_code"] = bool(
-            provider_cfg.get("trust_remote_code", False)
-        )
+        kwargs["normalize_embeddings"] = bool(provider_cfg.get("normalize_embeddings", True))
+        kwargs["trust_remote_code"] = bool(provider_cfg.get("trust_remote_code", False))
 
     if provider_cls is OllamaEmbeddingProvider:
         kwargs["api_base"] = provider_cfg.get("api_base", "http://localhost:11434")
@@ -244,9 +236,7 @@ class EmbeddingManager:
                 )
             for name, raw in profiles_cfg.items():
                 if not isinstance(raw, Mapping):
-                    raise EmbeddingConfigError(
-                        f"embeddings.profiles.{name} must be a table/object"
-                    )
+                    raise EmbeddingConfigError(f"embeddings.profiles.{name} must be a table/object")
                 profiles[name] = EmbeddingProfileConfig(name=name, raw=raw)
         else:
             # Legacy single-provider config: treat [embeddings] as a single profile.

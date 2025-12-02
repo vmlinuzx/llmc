@@ -110,11 +110,11 @@ class TestRAGRouterInit:
                     "input_cost": 0.0,
                     "output_cost": 0.0,
                     "context_window": 32768,
-                    "strengths": ["custom"]
+                    "strengths": ["custom"],
                 }
             },
             "thresholds": {},
-            "forced_routing": {}
+            "forced_routing": {},
         }
 
         router = RAGRouter(Path("/tmp/test"), custom_config)
@@ -231,7 +231,7 @@ class TestRAGRouterComplexityEstimation:
         plan = {
             "confidence": 0.9,
             "spans": [{"lines": [1, 10]}],
-            "symbols": ["function_a", "function_b"]
+            "symbols": ["function_a", "function_b"],
         }
 
         assert router._estimate_complexity(plan) == "simple"
@@ -240,11 +240,7 @@ class TestRAGRouterComplexityEstimation:
         """Test simple complexity with no spans."""
         router = RAGRouter(Path("/tmp/test"))
 
-        plan = {
-            "confidence": 0.85,
-            "spans": [],
-            "symbols": []
-        }
+        plan = {"confidence": 0.85, "spans": [], "symbols": []}
 
         assert router._estimate_complexity(plan) == "simple"
 
@@ -253,11 +249,7 @@ class TestRAGRouterComplexityEstimation:
         router = RAGRouter(Path("/tmp/test"))
 
         symbols = [f"symbol_{i}" for i in range(15)]
-        plan = {
-            "confidence": 0.7,
-            "spans": [{"lines": [1, 10]}],
-            "symbols": symbols
-        }
+        plan = {"confidence": 0.7, "spans": [{"lines": [1, 10]}], "symbols": symbols}
 
         assert router._estimate_complexity(plan) == "complex"
 
@@ -265,11 +257,7 @@ class TestRAGRouterComplexityEstimation:
         """Test complex due to low confidence."""
         router = RAGRouter(Path("/tmp/test"))
 
-        plan = {
-            "confidence": 0.4,
-            "spans": [{"lines": [1, 10]}],
-            "symbols": ["symbol_a"]
-        }
+        plan = {"confidence": 0.4, "spans": [{"lines": [1, 10]}], "symbols": ["symbol_a"]}
 
         assert router._estimate_complexity(plan) == "complex"
 
@@ -280,7 +268,7 @@ class TestRAGRouterComplexityEstimation:
         plan = {
             "confidence": 0.7,
             "spans": [{"lines": [1, 10]}],
-            "symbols": ["symbol_a", "symbol_b", "symbol_c"]
+            "symbols": ["symbol_a", "symbol_b", "symbol_c"],
         }
 
         assert router._estimate_complexity(plan) == "medium"
@@ -333,11 +321,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_validation_required(self, mock_generate_plan):
         """Test validation requirements route to premium."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.5,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.5, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -348,7 +332,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=False,
             requires_validation=True,
             estimated_context_tokens=1000,
-            confidence=0.5
+            confidence=0.5,
         )
 
         decision = router._decide_tier(analysis, "check my code", Path("/tmp/test"))
@@ -359,11 +343,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_complex_reasoning(self, mock_generate_plan):
         """Test complex reasoning routes to premium."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -374,7 +354,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=5000,
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "explain architecture", Path("/tmp/test"))
@@ -385,11 +365,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_large_context(self, mock_generate_plan):
         """Test large context routes to premium."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.7,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.7, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -400,7 +376,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=50000,  # Very large
-            confidence=0.7
+            confidence=0.7,
         )
 
         decision = router._decide_tier(analysis, "refactor module", Path("/tmp/test"))
@@ -411,11 +387,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_simple_high_confidence(self, mock_generate_plan):
         """Test simple task with high confidence routes to local."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.9,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.9, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -426,7 +398,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=False,
             requires_validation=False,
             estimated_context_tokens=500,
-            confidence=0.9
+            confidence=0.9,
         )
 
         decision = router._decide_tier(analysis, "format this code", Path("/tmp/test"))
@@ -437,11 +409,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_simple_no_codebase(self, mock_generate_plan):
         """Test simple task without codebase context routes to local."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.7,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.7, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -452,7 +420,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=False,
             requires_validation=False,
             estimated_context_tokens=1000,
-            confidence=0.7
+            confidence=0.7,
         )
 
         decision = router._decide_tier(analysis, "generate a hello world", Path("/tmp/test"))
@@ -463,11 +431,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_testing_routes_to_mid(self, mock_generate_plan):
         """Test testing tasks route to mid tier."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -478,7 +442,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=3000,
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "write tests for auth", Path("/tmp/test"))
@@ -489,11 +453,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_bug_hunting_routes_to_mid(self, mock_generate_plan):
         """Test bug hunting routes to mid tier."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -504,7 +464,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=2000,
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "find memory leak", Path("/tmp/test"))
@@ -515,11 +475,7 @@ class TestRAGRouterTierDecision:
     @patch("tools.rag_router.generate_plan")
     def test_decide_tier_default_to_mid(self, mock_generate_plan):
         """Test default routing to mid tier."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -530,7 +486,7 @@ class TestRAGRouterTierDecision:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=3000,
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "refactor function", Path("/tmp/test"))
@@ -545,11 +501,7 @@ class TestRAGRouterCostEstimation:
     @patch("tools.rag_router.generate_plan")
     def test_cost_estimation_local_is_free(self, mock_generate_plan):
         """Test local tier has zero cost."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.9,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.9, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -560,7 +512,7 @@ class TestRAGRouterCostEstimation:
             requires_codebase=False,
             requires_validation=False,
             estimated_context_tokens=1000,
-            confidence=0.9
+            confidence=0.9,
         )
 
         decision = router._decide_tier(analysis, "format code", Path("/tmp/test"))
@@ -571,11 +523,7 @@ class TestRAGRouterCostEstimation:
     @patch("tools.rag_router.generate_plan")
     def test_cost_estimation_mid_tier(self, mock_generate_plan):
         """Test mid tier cost calculation."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -586,7 +534,7 @@ class TestRAGRouterCostEstimation:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=10000,
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "refactor code", Path("/tmp/test"))
@@ -598,11 +546,7 @@ class TestRAGRouterCostEstimation:
     @patch("tools.rag_router.generate_plan")
     def test_cost_estimation_premium_tier(self, mock_generate_plan):
         """Test premium tier cost calculation."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.7,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.7, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -613,7 +557,7 @@ class TestRAGRouterCostEstimation:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=15000,
-            confidence=0.7
+            confidence=0.7,
         )
 
         decision = router._decide_tier(analysis, "explain design", Path("/tmp/test"))
@@ -626,11 +570,7 @@ class TestRAGRouterCostEstimation:
     @patch("tools.rag_router.generate_plan")
     def test_cost_estimate_includes_input_and_output(self, mock_generate_plan):
         """Test cost includes both input and output tokens."""
-        mock_generate_plan.return_value = {
-            "confidence": 0.6,
-            "spans": [],
-            "symbols": []
-        }
+        mock_generate_plan.return_value = {"confidence": 0.6, "spans": [], "symbols": []}
 
         router = RAGRouter(Path("/tmp/test"))
 
@@ -641,7 +581,7 @@ class TestRAGRouterCostEstimation:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=10000,  # Large input
-            confidence=0.6
+            confidence=0.6,
         )
 
         decision = router._decide_tier(analysis, "refactor " + "x" * 1000, Path("/tmp/test"))
@@ -660,11 +600,8 @@ class TestRAGRouterRAGIntegration:
         mock_generate_plan.return_value = {
             "intent": "refactor",
             "confidence": 0.8,
-            "spans": [
-                {"lines": [10, 50]},
-                {"lines": [100, 150]}
-            ],
-            "symbols": ["function_a", "function_b"]
+            "spans": [{"lines": [10, 50]}, {"lines": [100, 150]}],
+            "symbols": ["function_a", "function_b"],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -701,7 +638,7 @@ class TestRAGRouterRAGIntegration:
             "intent": "refactor",
             "confidence": 0.7,
             "spans": [],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -713,7 +650,7 @@ class TestRAGRouterRAGIntegration:
             requires_codebase=True,  # Needs codebase
             requires_validation=False,
             estimated_context_tokens=3000,
-            confidence=0.7
+            confidence=0.7,
         )
 
         decision = router._decide_tier(analysis, "refactor module", Path("/tmp/test"))
@@ -730,7 +667,7 @@ class TestRAGRouterRAGIntegration:
             "intent": "format",
             "confidence": 0.9,
             "spans": [],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -742,7 +679,7 @@ class TestRAGRouterRAGIntegration:
             requires_codebase=False,  # Doesn't need codebase
             requires_validation=False,
             estimated_context_tokens=500,
-            confidence=0.9
+            confidence=0.9,
         )
 
         decision = router._decide_tier(analysis, "format code", Path("/tmp/test"))
@@ -764,7 +701,7 @@ class TestRAGRouterRouteMethod:
             "intent": "format",
             "confidence": 0.5,
             "spans": [],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -785,7 +722,7 @@ class TestRAGRouterRouteMethod:
             "intent": "refactor",
             "confidence": 0.7,
             "spans": [],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -893,7 +830,7 @@ class TestRouteQueryConvenienceFunction:
             rationale=["Test"],
             context_needed=True,
             estimated_tokens=5000,
-            cost_estimate=0.05
+            cost_estimate=0.05,
         )
         mock_router.route.return_value = expected_decision
         mock_router_class.return_value = mock_router
@@ -914,7 +851,7 @@ class TestRAGRouterErrorHandling:
             "intent": None,
             "confidence": None,
             "spans": None,
-            "symbols": None
+            "symbols": None,
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -937,7 +874,7 @@ class TestRAGRouterErrorHandling:
                 {"lines": [30]},  # Missing end line
                 {"lines": [40, 50]},
             ],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))
@@ -954,7 +891,7 @@ class TestRAGRouterErrorHandling:
             # First call for analysis
             {"confidence": 0.7, "spans": [], "symbols": []},
             # Second call for RAG context fails
-            Exception("RAG service down")
+            Exception("RAG service down"),
         ]
 
         router = RAGRouter(Path("/tmp/test"))
@@ -966,7 +903,7 @@ class TestRAGRouterErrorHandling:
             requires_codebase=True,
             requires_validation=False,
             estimated_context_tokens=3000,
-            confidence=0.7
+            confidence=0.7,
         )
 
         # Should not crash even if RAG context fetch fails
@@ -1055,7 +992,7 @@ class TestRAGRouterEdgeCases:
                     requires_codebase=False,
                     requires_validation=False,
                     estimated_context_tokens=1000,
-                    confidence=0.99
+                    confidence=0.99,
                 )
                 with patch.object(router, "_decide_tier") as mock_decide:
                     mock_decide.return_value = RoutingDecision(
@@ -1065,7 +1002,7 @@ class TestRAGRouterEdgeCases:
                         rationale=[],
                         context_needed=False,
                         estimated_tokens=1000,
-                        cost_estimate=0.0
+                        cost_estimate=0.0,
                     )
 
                     decision = router.route("test", Path("/tmp/test"))
@@ -1079,11 +1016,11 @@ class TestRAGRouterEdgeCases:
             "intent": "refactor",
             "confidence": 0.7,
             "spans": [
-                {"lines": [1, 10]},   # 9 lines * 4 = 36 tokens
+                {"lines": [1, 10]},  # 9 lines * 4 = 36 tokens
                 {"lines": [20, 30]},  # 10 lines * 4 = 40 tokens
                 {"lines": [40, 45]},  # 5 lines * 4 = 20 tokens
             ],
-            "symbols": []
+            "symbols": [],
         }
 
         router = RAGRouter(Path("/tmp/test"))

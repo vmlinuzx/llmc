@@ -90,7 +90,9 @@ def _column_map(conn: sqlite3.Connection, table: str) -> dict[str, str]:
     return {"path": path_col, "start": start_col, "end": end_col, "text": text_col}
 
 
-def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Path | None = None) -> list[FtsHit]:
+def fts_search(
+    repo_root: Path, query: str, limit: int = 20, db_path: Path | None = None
+) -> list[FtsHit]:
     """Run an FTS MATCH search against the enrichment DB with optional bm25 ordering."""
     conn, path = _open_db(repo_root, db_path)
     try:
@@ -99,10 +101,10 @@ def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Path | Non
 
         cur = conn.cursor()
         sql_bm25 = f"""
-            SELECT {col['path']} as path,
-                   COALESCE({col['start']}, 1) as start_line,
-                   COALESCE({col['end']},   COALESCE({col['start']},1)+1) as end_line,
-                   {col['text']} as text,
+            SELECT {col["path"]} as path,
+                   COALESCE({col["start"]}, 1) as start_line,
+                   COALESCE({col["end"]},   COALESCE({col["start"]},1)+1) as end_line,
+                   {col["text"]} as text,
                    bm25({table}) as score
             FROM {table}
             WHERE {table} MATCH ?
@@ -114,10 +116,10 @@ def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Path | Non
             rows = cur.fetchall()
         except Exception:
             sql = f"""
-                SELECT {col['path']} as path,
-                       COALESCE({col['start']}, 1) as start_line,
-                       COALESCE({col['end']},   COALESCE({col['start']},1)+1) as end_line,
-                       {col['text']} as text
+                SELECT {col["path"]} as path,
+                       COALESCE({col["start"]}, 1) as start_line,
+                       COALESCE({col["end"]},   COALESCE({col["start"]},1)+1) as end_line,
+                       {col["text"]} as text
                 FROM {table}
                 WHERE {table} MATCH ?
                 LIMIT ?
@@ -139,4 +141,3 @@ def fts_search(repo_root: Path, query: str, limit: int = 20, db_path: Path | Non
         return hits
     finally:
         conn.close()
-

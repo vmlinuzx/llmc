@@ -16,51 +16,39 @@ from tools.rag.database import Database
 app = typer.Typer()
 
 DEFAULT_CONFIG = {
-    "storage": {
-        "index_path": ".llmc/index_v2.db"
-    },
+    "storage": {"index_path": ".llmc/index_v2.db"},
     "logging": {
         "log_directory": ".llmc/logs",
         "enable_rotation": True,
         "max_file_size_mb": 10,
-        "keep_jsonl_lines": 1000
+        "keep_jsonl_lines": 1000,
     },
     "indexing": {
         "exclude_dirs": [
-            ".git", 
-            ".llmc", 
-            ".venv", 
-            "__pycache__", 
+            ".git",
+            ".llmc",
+            ".venv",
+            "__pycache__",
             "node_modules",
             "dist",
             "build",
             ".pytest_cache",
-            ".mypy_cache"
+            ".mypy_cache",
         ]
     },
     "embeddings": {
         "default_profile": "docs",
-        "profiles": {
-            "docs": {
-                "provider": "ollama",
-                "model": "nomic-embed-text",
-                "dimension": 768
-            }
-        }
+        "profiles": {"docs": {"provider": "ollama", "model": "nomic-embed-text", "dimension": 768}},
     },
-    "rag": {
-        "enabled": True
-    }
+    "rag": {"enabled": True},
 }
+
 
 @app.command()
 def init(
     path: Path = typer.Option(
-        ".", 
-        "--path", 
-        "-p", 
-        help="Path to initialize the workspace in (default: current directory)"
-    )
+        ".", "--path", "-p", help="Path to initialize the workspace in (default: current directory)"
+    ),
 ):
     """
     Bootstrap .llmc/ workspace and configuration.
@@ -85,7 +73,7 @@ def init(
     # 1. Create .llmc/ directory
     llmc_dir = target_root / ".llmc"
     llmc_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # 2. Create logs directory
     logs_dir = llmc_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -104,15 +92,15 @@ def init(
     try:
         with open(config_path, "rb") as f:
             config = tomllib.load(f)
-            
+
         index_rel_path = config.get("storage", {}).get("index_path", ".llmc/index_v2.db")
         index_path = target_root / index_rel_path
-        
+
         typer.echo(f"Initializing database: {index_path}")
         # Database(__init__) creates the file and schema
         db = Database(index_path)
         db.close()
-        
+
     except Exception as e:
         typer.echo(f"Error initializing database: {e}", err=True)
         raise typer.Exit(code=1)

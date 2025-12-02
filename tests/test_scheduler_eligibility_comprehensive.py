@@ -306,9 +306,7 @@ def test_scheduler_run_tick_with_mixed_states(tmp_path: Path) -> None:
 
     # Create states
     states = {
-        "repo-running": RepoState(
-            repo_id="repo-running", last_run_status="running"
-        ),
+        "repo-running": RepoState(repo_id="repo-running", last_run_status="running"),
         "repo-failed": RepoState(
             repo_id="repo-failed",
             last_run_status="error",
@@ -375,9 +373,7 @@ def test_scheduler_run_tick_with_force_flags(tmp_path: Path) -> None:
 
     # Test with refresh_all flag
     with patch("tools.rag_daemon.scheduler.read_control_events") as mock_control:
-        mock_control.return_value = Mock(
-            refresh_all=True, refresh_repo_ids=set(), shutdown=False
-        )
+        mock_control.return_value = Mock(refresh_all=True, refresh_repo_ids=set(), shutdown=False)
 
         with patch.object(scheduler.state_store, "load_all", return_value=states):
             with patch.object(workers, "running_repo_ids", return_value=set()):

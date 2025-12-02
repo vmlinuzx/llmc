@@ -114,10 +114,12 @@ def _python_doc_hint(node: Node, source: bytes) -> str | None:
         return None
     text = _node_text(literal, source)
     # Strip quotes crudely
-    return text.strip().strip('"\'')
+    return text.strip().strip("\"'")
 
 
-def _collect_python(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
+def _collect_python(
+    node: Node, source: bytes, file_path: Path, scope: list[str] | None = None
+) -> list[SpanRecord]:
     scope = scope or []
     spans: list[SpanRecord] = []
     if node.type == "class_definition":
@@ -165,7 +167,9 @@ def _collect_python(node: Node, source: bytes, file_path: Path, scope: list[str]
     return spans
 
 
-def _collect_js(node: Node, source: bytes, file_path: Path, lang: str, scope: list[str] | None = None) -> list[SpanRecord]:
+def _collect_js(
+    node: Node, source: bytes, file_path: Path, lang: str, scope: list[str] | None = None
+) -> list[SpanRecord]:
     scope = scope or []
     spans: list[SpanRecord] = []
     if node.type in {"class_declaration", "class"}:
@@ -204,7 +208,9 @@ def _collect_js(node: Node, source: bytes, file_path: Path, lang: str, scope: li
     return spans
 
 
-def _collect_go(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
+def _collect_go(
+    node: Node, source: bytes, file_path: Path, scope: list[str] | None = None
+) -> list[SpanRecord]:
     scope = scope or []
     spans: list[SpanRecord] = []
 
@@ -252,7 +258,9 @@ def _collect_go(node: Node, source: bytes, file_path: Path, scope: list[str] | N
     return spans
 
 
-def _collect_java(node: Node, source: bytes, file_path: Path, scope: list[str] | None = None) -> list[SpanRecord]:
+def _collect_java(
+    node: Node, source: bytes, file_path: Path, scope: list[str] | None = None
+) -> list[SpanRecord]:
     scope = scope or []
     spans: list[SpanRecord] = []
 
@@ -374,8 +382,12 @@ def _collect_markdown(file_path: Path, source: bytes) -> list[SpanRecord]:
 
 LANG_EXTRACTORS: dict[str, Callable[[Path, bytes], list[SpanRecord]]] = {
     "python": lambda path, src: _collect_python(parse_source("python", src), src, path),
-    "javascript": lambda path, src: _collect_js(parse_source("javascript", src), src, path, "javascript"),
-    "typescript": lambda path, src: _collect_js(parse_source("typescript", src), src, path, "typescript"),
+    "javascript": lambda path, src: _collect_js(
+        parse_source("javascript", src), src, path, "javascript"
+    ),
+    "typescript": lambda path, src: _collect_js(
+        parse_source("typescript", src), src, path, "typescript"
+    ),
     "tsx": lambda path, src: _collect_js(parse_source("tsx", src), src, path, "tsx"),
     "go": lambda path, src: _collect_go(parse_source("go", src), src, path),
     "java": lambda path, src: _collect_java(parse_source("java", src), src, path),

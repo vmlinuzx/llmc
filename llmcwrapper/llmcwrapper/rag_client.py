@@ -5,7 +5,9 @@ import urllib.request
 
 
 class NullRAG:
-    def head(self, url): return True
+    def head(self, url):
+        return True
+
 
 class HttpRAG:
     def head(self, url, timeout=2):

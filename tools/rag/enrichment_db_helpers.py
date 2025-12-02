@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from pathlib import Path
 import sqlite3
@@ -37,6 +36,7 @@ def _candidate_db_paths(repo_root: Path) -> list[Path]:
         unique.append(path)
     return unique
 
+
 def get_enrichment_db_path(repo_root: Path) -> Path:
     """Returns the path to the enrichment database for a given repo."""
     for candidate in _candidate_db_paths(repo_root):
@@ -44,6 +44,7 @@ def get_enrichment_db_path(repo_root: Path) -> Path:
             return candidate
     # Fallback to default index path even if it doesn't exist yet
     return index_path_for_read(repo_root)
+
 
 def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
     """
@@ -62,13 +63,10 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
 
             tables = {
                 row[0]
-                for row in cursor.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table'"
-                )
+                for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
             }
             enrichment_columns = {
-                row[1]
-                for row in cursor.execute("PRAGMA table_info(enrichments)")
+                row[1] for row in cursor.execute("PRAGMA table_info(enrichments)")
             }
             usage_column = None
             if "usage_snippet" in enrichment_columns:
@@ -112,7 +110,9 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
                     start_line=row_dict.get("start_line"),
                     end_line=row_dict.get("end_line"),
                     summary=row_dict.get("summary"),
-                    usage_guide=row_dict.get("usage_text") or row_dict.get("usage_snippet") or row_dict.get("usage_guide"),
+                    usage_guide=row_dict.get("usage_text")
+                    or row_dict.get("usage_snippet")
+                    or row_dict.get("usage_guide"),
                 )
 
                 if not record.span_hash:

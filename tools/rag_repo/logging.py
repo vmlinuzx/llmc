@@ -10,4 +10,3 @@ class PathSafetyWarning(Warning):
 def warn_skip(entry: str, reason: str) -> None:
     """Emit a standardized warning when a path or entry is skipped for safety."""
     logging.getLogger("llmc.paths").warning("skip %s: %s", entry, reason)
-

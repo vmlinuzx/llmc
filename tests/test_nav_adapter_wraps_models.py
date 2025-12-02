@@ -64,4 +64,3 @@ def test_lineage_adapter_ok():
     r = lineage_to_rag_result(res)
     assert hasattr(r, "items") or hasattr(r, "meta")
     assert r.meta.freshness_state in {"FRESH", "STALE", "UNKNOWN"}
-

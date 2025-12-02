@@ -9,6 +9,7 @@ from tools.rag_nav.models import FreshnessState, IndexStatus
 try:
     from tools.rag_nav.metadata import load_status
 except ImportError:
+
     def load_status(repo_root: Path) -> IndexStatus | None:
         return None
 
@@ -67,7 +68,7 @@ def compute_route(repo_root: Path) -> RouteDecision:
         head = _detect_git_head(repo_root)
     except Exception:
         head = None
-    
+
     last_indexed = getattr(status, "last_indexed_commit", None)
 
     if not head or not last_indexed:
@@ -77,4 +78,3 @@ def compute_route(repo_root: Path) -> RouteDecision:
         return RouteDecision(use_rag=True, freshness_state="FRESH", status=status)
 
     return RouteDecision(use_rag=False, freshness_state="STALE", status=status)
-

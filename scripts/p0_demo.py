@@ -23,7 +23,9 @@ def main() -> None:
     repo = args.repo
     search_res = tool_rag_search(repo_root=repo, query=args.query, limit=10)
     where_used_res = tool_rag_where_used(repo_root=repo, symbol=args.query, limit=10)
-    lineage_res = tool_rag_lineage(repo_root=repo, symbol=args.query, direction="downstream", max_results=10)
+    lineage_res = tool_rag_lineage(
+        repo_root=repo, symbol=args.query, direction="downstream", max_results=10
+    )
 
     def show(name: str, result: object) -> None:
         meta = getattr(result, "meta", None)
@@ -42,7 +44,9 @@ def main() -> None:
             first = items[0]
             enrichment = getattr(first, "enrichment", None)
             if enrichment:
-                core = {key: enrichment.get(key) for key in ("summary", "inputs", "outputs", "pitfalls")}
+                core = {
+                    key: enrichment.get(key) for key in ("summary", "inputs", "outputs", "pitfalls")
+                }
                 print("enrichment:", core)
 
     show("search", search_res)
@@ -52,4 +56,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -52,4 +52,3 @@ def test_plan_workspace_malicious_raises(tmp_path: Path) -> None:
 
     with pytest.raises(PathTraversalError):
         ws.plan_workspace(repo, cfg, insp)
-

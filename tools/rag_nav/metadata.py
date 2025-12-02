@@ -5,6 +5,7 @@ Implements:
 - save_status(repo_root, status) -> Path
 - load_status(repo_root) -> IndexStatus | None
 """
+
 from __future__ import annotations
 
 import json

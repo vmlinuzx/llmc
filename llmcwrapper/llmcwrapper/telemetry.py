@@ -6,10 +6,13 @@ import uuid
 
 
 def ensure_dir(p):
-    os.makedirs(p, exist_ok=True); return p
+    os.makedirs(p, exist_ok=True)
+    return p
+
 
 def new_corr_id():
     return f"{int(time.time())}-{uuid.uuid4().hex[:8]}"
+
 
 def log_event(base_dir, corr_id, kind, payload):
     runs = ensure_dir(os.path.join(base_dir, ".llmc", "runs"))

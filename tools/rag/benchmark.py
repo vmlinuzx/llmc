@@ -118,8 +118,12 @@ def run_embedding_benchmark() -> dict[str, float]:
         best_index = max(range(len(scores)), key=scores.__getitem__)
         hit_flags.append(1 if candidate_labels[best_index] == 1 else 0)
 
-        best_positive = max((s for s, label in zip(scores, candidate_labels) if label == 1), default=0.0)
-        best_negative = max((s for s, label in zip(scores, candidate_labels) if label == 0), default=0.0)
+        best_positive = max(
+            (s for s, label in zip(scores, candidate_labels) if label == 1), default=0.0
+        )
+        best_negative = max(
+            (s for s, label in zip(scores, candidate_labels) if label == 0), default=0.0
+        )
         margins.append(best_positive - best_negative)
         positive_scores.extend(s for s, label in zip(scores, candidate_labels) if label == 1)
         negative_scores.extend(s for s, label in zip(scores, candidate_labels) if label == 0)

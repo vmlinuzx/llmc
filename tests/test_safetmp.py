@@ -23,4 +23,3 @@ def test_safetmp_base_scoped(tmp_path: Path) -> None:
     st = SafeTmp(ws)
     base = st.base()
     assert str(base).startswith(str(ws))
-

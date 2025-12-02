@@ -154,13 +154,21 @@ def run(
         rag_files = [item["file"] for item in (rag_items or [])]
         fb_files = [item["file"] for item in (fb_items or [])]
 
-        p_rag_tokens = precision_at_k_tokens(rag_items or [], relevant, k) if rag_items is not None else None
-        p_fb_tokens = precision_at_k_tokens(fb_items or [], relevant, k) if fb_items is not None else None
+        p_rag_tokens = (
+            precision_at_k_tokens(rag_items or [], relevant, k) if rag_items is not None else None
+        )
+        p_fb_tokens = (
+            precision_at_k_tokens(fb_items or [], relevant, k) if fb_items is not None else None
+        )
         p_rag_gold = (
-            precision_at_k_files(rag_files, gold_globs, k) if (rag_items is not None and gold_globs) else None
+            precision_at_k_files(rag_files, gold_globs, k)
+            if (rag_items is not None and gold_globs)
+            else None
         )
         p_fb_gold = (
-            precision_at_k_files(fb_files, gold_globs, k) if (fb_items is not None and gold_globs) else None
+            precision_at_k_files(fb_files, gold_globs, k)
+            if (fb_items is not None and gold_globs)
+            else None
         )
 
         if p_rag_tokens is not None:
@@ -175,8 +183,12 @@ def run(
         summary["by_query"].append(
             {
                 "q": query,
-                "rag": {"p_at_k_tokens": p_rag_tokens, "files": rag_files} if rag_items is not None else None,
-                "fallback": {"p_at_k_tokens": p_fb_tokens, "files": fb_files} if fb_items is not None else None,
+                "rag": {"p_at_k_tokens": p_rag_tokens, "files": rag_files}
+                if rag_items is not None
+                else None,
+                "fallback": {"p_at_k_tokens": p_fb_tokens, "files": fb_files}
+                if fb_items is not None
+                else None,
                 "gold": gold_globs or None,
                 "p_at_k_gold": (
                     {"rag": p_rag_gold, "fallback": p_fb_gold}
@@ -261,7 +273,9 @@ if __name__ == "__main__":
     parser.add_argument("--mode", choices=["rag", "fallback", "both"], default="both")
     args = parser.parse_args()
 
-    result = run(Path(args.repo_root).resolve(), Path(args.queries), Path(args.out), k=args.k, mode=args.mode)
+    result = run(
+        Path(args.repo_root).resolve(), Path(args.queries), Path(args.out), k=args.k, mode=args.mode
+    )
     print(
         json.dumps(
             {"wrote": result["json"], "md": result["md"], "macro": result["summary"]["macro"]},

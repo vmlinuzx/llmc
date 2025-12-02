@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Live Monitor Screen - Real-time TE telemetry feed, Matrix-style."""
+
 from datetime import datetime
 from pathlib import Path
 import sqlite3
@@ -15,7 +16,7 @@ from textual.widgets import DataTable, Static
 # Agent color mapping
 AGENT_COLORS = {
     "claude-dc": "cyan",
-    "codex-cli": "green", 
+    "codex-cli": "green",
     "manual-dave": "yellow",
     "minimax-cli": "magenta",
     "gpt-chat": "blue",
@@ -117,13 +118,13 @@ class LiveMonitorScreen(Screen):
         with Container(id="header-bar"):
             yield Static("TE Live Monitor", id="title")
             yield Static("● LIVE", id="live-indicator")
-        
+
         yield DataTable(id="feed-table", zebra_stripes=True, cursor_type="row")
-        
+
         with ScrollableContainer(id="detail-panel"):
             yield Static("Event Details", id="detail-title")
             yield Static("[dim]Select a row to view details[/dim]", id="detail-content")
-        
+
         yield Static("Waiting for data...", id="stats-bar")
         yield Static("[p] Pause  [c] Clear  [r] Refresh  [↑↓] Select  [esc] Back", id="footer-help")
 
@@ -184,13 +185,16 @@ class LiveMonitorScreen(Screen):
         if not conn:
             return
         try:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT id, timestamp, agent_id, session_id, cmd, mode,
                        input_size, output_size, truncated, latency_ms, error, output_text
                 FROM telemetry_events
                 WHERE id > ?
                 ORDER BY id ASC
-            """, (self._last_id,))
+            """,
+                (self._last_id,),
+            )
             new_rows = cursor.fetchall()
             if new_rows:
                 for row in new_rows:
@@ -202,9 +206,21 @@ class LiveMonitorScreen(Screen):
 
     def _add_row(self, row: tuple) -> None:
         """Add a telemetry row to the table."""
-        (row_id, timestamp, agent_id, session_id, cmd, mode,
-         input_size, output_size, truncated, latency_ms, error, output_text) = row
-        
+        (
+            row_id,
+            timestamp,
+            agent_id,
+            session_id,
+            cmd,
+            mode,
+            input_size,
+            output_size,
+            truncated,
+            latency_ms,
+            error,
+            output_text,
+        ) = row
+
         # Update tracking
         self._last_id = max(self._last_id, row_id)
         self._total_calls += 1
@@ -251,7 +267,7 @@ class LiveMonitorScreen(Screen):
 
         # Format latency
         if latency_ms and latency_ms >= 1000:
-            lat_str = f"{latency_ms/1000:.1f}s"
+            lat_str = f"{latency_ms / 1000:.1f}s"
         else:
             lat_str = f"{latency_ms or 0:.0f}ms"
 
@@ -309,43 +325,47 @@ class LiveMonitorScreen(Screen):
 
         # Format the detail view
         lines = []
-        
+
         # Command (full, prominent)
         lines.append(f"[bold cyan]Command:[/bold cyan] {data['cmd']}")
         lines.append("")
-        
+
         # Metadata grid
-        mode_style = "green" if data['mode'] == "enriched" else "dim"
+        mode_style = "green" if data["mode"] == "enriched" else "dim"
         lines.append(
             f"[bold]Agent:[/bold] {data['agent_id']}  │  "
             f"[bold]Mode:[/bold] [{mode_style}]{data['mode']}[/{mode_style}]  │  "
             f"[bold]Latency:[/bold] {data['latency_ms']}ms"
         )
 
-        in_kb = (data['input_size'] or 0) / 1024
-        out_kb = (data['output_size'] or 0) / 1024
-        trunc_str = "[yellow]Yes[/yellow]" if data['truncated'] else "[green]No[/green]"
+        in_kb = (data["input_size"] or 0) / 1024
+        out_kb = (data["output_size"] or 0) / 1024
+        trunc_str = "[yellow]Yes[/yellow]" if data["truncated"] else "[green]No[/green]"
         lines.append(
             f"[bold]Input:[/bold] {in_kb:.2f}KB  │  "
             f"[bold]Output:[/bold] {out_kb:.2f}KB  │  "
             f"[bold]Truncated:[/bold] {trunc_str}"
         )
-        
-        lines.append(f"[bold]Session:[/bold] {data['session_id']}  │  [bold]ID:[/bold] {data['id']}")
+
+        lines.append(
+            f"[bold]Session:[/bold] {data['session_id']}  │  [bold]ID:[/bold] {data['id']}"
+        )
         lines.append(f"[bold]Timestamp:[/bold] {data['timestamp']}")
-        
+
         # Error if present
-        if data['error']:
+        if data["error"]:
             lines.append(f"[bold red]Error:[/bold red] {data['error']}")
-        
+
         # Output if captured
-        if data.get('output_text'):
+        if data.get("output_text"):
             lines.append("")
             lines.append("[bold cyan]─── Output ───[/bold cyan]")
             # Show output, truncated display if very long
-            output = data['output_text']
+            output = data["output_text"]
             if len(output) > 2000:
-                output = output[:2000] + f"\n[dim]... ({len(data['output_text'])} bytes total)[/dim]"
+                output = (
+                    output[:2000] + f"\n[dim]... ({len(data['output_text'])} bytes total)[/dim]"
+                )
             lines.append(output)
         else:
             lines.append("")
@@ -360,10 +380,10 @@ class LiveMonitorScreen(Screen):
         """Update the stats bar."""
         avg_lat = self._total_latency / self._total_calls if self._total_calls else 0
         enr_pct = (self._enriched_count / self._total_calls * 100) if self._total_calls else 0
-        
+
         filled = int(enr_pct / 10)
         bar = "█" * filled + "░" * (10 - filled)
-        
+
         stats = (
             f"Session: {self._total_calls} calls │ "
             f"{len(self._agents_seen)} agents │ "

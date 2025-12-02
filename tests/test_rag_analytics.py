@@ -36,7 +36,7 @@ class TestQueryRecord:
             query_text="test query",
             timestamp=now,
             results_count=5,
-            files_retrieved=["file1.py", "file2.py"]
+            files_retrieved=["file1.py", "file2.py"],
         )
 
         assert record.query_text == "test query"
@@ -56,7 +56,7 @@ class TestAnalyticsSummary:
             total_queries=15,
             unique_queries=10,
             avg_results_per_query=2.5,
-            time_range_days=7
+            time_range_days=7,
         )
 
         assert summary.top_queries == [("query1", 10), ("query2", 5)]
@@ -92,16 +92,12 @@ class TestQueryTrackerInit:
 
             # Verify schema
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = {row[0] for row in cursor}
             assert "query_history" in tables
 
             # Verify indexes
-            cursor = conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='index'"
-            )
+            cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='index'")
             indexes = {row[0] for row in cursor}
             assert "idx_query_timestamp" in indexes
             assert "idx_query_text" in indexes
@@ -130,16 +126,12 @@ class TestQueryTrackerLogQuery:
             tracker = QueryTracker(db_path)
 
             tracker.log_query(
-                "test query",
-                results_count=5,
-                files_retrieved=["file1.py", "file2.py"]
+                "test query", results_count=5, files_retrieved=["file1.py", "file2.py"]
             )
 
             # Verify data was logged
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT query_text, results_count FROM query_history"
-            )
+            cursor = conn.execute("SELECT query_text, results_count FROM query_history")
             row = cursor.fetchone()
             assert row[0] == "test query"
             assert row[1] == 5
@@ -156,9 +148,7 @@ class TestQueryTrackerLogQuery:
 
             # Verify files were stored as JSON
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT files_retrieved FROM query_history"
-            )
+            cursor = conn.execute("SELECT files_retrieved FROM query_history")
             row = cursor.fetchone()
             stored_files = json.loads(row[0])
             assert stored_files == files
@@ -171,11 +161,7 @@ class TestQueryTrackerLogQuery:
             tracker = QueryTracker(db_path)
 
             for i in range(5):
-                tracker.log_query(
-                    f"query {i}",
-                    results_count=i,
-                    files_retrieved=[f"file{i}.py"]
-                )
+                tracker.log_query(f"query {i}", results_count=i, files_retrieved=[f"file{i}.py"])
 
             # Verify all queries were logged
             conn = sqlite3.connect(str(db_path))
@@ -195,9 +181,7 @@ class TestQueryTrackerLogQuery:
 
             # Verify special characters are preserved
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT query_text FROM query_history"
-            )
+            cursor = conn.execute("SELECT query_text FROM query_history")
             row = cursor.fetchone()
             assert row[0] == special_query
             conn.close()
@@ -212,9 +196,7 @@ class TestQueryTrackerLogQuery:
 
             # Verify empty list is stored
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT files_retrieved FROM query_history"
-            )
+            cursor = conn.execute("SELECT files_retrieved FROM query_history")
             row = cursor.fetchone()
             assert json.loads(row[0]) == []
             conn.close()
@@ -229,9 +211,7 @@ class TestQueryTrackerLogQuery:
 
             # Verify large count is preserved
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute(
-                "SELECT results_count FROM query_history"
-            )
+            cursor = conn.execute("SELECT results_count FROM query_history")
             row = cursor.fetchone()
             assert row[0] == 999999
             conn.close()
@@ -397,7 +377,7 @@ class TestQueryTrackerGetAnalytics:
                 INSERT INTO query_history (query_text, timestamp, results_count, files_retrieved)
                 VALUES (?, ?, ?, ?)
                 """,
-                ("old", old_date.strftime("%Y-%m-%d %H:%M:%S"), 1, json.dumps([]))
+                ("old", old_date.strftime("%Y-%m-%d %H:%M:%S"), 1, json.dumps([])),
             )
             conn.commit()
             conn.close()
@@ -422,7 +402,7 @@ class TestQueryTrackerGetAnalytics:
                 INSERT INTO query_history (query_text, timestamp, results_count, files_retrieved)
                 VALUES (?, ?, ?, ?)
                 """,
-                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json")
+                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json"),
             )
             conn.commit()
             conn.close()
@@ -555,7 +535,7 @@ class TestQueryTrackerGetRecentQueries:
                 INSERT INTO query_history (query_text, timestamp, results_count, files_retrieved)
                 VALUES (?, ?, ?, ?)
                 """,
-                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json")
+                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json"),
             )
             conn.commit()
             conn.close()
@@ -578,7 +558,7 @@ class TestFormatAnalytics:
             total_queries=0,
             unique_queries=0,
             avg_results_per_query=0.0,
-            time_range_days=7
+            time_range_days=7,
         )
 
         formatted = format_analytics(summary)
@@ -594,7 +574,7 @@ class TestFormatAnalytics:
             total_queries=10,
             unique_queries=8,
             avg_results_per_query=2.5,
-            time_range_days=7
+            time_range_days=7,
         )
 
         formatted = format_analytics(summary)
@@ -619,13 +599,16 @@ class TestFormatAnalytics:
             total_queries=1,
             unique_queries=1,
             avg_results_per_query=1.0,
-            time_range_days=7
+            time_range_days=7,
         )
 
         formatted = format_analytics(summary)
 
         # Should be truncated to 50 chars with "..." if needed
-        assert "..." in formatted or len([line for line in formatted.split('\n') if long_query in line]) == 0
+        assert (
+            "..." in formatted
+            or len([line for line in formatted.split("\n") if long_query in line]) == 0
+        )
 
     def test_format_analytics_truncates_long_files(self):
         """Test formatting truncates long file paths."""
@@ -636,7 +619,7 @@ class TestFormatAnalytics:
             total_queries=1,
             unique_queries=1,
             avg_results_per_query=1.0,
-            time_range_days=7
+            time_range_days=7,
         )
 
         formatted = format_analytics(summary)
@@ -652,13 +635,13 @@ class TestFormatAnalytics:
             total_queries=3,
             unique_queries=3,
             avg_results_per_query=1.0,
-            time_range_days=7
+            time_range_days=7,
         )
 
         formatted = format_analytics(summary)
 
         # Should have numbered lists
-        lines = formatted.split('\n')
+        lines = formatted.split("\n")
         query_section = False
         for line in lines:
             if "TOP QUERIES:" in line:
@@ -675,7 +658,7 @@ class TestFormatAnalytics:
             total_queries=0,
             unique_queries=0,
             avg_results_per_query=0.0,
-            time_range_days=30
+            time_range_days=30,
         )
 
         formatted = format_analytics(summary)

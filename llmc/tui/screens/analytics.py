@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Analytics Screen - Tool Envelope telemetry visualization."""
+
 from datetime import datetime
 from pathlib import Path
 import sqlite3
@@ -104,8 +105,7 @@ class AnalyticsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         """Create the analytics layout."""
-        
-        
+
         yield Static("TE Analytics Dashboard", id="header")
 
         with Grid(id="dashboard-grid"):
@@ -116,8 +116,12 @@ class AnalyticsScreen(Screen):
                     # Pre-allocate 5 stat slots to avoid mount churn
                     for i in range(5):
                         with Container(classes="stat-item"):
-                            yield Static("-", id=f"stat-val-{i}", classes="stat-value", markup=False)
-                            yield Static("...", id=f"stat-lbl-{i}", classes="stat-label", markup=False)
+                            yield Static(
+                                "-", id=f"stat-val-{i}", classes="stat-value", markup=False
+                            )
+                            yield Static(
+                                "...", id=f"stat-lbl-{i}", classes="stat-label", markup=False
+                            )
 
             # Row 2, Col 1: Candidates
             with Container(id="candidates-panel", classes="panel"):
@@ -142,7 +146,7 @@ class AnalyticsScreen(Screen):
         """Initialize table columns."""
         cand_table = self.query_one("#candidates-table", DataTable)
         cand_table.add_columns("Command", "Calls", "Avg Size")
-        
+
         enrich_table = self.query_one("#enriched-table", DataTable)
         enrich_table.add_columns("Command", "Calls", "Avg Latency")
 
@@ -152,10 +156,10 @@ class AnalyticsScreen(Screen):
         # llmc/tui/screens/analytics.py -> .../src/llmc
         repo_root = Path(__file__).resolve().parents[3]
         db_path = repo_root / ".llmc" / "te_telemetry.db"
-        
+
         if not db_path.exists():
             return None
-            
+
         try:
             return sqlite3.connect(db_path)
         except Exception:
@@ -172,7 +176,9 @@ class AnalyticsScreen(Screen):
             self._update_summary(conn)
             self._update_candidates(conn)
             self._update_enriched(conn)
-            self.query_one("#header", Static).update(f"TE Analytics :: {datetime.now().strftime('%H:%M:%S')}")
+            self.query_one("#header", Static).update(
+                f"TE Analytics :: {datetime.now().strftime('%H:%M:%S')}"
+            )
         except Exception as exc:
             self.query_one("#header", Static).update(f"Error: {exc}")
         finally:
@@ -192,12 +198,12 @@ class AnalyticsScreen(Screen):
         """)
         row = cursor.fetchone()
         total, unique_cmds, avg_lat, enriched, total_bytes = row or (0, 0, 0, 0, 0)
-        
+
         # Calculate percentages/formatting
         enrich_pct = (enriched / total * 100) if total else 0.0
         avg_lat_str = f"{avg_lat:.1f}ms" if avg_lat else "0ms"
         total_mb = (total_bytes or 0) / 1024 / 1024
-        
+
         # Define stats to show
         stats = [
             ("Total Calls", f"{total:,}"),
@@ -206,7 +212,7 @@ class AnalyticsScreen(Screen):
             ("Avg Latency", avg_lat_str),
             ("Data Flow", f"{total_mb:.2f} MB"),
         ]
-        
+
         # Update existing widgets by ID
         for i, (label, value) in enumerate(stats):
             self.query_one(f"#stat-val-{i}", Static).update(value)
@@ -216,7 +222,7 @@ class AnalyticsScreen(Screen):
         """Populate unenriched candidates table."""
         table = self.query_one("#candidates-table", DataTable)
         table.clear()
-        
+
         cursor = conn.execute("""
             SELECT 
                 cmd,
@@ -228,16 +234,16 @@ class AnalyticsScreen(Screen):
             ORDER BY count DESC
             LIMIT 50
         """)
-        
+
         for cmd, count, avg_out in cursor.fetchall():
-            avg_kb = f"{avg_out/1024:.1f} KB"
+            avg_kb = f"{avg_out / 1024:.1f} KB"
             table.add_row(Text(cmd), str(count), avg_kb)
 
     def _update_enriched(self, conn: sqlite3.Connection) -> None:
         """Populate enriched actions table."""
         table = self.query_one("#enriched-table", DataTable)
         table.clear()
-        
+
         cursor = conn.execute("""
             SELECT 
                 cmd,
@@ -249,7 +255,7 @@ class AnalyticsScreen(Screen):
             ORDER BY count DESC
             LIMIT 50
         """)
-        
+
         for cmd, count, avg_lat in cursor.fetchall():
             avg_str = f"{avg_lat:.1f}ms"
             table.add_row(Text(cmd), str(count), avg_str)

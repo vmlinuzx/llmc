@@ -52,4 +52,3 @@ def test_safe_subpath_blocks_symlink_outside(tmp_path: Path) -> None:
     # Attempt to resolve through the symlink to a file outside base.
     with pytest.raises(PathTraversalError):
         safe_subpath(base, "link/file.txt")
-

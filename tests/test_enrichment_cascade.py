@@ -9,7 +9,9 @@ from tools.rag.enrichment_backends import BackendCascade, BackendError
 
 
 class _FakeBackend:
-    def __init__(self, config: BackendConfig, *, should_fail: bool = False, label: str = "") -> None:
+    def __init__(
+        self, config: BackendConfig, *, should_fail: bool = False, label: str = ""
+    ) -> None:
         self.config = config
         self._should_fail = should_fail
         self._label = label or config.name
@@ -19,7 +21,10 @@ class _FakeBackend:
         self.calls.append(prompt)
         if self._should_fail:
             raise BackendError(f"{self._label} failed")
-        return f"{self._label}: {prompt}", {"model": self.config.model or "dummy", "host": "test-host"}
+        return f"{self._label}: {prompt}", {
+            "model": self.config.model or "dummy",
+            "host": "test-host",
+        }
 
 
 def test_cascade_tries_second_on_backend_error() -> None:

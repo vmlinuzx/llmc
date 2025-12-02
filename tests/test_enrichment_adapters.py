@@ -32,7 +32,9 @@ def test_ollama_adapter_success(monkeypatch: pytest.MonkeyPatch) -> None:
         calls["ollama_host_label"] = kwargs.get("ollama_host_label")
         return "RAW", {"backend": "ollama", "model": "env-model"}
 
-    def fake_parse_and_validate(raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any):
+    def fake_parse_and_validate(
+        raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any
+    ):
         assert raw == "RAW"
         assert meta["backend"] == "ollama"
         return {"ok": True}, None
@@ -76,7 +78,9 @@ def test_ollama_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> N
 
     failure_tuple = ("validation", ValueError("oops"), {"foo": "bar"})
 
-    def fake_parse_and_validate(raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any):
+    def fake_parse_and_validate(
+        raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any
+    ):
         return None, failure_tuple
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)
@@ -99,7 +103,9 @@ def test_ollama_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> N
     assert err.failure == failure_tuple
 
 
-def test_gateway_adapter_success_respects_model_and_restores_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_gateway_adapter_success_respects_model_and_restores_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     original_model = "orig-model"
     monkeypatch.setenv("GEMINI_MODEL", original_model)
 
@@ -108,7 +114,9 @@ def test_gateway_adapter_success_respects_model_and_restores_env(monkeypatch: py
         assert os.environ.get("GEMINI_MODEL") == "gemini-2.5-flash"
         return "RAW", {}
 
-    def fake_parse_and_validate(raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any):
+    def fake_parse_and_validate(
+        raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any
+    ):
         return {"ok": True}, None
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)
@@ -141,7 +149,9 @@ def test_gateway_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> 
     def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> tuple[str, dict[str, Any]]:
         return "RAW", {}
 
-    def fake_parse_and_validate(raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any):
+    def fake_parse_and_validate(
+        raw: str, item: dict[str, Any], meta: dict[str, Any], **kwargs: Any
+    ):
         return None, failure_tuple
 
     monkeypatch.setattr(qeb, "call_qwen", fake_call_qwen)

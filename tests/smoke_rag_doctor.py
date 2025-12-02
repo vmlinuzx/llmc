@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import sys
 
@@ -16,11 +15,12 @@ class SmokeTestApp(App):
     def exit_success(self):
         self.exit(0)
 
+
 if __name__ == "__main__":
     # Mock repo root
     app = SmokeTestApp()
     app.repo_root = Path.cwd()
-    
+
     # We want to run this headless if possible, but Textual needs a driver.
     # We can use the 'dummy' driver for testing logic without UI.
     try:

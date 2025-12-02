@@ -13,7 +13,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd")
 
     sp_show = sub.add_parser("show", help="Show resolved config for a profile")
-    sp_show.add_argument("--profile", default=os.environ.get("LLMC_PROFILE","daily"))
+    sp_show.add_argument("--profile", default=os.environ.get("LLMC_PROFILE", "daily"))
 
     sp_set = sub.add_parser("set", help="Print shell export for LLMC_PROFILE=<name>")
     sp_set.add_argument("name")

@@ -48,28 +48,35 @@ class RagTestRunner:
         if self.verbose:
             print(msg)
 
-    def run(self, cmd: list[str], cwd: Path | None = None, timeout: int = 30,
-            input_data: str | None = None, check: bool = True) -> subprocess.CompletedProcess:
+    def run(
+        self,
+        cmd: list[str],
+        cwd: Path | None = None,
+        timeout: int = 30,
+        input_data: str | None = None,
+        check: bool = True,
+    ) -> subprocess.CompletedProcess:
         """Run a command and return the result."""
         self.log(f"Running: {' '.join(cmd)}")
 
         # Ensure PYTHONPATH includes repo_root
         env = os.environ.copy()
         pythonpath = str(self.repo_root)
-        if 'PYTHONPATH' in env:
-            env['PYTHONPATH'] = f"{pythonpath}:{env['PYTHONPATH']}"
+        if "PYTHONPATH" in env:
+            env["PYTHONPATH"] = f"{pythonpath}:{env['PYTHONPATH']}"
         else:
-            env['PYTHONPATH'] = pythonpath
+            env["PYTHONPATH"] = pythonpath
 
         try:
             result = subprocess.run(
                 cmd,
-                check=False, cwd=cwd or self.repo_root,
+                check=False,
+                cwd=cwd or self.repo_root,
                 env=env,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                input=input_data
+                input=input_data,
             )
             if check and result.returncode != 0:
                 self.log(f"Command failed with code {result.returncode}")
@@ -96,7 +103,9 @@ class TestClass:
         pass
 """)
 
-        (self.temp_dir / "README.md").write_text("# Test Repo\nThis is a test repository for RAG testing.")
+        (self.temp_dir / "README.md").write_text(
+            "# Test Repo\nThis is a test repository for RAG testing."
+        )
 
         (self.temp_dir / ".git").mkdir(exist_ok=True)
 
@@ -108,8 +117,15 @@ class TestClass:
             shutil.rmtree(self.temp_dir)
             self.log(f"Cleaned up: {self.temp_dir}")
 
-    def add_result(self, name: str, category: str, passed: bool,
-                   message: str, duration_ms: float, details: dict | None = None):
+    def add_result(
+        self,
+        name: str,
+        category: str,
+        passed: bool,
+        message: str,
+        duration_ms: float,
+        details: dict | None = None,
+    ):
         """Record a test result."""
         result = RagTestResult(name, category, passed, message, duration_ms, details)
         self.results.append(result)
@@ -125,8 +141,7 @@ class TestClass:
         start = time.time()
         try:
             # Try different CLI entry points
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "--help"],
-                            check=False)
+            result = self.run([sys.executable, "-m", "tools.rag.cli", "--help"], check=False)
 
             if result.returncode == 0 and b"Commands:" in result.stdout.encode():
                 self.add_result(
@@ -135,7 +150,7 @@ class TestClass:
                     True,
                     "CLI help shows commands and exits 0",
                     (time.time() - start) * 1000,
-                    {"stdout": result.stdout[:500]}
+                    {"stdout": result.stdout[:500]},
                 )
             else:
                 self.add_result(
@@ -144,7 +159,7 @@ class TestClass:
                     False,
                     f"CLI help failed (exit code {result.returncode})",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr, "stdout": result.stdout}
+                    {"stderr": result.stderr, "stdout": result.stdout},
                 )
         except Exception as e:
             self.add_result(
@@ -152,7 +167,7 @@ class TestClass:
                 "Config & CLI",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_subcommand_help(self):
@@ -162,8 +177,7 @@ class TestClass:
         failed = []
 
         for cmd in commands:
-            result = self.run([sys.executable, "-m", "tools.rag.cli", cmd, "--help"],
-                            check=False)
+            result = self.run([sys.executable, "-m", "tools.rag.cli", cmd, "--help"], check=False)
             if result.returncode != 0 or b"Usage:" not in result.stdout.encode():
                 failed.append(cmd)
 
@@ -174,7 +188,7 @@ class TestClass:
                 True,
                 f"All {len(commands)} subcommands show help",
                 (time.time() - start) * 1000,
-                {"tested_commands": commands}
+                {"tested_commands": commands},
             )
         else:
             self.add_result(
@@ -183,15 +197,15 @@ class TestClass:
                 False,
                 f"{len(failed)} commands failed help: {failed}",
                 (time.time() - start) * 1000,
-                {"failed_commands": failed}
+                {"failed_commands": failed},
             )
 
     def test_invalid_flags(self):
         """Test 1.3: Misconfigured or invalid flags produce errors"""
         start = time.time()
-        result = self.run([sys.executable, "-m", "tools.rag.cli", "search",
-                          "--invalid-flag"],
-                        check=False)
+        result = self.run(
+            [sys.executable, "-m", "tools.rag.cli", "search", "--invalid-flag"], check=False
+        )
 
         if result.returncode != 0:
             self.add_result(
@@ -200,7 +214,7 @@ class TestClass:
                 True,
                 "Invalid flag produces non-zero exit code",
                 (time.time() - start) * 1000,
-                {"exit_code": result.returncode}
+                {"exit_code": result.returncode},
             )
         else:
             self.add_result(
@@ -209,7 +223,7 @@ class TestClass:
                 False,
                 "Invalid flag should produce error but didn't",
                 (time.time() - start) * 1000,
-                {"exit_code": result.returncode}
+                {"exit_code": result.returncode},
             )
 
     # Test Category 2: Database & Index Schema
@@ -220,8 +234,12 @@ class TestClass:
 
         try:
             # Run index command
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                            cwd=test_repo, check=False, timeout=60)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "index"],
+                cwd=test_repo,
+                check=False,
+                timeout=60,
+            )
 
             rag_dir = test_repo / ".rag"
             db_file = rag_dir / "index_v2.db"
@@ -244,7 +262,7 @@ class TestClass:
                         True,
                         f"Created DB with all required tables at {db_file}",
                         (time.time() - start) * 1000,
-                        {"db_path": str(db_file), "tables": tables}
+                        {"db_path": str(db_file), "tables": tables},
                     )
                 else:
                     self.add_result(
@@ -253,7 +271,7 @@ class TestClass:
                         False,
                         f"Missing tables: {missing}",
                         (time.time() - start) * 1000,
-                        {"db_path": str(db_file), "found_tables": tables, "missing": missing}
+                        {"db_path": str(db_file), "found_tables": tables, "missing": missing},
                     )
             else:
                 self.add_result(
@@ -262,7 +280,7 @@ class TestClass:
                     False,
                     f"DB file not created at {db_file}",
                     (time.time() - start) * 1000,
-                    {"stdout": result.stdout, "stderr": result.stderr}
+                    {"stdout": result.stdout, "stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -270,7 +288,7 @@ class TestClass:
                 "Database & Index",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_idempotent_reindex(self):
@@ -280,21 +298,21 @@ class TestClass:
 
         try:
             # First index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Get initial stats
-            result1 = self.run([sys.executable, "-m", "tools.rag.cli", "stats", "--json"],
-                             cwd=test_repo)
+            result1 = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "stats", "--json"], cwd=test_repo
+            )
             stats1 = json.loads(result1.stdout)
 
             # Second index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Get stats again
-            result2 = self.run([sys.executable, "-m", "tools.rag.cli", "stats", "--json"],
-                             cwd=test_repo)
+            result2 = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "stats", "--json"], cwd=test_repo
+            )
             stats2 = json.loads(result2.stdout)
 
             # Compare
@@ -305,7 +323,7 @@ class TestClass:
                     True,
                     f"No duplication: {stats1.get('spans')} spans in both runs",
                     (time.time() - start) * 1000,
-                    {"first_run": stats1, "second_run": stats2}
+                    {"first_run": stats1, "second_run": stats2},
                 )
             else:
                 self.add_result(
@@ -314,7 +332,7 @@ class TestClass:
                     False,
                     f"Spans changed: {stats1.get('spans')} → {stats2.get('spans')}",
                     (time.time() - start) * 1000,
-                    {"first_run": stats1, "second_run": stats2}
+                    {"first_run": stats1, "second_run": stats2},
                 )
         except Exception as e:
             self.add_result(
@@ -322,7 +340,7 @@ class TestClass:
                 "Database & Index",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_corrupt_db_behavior(self):
@@ -332,8 +350,7 @@ class TestClass:
 
         try:
             # Create index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Find and corrupt the DB
             db_file = test_repo / ".rag" / "llmc.sqlite"
@@ -342,8 +359,9 @@ class TestClass:
                 db_file.write_bytes(b"corrupted data!" * 100)
 
                 # Try to run stats (should handle corruption)
-                result = self.run([sys.executable, "-m", "tools.rag.cli", "stats"],
-                                cwd=test_repo, check=False)
+                result = self.run(
+                    [sys.executable, "-m", "tools.rag.cli", "stats"], cwd=test_repo, check=False
+                )
 
                 # Should either fail gracefully or detect corruption
                 if "corrupt" in result.stderr.lower() or "error" in result.stderr.lower():
@@ -353,7 +371,7 @@ class TestClass:
                         True,
                         "Corruption detected and reported",
                         (time.time() - start) * 1000,
-                        {"stderr": result.stderr}
+                        {"stderr": result.stderr},
                     )
                 else:
                     self.add_result(
@@ -362,7 +380,7 @@ class TestClass:
                         False,
                         "DB corruption not properly handled",
                         (time.time() - start) * 1000,
-                        {"stderr": result.stderr, "stdout": result.stdout}
+                        {"stderr": result.stderr, "stdout": result.stdout},
                     )
         except Exception as e:
             self.add_result(
@@ -370,7 +388,7 @@ class TestClass:
                 "Database & Index",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 3: Embeddings & Caching
@@ -381,12 +399,15 @@ class TestClass:
 
         try:
             # Index repo
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Run embed (dry run to see what would be embedded)
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "embed", "--dry-run", "--execute"],
-                            cwd=test_repo, check=False, timeout=120)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "embed", "--dry-run", "--execute"],
+                cwd=test_repo,
+                check=False,
+                timeout=120,
+            )
 
             # Note: This test may need modification based on actual embedding behavior
             self.add_result(
@@ -395,7 +416,7 @@ class TestClass:
                 True,
                 "Embedding command executed (actual caching requires embedding setup)",
                 (time.time() - start) * 1000,
-                {"output": result.stdout[:500]}
+                {"output": result.stdout[:500]},
             )
         except Exception as e:
             self.add_result(
@@ -403,7 +424,7 @@ class TestClass:
                 "Embeddings & Caching",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 4: Enrichment & Indexing Pipeline
@@ -418,13 +439,15 @@ class TestClass:
             binary_file.write_bytes(b"\x00\x01\x02\x03" * 100)
 
             # Index
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                            cwd=test_repo, timeout=60)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60
+            )
             output = result.stdout
 
             # Check stats
-            stats_result = self.run([sys.executable, "-m", "tools.rag.cli", "stats", "--json"],
-                                   cwd=test_repo)
+            stats_result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "stats", "--json"], cwd=test_repo
+            )
             stats = json.loads(stats_result.stdout)
 
             # Verify only expected files were indexed
@@ -435,7 +458,7 @@ class TestClass:
                     True,
                     f"Indexed {stats.get('files')} files",
                     (time.time() - start) * 1000,
-                    {"stats": stats}
+                    {"stats": stats},
                 )
             else:
                 self.add_result(
@@ -444,7 +467,7 @@ class TestClass:
                     False,
                     "No files indexed",
                     (time.time() - start) * 1000,
-                    {"stats": stats, "output": output}
+                    {"stats": stats, "output": output},
                 )
         except Exception as e:
             self.add_result(
@@ -452,7 +475,7 @@ class TestClass:
                 "Enrichment & Indexing",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_incremental_updates(self):
@@ -462,8 +485,7 @@ class TestClass:
 
         try:
             # First index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Modify one file
             test_file = test_repo / "src" / "test.py"
@@ -471,8 +493,11 @@ class TestClass:
             test_file.write_text(original + "\n# Modified\n")
 
             # Sync
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "sync", "--path", str(test_file)],
-                            cwd=test_repo, timeout=60)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "sync", "--path", str(test_file)],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Verify it processed the change
             if "unchanged" not in result.stdout.lower() or "1" in result.stdout:
@@ -482,7 +507,7 @@ class TestClass:
                     True,
                     "Incremental update executed",
                     (time.time() - start) * 1000,
-                    {"output": result.stdout}
+                    {"output": result.stdout},
                 )
             else:
                 self.add_result(
@@ -491,7 +516,7 @@ class TestClass:
                     True,
                     "No changes detected (acceptable if hash same)",
                     (time.time() - start) * 1000,
-                    {"output": result.stdout}
+                    {"output": result.stdout},
                 )
         except Exception as e:
             self.add_result(
@@ -499,7 +524,7 @@ class TestClass:
                 "Enrichment & Indexing",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 5: Planner & Context Trimmer
@@ -510,12 +535,14 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Generate a plan
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "plan", "hello world"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "plan", "hello world"],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 plan = json.loads(result.stdout)
@@ -525,7 +552,7 @@ class TestClass:
                     True,
                     "Plan generated successfully",
                     (time.time() - start) * 1000,
-                    {"plan_keys": list(plan.keys()) if plan else []}
+                    {"plan_keys": list(plan.keys()) if plan else []},
                 )
             else:
                 self.add_result(
@@ -534,7 +561,7 @@ class TestClass:
                     False,
                     "Plan generation failed",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -542,7 +569,7 @@ class TestClass:
                 "Planner & Context",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 6: Search Ranking & Relevance
@@ -553,12 +580,14 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Search
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "search", "hello", "--json"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "search", "hello", "--json"],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 results = json.loads(result.stdout)
@@ -569,7 +598,7 @@ class TestClass:
                         True,
                         f"Found {len(results)} results",
                         (time.time() - start) * 1000,
-                        {"result_count": len(results)}
+                        {"result_count": len(results)},
                     )
                 else:
                     self.add_result(
@@ -578,7 +607,7 @@ class TestClass:
                         False,
                         "Invalid search results format",
                         (time.time() - start) * 1000,
-                        {"result": results}
+                        {"result": results},
                     )
             else:
                 self.add_result(
@@ -587,7 +616,7 @@ class TestClass:
                     False,
                     "Search failed",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -595,7 +624,7 @@ class TestClass:
                 "Search & Relevance",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_search_semantic(self):
@@ -605,12 +634,14 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Semantic search
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "search", "greeting function", "--json"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "search", "greeting function", "--json"],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 results = json.loads(result.stdout)
@@ -620,7 +651,7 @@ class TestClass:
                     True,
                     "Semantic search executed",
                     (time.time() - start) * 1000,
-                    {"result_count": len(results) if isinstance(results, list) else 0}
+                    {"result_count": len(results) if isinstance(results, list) else 0},
                 )
             else:
                 self.add_result(
@@ -629,7 +660,7 @@ class TestClass:
                     False,
                     "Semantic search failed",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -637,7 +668,7 @@ class TestClass:
                 "Search & Relevance",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_search_no_results(self):
@@ -647,12 +678,21 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Search for non-existent
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "search", "nonexistent_symbol_xyz123", "--json"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "tools.rag.cli",
+                    "search",
+                    "nonexistent_symbol_xyz123",
+                    "--json",
+                ],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 results = json.loads(result.stdout)
@@ -662,7 +702,7 @@ class TestClass:
                         "Search & Relevance",
                         True,
                         "Empty results for non-existent query",
-                        (time.time() - start) * 1000
+                        (time.time() - start) * 1000,
                     )
                 else:
                     self.add_result(
@@ -671,7 +711,7 @@ class TestClass:
                         False,
                         f"Expected empty results, got {len(results) if isinstance(results, list) else 'N/A'}",
                         (time.time() - start) * 1000,
-                        {"results": results}
+                        {"results": results},
                     )
             else:
                 self.add_result(
@@ -680,7 +720,7 @@ class TestClass:
                     False,
                     "Search command failed",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -688,7 +728,7 @@ class TestClass:
                 "Search & Relevance",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 7: Service Layer & HTTP API
@@ -699,8 +739,7 @@ class TestClass:
 
         try:
             # Index first
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Try to start server (just check if it responds)
             server_script = self.repo_root / "scripts" / "rag" / "rag_server.py"
@@ -711,7 +750,7 @@ class TestClass:
                     [sys.executable, str(server_script)],
                     cwd=test_repo,
                     stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
+                    stderr=subprocess.PIPE,
                 )
 
                 # Wait a bit for startup
@@ -727,7 +766,7 @@ class TestClass:
                         "Service Layer",
                         True,
                         "Server started successfully",
-                        (time.time() - start) * 1000
+                        (time.time() - start) * 1000,
                     )
                 else:
                     stdout, stderr = proc.communicate()
@@ -737,7 +776,7 @@ class TestClass:
                         False,
                         "Server failed to start",
                         (time.time() - start) * 1000,
-                        {"stderr": stderr.decode(), "stdout": stdout.decode()}
+                        {"stderr": stderr.decode(), "stdout": stdout.decode()},
                     )
             else:
                 self.add_result(
@@ -745,7 +784,7 @@ class TestClass:
                     "Service Layer",
                     False,
                     "Server script not found",
-                    (time.time() - start) * 1000
+                    (time.time() - start) * 1000,
                 )
         except Exception as e:
             self.add_result(
@@ -753,7 +792,7 @@ class TestClass:
                 "Service Layer",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 8: Logging & Observability
@@ -764,8 +803,12 @@ class TestClass:
 
         try:
             # Run doctor command
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "doctor"],
-                            cwd=test_repo, check=False, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "doctor"],
+                cwd=test_repo,
+                check=False,
+                timeout=30,
+            )
 
             self.add_result(
                 "health_check",
@@ -773,7 +816,7 @@ class TestClass:
                 True,
                 "Doctor command executed",
                 (time.time() - start) * 1000,
-                {"exit_code": result.returncode}
+                {"exit_code": result.returncode},
             )
         except Exception as e:
             self.add_result(
@@ -781,7 +824,7 @@ class TestClass:
                 "Logging & Observability",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     # Test Category 9: End-to-End Smoke Tests
@@ -792,12 +835,14 @@ class TestClass:
 
         try:
             # Step 1: index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Step 2: search
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "search", "test", "--json"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "search", "test", "--json"],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 results = json.loads(result.stdout)
@@ -807,7 +852,7 @@ class TestClass:
                     True,
                     f"End-to-end test passed with {len(results) if isinstance(results, list) else 0} results",
                     (time.time() - start) * 1000,
-                    {"result_count": len(results) if isinstance(results, list) else 0}
+                    {"result_count": len(results) if isinstance(results, list) else 0},
                 )
             else:
                 self.add_result(
@@ -816,7 +861,7 @@ class TestClass:
                     False,
                     "End-to-end test failed at search",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -824,7 +869,7 @@ class TestClass:
                 "End-to-End",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_e2e_ask_code(self):
@@ -834,12 +879,14 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "tools.rag.cli", "index"],
-                    cwd=test_repo, timeout=60)
+            self.run([sys.executable, "-m", "tools.rag.cli", "index"], cwd=test_repo, timeout=60)
 
             # Ask a question
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "plan", "what functions are defined"],
-                            cwd=test_repo, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "plan", "what functions are defined"],
+                cwd=test_repo,
+                timeout=30,
+            )
 
             if result.returncode == 0:
                 plan = json.loads(result.stdout)
@@ -849,7 +896,7 @@ class TestClass:
                     True,
                     "Question answered successfully",
                     (time.time() - start) * 1000,
-                    {"plan_provided": bool(plan)}
+                    {"plan_provided": bool(plan)},
                 )
             else:
                 self.add_result(
@@ -858,7 +905,7 @@ class TestClass:
                     False,
                     "Failed to answer question",
                     (time.time() - start) * 1000,
-                    {"stderr": result.stderr}
+                    {"stderr": result.stderr},
                 )
         except Exception as e:
             self.add_result(
@@ -866,7 +913,7 @@ class TestClass:
                 "End-to-End",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def test_error_exit_code(self):
@@ -876,8 +923,12 @@ class TestClass:
 
         try:
             # Try search without index
-            result = self.run([sys.executable, "-m", "tools.rag.cli", "search", "test"],
-                            cwd=test_repo, check=False, timeout=30)
+            result = self.run(
+                [sys.executable, "-m", "tools.rag.cli", "search", "test"],
+                cwd=test_repo,
+                check=False,
+                timeout=30,
+            )
 
             if result.returncode != 0:
                 self.add_result(
@@ -886,7 +937,7 @@ class TestClass:
                     True,
                     "Errors produce non-zero exit code",
                     (time.time() - start) * 1000,
-                    {"exit_code": result.returncode}
+                    {"exit_code": result.returncode},
                 )
             else:
                 self.add_result(
@@ -895,7 +946,7 @@ class TestClass:
                     False,
                     "Expected non-zero exit code for error case",
                     (time.time() - start) * 1000,
-                    {"exit_code": result.returncode}
+                    {"exit_code": result.returncode},
                 )
         except Exception as e:
             self.add_result(
@@ -903,7 +954,7 @@ class TestClass:
                 "End-to-End",
                 False,
                 f"Exception: {str(e)}",
-                (time.time() - start) * 1000
+                (time.time() - start) * 1000,
             )
 
     def run_all_tests(self):
@@ -979,14 +1030,20 @@ class TestClass:
         print(f"Total Tests: {total}")
         print(f"Passed: {total_passed}")
         print(f"Failed: {total_failed}")
-        print(f"Success Rate: {(total_passed/total*100):.1f}%")
+        print(f"Success Rate: {(total_passed / total * 100):.1f}%")
         print()
 
         # By category
         print("BY CATEGORY:")
         for category, data in categories.items():
-            rate = (data["passed"] / (data["passed"] + data["failed"]) * 100) if (data["passed"] + data["failed"]) > 0 else 0
-            print(f"  {category}: {data['passed']}/{data['passed'] + data['failed']} passed ({rate:.1f}%)")
+            rate = (
+                (data["passed"] / (data["passed"] + data["failed"]) * 100)
+                if (data["passed"] + data["failed"]) > 0
+                else 0
+            )
+            print(
+                f"  {category}: {data['passed']}/{data['passed'] + data['failed']} passed ({rate:.1f}%)"
+            )
         print()
 
         # Failed tests
@@ -1001,23 +1058,27 @@ class TestClass:
         # Save JSON report
         report_file = self.repo_root / "rag_test_report.json"
         with open(report_file, "w") as f:
-            json.dump({
-                "summary": {
-                    "total": total,
-                    "passed": total_passed,
-                    "failed": total_failed,
-                    "success_rate": total_passed / total * 100 if total > 0 else 0
+            json.dump(
+                {
+                    "summary": {
+                        "total": total,
+                        "passed": total_passed,
+                        "failed": total_failed,
+                        "success_rate": total_passed / total * 100 if total > 0 else 0,
+                    },
+                    "by_category": {
+                        cat: {
+                            "passed": data["passed"],
+                            "failed": data["failed"],
+                            "total": data["passed"] + data["failed"],
+                        }
+                        for cat, data in categories.items()
+                    },
+                    "tests": [r.to_dict() for r in self.results],
                 },
-                "by_category": {
-                    cat: {
-                        "passed": data["passed"],
-                        "failed": data["failed"],
-                        "total": data["passed"] + data["failed"]
-                    }
-                    for cat, data in categories.items()
-                },
-                "tests": [r.to_dict() for r in self.results]
-            }, f, indent=2)
+                f,
+                indent=2,
+            )
 
         print(f"Detailed report saved to: {report_file}")
         print()

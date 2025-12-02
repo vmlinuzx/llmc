@@ -12,4 +12,3 @@ def test_doctor_paths_ok(tmp_path: Path) -> None:
     assert info["workspace_exists"]
     assert info["export_exists"]
     assert info["under_workspace"]
-

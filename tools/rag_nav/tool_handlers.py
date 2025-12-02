@@ -57,53 +57,57 @@ def _rag_graph_path(repo_root: Path | str) -> Path:
 
 def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
     """Attach enrichment data from loaded graph nodes to result items.
-    
+
     Args:
         repo_root: Repository root path
         items: List of SearchItem, WhereUsedItem, or LineageItem objects
-        
+
     Returns:
         The modified list of items with enrichment attached where found.
     """
     nodes, _ = _load_graph(repo_root)
     if not nodes:
         return items
-        
+
     # Index nodes by file path for fast lookup (legacy/fallback)
     nodes_by_path: dict[str, list[dict]] = {}
     # Also index by ID for AST lookup
     nodes_by_id: dict[str, dict] = {}
-    
+
     for n in nodes:
         p = _node_path(n)
         if p:
             nodes_by_path.setdefault(p, []).append(n)
-        
+
         nid = _node_name(n)
         # Normalize ID: strip prefix if present
-        if nid.startswith("sym:"): nid = nid[4:]
-        elif nid.startswith("type:"): nid = nid[5:]
+        if nid.startswith("sym:"):
+            nid = nid[4:]
+        elif nid.startswith("type:"):
+            nid = nid[5:]
         nodes_by_id[nid] = n
-            
+
     # Cache for file content to avoid re-reading per item
     source_cache = {}
 
     for item in items:
         if not item.file:
             continue
-            
+
         best_node = None
-        
+
         # Strategy 1: Fuzzy AST Linking (Resilient to line shifts)
         # Only works if we have line number info
         if item.snippet and item.snippet.location:
             # Read file content
             if item.file not in source_cache:
                 try:
-                    source_cache[item.file] = (Path(repo_root) / item.file).read_text(errors="ignore")
+                    source_cache[item.file] = (Path(repo_root) / item.file).read_text(
+                        errors="ignore"
+                    )
                 except Exception:
                     source_cache[item.file] = None
-            
+
             source = source_cache[item.file]
             if source:
                 sl = item.snippet.location.start_line
@@ -116,11 +120,11 @@ def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
                     # This matches schema.py's ID generation
                     stem = Path(item.file).stem
                     graph_id = f"{stem}.{symbol_id}"
-                    
+
                     # DEBUG
                     # print(f"DEBUG: constructed graph_id={graph_id}")
                     # print(f"DEBUG: nodes_by_id keys={list(nodes_by_id.keys())[:5]}")
-                    
+
                     if graph_id in nodes_by_id:
                         best_node = nodes_by_id[graph_id]
 
@@ -130,7 +134,7 @@ def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
             if item.snippet and item.snippet.location:
                 sl = item.snippet.location.start_line
                 el = item.snippet.location.end_line
-                
+
                 for node in candidates:
                     n_start, n_end = _node_span(node)
                     if n_start is not None and n_end is not None:
@@ -138,13 +142,12 @@ def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
                         if not (el < n_start or sl > n_end):
                             best_node = node
                             break
-        
+
         if best_node:
             metadata = best_node.get("metadata")
             if metadata:
                 enrich = EnrichmentData(
-                    summary=metadata.get("summary"),
-                    usage_guide=metadata.get("usage_guide")
+                    summary=metadata.get("summary"), usage_guide=metadata.get("usage_guide")
                 )
                 if enrich.summary or enrich.usage_guide:
                     item.enrichment = enrich
@@ -172,17 +175,17 @@ def _load_graph(repo_root: Path | str) -> tuple[list[dict], list[dict]]:
             data = json.load(f)
         nodes = data.get("nodes") or data.get("entities") or []
         edges = data.get("edges") or []
-        
+
         # Allow consuming schema_graph artifacts by projecting relations into edges.
         # Try three formats:
         # 1. Top-level "relations" key (SchemaGraph.to_dict() format)
-        # 2. Nested "schema_graph.relations" 
+        # 2. Nested "schema_graph.relations"
         # 3. Already have "edges"
         if not edges:
             rels = data.get("relations") or []  # Format 1: top-level relations
             if not rels and isinstance(data.get("schema_graph"), dict):
                 rels = data["schema_graph"].get("relations") or []  # Format 2: nested
-            
+
             if isinstance(rels, list) and rels:
                 edges = [
                     {
@@ -209,7 +212,9 @@ def _node_path(n: dict) -> str:
 
 def _node_span(n: dict) -> tuple[int | None, int | None]:
     span = n.get("span") or n.get("loc") or {}
-    start = span.get("start_line") or span.get("start") or span.get("line_start") or n.get("start_line")
+    start = (
+        span.get("start_line") or span.get("start") or span.get("line_start") or n.get("start_line")
+    )
     end = span.get("end_line") or span.get("end") or span.get("line_end") or n.get("end_line")
     try:
         start_i = int(start) if start is not None else None
@@ -219,7 +224,9 @@ def _node_span(n: dict) -> tuple[int | None, int | None]:
         return None, None
 
 
-def _read_snippet(repo_root: str, path: str, start_line: int | None, end_line: int | None) -> Snippet:
+def _read_snippet(
+    repo_root: str, path: str, start_line: int | None, end_line: int | None
+) -> Snippet:
     """Read file and slice [start_line, end_line]. Lines are 1-based, inclusive."""
     abspath = os.path.join(repo_root, path) if path else ""
     text = ""
@@ -367,7 +374,10 @@ def build_graph_for_repo(repo_root: Path | str):
         def _iter_py_files(root: Path) -> Iterable[Path]:
             for path in root.rglob("*.py"):
                 # Skip common junk directories.
-                if any(part in {".git", ".venv", "venv", "__pycache__", "node_modules"} for part in path.parts):
+                if any(
+                    part in {".git", ".venv", "venv", "__pycache__", "node_modules"}
+                    for part in path.parts
+                ):
                     continue
                 yield path
 
@@ -467,19 +477,21 @@ def build_graph_for_repo(repo_root: Path | str):
 # Phase 2: Enriched Schema Graph Builder
 # ============================================================================
 
+
 def _build_base_structural_schema_graph(repo_root: Path) -> Any:
     """Loads/builds the purely structural graph from AST analysis.
-    
+
     Internal helper for Phase 2. Reuses existing Phase 2 logic.
     """
     from tools.rag.schema import build_graph_for_repo as _schema_build_graph_for_repo
+
     # Force require_enrichment=False to get the raw AST graph
     return _schema_build_graph_for_repo(repo_root, require_enrichment=False)
 
 
 def _save_schema_graph(repo_root: Path, graph: Any):
     """Saves the SchemaGraph to disk.
-    
+
     Internal helper for Phase 2.
     """
     graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -498,17 +510,17 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
     enrichment database.
     """
     from tools.rag.enrichment_db_helpers import load_enrichment_data
-    
+
     # 1. Build the base structural graph
     base_graph = _build_base_structural_schema_graph(repo_root)
 
     # 2. Load all enrichment data
     enrichments_by_span = load_enrichment_data(repo_root)
-    
+
     # 3. Build Spatial Index: (normalized_path, start_line) -> EnrichmentRecord
     # This bridges the gap between AST (Graph) and Content Hash (DB).
     enrich_by_loc: dict[tuple[str, int], Any] = {}
-    
+
     # load_enrichment_data now returns Dict[span_hash, List[EnrichmentRecord]]
     # We iterate the lists of records.
     for records in enrichments_by_span.values():
@@ -523,12 +535,12 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
                         norm_p = str(p)
                 except ValueError:
                     norm_p = str(record.file_path)
-                
+
                 enrich_by_loc[(norm_p, record.start_line)] = record
 
     # 4. Iterate through graph entities and merge metadata
     enriched_count = 0
-    
+
     if hasattr(base_graph, "entities"):
         for entity in base_graph.entities:
             if not entity.file_path or entity.start_line is None:
@@ -543,36 +555,38 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
                     norm_entity_path = str(p)
             except ValueError:
                 norm_entity_path = entity.file_path
-            
+
             # Update entity path to be relative in the export
             entity.file_path = norm_entity_path
 
             # Match by Location
             key = (norm_entity_path, entity.start_line)
             enrich = enrich_by_loc.get(key)
-            
+
             if enrich:
                 _attach_enrichment_to_entity(entity, enrich)
                 enriched_count += 1
 
-    print(f"    📊 Enrichment integration: {enriched_count}/{len(base_graph.entities)} entities enriched.")
+    print(
+        f"    📊 Enrichment integration: {enriched_count}/{len(base_graph.entities)} entities enriched."
+    )
 
     # 4. Save the enriched graph
     _save_schema_graph(repo_root, base_graph)
-    
+
     return base_graph
 
 
 def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
     """Internal helper to attach enrichment fields to entity metadata.
-    
+
     Args:
         entity: Entity to enrich
         enrich: EnrichmentRecord with metadata
     """
     # Parse JSON fields if they're stored as strings
     import json
-    
+
     def safe_json_load(value: str | None) -> list | None:
         if not value:
             return None
@@ -580,21 +594,21 @@ def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
             return json.loads(value) if isinstance(value, str) else value
         except (json.JSONDecodeError, TypeError):
             return None
-    
+
     # Attach all enrichment fields
     if enrich.summary:
         entity.metadata["summary"] = enrich.summary
-    
+
     # Map usage_guide (Record) -> usage_guide (Metadata) or usage_snippet (Metadata)
     # The Record has 'usage_guide' populated from DB 'usage_snippet'.
     if enrich.usage_guide:
         entity.metadata["usage_guide"] = enrich.usage_guide
-        entity.metadata["usage_snippet"] = enrich.usage_guide # redundant but safe
-    
+        entity.metadata["usage_snippet"] = enrich.usage_guide  # redundant but safe
+
     # Additional fields (if available in record)
     # Note: EnrichmentRecord currently only has summary/usage_guide populated by load_enrichment_data
     # but we should be ready for others if they are added.
-    
+
     # Always store symbol/span_hash for downstream tools.
     if getattr(enrich, "symbol", None):
         entity.metadata["symbol"] = enrich.symbol
@@ -605,7 +619,17 @@ def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
 # --- Fallback helpers (local scan) ---------------------------------------------
 def _iter_repo_py_files(repo_root):
     import os
-    skip_dirs = {".git", ".llmc", ".trash", "__pycache__", ".venv", "venv", ".mypy_cache", ".pytest_cache"}
+
+    skip_dirs = {
+        ".git",
+        ".llmc",
+        ".trash",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".mypy_cache",
+        ".pytest_cache",
+    }
     for root, dirs, files in os.walk(str(repo_root)):
         dirs[:] = [d for d in dirs if d not in skip_dirs]
         for name in files:
@@ -626,7 +650,7 @@ def _grep_snippets(repo_root, needle, max_items):
                     if needle in line:
                         sl = max(1, i - 2)
                         el = min(len(lines), i + 2)
-                        text = "".join(lines[sl-1:el])
+                        text = "".join(lines[sl - 1 : el])
                         items.append((rel, sl, el, text))
                         if len(items) >= max_items:
                             return items
@@ -635,9 +659,6 @@ def _grep_snippets(repo_root, needle, max_items):
     except Exception:
         pass
     return items
-
-
-
 
 
 def _neighbors_to_items(neigh: list[Neighbor]) -> list[SearchItem]:
@@ -675,7 +696,9 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
                     file=h.file,
                     snippet=Snippet(
                         text=h.text,
-                        location=SnippetLocation(path=h.file, start_line=h.start_line, end_line=h.end_line),
+                        location=SnippetLocation(
+                            path=h.file, start_line=h.start_line, end_line=h.end_line
+                        ),
                     ),
                 )
                 for h in ranked
@@ -686,7 +709,9 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
             remaining = max(0, max_results - len(items))
             if remaining > 0:
                 try:
-                    res = expand_search_items(repo_root_path, items, max_expansion=min(remaining, max_results), hops=1)
+                    res = expand_search_items(
+                        repo_root_path, items, max_expansion=min(remaining, max_results), hops=1
+                    )
                     if isinstance(res, tuple):
                         _, neigh = res
                         neighbor_items = _neighbors_to_items(neigh)
@@ -710,7 +735,7 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
             )
             # Phase 3: Attach graph enrichment if available
             res.items = _attach_graph_enrichment(repo_root, res.items)
-            
+
             return _maybe_attach_enrichment_search(repo_root, res)
         except (RagDbNotFound, RuntimeError):
             source = "LOCAL_FALLBACK"
@@ -737,7 +762,7 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
     )
     # Phase 3: Attach graph enrichment if available (even for fallback search if graph exists)
     res.items = _attach_graph_enrichment(repo_root, res.items)
-    
+
     return _maybe_attach_enrichment_search(repo_root, res)
 
 
@@ -862,7 +887,7 @@ def tool_rag_stats(repo_root: Path | str) -> dict[str, Any]:
     nodes, _ = _load_graph(repo_root)
     total_nodes = len(nodes)
     enriched_nodes = sum(1 for n in nodes if n.get("metadata", {}).get("summary"))
-    
+
     return {
         "total_nodes": total_nodes,
         "enriched_nodes": enriched_nodes,
@@ -910,7 +935,9 @@ def _maybe_attach_enrichment_search(repo_root: str, res: SearchResult) -> Search
         stats = EnrichStats()
         store = SqliteEnrichmentStore(db_path)
         max_chars = _enrichment_max_chars()
-        res = attach_enrichments_to_search_result(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+        res = attach_enrichments_to_search_result(
+            res, store, max_snippets=1, max_chars=max_chars, stats=stats
+        )
 
         if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
             _enrich_log.info(
@@ -951,7 +978,9 @@ def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) ->
         stats = EnrichStats()
         store = SqliteEnrichmentStore(db_path)
         max_chars = _enrichment_max_chars()
-        res = attach_enrichments_to_where_used(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+        res = attach_enrichments_to_where_used(
+            res, store, max_snippets=1, max_chars=max_chars, stats=stats
+        )
 
         if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
             _enrich_log.info(
@@ -992,7 +1021,9 @@ def _maybe_attach_enrichment_lineage(repo_root: str, res: LineageResult) -> Line
         stats = EnrichStats()
         store = SqliteEnrichmentStore(db_path)
         max_chars = _enrichment_max_chars()
-        res = attach_enrichments_to_lineage(res, store, max_snippets=1, max_chars=max_chars, stats=stats)
+        res = attach_enrichments_to_lineage(
+            res, store, max_snippets=1, max_chars=max_chars, stats=stats
+        )
 
         if str(os.getenv("LLMC_ENRICH_LOG", "")).lower() in {"1", "true", "yes"}:
             _enrich_log.info(

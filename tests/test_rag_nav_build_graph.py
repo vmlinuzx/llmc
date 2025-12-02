@@ -22,10 +22,7 @@ def test_build_graph_creates_graph_and_status(tmp_path: Path) -> None:
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
     # Create two classes with an inheritance edge to exercise relations.
     (pkg_dir / "module_b.py").write_text(
-        "class Base:\n"
-        "    pass\n\n"
-        "class Child(Base):\n"
-        "    pass\n",
+        "class Base:\n    pass\n\nclass Child(Base):\n    pass\n",
         encoding="utf-8",
     )
 

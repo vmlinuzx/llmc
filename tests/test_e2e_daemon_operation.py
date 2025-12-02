@@ -18,6 +18,7 @@ from tools.rag_repo.cli import _cmd_add
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 @pytest.mark.allow_sleep
 def test_e2e_daemon_tick_with_dummy_runner(tmp_path: Path) -> None:
     """End-to-end test: daemon tick with dummy job runner."""
@@ -55,6 +56,7 @@ sys.exit(0)
 
         # Register repo
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -84,8 +86,11 @@ sys.exit(0)
         )
 
         # Create daemon components
-        registry = RegistryAdapter(cfg.registry_path) if hasattr(RegistryAdapter, '__init__') else None
+        registry = (
+            RegistryAdapter(cfg.registry_path) if hasattr(RegistryAdapter, "__init__") else None
+        )
         from tools.rag_daemon.registry import RegistryClient
+
         registry_client = RegistryClient.from_config(cfg)
         state_store = StateStore(cfg.state_store_path)
         workers = WorkerPool(cfg, state_store)
@@ -101,7 +106,7 @@ sys.exit(0)
         log_file = home / "runner_calls.log"
         assert log_file.exists(), "Dummy runner was not called"
 
-        calls = [json.loads(line) for line in log_file.read_text().strip().split('\n')]
+        calls = [json.loads(line) for line in log_file.read_text().strip().split("\n")]
         assert len(calls) == 1, f"Expected 1 call, got {len(calls)}"
 
         call = calls[0]
@@ -141,6 +146,7 @@ exit 0
 
         # Register all repos
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -218,6 +224,7 @@ exit 1
 
         # Register repo
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -294,6 +301,7 @@ exit 0
 
         # Register repo
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -381,6 +389,7 @@ exit 0
 
         # Register repo
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -463,6 +472,7 @@ exit 0
 
         # Register all repos
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -522,6 +532,7 @@ def test_e2e_daemon_with_fake_home(tmp_path: Path) -> None:
 
         # Set up fake home environment
         import os
+
         old_home = os.environ.get("HOME")
         os.environ["HOME"] = str(temp_home)
 
@@ -540,6 +551,7 @@ exit 0
 
             # Use default config path (~/.llmc/rag-daemon.yml)
             from tools.rag_repo.config import ToolConfig
+
             tool_config = ToolConfig(
                 registry_path=temp_home / ".llmc" / "repos.yml",
                 default_rag_profile="default",
@@ -550,6 +562,7 @@ exit 0
 
             # Add repo
             from tools.rag_repo.cli import _cmd_add
+
             args = Mock(
                 path=str(repo_root),
                 yes=True,
@@ -560,6 +573,7 @@ exit 0
 
             # Verify repo was added
             from tools.rag_repo.registry import RegistryAdapter
+
             registry = RegistryAdapter(tool_config)
             entries = registry.load_all()
             assert len(entries) == 1
@@ -627,6 +641,7 @@ exit 0
 
         # Step 3: Add repo
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
             default_rag_profile="default",
@@ -667,7 +682,7 @@ exit 0
         # Step 5: Run daemon
         scheduler.run_once()
         time.sleep(3)
-        
+
         # Explicitly shut down workers to release file handles
         workers._executor.shutdown(wait=True)
 
@@ -695,6 +710,7 @@ exit 0
 
 if __name__ == "__main__":
     import sys
+
     sys.path.insert(0, str(REPO_ROOT))
 
     # Import required modules
@@ -725,6 +741,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"✗ {test.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

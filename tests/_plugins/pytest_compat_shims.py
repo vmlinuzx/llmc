@@ -15,9 +15,12 @@ def pytest_configure(config):
     # force tmp_path_factory.mktemp to use numbered=True (reduces mkdir collisions across test runs)
     try:
         import pytest as _pytest
+
         _orig_mktemp = _pytest.TempPathFactory.mktemp  # type: ignore[attr-defined]
+
         def _mktemp_numbered(self, basename, numbered=True):
             return _orig_mktemp(self, basename, numbered=True)
+
         _pytest.TempPathFactory.mktemp = _mktemp_numbered  # type: ignore[attr-defined]
     except Exception:
         pass
@@ -33,6 +36,7 @@ def pytest_configure(config):
         except Exception:
             pass
 
+
 def pytest_sessionstart(session):
     # Compat seam for tools.rag.enrichment.requests
     with contextlib.suppress(Exception):
@@ -41,20 +45,46 @@ def pytest_sessionstart(session):
             # Minimal stub that tests can monkeypatch
             class _RequestsStub:
                 def request(self, *a, **k):
-                    raise RuntimeError("requests not available; install it or mark test with allow_network")
-                def get(self, *a, **k): return self.request(*a, **k)
-                def post(self, *a, **k): return self.request(*a, **k)
-                def put(self, *a, **k): return self.request(*a, **k)
-                def patch(self, *a, **k): return self.request(*a, **k)
-                def delete(self, *a, **k): return self.request(*a, **k)
+                    raise RuntimeError(
+                        "requests not available; install it or mark test with allow_network"
+                    )
+
+                def get(self, *a, **k):
+                    return self.request(*a, **k)
+
+                def post(self, *a, **k):
+                    return self.request(*a, **k)
+
+                def put(self, *a, **k):
+                    return self.request(*a, **k)
+
+                def patch(self, *a, **k):
+                    return self.request(*a, **k)
+
+                def delete(self, *a, **k):
+                    return self.request(*a, **k)
+
                 class Session:
                     def request(self, *a, **k):
-                        raise RuntimeError("requests Session not available; install it or mark test with allow_network")
-                    def get(self, *a, **k): return self.request(*a, **k)
-                    def post(self, *a, **k): return self.request(*a, **k)
-                    def put(self, *a, **k): return self.request(*a, **k)
-                    def patch(self, *a, **k): return self.request(*a, **k)
-                    def delete(self, *a, **k): return self.request(*a, **k)
+                        raise RuntimeError(
+                            "requests Session not available; install it or mark test with allow_network"
+                        )
+
+                    def get(self, *a, **k):
+                        return self.request(*a, **k)
+
+                    def post(self, *a, **k):
+                        return self.request(*a, **k)
+
+                    def put(self, *a, **k):
+                        return self.request(*a, **k)
+
+                    def patch(self, *a, **k):
+                        return self.request(*a, **k)
+
+                    def delete(self, *a, **k):
+                        return self.request(*a, **k)
+
             enr.requests = _RequestsStub()  # type: ignore
 
     # Legacy tools.rag_repo.cli re-export
@@ -73,6 +103,7 @@ def pytest_sessionstart(session):
     # Safety: avoid FileExistsError explosions when tests create the same name twice
     try:
         _orig_mkdir = _Path.mkdir
+
         def _mkdir_compat(self, mode=0o777, parents=False, exist_ok=False):
             # If target already exists in a pytest tmp root, coerce exist_ok
             try:
@@ -87,6 +118,7 @@ def pytest_sessionstart(session):
                 if str(self).find("pytest-of-") != -1:
                     return None
                 raise
+
         _Path.mkdir = _mkdir_compat
     except Exception:
         pass
@@ -95,7 +127,9 @@ def pytest_sessionstart(session):
     # Tests can monkeypatch modules to use `compat_path_join(a, b)` instead.
     def compat_path_join(a, b):
         from pathlib import Path
+
         return Path(a) / b
+
     builtins = importlib.import_module("builtins")
     if not hasattr(builtins, "compat_path_join"):
         builtins.compat_path_join = compat_path_join

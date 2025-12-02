@@ -14,8 +14,7 @@ def _write_simple_python_file(repo_root: Path) -> Path:
     """Create a simple Python source file in the repo."""
     src = repo_root / "sample.py"
     src.write_text(
-        "def hello(name: str) -> str:\n"
-        "    return f'hello {name}'\n",
+        "def hello(name: str) -> str:\n    return f'hello {name}'\n",
         encoding="utf-8",
     )
     return src
@@ -61,4 +60,3 @@ def test_index_repo_skips_unchanged_files(tmp_path: Path, monkeypatch) -> None:
     assert second.files == 0
     # The unchanged counter should reflect the one file we indexed previously.
     assert second.unchanged == 1
-

@@ -12,26 +12,23 @@ import tempfile
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 def run_cmd(cmd, cwd=str(REPO_ROOT), timeout=5):
     """Run a command and return result."""
     try:
         result = subprocess.run(
-            cmd,
-            check=False, shell=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=cwd
+            cmd, check=False, shell=True, capture_output=True, text=True, timeout=timeout, cwd=cwd
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
         return -1, "", "TIMEOUT"
 
+
 def test_state_store_corrupt_data():
     """Test state store with corrupt JSON."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: State Store - Corrupt JSON Handling")
-    print("="*70)
+    print("=" * 70)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         store_path = Path(tmpdir) / "state"
@@ -67,11 +64,12 @@ print(f'SUCCESS: Corrupt JSON was ignored without crashing')
             print("✗ FAIL: Error handling corrupt JSON")
             return False
 
+
 def test_scheduler_consecutive_failures():
     """Test scheduler backoff logic with consecutive failures."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: Scheduler - Consecutive Failures & Backoff")
-    print("="*70)
+    print("=" * 70)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create a config
@@ -121,11 +119,12 @@ else:
 
         return returncode == 0
 
+
 def test_control_surface():
     """Test control surface flag handling."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: Control Surface - Flag File Handling")
-    print("="*70)
+    print("=" * 70)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         control_dir = Path(tmpdir) / "control"
@@ -171,11 +170,12 @@ else:
 
         return returncode == 0
 
+
 def test_registry_empty_and_invalid():
     """Test registry with empty and invalid data."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: Registry - Empty and Invalid Path Handling")
-    print("="*70)
+    print("=" * 70)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         registry_path = Path(tmpdir) / "empty_registry.yml"
@@ -209,17 +209,18 @@ else:
 
         return returncode == 0
 
+
 def test_repo_tool_commands():
     """Test repo tool add/remove/list/inspect commands."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: Repo Tool - Command Line Interface")
-    print("="*70)
+    print("=" * 70)
 
     results = []
 
     # Test 1: Help command
     print("\n[1] Testing help command...")
-    returncode, stdout, stderr = run_cmd(f'{str(REPO_ROOT)}/scripts/llmc-rag-repo help')
+    returncode, stdout, stderr = run_cmd(f"{str(REPO_ROOT)}/scripts/llmc-rag-repo help")
     if "LLMC RAG Repo Tool" in stdout and returncode == 0:
         print("✓ PASS: Help command works")
         results.append(True)
@@ -232,12 +233,12 @@ def test_repo_tool_commands():
     with tempfile.TemporaryDirectory() as tmpdir:
         registry_file = Path(tmpdir) / "repos.yml"
         registry_file.touch()
-        
+
         config_file = Path(tmpdir) / "config.yml"
         config_file.write_text(f"registry_path: {registry_file}\n")
-        
+
         returncode, stdout, stderr = run_cmd(
-            f'{str(REPO_ROOT)}/scripts/llmc-rag-repo list --config {config_file}'
+            f"{str(REPO_ROOT)}/scripts/llmc-rag-repo list --config {config_file}"
         )
         if "No repos registered" in stdout and returncode == 0:
             print("✓ PASS: List command works with empty registry")
@@ -249,7 +250,9 @@ def test_repo_tool_commands():
 
     # Test 3: Inspect non-existent repo
     print("\n[3] Testing inspect on non-existent repo...")
-    returncode, stdout, stderr = run_cmd(f'{str(REPO_ROOT)}/scripts/llmc-rag-repo inspect /nonexistent/path')
+    returncode, stdout, stderr = run_cmd(
+        f"{str(REPO_ROOT)}/scripts/llmc-rag-repo inspect /nonexistent/path"
+    )
     # Inspect returns 0 even if repo missing, but reports Exists: False
     if returncode == 0 and "Exists: False" in stdout:
         print("✓ PASS: Inspect correctly reports non-existent path")
@@ -260,11 +263,12 @@ def test_repo_tool_commands():
 
     return all(results)
 
+
 def test_worker_pool_failure():
     """Test worker pool failure handling."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST: Worker Pool - Failure Handling")
-    print("="*70)
+    print("=" * 70)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         # Create a fake job runner that fails
@@ -347,11 +351,12 @@ else:
 
         return returncode == 0
 
+
 def main():
     """Run all tests."""
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("LLMC RAG DAEMON & REPO TOOL - RUTHLESS TESTING")
-    print("="*70)
+    print("=" * 70)
     print("\nFinding failures is success. Green is suspicious.\n")
 
     tests = [
@@ -371,13 +376,14 @@ def main():
         except Exception as e:
             print(f"\n✗ EXCEPTION in {name}: {e}")
             import traceback
+
             traceback.print_exc()
             results.append((name, False))
 
     # Summary
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TEST SUMMARY")
-    print("="*70)
+    print("=" * 70)
 
     for name, result in results:
         status = "✓ PASS" if result else "✗ FAIL"
@@ -394,6 +400,7 @@ def main():
     else:
         print("\n⚠️  All tests passed - suspiciously green!")
         sys.exit(0)
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -105,7 +104,9 @@ def test_batch_enrich_no_pending_spans(tmp_path) -> None:
     db_path = repo_root / "test.db"
     db = Database(db_path)
 
-    def fake_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:  # pragma: no cover - should not be called
+    def fake_llm_call(
+        prompt: dict[str, Any],
+    ) -> dict[str, Any]:  # pragma: no cover - should not be called
         raise AssertionError("LLM should not be called when there are no pending spans")
 
     result = batch_enrich(

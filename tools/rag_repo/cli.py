@@ -33,7 +33,9 @@ def resolve_workspace_from_cli(
     return safe_subpath(base, name_or_path)
 
 
-def clean_workspace(repo_root: Path, workspace_arg: str | Path | None = None, *, force: bool = False) -> dict:
+def clean_workspace(
+    repo_root: Path, workspace_arg: str | Path | None = None, *, force: bool = False
+) -> dict:
     """Remove contents of a workspace safely. Requires force=True."""
     if not force:
         raise RuntimeError("Refusing to clean without --force. This operation is destructive.")
@@ -71,32 +73,27 @@ def export_bundle(
     export_dir = resolve_export_dir(repo_root, workspace_arg, export_arg)
     export_dir.mkdir(parents=True, exist_ok=True)
     if any(export_dir.iterdir()) and not force:
-        raise RuntimeError(
-            "Export directory is not empty. Re-run with --force to overwrite."
-        )
+        raise RuntimeError("Export directory is not empty. Re-run with --force to overwrite.")
     return {"export_dir": export_dir}
-
 
 
 def _print_top_level_help() -> None:
     """Print a tree-style help overview for llmc-rag-repo."""
     print(
-        
-            "LLMC RAG Repo Tool\n\n"
-            "Manage which repos are tracked by the LLMC RAG daemon.\n\n"
-            "Usage:\n"
-            "  llmc-rag-repo <command> [options]\n\n"
-            "Commands:\n"
-            "  add        Register a repo and create its .llmc/rag workspace\n"
-            "  remove     Unregister a repo\n"
-            "  list       List all registered repos\n"
-            "  inspect    Show detailed info for a single repo\n"
-            "  help       Show this help overview\n\n"
-            "Examples:\n"
-            "  llmc-rag-repo add /home/you/src/llmc\n"
-            "  llmc-rag-repo list\n"
-            "  llmc-rag-repo inspect /home/you/src/llmc\n"
-        
+        "LLMC RAG Repo Tool\n\n"
+        "Manage which repos are tracked by the LLMC RAG daemon.\n\n"
+        "Usage:\n"
+        "  llmc-rag-repo <command> [options]\n\n"
+        "Commands:\n"
+        "  add        Register a repo and create its .llmc/rag workspace\n"
+        "  remove     Unregister a repo\n"
+        "  list       List all registered repos\n"
+        "  inspect    Show detailed info for a single repo\n"
+        "  help       Show this help overview\n\n"
+        "Examples:\n"
+        "  llmc-rag-repo add /home/you/src/llmc\n"
+        "  llmc-rag-repo list\n"
+        "  llmc-rag-repo inspect /home/you/src/llmc\n"
     )
 
 

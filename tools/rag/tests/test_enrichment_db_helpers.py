@@ -27,9 +27,7 @@ def _seed_simple_index(db_path: Path) -> Database:
             """,
             ("foo.py", "python", "hash", 10, time.time()),
         )
-        file_id = conn.execute(
-            "SELECT id FROM files WHERE path = ?", ("foo.py",)
-        ).fetchone()[0]
+        file_id = conn.execute("SELECT id FROM files WHERE path = ?", ("foo.py",)).fetchone()[0]
 
         conn.execute(
             """
@@ -95,4 +93,3 @@ def test_search_enrichments_fts(tmp_path: Path) -> None:
         # should still unpack cleanly.
 
     db.close()
-

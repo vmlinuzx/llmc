@@ -25,4 +25,3 @@ def doctor_paths(
         "export_empty": not any(export_dir.iterdir()),
         "under_workspace": str(export_dir).startswith(str(workspace_root)),
     }
-

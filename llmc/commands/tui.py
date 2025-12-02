@@ -10,6 +10,7 @@ def tui():
     app = LLMC_TUI(repo_root=repo_root)
     app.run()
 
+
 def monitor():
     """Alias for 'tui' command."""
     tui()

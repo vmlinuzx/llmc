@@ -217,7 +217,9 @@ class RegistryClient:
             raise KeyError("rag_workspace_path is required")
 
         if self.config is not None:
-            repo_path, workspace_candidate = _normalize_paths(self.config, raw_repo_path, raw_workspace_path)
+            repo_path, workspace_candidate = _normalize_paths(
+                self.config, raw_repo_path, raw_workspace_path
+            )
             if workspace_candidate is None:
                 raise KeyError("rag_workspace_path is required")
             workspace_path = workspace_candidate

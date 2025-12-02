@@ -60,7 +60,9 @@ def test_e2e_smoke_test(tmp_path: Path) -> None:
     init_workspace(plan, inspection, tool_config, non_interactive=True)
     validation = validate_workspace(plan)
 
-    assert validation.status in ["ok", "warning"], f"Workspace validation failed: {validation.issues}"
+    assert validation.status in ["ok", "warning"], (
+        f"Workspace validation failed: {validation.issues}"
+    )
 
     # Setup 3: Register the repo using the registry tool
     registry_adapter = RegistryAdapter(tool_config)
@@ -322,7 +324,9 @@ def test_e2e_multiple_repos(tmp_path: Path) -> None:
     registry = RegistryClient.from_config(config)
     state_store = StateStore(config.state_store_path)
     workers = WorkerPool(config=config, state_store=state_store)
-    scheduler = Scheduler(config=config, registry=registry, state_store=state_store, workers=workers)
+    scheduler = Scheduler(
+        config=config, registry=registry, state_store=state_store, workers=workers
+    )
 
     # Run scheduler
     registry_entries = registry.load()

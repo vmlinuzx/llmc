@@ -59,11 +59,7 @@ class TeMeta:
 
 def format_meta_header(meta: TeMeta) -> str:
     """Format MPD meta header between markers."""
-    return (
-        "# TE_BEGIN_META\n"
-        + json.dumps(meta.to_dict(), ensure_ascii=False)
-        + "\n# TE_END_META"
-    )
+    return "# TE_BEGIN_META\n" + json.dumps(meta.to_dict(), ensure_ascii=False) + "\n# TE_END_META"
 
 
 def format_breadcrumb(message: str) -> str:
@@ -98,12 +94,8 @@ class FormattedOutput:
                     meta = json.loads(lines[1])
             except Exception:
                 pass
-        
-        return {
-            "meta": meta,
-            "content": self.content,
-            "breadcrumbs": self.breadcrumbs
-        }
+
+        return {"meta": meta, "content": self.content, "breadcrumbs": self.breadcrumbs}
 
 
 def compute_hot_zone(file_counts: dict[str, int], total: int) -> str | None:

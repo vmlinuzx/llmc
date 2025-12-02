@@ -40,4 +40,3 @@ def test_normalize_paths_rejects_outside(tmp_path: Path) -> None:
 
     with pytest.raises(PathTraversalError):
         dreg._normalize_paths(cfg, "../../etc", None)
-

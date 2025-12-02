@@ -31,9 +31,16 @@ class TestGitHeadDetection:
 
         # Initialize git repo
         subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True)
-        
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
+        )
+
         # Ensure nothing is ignored
         (repo_root / ".gitignore").write_text("")
         subprocess.run(["git", "add", ".gitignore"], cwd=repo_root, check=True, capture_output=True)
@@ -41,15 +48,16 @@ class TestGitHeadDetection:
         # Create commit
         (repo_root / "test.txt").write_text("test")
         subprocess.run(["git", "add", "test.txt"], cwd=repo_root, check=False, capture_output=True)
-        subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "--allow-empty", "-m", "Initial"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
 
         # Get HEAD
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
         )
         head_sha = result.stdout.strip()
 
@@ -109,7 +117,7 @@ class TestGitHeadDetection:
             ["git", "rev-parse", "HEAD"],
             cwd=tmp_path,  # Non-git directory
             capture_output=True,
-            check=False
+            check=False,
         )
 
         assert result.returncode != 0
@@ -125,39 +133,40 @@ class TestGitHeadDetection:
         repo_root.mkdir()
 
         subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
+        )
 
         # Create initial commit
         (repo_root / "test.txt").write_text("test")
         subprocess.run(["git", "add", "."], cwd=repo_root, check=False, capture_output=True)
-        subprocess.run(["git", "commit", "--allow-empty", "-m", "Initial"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "--allow-empty", "-m", "Initial"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
 
         # Get commit SHA
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
         )
         commit_sha = result.stdout.strip()
 
         # Checkout detached HEAD
         subprocess.run(
-            ["git", "checkout", commit_sha],
-            cwd=repo_root,
-            check=True,
-            capture_output=True
+            ["git", "checkout", commit_sha], cwd=repo_root, check=True, capture_output=True
         )
 
         # HEAD should still be detected
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
         )
         head_sha = result.stdout.strip()
 
@@ -172,11 +181,7 @@ class TestGitHeadDetection:
 
         # Try to get HEAD - should fail or return empty
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=False
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=False
         )
 
         # No commits = HEAD doesn't exist
@@ -194,10 +199,7 @@ class TestGitHeadDetection:
 
         # Should handle corruption gracefully
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            check=False
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, check=False
         )
 
         # Should fail with corrupt git
@@ -216,8 +218,15 @@ class TestGitHeadDetection:
         # Initialize both as git repos
         for repo in [parent_repo, child_repo]:
             subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "config", "user.email", "test@test.com"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Test"], cwd=repo, check=True, capture_output=True
+            )
 
         # Submodules complicate HEAD detection
         # Test that we handle them
@@ -235,11 +244,7 @@ class TestGitHeadDetection:
     def test_detect_git_head_bare_repo(self, tmp_path: Path):
         """Test git HEAD in bare repository."""
         bare_repo = tmp_path / "bare.git"
-        subprocess.run(
-            ["git", "init", "--bare", str(bare_repo)],
-            check=True,
-            capture_output=True
-        )
+        subprocess.run(["git", "init", "--bare", str(bare_repo)], check=True, capture_output=True)
 
         # Bare repos still have HEAD
         # Should detect
@@ -402,7 +407,7 @@ class TestComputeRouteEdgeCases:
         status = Mock()
         status.index_state = "fresh"
         status.last_indexed_commit = None
-        
+
         with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "abc123"
 
@@ -466,6 +471,7 @@ class TestComputeRouteEdgeCases:
     def test_compute_route_with_load_status_exception(self, tmp_path: Path):
         """Test compute_route when load_status raises exception."""
         from tools.rag_nav.gateway import compute_route
+
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 
@@ -645,13 +651,13 @@ class TestMissingGraphWhenUseRagTrue:
 
         graph_file = llmc_dir / "rag_graph.json"
         # Legacy format with schema_graph.relations
-        graph_file.write_text('''{
+        graph_file.write_text("""{
             "schema_graph": {
                 "relations": [
                     {"edge": "CALLS", "src": "func_a", "dst": "func_b"}
                 ]
             }
-        }''')
+        }""")
 
         # Should handle legacy format
         with open(graph_file) as f:
@@ -667,12 +673,12 @@ class TestMissingGraphWhenUseRagTrue:
         llmc_dir.mkdir()
 
         graph_file = llmc_dir / "rag_graph.json"
-        graph_file.write_text('''{
+        graph_file.write_text("""{
             "nodes": [
                 {"id": "funcção", "name": "функция", "path": "测试.py"}
             ],
             "edges": []
-        }''')
+        }""")
 
         # Should handle UTF-8
         with open(graph_file, encoding="utf-8") as f:
@@ -695,7 +701,7 @@ class TestMissingGraphWhenUseRagTrue:
             except PermissionError:
                 # If we can't delete, maybe we can't write. Try chmoding parent?
                 pass
-        
+
         try:
             graph_file.write_text('{"nodes": [], "edges": []}')
         except PermissionError:
@@ -749,12 +755,20 @@ class TestGatewayPerformance:
     def test_compute_route_with_git(self, tmp_path: Path):
         """Test compute_route with actual git repo."""
         from tools.rag_nav.gateway import compute_route
+
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 
         subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
+        )
 
         with patch("tools.rag_nav.metadata.load_status") as mock_load:
             mock_load.return_value = None
@@ -793,6 +807,7 @@ class TestGatewayErrorRecovery:
     def test_recover_from_status_load_failure(self, tmp_path: Path):
         """Test recovery when status file is corrupt."""
         from tools.rag_nav.gateway import compute_route
+
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 

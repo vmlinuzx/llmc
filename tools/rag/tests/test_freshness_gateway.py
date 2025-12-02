@@ -17,12 +17,21 @@ from tools.rag_nav.models import IndexStatus
 def _init_git_repo(repo_path: Path, commit_sha: str = "abc123def456") -> str:
     """Initialize a git repo and return the HEAD SHA."""
     subprocess.run(["git", "init"], cwd=repo_path, capture_output=True, check=True)
-    subprocess.run(["git", "config", "user.email", "test@test.com"], check=False, cwd=repo_path, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Test"], check=False, cwd=repo_path, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@test.com"],
+        check=False,
+        cwd=repo_path,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"], check=False, cwd=repo_path, capture_output=True
+    )
     (repo_path / "README.md").write_text("# Test")
     subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True, check=True)
     subprocess.run(["git", "commit", "-m", "init"], cwd=repo_path, capture_output=True, check=True)
-    result = subprocess.run(["git", "rev-parse", "HEAD"], check=False, cwd=repo_path, capture_output=True, text=True)
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"], check=False, cwd=repo_path, capture_output=True, text=True
+    )
     return result.stdout.strip()
 
 
@@ -34,9 +43,9 @@ class TestComputeRoute:
         """No status file -> UNKNOWN, don't use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "UNKNOWN"
         assert route.status is None
@@ -45,7 +54,7 @@ class TestComputeRoute:
         """Stale index -> STALE, don't use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         status = IndexStatus(
             repo=str(repo_root),
             index_state="stale",
@@ -54,9 +63,9 @@ class TestComputeRoute:
             schema_version="1.0",
         )
         save_status(repo_root, status)
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "STALE"
 
@@ -64,7 +73,7 @@ class TestComputeRoute:
         """Error index -> STALE, don't use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         status = IndexStatus(
             repo=str(repo_root),
             index_state="error",
@@ -74,9 +83,9 @@ class TestComputeRoute:
             last_error="Database locked",
         )
         save_status(repo_root, status)
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "STALE"
 
@@ -84,7 +93,7 @@ class TestComputeRoute:
         """Fresh index but no git repo -> UNKNOWN (can't verify HEAD)."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         status = IndexStatus(
             repo=str(repo_root),
             index_state="fresh",
@@ -93,9 +102,9 @@ class TestComputeRoute:
             schema_version="1.0",
         )
         save_status(repo_root, status)
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "UNKNOWN"
 
@@ -103,10 +112,10 @@ class TestComputeRoute:
         """Fresh index + matching HEAD -> FRESH, use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         # Init git and get actual HEAD
         head_sha = _init_git_repo(repo_root)
-        
+
         status = IndexStatus(
             repo=str(repo_root),
             index_state="fresh",
@@ -115,9 +124,9 @@ class TestComputeRoute:
             schema_version="1.0",
         )
         save_status(repo_root, status)
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is True
         assert route.freshness_state == "FRESH"
         assert route.status is not None
@@ -126,10 +135,10 @@ class TestComputeRoute:
         """Fresh index + mismatched HEAD -> STALE, don't use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         # Init git
         _init_git_repo(repo_root)
-        
+
         status = IndexStatus(
             repo=str(repo_root),
             index_state="fresh",
@@ -138,9 +147,9 @@ class TestComputeRoute:
             schema_version="1.0",
         )
         save_status(repo_root, status)
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "STALE"
 
@@ -148,14 +157,14 @@ class TestComputeRoute:
         """Malformed JSON -> UNKNOWN, don't use RAG."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         # Write invalid JSON directly
         path = status_path(repo_root)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("{ invalid json }", encoding="utf-8")
-        
+
         route = compute_route(repo_root)
-        
+
         assert route.use_rag is False
         assert route.freshness_state == "UNKNOWN"
 
@@ -163,9 +172,9 @@ class TestComputeRoute:
         """RouteDecision has all required fields."""
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
-        
+
         route = compute_route(repo_root)
-        
+
         assert hasattr(route, "use_rag")
         assert hasattr(route, "freshness_state")
         assert hasattr(route, "status")

@@ -195,37 +195,35 @@ class Database:
 
     def replace_spans(self, file_id: int, spans: Sequence[SpanRecord]) -> None:
         """Replace spans for a file, preserving unchanged spans and their enrichments.
-        
+
         This is a DIFFERENTIAL update:
         - Keeps spans with unchanged content (same span_hash)
         - Only deletes spans that were removed or changed
         - Only inserts new or modified spans
-        
+
         This preserves enrichments for unchanged code, saving 90%+ LLM calls!
         """
         # Get existing span hashes for this file
         existing = self.conn.execute(
-            "SELECT span_hash FROM spans WHERE file_id = ?",
-            (file_id,)
+            "SELECT span_hash FROM spans WHERE file_id = ?", (file_id,)
         ).fetchall()
         existing_hashes = {row[0] for row in existing}
-        
+
         # New span hashes from the file
         new_hashes = {span.span_hash for span in spans}
-        
+
         # Calculate the delta
         to_delete = existing_hashes - new_hashes  # Spans no longer in file
-        to_add = new_hashes - existing_hashes      # New/modified spans
-        unchanged = existing_hashes & new_hashes   # Preserved (with enrichments!)
-        
+        to_add = new_hashes - existing_hashes  # New/modified spans
+        unchanged = existing_hashes & new_hashes  # Preserved (with enrichments!)
+
         # Only delete spans that actually changed or were removed
         if to_delete:
-            placeholders = ','.join('?' * len(to_delete))
+            placeholders = ",".join("?" * len(to_delete))
             self.conn.execute(
-                f"DELETE FROM spans WHERE span_hash IN ({placeholders})",
-                list(to_delete)
+                f"DELETE FROM spans WHERE span_hash IN ({placeholders})", list(to_delete)
             )
-        
+
         # Only insert truly new or modified spans
         new_spans = [s for s in spans if s.span_hash in to_add]
         if new_spans:
@@ -256,15 +254,19 @@ class Database:
                     for span in new_spans
                 ],
             )
-        
+
         # Log the delta for visibility (helpful for debugging and metrics)
         if to_add or to_delete:
             import sys
-            print(f"    📊 Spans: {len(unchanged)} unchanged, {len(to_add)} added, {len(to_delete)} deleted", file=sys.stderr)
+
+            print(
+                f"    📊 Spans: {len(unchanged)} unchanged, {len(to_add)} added, {len(to_delete)} deleted",
+                file=sys.stderr,
+            )
 
     def get_file_hash(self, path: Path) -> str | None:
         """Get the stored file hash for a given path.
-        
+
         Returns:
             The file hash if the file exists in the database, None otherwise.
         """
@@ -406,7 +408,14 @@ class Database:
             (profile, model, dim),
         )
 
-    def store_embedding(self, span_hash: str, vector: list[float], route_name: str = "docs", profile_name: str = "default", table_name: str = "embeddings") -> None:
+    def store_embedding(
+        self,
+        span_hash: str,
+        vector: list[float],
+        route_name: str = "docs",
+        profile_name: str = "default",
+        table_name: str = "embeddings",
+    ) -> None:
         blob = struct.pack(f"<{len(vector)}f", *vector)
         if table_name not in ("embeddings", "emb_code"):
             raise ValueError(f"Invalid table_name: {table_name}")
@@ -423,7 +432,7 @@ class Database:
         """Yield embedding rows joined with span/file metadata."""
         if table_name not in ("embeddings", "emb_code"):
             raise ValueError(f"Invalid table_name: {table_name}")
-            
+
         cursor = self.conn.execute(
             f"""
             SELECT
@@ -443,7 +452,6 @@ class Database:
         )
         for row in cursor:
             yield row
-
 
     # ------------------------------------------------------------------
     # Enrichment-aware helpers (Phase 1 – DB / FTS integration)
@@ -647,12 +655,12 @@ class Database:
                 JOIN spans AS s ON s.span_hash = e.span_hash
                 """
             )
-            row = conn.execute(
-                "SELECT COUNT(*) AS n FROM enrichments_fts"
-            ).fetchone()
+            row = conn.execute("SELECT COUNT(*) AS n FROM enrichments_fts").fetchone()
         return int(row["n"]) if row is not None else 0
 
-    def search_enrichments_fts(self, query: str, limit: int = 10) -> list[tuple[str, str | None, float | None]]:
+    def search_enrichments_fts(
+        self, query: str, limit: int = 10
+    ) -> list[tuple[str, str | None, float | None]]:
         """Search enrichments text using FTS5.
 
         Returns:
@@ -700,7 +708,6 @@ class Database:
             score = float(score_val) if score_val is not None else None
             results.append((row["symbol"], row["summary"], score))
         return results
-
 
     @contextmanager
     def transaction(self) -> Iterator[sqlite3.Connection]:

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,9 +27,7 @@ def _insert_file_and_span(
     )
     db.conn.commit()
 
-    file_id = db.conn.execute(
-        "SELECT id FROM files WHERE path=?", (str(file_rel),)
-    ).fetchone()[0]
+    file_id = db.conn.execute("SELECT id FROM files WHERE path=?", (str(file_rel),)).fetchone()[0]
 
     db.conn.execute(
         """

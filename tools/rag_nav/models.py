@@ -36,6 +36,7 @@ SourceTag = Literal["RAG_GRAPH", "LOCAL_FALLBACK"]
 # Snippet containers
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SnippetLocation:
     """Location of a snippet within a source file."""
@@ -57,15 +58,17 @@ class Snippet:
 # Search / Where-Used / Lineage result models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class EnrichmentData:
     """Semantic enrichment for a code entity."""
+
     summary: str | None = None
     usage_guide: str | None = None
     content_type: str | None = None
     content_language: str | None = None
     # Extensible for future fields (inputs, outputs, etc.)
-    
+
     def to_dict(self) -> dict:
         return {k: v for k, v in asdict(self).items() if v is not None}
 
@@ -94,7 +97,7 @@ class SearchResult:
     truncated: bool = False
     source: SourceTag = "RAG_GRAPH"
     freshness_state: FreshnessState = "UNKNOWN"
-    
+
     def to_dict(self) -> dict:
         return {
             "query": self.query,

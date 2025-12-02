@@ -20,7 +20,9 @@ class _FakeBackend:
     def describe_host(self) -> str | None:
         return self._name
 
-    def generate(self, prompt: str, *, item: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    def generate(
+        self, prompt: str, *, item: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         if self._should_fail:
             raise BackendError(f"{self._name} failed", failure_type=self._failure_type)
         return {"ok": self._name}, {"model": self._name}

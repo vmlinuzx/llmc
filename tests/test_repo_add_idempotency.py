@@ -13,6 +13,7 @@ from tools.rag_repo.registry import RegistryAdapter
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
     """Test that adding a new repo creates the workspace structure."""
     with tempfile.TemporaryDirectory() as home:
@@ -28,6 +29,7 @@ def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
 
         # Create tool config
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -87,6 +89,7 @@ def test_add_existing_repo_is_idempotent(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -158,6 +161,7 @@ def test_add_repo_preserves_existing_configs(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -196,6 +200,7 @@ def test_add_repo_multiple_times_same_registry(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -238,6 +243,7 @@ def test_add_repo_different_paths_same_repo(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -284,6 +290,7 @@ def test_add_repo_workspace_initialization(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -337,6 +344,7 @@ def test_add_repo_creates_registry_entry(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="production",
@@ -385,6 +393,7 @@ def test_add_with_custom_profile(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -419,6 +428,7 @@ def test_add_repo_json_output(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -463,6 +473,7 @@ def test_add_non_existent_repo_fails(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -501,6 +512,7 @@ def test_add_creates_directory_structure(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -546,6 +558,7 @@ def test_add_idempotency_with_registry_changes(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         from tools.rag_repo.config import ToolConfig
+
         tool_config = ToolConfig(
             registry_path=registry_path,
             default_rag_profile="default",
@@ -582,6 +595,7 @@ def test_add_idempotency_with_registry_changes(tmp_path: Path) -> None:
 if __name__ == "__main__":
     # Run tests
     import sys
+
     sys.path.insert(0, str(REPO_ROOT))
 
     tests = [
@@ -611,6 +625,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"✗ {test.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 

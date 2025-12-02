@@ -37,4 +37,6 @@ def read_control_events(control_dir: Path) -> ControlEvents:
             # Non-fatal if we fail to delete
             pass
 
-    return ControlEvents(refresh_all=refresh_all, refresh_repo_ids=refresh_repo_ids, shutdown=shutdown)
+    return ControlEvents(
+        refresh_all=refresh_all, refresh_repo_ids=refresh_repo_ids, shutdown=shutdown
+    )

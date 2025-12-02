@@ -14,6 +14,7 @@ from llmc.routing.query_type import CODE_STRUCT_REGEX, ERP_SKU_REGEX, classify_q
 # EDGE CASE 1: None and Empty Inputs
 # ==============================================================================
 
+
 def test_classify_query_none_input():
     """What happens with None input? Should this crash or handle gracefully?"""
     try:
@@ -48,6 +49,7 @@ def test_classify_query_whitespace_only():
 # ==============================================================================
 # EDGE CASE 2: Unicode and Special Characters
 # ==============================================================================
+
 
 def test_classify_query_unicode_code():
     """Can the system handle Unicode code patterns?"""
@@ -90,6 +92,7 @@ def test_classify_query_mixed_unicode_normal():
 # ==============================================================================
 # EDGE CASE 3: Regex Pattern Edge Cases
 # ==============================================================================
+
 
 def test_sku_regex_very_short():
     """Test SKU regex with very short patterns"""
@@ -137,8 +140,8 @@ def test_code_struct_regex_pathological():
         ("def func(): return True", True),
         # C-style braces are NOT currently supported by CODE_STRUCT_REGEXES
         ("{\n    return x;\n}", False),
-        ("int main() { return 0; }", True), # Matches function call regex 'main()'
-        ("if (x) { do(); }", True), # Matches function call regex 'do()'
+        ("int main() { return 0; }", True),  # Matches function call regex 'main()'
+        ("if (x) { do(); }", True),  # Matches function call regex 'do()'
         # Should NOT match
         ("{this is just braces}", False),  # Not code structure
         ("{braces in prose}", False),
@@ -154,7 +157,7 @@ def test_code_struct_regex_pathological():
             if matches:
                 found_any = True
                 all_matches.extend(matches)
-        
+
         if should_match:
             assert found_any, f"Pattern '{pattern}' should match CODE_STRUCT_REGEX"
         else:
@@ -164,6 +167,7 @@ def test_code_struct_regex_pathological():
 # ==============================================================================
 # EDGE CASE 4: Ambiguous Queries
 # ==============================================================================
+
 
 def test_classify_query_product_vs_code():
     """Ambiguous: 'product' is in both ERP_KEYWORDS and could be in code"""
@@ -223,6 +227,7 @@ def test_classify_query_code_like_but_not():
 # EDGE CASE 5: Tool Context Edge Cases
 # ==============================================================================
 
+
 def test_classify_query_tool_context_case_sensitivity():
     """Tool context should handle case variations"""
     queries = [
@@ -274,12 +279,15 @@ def test_classify_query_tool_context_none_values():
 # EDGE CASE 6: Very Long and Pathological Inputs
 # ==============================================================================
 
+
 def test_classify_query_very_long_query():
     """What about extremely long queries?"""
     # 10k characters of 'lorem ipsum'
     long_text = "Lorem ipsum " * 1000
     result = classify_query(long_text)
-    print(f"Very long query result: route={result['route_name']}, confidence={result['confidence']}")
+    print(
+        f"Very long query result: route={result['route_name']}, confidence={result['confidence']}"
+    )
     # Should complete without error
     assert "route_name" in result
 
@@ -305,6 +313,7 @@ def test_classify_query_many_sku_patterns():
 # ==============================================================================
 # EDGE CASE 7: Conflicting Signals
 # ==============================================================================
+
 
 def test_classify_query_code_in_erp_context():
     """Code structure in ERP tool context - who wins?"""
@@ -342,6 +351,7 @@ def test_classify_query_contradictory_patterns():
 # ==============================================================================
 # EDGE CASE 8: Code Fence Edge Cases
 # ==============================================================================
+
 
 def test_classify_query_empty_code_fence():
     """Empty code fence"""
@@ -389,6 +399,7 @@ def test_classify_query_malformed_code_fence():
 # EDGE CASE 9: Numbers and Special Patterns
 # ==============================================================================
 
+
 def test_classify_query_numbers_only():
     """Query with just numbers"""
     query = "12345"
@@ -428,6 +439,7 @@ def test_classify_query_version_numbers():
 # EDGE CASE 10: Performance and Memory
 # ==============================================================================
 
+
 def test_classify_query_deeply_nested_structures():
     """Deeply nested code structures"""
     query = "\n".join(["    " * i + "return x" for i in range(1000)])
@@ -439,7 +451,7 @@ def test_classify_query_deeply_nested_structures():
 
 if __name__ == "__main__":
     # Run tests and print results
-    print("\n" + "="*80)
+    print("\n" + "=" * 80)
     print("RUTHLESS EDGE CASE TESTING FOR QUERY ROUTING")
-    print("="*80)
+    print("=" * 80)
     pytest.main([__file__, "-v", "-s"])

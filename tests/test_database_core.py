@@ -77,9 +77,7 @@ def test_replace_spans_preserves_unchanged_and_reports_stats(tmp_path: Path, cap
         db.replace_spans(file_id, updated_spans)
 
         # We expect two spans total, with hashes span-a and span-c.
-        rows = db.conn.execute(
-            "SELECT span_hash, symbol FROM spans ORDER BY span_hash"
-        ).fetchall()
+        rows = db.conn.execute("SELECT span_hash, symbol FROM spans ORDER BY span_hash").fetchall()
         hashes = {row["span_hash"] for row in rows}
         symbols = {row["symbol"] for row in rows}
         assert hashes == {"span-a", "span-c"}

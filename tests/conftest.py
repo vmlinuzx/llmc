@@ -88,7 +88,7 @@ def pytest_collection_modifyitems(config, items):
         if item.fspath and item.fspath.exists():
             content = item.fspath.read_text(encoding="utf-8")
             # Skip if it has main AND doesn't have pytest test markers
-            if "if __name__ == \"__main__\":" in content:
+            if 'if __name__ == "__main__":' in content:
                 if "import pytest" not in content and "@pytest" not in content:
                     item.add_marker(skip_standalone)
 

@@ -468,9 +468,7 @@ class TestContractBackwardCompatibility:
         ]
 
         for field in required_fields:
-            assert field in meta_dict, (
-                f"Required field '{field}' was removed from meta contract"
-            )
+            assert field in meta_dict, f"Required field '{field}' was removed from meta contract"
 
     def test_status_literal_values_stable(self):
         """

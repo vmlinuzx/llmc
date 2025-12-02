@@ -12,4 +12,3 @@ def test_cli_error_code_for_bad_workspace(tmp_path, capsys) -> None:
     assert code == 2
     err = capsys.readouterr().err
     assert "ERROR:" in err
-

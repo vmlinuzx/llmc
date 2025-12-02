@@ -54,7 +54,6 @@ class SystemInfoError(LinuxOpsError):
     code = "SYSTEM_INFO_ERROR"
 
 
-
 class ProcessLimitError(LinuxOpsError):
     """Process limit exceeded."""
 

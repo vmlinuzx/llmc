@@ -23,18 +23,24 @@ try:
     from llmc.te.telemetry import log_routing_event
 except ImportError:
     # No-op fallback when llmc module is not available
-    def log_routing_event(mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs) -> None:
+    def log_routing_event(
+        mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs
+    ) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass
+
 
 # Conditional import for routing components - allows the module to work without llmc dependency
 try:
     from llmc.routing.fusion import fuse_scores
 except ImportError:
     # No-op fallback when llmc module is not available
-    def fuse_scores(results_by_route: dict[str, list[Any]], route_weights: dict[str, float]) -> list[Any]:
+    def fuse_scores(
+        results_by_route: dict[str, list[Any]], route_weights: dict[str, float]
+    ) -> list[Any]:
         """No-op fallback for score fusion when llmc module is unavailable."""
         return []
+
 
 try:
     from llmc.routing.router import create_router
@@ -43,6 +49,7 @@ except ImportError:
     def create_router(config: dict[str, Any]) -> Any:
         """No-op fallback for router creation when llmc module is unavailable."""
         return None
+
 
 import logging
 
@@ -84,9 +91,10 @@ def _filename_boost(query: str, path_str: str) -> float:
         return 0.0
     q = query.strip().lower()
     import os
+
     basename = os.path.basename(path_str).lower()
     stem, _ = os.path.splitext(basename)
-    
+
     if q == basename:
         return 0.20  # Huge boost for exact match
     if q == stem:
@@ -123,7 +131,7 @@ def _score_candidates(
         if query_norm == 0.0 or vector_norm == 0.0:
             continue
         similarity = _dot(query_vector, vector) / (query_norm * vector_norm)
-        
+
         if query_text:
             similarity += _filename_boost(query_text, row["file_path"])
 
@@ -178,7 +186,9 @@ def _enrich_debug_info(
                         "outputs": _safe_load(row["outputs"]),
                         "side_effects": _safe_load(row["side_effects"]),
                         "pitfalls": _safe_load(row["pitfalls"]),
-                        "evidence_count": len(json.loads(row["evidence"])) if row["evidence"] else 0,
+                        "evidence_count": len(json.loads(row["evidence"]))
+                        if row["evidence"]
+                        else 0,
                     }
         except Exception:
             pass
@@ -193,8 +203,9 @@ def _enrich_debug_info(
             # We do a lazy load or manual parse to avoid huge overhead if possible,
             # but SchemaGraph.load is standard.
             from .schema import SchemaGraph
+
             graph = SchemaGraph.load(graph_path)
-            
+
             # Index entities by span_hash or fuzzy location
             # For now, let's try to match by file path and line overlap
             # Optimization: Pre-index graph entities by file path
@@ -208,7 +219,7 @@ def _enrich_debug_info(
                     parts = ent.path.rsplit(":", 1)
                     if len(parts) == 2:
                         fpath = parts[0]
-                
+
                 if fpath:
                     # Normalize to string relative to repo root if possible
                     entities_by_file.setdefault(fpath, []).append(ent)
@@ -222,16 +233,20 @@ def _enrich_debug_info(
 
             for res in results:
                 # Try to find matching entity
-                res_path_str = str(res.path.relative_to(repo_root)) if res.path.is_absolute() else str(res.path)
+                res_path_str = (
+                    str(res.path.relative_to(repo_root))
+                    if res.path.is_absolute()
+                    else str(res.path)
+                )
                 candidates = entities_by_file.get(res_path_str, [])
-                
+
                 matched_ent = None
                 # Simple overlap check
                 for ent in candidates:
                     # Check lines if available
                     e_start = getattr(ent, "start_line", None)
                     e_end = getattr(ent, "end_line", None)
-                    
+
                     if e_start is None:
                         # Try parse from path string
                         try:
@@ -249,10 +264,10 @@ def _enrich_debug_info(
                     if not (e_end < res.start_line or e_start > res.end_line):
                         matched_ent = ent
                         break
-                
+
                 if matched_ent:
                     # Gather neighbors
-                    parents = [] # Logic to find parents (containers) is implicit in AST or naming usually
+                    parents = []  # Logic to find parents (containers) is implicit in AST or naming usually
                     children = []
                     related_code = []
                     related_tests = []
@@ -265,7 +280,7 @@ def _enrich_debug_info(
                             related_code.append(f"Calls: {target}")
                         elif rel.edge == "extends":
                             parents.append(f"Extends: {target}")
-                    
+
                     # Incoming edges
                     for rel in rels_by_dst.get(matched_ent.id, []):
                         source = rel.src
@@ -275,7 +290,7 @@ def _enrich_debug_info(
                             children.append(f"Subclass: {source}")
                         elif "test" in source.lower() or "test" in rel.edge:
                             related_tests.append(source)
-                    
+
                     # Implicit parent by name (e.g. mod.Class.func -> mod.Class)
                     if "." in matched_ent.id:
                         parent_id = matched_ent.id.rsplit(".", 1)[0]
@@ -300,7 +315,7 @@ def _enrich_debug_info(
     for res in results:
         debug = {
             "search": {
-                "rank": -1, # To be filled by caller or implicit order
+                "rank": -1,  # To be filled by caller or implicit order
                 "score": res.score,
                 "embedding_similarity": res.score,
                 # No reranker in this simple search pipeline
@@ -310,7 +325,7 @@ def _enrich_debug_info(
             "provenance": {
                 "kind": res.kind,
                 # Last commit could be fetched via git if slow is ok, skipping for speed
-            }
+            },
         }
         enriched_results.append(
             SpanSearchResult(
@@ -323,10 +338,10 @@ def _enrich_debug_info(
                 score=res.score,
                 summary=res.summary,
                 normalized_score=res.normalized_score,
-                debug_info=debug
+                debug_info=debug,
             )
         )
-    
+
     return enriched_results
 
 
@@ -357,7 +372,7 @@ def search_spans(
         classification = router.decide_route(query, tool_context=tool_context)
         primary_route = classification["route_name"]
         route_decision = classification
-        
+
         logger.debug(
             "Query routing classification: route='%s' confidence=%.2f reasons=%s",
             primary_route,
@@ -370,7 +385,7 @@ def search_spans(
                 "route_name": primary_route,
                 "confidence": f"{classification['confidence']:.2f}",
                 "reasons": ";".join(classification["reasons"]),
-                "query_hash": hash(query)
+                "query_hash": hash(query),
             },
             repo_root=repo,
         )
@@ -378,35 +393,35 @@ def search_spans(
     # 2. Determine Routes (Single or Multi)
     # This helper handles the enable_multi_route check internally
     routes_to_query = get_multi_route_config(primary_route, repo)
-    
+
     if len(routes_to_query) > 1:
         logger.debug(f"Multi-route retrieval enabled. Fan-out: {routes_to_query}")
 
     # 3. Execute Searches
     results_by_route = {}
     route_weights = {}
-    
+
     # Cache embeddings by profile name to avoid redundant API calls
     # Key: profile_name, Value: (query_vector, query_norm)
     embedding_cache = {}
-    
+
     config = load_config(repo)
     db = Database(db_path)
-    
+
     try:
         for route_name, weight in routes_to_query:
             route_weights[route_name] = weight
-            
+
             try:
                 profile_name, index_name = resolve_route(route_name, "query", repo)
             except ConfigError as e:
                 logger.warning(f"Skipping route '{route_name}' due to config error: {e}")
                 continue
-                
+
             # Get profile config to find model/dim
             profiles_cfg = config.get("embeddings", {}).get("profiles", {})
             resolved_profile_cfg = profiles_cfg.get(profile_name, {})
-            
+
             # Reuse embedding if possible
             if profile_name in embedding_cache:
                 query_vector, query_norm = embedding_cache[profile_name]
@@ -415,9 +430,11 @@ def search_spans(
                 resolved_dim = resolved_profile_cfg.get("dim") or embedding_model_dim()
                 if resolved_model in HASH_MODELS:
                     resolved_dim = 64
-                    
-                logger.debug(f"Embedding query for route='{route_name}' (profile='{profile_name}'): model='{resolved_model}'")
-                
+
+                logger.debug(
+                    f"Embedding query for route='{route_name}' (profile='{profile_name}'): model='{resolved_model}'"
+                )
+
                 backend = build_embedding_backend(resolved_model, dim=resolved_dim)
                 query_vector = backend.embed_queries([query])[0]
                 query_norm = _norm(query_vector)
@@ -426,28 +443,28 @@ def search_spans(
             # Search DB
             try:
                 scored_objs = _score_candidates(
-                    query_vector, 
-                    query_norm, 
-                    db.iter_embeddings(table_name=index_name), 
-                    query_text=query
+                    query_vector,
+                    query_norm,
+                    db.iter_embeddings(table_name=index_name),
+                    query_text=query,
                 )
-                
+
                 # Convert to dicts for fusion
                 results_by_route[route_name] = [
                     {**asdict(r), "slice_id": r.span_hash} for r in scored_objs
                 ]
-                
+
             except ValueError:
                 logger.warning(f"Query search against '{index_name}' failed. Skipping this route.")
                 continue
-                
+
     finally:
         db.close()
-        
+
     # 4. Fuse
     fused_dicts = fuse_scores(results_by_route, route_weights)
     top_dicts = fused_dicts[:limit]
-    
+
     # 5. Reconstruct Objects
     top_results = []
     for d in top_dicts:
@@ -455,7 +472,7 @@ def search_spans(
         d_clean = {k: v for k, v in d.items() if k != "slice_id"}
         # Path object is preserved by asdict
         top_results.append(SpanSearchResult(**d_clean))
-    
+
     if debug:
         top_results = _enrich_debug_info(top_results, repo, db_path)
         # Assign ranks and attach routing info
@@ -466,15 +483,19 @@ def search_spans(
             search_info["rank"] = i + 1
             if route_decision:
                 search_info["routing"] = route_decision
-                search_info["multi_route_fanout"] = routes_to_query if len(routes_to_query) > 1 else None
+                search_info["multi_route_fanout"] = (
+                    routes_to_query if len(routes_to_query) > 1 else None
+                )
                 # Add target_index based on primary route if not multi-route
-                if not (len(routes_to_query) > 1): # If single route
+                if not (len(routes_to_query) > 1):  # If single route
                     try:
                         _, primary_index_name = resolve_route(primary_route, "query", repo)
                         search_info["target_index"] = primary_index_name
                     except ConfigError:
-                        logger.warning(f"Could not resolve primary route index for debug info: {primary_route}")
-            
+                        logger.warning(
+                            f"Could not resolve primary route index for debug info: {primary_route}"
+                        )
+
             new_results.append(
                 SpanSearchResult(
                     span_hash=r.span_hash,
@@ -486,10 +507,9 @@ def search_spans(
                     score=r.score,
                     summary=r.summary,
                     normalized_score=r.normalized_score,
-                    debug_info={**d_info, "search": search_info}
+                    debug_info={**d_info, "search": search_info},
                 )
             )
         top_results = new_results
 
     return top_results
-

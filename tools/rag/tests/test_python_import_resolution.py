@@ -1,4 +1,3 @@
-
 import pytest
 
 from tools.rag.schema import (
@@ -15,6 +14,7 @@ def repo_with_files(tmp_path):
         for file_name, content in files_dict.items():
             (repo_root / file_name).write_text(content, encoding="utf-8")
         return repo_root
+
     return _create_repo
 
 
@@ -25,23 +25,26 @@ def get_call_relations(graph) -> list[tuple[str, str]]:
 
 # --- Test Cases from SDD ---
 
+
 def test_imported_function_call_targets_definer(repo_with_files):
     """
     Verifies that a direct call to an imported function correctly
     targets the definer module's symbol.
     """
-    repo_root = repo_with_files({
-        "definer.py": """
+    repo_root = repo_with_files(
+        {
+            "definer.py": """
 def hello():
     pass
 """,
-        "importer.py": """
+            "importer.py": """
 from definer import hello
 
 def caller():
     hello()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -57,18 +60,20 @@ def test_module_alias_call_resolves_via_import_map(repo_with_files):
     Verifies that a call through a module alias correctly targets
     the definer module's symbol.
     """
-    repo_root = repo_with_files({
-        "definer.py": """
+    repo_root = repo_with_files(
+        {
+            "definer.py": """
 def hello():
     pass
 """,
-        "importer.py": """
+            "importer.py": """
 import definer as d
 
 def caller():
     d.hello()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -84,18 +89,20 @@ def test_imported_function_alias_resolves(repo_with_files):
     Verifies that a call to an aliased imported function correctly
     targets the definer module's symbol.
     """
-    repo_root = repo_with_files({
-        "definer.py": """
+    repo_root = repo_with_files(
+        {
+            "definer.py": """
 def hello():
     pass
 """,
-        "importer.py": """
+            "importer.py": """
 from definer import hello as hi
 
 def caller():
     hi()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -108,20 +115,23 @@ def caller():
 
 # --- Additional Test Cases for Robustness ---
 
+
 def test_local_function_call_is_unaffected(repo_with_files):
     """
     Ensures that calls to local functions are still correctly resolved
     to the current module.
     """
-    repo_root = repo_with_files({
-        "local_module.py": """
+    repo_root = repo_with_files(
+        {
+            "local_module.py": """
 def my_local_func():
     pass
 
 def caller():
     my_local_func()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -133,19 +143,21 @@ def test_multiple_imports_from_same_module(repo_with_files):
     """
     Tests multiple imports from the same module, ensuring all resolve correctly.
     """
-    repo_root = repo_with_files({
-        "lib.py": """
+    repo_root = repo_with_files(
+        {
+            "lib.py": """
 def func_a(): pass
 def func_b(): pass
 """,
-        "app.py": """
+            "app.py": """
 from lib import func_a, func_b
 
 def main():
     func_a()
     func_b()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -158,17 +170,19 @@ def test_import_module_and_call_directly(repo_with_files):
     """
     Tests 'import module' and then 'module.func()' call.
     """
-    repo_root = repo_with_files({
-        "utils.py": """
+    repo_root = repo_with_files(
+        {
+            "utils.py": """
 def helper_func(): pass
 """,
-        "main.py": """
+            "main.py": """
 import utils
 
 def execute():
     utils.helper_func()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -182,14 +196,16 @@ def test_non_existent_import_still_local_fallback(repo_with_files):
     it still falls back to a local symbol, as we don't have static analysis
     to validate imports.
     """
-    repo_root = repo_with_files({
-        "importer.py": """
+    repo_root = repo_with_files(
+        {
+            "importer.py": """
 from non_existent_module import non_existent_func
 
 def caller():
     non_existent_func()
 """,
-    })
+        }
+    )
 
     graph = build_graph_for_repo(repo_root, require_enrichment=False)
     calls = get_call_relations(graph)
@@ -197,4 +213,3 @@ def caller():
     # We expect it to construct a symbol ID based on the imported module,
     # as the extractor processes the import statement directly.
     assert ("sym:importer.caller", "sym:non_existent_module.non_existent_func") in calls
-

@@ -30,6 +30,7 @@ from .utils import (
 # Import sidecar generator (optional dependency)
 try:
     from .sidecar_generator import SidecarGenerator
+
     SIDECAR_AVAILABLE = True
 except ImportError:
     SIDECAR_AVAILABLE = False
@@ -45,11 +46,11 @@ class IndexStats(dict):
     @property
     def spans(self) -> int:
         return self.get("spans", 0)
-    
+
     @property
     def sidecars(self) -> int:
         return self.get("sidecars", 0)
-    
+
     @property
     def unchanged(self) -> int:
         return self.get("unchanged", 0)
@@ -97,47 +98,44 @@ def build_file_record(file_path: Path, lang: str, repo_root: Path, source: bytes
 
 
 def generate_sidecar_if_enabled(
-    file_path: Path,
-    lang: str,
-    source: bytes,
-    repo_root: Path
+    file_path: Path, lang: str, source: bytes, repo_root: Path
 ) -> Path | None:
     """Generate .md sidecar file if enabled via environment variable.
-    
+
     Args:
         file_path: Relative file path
         lang: Language name
         source: File content (bytes)
         repo_root: Repository root path
-        
+
     Returns:
         Path to generated sidecar, or None if disabled/failed
     """
     # Check if sidecar generation is enabled
     if not SIDECAR_AVAILABLE:
         return None
-    
+
     if os.environ.get("LLMC_GENERATE_SIDECARS", "1") == "0":
         return None
-    
+
     try:
         generator = SidecarGenerator(lang)
         markdown = generator.generate_from_file(repo_root / file_path, content=source)
-        
+
         # Write to .artifacts/ directory
         artifacts_dir = repo_root / ".artifacts"
         artifacts_dir.mkdir(parents=True, exist_ok=True)
-        
+
         sidecar_path = artifacts_dir / f"{file_path.stem}.md"
-        sidecar_path.write_text(markdown, encoding='utf-8')
-        
+        sidecar_path.write_text(markdown, encoding="utf-8")
+
         return sidecar_path
     except Exception as e:
         # Silently fail sidecar generation - don't break indexing
         import sys
+
         print(f"Warning: Failed to generate sidecar for {file_path}: {e}", file=sys.stderr)
         return None
-
 
 
 def index_repo(
@@ -165,7 +163,14 @@ def index_repo(
     else:
         spans_export_handle = None
 
-    counts = {"files": 0, "spans": 0, "skipped": 0, "unchanged": 0, "sidecars": 0, "duration_sec": 0.0}
+    counts = {
+        "files": 0,
+        "spans": 0,
+        "skipped": 0,
+        "unchanged": 0,
+        "sidecars": 0,
+        "duration_sec": 0.0,
+    }
     start_time = time.time()
 
     try:
@@ -176,14 +181,14 @@ def index_repo(
                 counts["skipped"] += 1
                 continue
             source = absolute_path.read_bytes()
-            
+
             # INCREMENTAL INDEXING: Skip files with unchanged content
             new_hash = compute_hash(source)
             existing_hash = db.get_file_hash(relative_path)
             if existing_hash == new_hash:
                 counts["unchanged"] += 1
                 continue
-            
+
             # ATOMIC OPERATION: Extract spans and generate sidecar from same source/AST
             text_preview = source[:1024].decode("utf-8", errors="ignore")
             classification = classify_slice(relative_path, None, text_preview)
@@ -197,7 +202,7 @@ def index_repo(
 
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(relative_path, lang, repo_root, source)
-            
+
             # Generate sidecar (using same loaded content)
             sidecar_path = generate_sidecar_if_enabled(relative_path, lang, source, repo_root)
             if sidecar_path:
@@ -232,7 +237,14 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
     spans_export_handle = spans_export_path(repo_root).open("a", encoding="utf-8")
     matcher = _gitignore_matcher(repo_root)
 
-    counts = {"files": 0, "spans": 0, "deleted": 0, "unchanged": 0, "sidecars": 0, "duration_sec": 0.0}
+    counts = {
+        "files": 0,
+        "spans": 0,
+        "deleted": 0,
+        "unchanged": 0,
+        "sidecars": 0,
+        "duration_sec": 0.0,
+    }
     start_time = time.time()
     try:
         for rel in paths:
@@ -255,14 +267,14 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
                     db.delete_file(rel)
                 continue
             source = absolute.read_bytes()
-            
+
             # INCREMENTAL INDEXING: Skip files with unchanged content
             new_hash = compute_hash(source)
             existing_hash = db.get_file_hash(rel)
             if existing_hash == new_hash:
                 counts["unchanged"] += 1
                 continue
-            
+
             # ATOMIC OPERATION: Extract spans and generate sidecar
             text_preview = source[:1024].decode("utf-8", errors="ignore")
             classification = classify_slice(rel, None, text_preview)
@@ -276,12 +288,12 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
 
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(rel, lang, repo_root, source)
-            
+
             # Generate sidecar (using same loaded content)
             sidecar_path = generate_sidecar_if_enabled(rel, lang, source, repo_root)
             if sidecar_path:
                 counts["sidecars"] += 1
-            
+
             with db.transaction():
                 file_id = db.upsert_file(file_record)
                 db.replace_spans(file_id, spans)

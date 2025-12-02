@@ -86,7 +86,7 @@ def _list_processes_shell(user_filter: str | None = None) -> list[ProcessInfo]:
     """List processes using ps command (fallback method)."""
     # ps output: PID USER %CPU %MEM COMMAND
     cmd = ["ps", "-eo", "pid,user,%cpu,%mem,command", "--sort=-%cpu"]
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -95,42 +95,44 @@ def _list_processes_shell(user_filter: str | None = None) -> list[ProcessInfo]:
             timeout=30,
             check=False,
         )
-        
+
         if result.returncode != 0:
             logger.warning(f"ps command failed: {result.stderr}")
             return []
-        
+
         infos: list[ProcessInfo] = []
         lines = result.stdout.strip().split("\n")
-        
+
         # Skip header
         for line in lines[1:]:
             parts = line.split(None, 4)  # Split into 5 parts max
             if len(parts) < 5:
                 continue
-            
+
             try:
                 pid = int(parts[0])
                 user = parts[1]
                 cpu = float(parts[2])
                 mem = float(parts[3])
                 command = parts[4][:500]
-                
+
                 if user_filter is not None and user != user_filter:
                     continue
-                
-                infos.append(ProcessInfo(
-                    pid=pid,
-                    user=user,
-                    cpu_percent=cpu,
-                    mem_percent=mem,
-                    command=command,
-                ))
+
+                infos.append(
+                    ProcessInfo(
+                        pid=pid,
+                        user=user,
+                        cpu_percent=cpu,
+                        mem_percent=mem,
+                        command=command,
+                    )
+                )
             except (ValueError, IndexError):
                 continue
-        
+
         return infos
-        
+
     except subprocess.TimeoutExpired:
         logger.error("ps command timed out")
         return []
@@ -143,6 +145,7 @@ def _get_process_owner(pid: int) -> str | None:
     """Get the username that owns a process."""
     try:
         import psutil
+
         p = psutil.Process(pid)
         return p.username()
     except Exception:
@@ -154,6 +157,7 @@ def _get_process_owner(pid: int) -> str | None:
                     if line.startswith("Uid:"):
                         uid = int(line.split()[1])
                         import pwd
+
                         return pwd.getpwuid(uid).pw_name
         except Exception:
             pass
@@ -168,39 +172,40 @@ def mcp_linux_proc_list(
 ) -> dict:
     """
     List running processes with resource usage.
-    
+
     Args:
         config: LinuxOps configuration
         max_results: Maximum processes to return (1-5000)
         user: Optional username filter
-        
+
     Returns:
         dict with processes list, total count, truncated flag
     """
     # Check feature flag
     if not config.features.proc_enabled:
         raise FeatureDisabledError("Process tools are disabled in config")
-    
+
     # Clamp max_results
     max_results = max(1, min(max_results, 5000))
-    
+
     # Try psutil first, fall back to shell
     try:
         import psutil
+
         processes = _list_processes_psutil(user)
     except ImportError:
         logger.info("psutil not available, using shell fallback")
         processes = _list_processes_shell(user)
-    
+
     # Sort by CPU descending
     processes.sort(key=lambda p: p.cpu_percent, reverse=True)
-    
+
     total = len(processes)
     truncated = total > max_results
-    
+
     if truncated:
         processes = processes[:max_results]
-    
+
     return {
         "processes": [p.to_dict() for p in processes],
         "total_processes": total,
@@ -216,15 +221,15 @@ def mcp_linux_proc_kill(
 ) -> dict:
     """
     Send a signal to a process.
-    
+
     Args:
         config: LinuxOps configuration
         pid: Process ID to signal
         signal: Signal name (TERM, KILL, INT, HUP, STOP, CONT)
-        
+
     Returns:
         dict with success status and message
-        
+
     Raises:
         FeatureDisabledError: If proc tools disabled
         KillForbiddenError: If trying to kill PID 1 or MCP server
@@ -235,24 +240,24 @@ def mcp_linux_proc_kill(
     # Check feature flag
     if not config.features.proc_enabled:
         raise FeatureDisabledError("Process tools are disabled in config")
-    
+
     # Validate signal
     signal = signal.upper()
     if signal not in SIGNALS:
         raise InvalidArgumentError(
             f"Invalid signal '{signal}'. Valid signals: {', '.join(SIGNALS.keys())}"
         )
-    
+
     # Safety checks
     if pid == 1:
         raise KillForbiddenError("Cannot kill PID 1 (init/systemd)")
-    
+
     if pid == MCP_PID:
         raise KillForbiddenError("Cannot kill MCP server process")
-    
+
     if pid <= 0:
         raise InvalidArgumentError(f"Invalid PID: {pid}")
-    
+
     # Check process exists
     try:
         os.kill(pid, 0)  # Signal 0 just checks existence
@@ -261,19 +266,19 @@ def mcp_linux_proc_kill(
     except PermissionError:
         # Process exists but we can't signal it
         pass
-    
+
     # Check ownership if configured
     if not config.process_limits.allow_kill_other_users:
         current_user = getpass.getuser()
         proc_owner = _get_process_owner(pid)
-        
+
         if proc_owner and proc_owner != current_user:
             raise PermissionDeniedError(
                 f"Cannot kill process {pid} owned by '{proc_owner}' "
                 f"(current user: '{current_user}'). "
                 f"Set allow_kill_other_users=true to override."
             )
-    
+
     # Send the signal
     try:
         os.kill(pid, SIGNALS[signal])
@@ -294,10 +299,10 @@ def mcp_linux_proc_kill(
         }
 
 
-
 # ============================================================================
 # L3: Interactive Process / REPL Tools
 # ============================================================================
+
 
 def mcp_linux_proc_start(
     command: str,

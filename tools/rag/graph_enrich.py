@@ -272,8 +272,16 @@ def enrich_graph_entities(graph: Any, repo_root: Path, *, max_per_entity: int = 
             span_hash: str | None = None
             if strategy.startswith("span"):
                 with_text = strategy.endswith("(with_text)")
-                span_hash = compute_span_hash(rel, int(start), int(end), text=None if not with_text else "", with_text=with_text)
-            _merge_into_metadata(entity, payload, strategy=strategy, db_path=db_path, span_hash=span_hash)
+                span_hash = compute_span_hash(
+                    rel,
+                    int(start),
+                    int(end),
+                    text=None if not with_text else "",
+                    with_text=with_text,
+                )
+            _merge_into_metadata(
+                entity, payload, strategy=strategy, db_path=db_path, span_hash=span_hash
+            )
         except Exception:
             continue
     return graph
@@ -296,11 +304,10 @@ def enrich_graph_file(graph_json_path: Path, repo_root: Path) -> None:
         def __init__(self, payload: dict[str, Any]) -> None:
             self.__dict__.update(payload)
 
-    graph = type("GraphWrapper", (object,), {"entities": [ _EntityWrapper(d) for d in entities ]})()
+    graph = type("GraphWrapper", (object,), {"entities": [_EntityWrapper(d) for d in entities]})()
     enrich_graph_entities(graph, repo_root)
 
     for idx, entity in enumerate(graph.entities):
         entities[idx].update(getattr(entity, "__dict__", {}))
 
     Path(graph_json_path).write_text(json.dumps(data, indent=2), encoding="utf-8")
-

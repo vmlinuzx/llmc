@@ -1,6 +1,7 @@
 """
 Test 11: Index Status Metadata - Round-trip and Corruption Handling
 """
+
 import json
 import os
 from pathlib import Path
@@ -9,10 +10,18 @@ import tempfile
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+
 # Simulated IndexStatus class (from what we see in rag_index_status.json)
 class IndexStatus:
-    def __init__(self, index_state, last_indexed_at, repo, schema_version,
-                 last_indexed_commit=None, last_error=None):
+    def __init__(
+        self,
+        index_state,
+        last_indexed_at,
+        repo,
+        schema_version,
+        last_indexed_commit=None,
+        last_error=None,
+    ):
         self.index_state = index_state
         self.last_indexed_at = last_indexed_at
         self.repo = repo
@@ -27,7 +36,7 @@ class IndexStatus:
             "repo": self.repo,
             "schema_version": self.schema_version,
             "last_indexed_commit": self.last_indexed_commit,
-            "last_error": self.last_error
+            "last_error": self.last_error,
         }
 
     @classmethod
@@ -38,7 +47,7 @@ class IndexStatus:
             repo=data.get("repo"),
             schema_version=data.get("schema_version"),
             last_indexed_commit=data.get("last_indexed_commit"),
-            last_error=data.get("last_error")
+            last_error=data.get("last_error"),
         )
 
     @classmethod
@@ -48,8 +57,9 @@ class IndexStatus:
         return cls.from_dict(data)
 
     def save(self, path):
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(self.to_dict(), f)
+
 
 def test_index_status_round_trip():
     """Test saving and loading IndexStatus"""
@@ -62,11 +72,11 @@ def test_index_status_round_trip():
         repo=str(REPO_ROOT),
         schema_version=1,
         last_indexed_commit="29a91d55c6478ebaf7a721eac2c09dbbe4577a0b",
-        last_error=None
+        last_error=None,
     )
 
     # Save to temp file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         status.save(f.name)
         temp_path = f.name
 
@@ -87,6 +97,7 @@ def test_index_status_round_trip():
     finally:
         os.unlink(temp_path)
 
+
 def test_index_status_missing_file():
     """Test handling of missing status file"""
     print("Test 2: Missing file handling")
@@ -99,11 +110,12 @@ def test_index_status_missing_file():
     except Exception as e:
         print(f"  ✓ Raised exception: {type(e).__name__}\n")
 
+
 def test_index_status_corrupt_json():
     """Test handling of corrupt JSON"""
     print("Test 3: Corrupt JSON handling")
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write("{ this is not valid json }")
         corrupt_path = f.name
 
@@ -118,19 +130,23 @@ def test_index_status_corrupt_json():
     finally:
         os.unlink(corrupt_path)
 
+
 def test_index_status_missing_fields():
     """Test handling of JSON with missing fields"""
     print("Test 4: Missing fields handling")
 
     # Create JSON with missing optional fields
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-        json.dump({
-            "index_state": "ready",
-            "last_indexed_at": "2025-11-16T00:00:00",
-            "repo": "/tmp/test",
-            "schema_version": 1
-            # Missing: last_indexed_commit, last_error
-        }, f)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(
+            {
+                "index_state": "ready",
+                "last_indexed_at": "2025-11-16T00:00:00",
+                "repo": "/tmp/test",
+                "schema_version": 1,
+                # Missing: last_indexed_commit, last_error
+            },
+            f,
+        )
         incomplete_path = f.name
 
     try:
@@ -150,6 +166,7 @@ def test_index_status_missing_fields():
 
     finally:
         os.unlink(incomplete_path)
+
 
 def test_existing_status_file():
     """Test the actual status file in the repo"""

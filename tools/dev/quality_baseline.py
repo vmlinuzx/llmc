@@ -83,4 +83,3 @@ if __name__ == "__main__":
         check()
     else:
         print("Usage: python tools/dev/quality_baseline.py [write|check]")
-

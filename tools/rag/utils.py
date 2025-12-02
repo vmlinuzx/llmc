@@ -20,7 +20,9 @@ def find_repo_root(start: Path | None = None) -> Path:
     return start
 
 
-def iter_source_files(repo_root: Path, include_paths: Iterable[Path] | None = None) -> Iterator[Path]:
+def iter_source_files(
+    repo_root: Path, include_paths: Iterable[Path] | None = None
+) -> Iterator[Path]:
     matcher = _gitignore_matcher(repo_root)
     if include_paths:
         for path in include_paths:
@@ -39,7 +41,9 @@ def iter_source_files(repo_root: Path, include_paths: Iterable[Path] | None = No
         yield from _iter_directory(repo_root, repo_root, matcher)
 
 
-def _iter_directory(repo_root: Path, directory: Path, matcher: Callable[[Path], bool]) -> Iterator[Path]:
+def _iter_directory(
+    repo_root: Path, directory: Path, matcher: Callable[[Path], bool]
+) -> Iterator[Path]:
     exclude_dirs = get_exclude_dirs(repo_root)
     for root, dirs, files in os.walk(directory):
         root_path = Path(root)

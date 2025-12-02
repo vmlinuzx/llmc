@@ -100,7 +100,7 @@ def list_context_allow_paths(repo_root: Path) -> list[Path]:
                 for sub in path.rglob("*"):
                     if sub.is_file():
                         included.add(sub)
-    
+
     return list(included)
 
 
@@ -152,14 +152,14 @@ def main() -> int:
 
     # Generate timestamp
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    
+
     # New base name includes repo name and timestamp
     base_zip_name = f"{repo_root.name}-{timestamp}"
 
     zip_path = next_available_zip_path(dest_dir, base_zip_name)
 
     files = list_included_paths(repo_root)
-    
+
     # Add .contextallow files ONLY if --large is specified
     if include_large:
         extra_files = list_context_allow_paths(repo_root)
@@ -203,7 +203,10 @@ def main() -> int:
                     zf.writestr(zinfo, src.read())
     except PermissionError as e:
         print(f"Permission denied creating {zip_path}: {e}", file=sys.stderr)
-        print("Hint: run from a context that can write to the parent directory, or adjust destination.", file=sys.stderr)
+        print(
+            "Hint: run from a context that can write to the parent directory, or adjust destination.",
+            file=sys.stderr,
+        )
         return 4
 
     print(f"Created: {zip_path}")
@@ -213,4 +216,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

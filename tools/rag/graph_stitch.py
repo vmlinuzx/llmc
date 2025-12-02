@@ -71,7 +71,9 @@ def load_neighbor_index(repo_root: Path) -> dict[str, set[str]]:
     return _index_edges(graph)
 
 
-def stitch_neighbors(repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1) -> list[Neighbor]:
+def stitch_neighbors(
+    repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1
+) -> list[Neighbor]:
     """Return neighbor file paths (1..hops) for given seed paths, unique and capped."""
     idx = load_neighbor_index(repo_root)
     seen: set[str] = set(seed_paths)
@@ -109,4 +111,3 @@ def expand_search_items(repo_root: Path, items: list, max_expansion: int = 20, h
         return items
 
     return items, neighbors
-

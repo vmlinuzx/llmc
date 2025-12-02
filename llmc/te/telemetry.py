@@ -73,29 +73,29 @@ def _init_telemetry_db(db_path: Path) -> None:
                 output_text TEXT
             )
         """)
-        
+
         # Index for common queries
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_timestamp 
             ON telemetry_events(timestamp DESC)
         """)
-        
+
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_agent_cmd 
             ON telemetry_events(agent_id, cmd)
         """)
-        
+
         conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_mode 
             ON telemetry_events(mode)
         """)
-        
+
         # Migration: add output_text column to existing DBs
         try:
             conn.execute("ALTER TABLE telemetry_events ADD COLUMN output_text TEXT")
         except sqlite3.OperationalError:
             pass  # Column already exists
-        
+
         conn.commit()
     finally:
         conn.close()
@@ -121,7 +121,7 @@ def log_event(
     # Only capture output if enabled in config, and cap at max bytes
     captured_output = None
     if cfg.capture_output and output_text:
-        captured_output = output_text[:cfg.output_max_bytes]
+        captured_output = output_text[: cfg.output_max_bytes]
 
     event = TeEvent(
         timestamp=_now_iso(),
@@ -139,31 +139,34 @@ def log_event(
     )
 
     db_path = _get_telemetry_db_path(cfg, repo_root)
-    
+
     try:
         _init_telemetry_db(db_path)
         conn = sqlite3.connect(db_path)
         try:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO telemetry_events (
                     timestamp, agent_id, session_id, cmd, mode,
                     input_size, output_size, truncated, handle_created,
                     latency_ms, error, output_text
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                event.timestamp,
-                event.agent_id,
-                event.session_id,
-                event.cmd,
-                event.mode,
-                event.input_size,
-                event.output_size,
-                1 if event.truncated else 0,
-                1 if event.handle_created else 0,
-                event.latency_ms,
-                event.error,
-                event.output_text,
-            ))
+            """,
+                (
+                    event.timestamp,
+                    event.agent_id,
+                    event.session_id,
+                    event.cmd,
+                    event.mode,
+                    event.input_size,
+                    event.output_size,
+                    1 if event.truncated else 0,
+                    1 if event.handle_created else 0,
+                    event.latency_ms,
+                    event.error,
+                    event.output_text,
+                ),
+            )
             conn.commit()
         finally:
             conn.close()

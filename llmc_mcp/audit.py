@@ -16,7 +16,7 @@ class TokenAuditWriter:
 
     Appends per-request token usage to CSV file for cost tracking.
     Thread-safe with lazy file creation.
-    
+
     CRITICAL: This class must NEVER raise exceptions that kill tool calls.
     All file operations are wrapped in try/except to fail silently.
     """
@@ -78,7 +78,7 @@ class TokenAuditWriter:
         try:
             with self._lock:
                 self._ensure_file()
-                
+
                 if self._failed:  # Check again after ensure_file
                     return
 

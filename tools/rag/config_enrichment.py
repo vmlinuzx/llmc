@@ -77,6 +77,7 @@ __all__ = [
     "load_enrichment_config",
 ]
 
+
 def _load_toml(path: Path) -> dict[str, Any]:
     if _toml is None:
         raise EnrichmentConfigError("No TOML parser available (tomllib/tomli not installed).")
@@ -96,7 +97,9 @@ def _parse_backend_spec(
     chain_name = str(raw.get("chain") or default_chain)
     provider = str(raw.get("provider") or "").strip()
     if provider not in _ALLOWED_PROVIDERS:
-        raise EnrichmentConfigError(f"Unsupported enrichment provider {provider!r} for backend {name!r}.")
+        raise EnrichmentConfigError(
+            f"Unsupported enrichment provider {provider!r} for backend {name!r}."
+        )
 
     model = raw.get("model")
     if model is not None:
@@ -291,7 +294,6 @@ def load_enrichment_config(
         root_enrichment.get("enforce_latin1_enrichment", True),
     )
     enforce_latin1_enrichment = str(enforce_latin1_raw).lower() in ("1", "true", "yes", "on")
-
 
     # Chains from TOML.
     chains = _parse_chain_from_toml(data, default_chain=default_chain)

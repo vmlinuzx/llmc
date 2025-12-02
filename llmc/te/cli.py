@@ -10,7 +10,7 @@ Usage:
     te -i <command> [args...]    # force raw/pass-through (no enrichment)
     te --handle res_01H...       # retrieve stored result
     te --list-handles            # list available handles
-    
+
 Known enriched commands: grep, cat, find
 Unknown commands are passed through to bash with telemetry logging.
 """
@@ -35,7 +35,7 @@ ENRICHED_COMMANDS = {"grep", "cat", "find"}
 def _parse_args() -> tuple[argparse.Namespace, list[str]]:
     """
     Parse command line arguments.
-    
+
     Returns (parsed_args, remaining_args) to allow pass-through of unknown flags.
     """
     parser = argparse.ArgumentParser(
@@ -55,7 +55,8 @@ All other commands pass through to bash with telemetry.
     )
 
     parser.add_argument(
-        "-i", "--raw",
+        "-i",
+        "--raw",
         action="store_true",
         help="Force raw/pass-through mode (skip enrichment even for known commands)",
     )
@@ -138,12 +139,12 @@ def _handle_list_handles() -> int:
 def _handle_stats(repo_root: Path) -> int:
     """Show telemetry statistics from SQLite database."""
     import sqlite3
-    
+
     db_path = repo_root / ".llmc" / "te_telemetry.db"
     if not db_path.exists():
         print("[TE] no telemetry data yet")
         return 0
-    
+
     conn = sqlite3.connect(db_path)
     try:
         # Overall stats
@@ -160,16 +161,16 @@ def _handle_stats(repo_root: Path) -> int:
         unique_cmds = row[1] or 0
         avg_latency = row[2] or 0.0
         total_output = row[3] or 0
-        
+
         print("┌─ [TE] Telemetry Summary ──────────────────────────────┐")
         print(f"│ Total calls:     {total_calls:<37}│")
         print(f"│ Unique commands: {unique_cmds:<37}│")
-        print(f"│ Avg latency:     {avg_latency:.1f}ms{' '*(35 - len(f'{avg_latency:.1f}'))}│")
+        print(f"│ Avg latency:     {avg_latency:.1f}ms{' ' * (35 - len(f'{avg_latency:.1f}'))}│")
         val_str = f"{total_output / 1024:.1f} KB"
         print(f"│ Total output:    {val_str:<37}│")
         print("└───────────────────────────────────────────────────────┘")
         print()
-        
+
         # Top 5 Unenriched (mode != 'enriched')
         print("┌─ Top 5 Unenriched Calls ──────────────────────────────┐")
         cursor = conn.execute("""
@@ -183,10 +184,10 @@ def _handle_stats(repo_root: Path) -> int:
             ORDER BY count DESC
             LIMIT 5
         """)
-        
+
         rows = cursor.fetchall()
         if not rows:
-             print("│ (no data)                                             │")
+            print("│ (no data)                                             │")
         for cmd, count, avg_lat in rows:
             line = f"{cmd} ({count}x) - {avg_lat:.1f}ms"
             print(f"│ {line:<54}│")
@@ -206,19 +207,19 @@ def _handle_stats(repo_root: Path) -> int:
             ORDER BY count DESC
             LIMIT 5
         """)
-        
+
         rows = cursor.fetchall()
         if not rows:
-             print("│ (no data)                                             │")
+            print("│ (no data)                                             │")
         for cmd, count, avg_lat in rows:
             line = f"{cmd} ({count}x) - {avg_lat:.1f}ms"
             print(f"│ {line:<54}│")
         print("└───────────────────────────────────────────────────────┘")
         print()
-        
+
         # Routing Stats
         print("┌─ Routing Stats ───────────────────────────────────────┐")
-        
+
         # Slice Ingest Routing
         slice_ingest_cursor = conn.execute("""
             SELECT 
@@ -227,7 +228,7 @@ def _handle_stats(repo_root: Path) -> int:
             WHERE mode = 'routing_ingest_slice'
         """)
         slice_ingest_events = slice_ingest_cursor.fetchall()
-        
+
         slice_types: Dict[str, int] = {}
         slice_routes: Dict[str, int] = {}
         for event in slice_ingest_events:
@@ -235,10 +236,10 @@ def _handle_stats(repo_root: Path) -> int:
             # Example: [routing_ingest_slice] slice_type=code, route_name=code, profile_name=code_jina
             parts = cmd_str.split("] ")[1].split(", ")
             details = {p.split("=")[0]: p.split("=")[1] for p in parts}
-            
+
             slice_type = details.get("slice_type", "unknown")
             route_name = details.get("route_name", "unknown")
-            
+
             slice_types[slice_type] = slice_types.get(slice_type, 0) + 1
             slice_routes[route_name] = slice_routes.get(route_name, 0) + 1
 
@@ -262,17 +263,17 @@ def _handle_stats(repo_root: Path) -> int:
             WHERE mode = 'routing_query_classify'
         """)
         query_classify_events = query_classify_cursor.fetchall()
-        
+
         query_routes: Dict[str, int] = {}
         for event in query_classify_events:
             cmd_str = event[0]
             # Example: [routing_query_classify] route_name=docs, confidence=0.8
             parts = cmd_str.split("] ")[1].split(", ")
             details = {p.split("=")[0]: p.split("=")[1] for p in parts}
-            
+
             route_name = details.get("route_name", "unknown")
             query_routes[route_name] = query_routes.get(route_name, 0) + 1
-        
+
         fallback_cursor = conn.execute("""
             SELECT 
                 cmd
@@ -280,14 +281,14 @@ def _handle_stats(repo_root: Path) -> int:
             WHERE mode = 'routing_fallback'
         """)
         fallback_events = fallback_cursor.fetchall()
-        
+
         fallbacks: Dict[str, int] = {}
         for event in fallback_events:
             cmd_str = event[0]
             # Example: [routing_fallback] type=missing_slice_type_mapping, slice_type=weird_type, fallback_to=docs
             parts = cmd_str.split("] ")[1].split(", ")
             details = {p.split("=")[0]: p.split("=")[1] for p in parts}
-            
+
             fallback_type = details.get("type", "unknown")
             fallbacks[fallback_type] = fallbacks.get(fallback_type, 0) + 1
 
@@ -298,14 +299,14 @@ def _handle_stats(repo_root: Path) -> int:
             WHERE mode = 'routing_error'
         """)
         error_events = error_cursor.fetchall()
-        
+
         routing_errors: Dict[str, int] = {}
         for event in error_events:
             cmd_str = event[0]
             # Example: [routing_error] type=critical_missing_docs_route, missing_route=docs, operation=ingest
             parts = cmd_str.split("] ")[1].split(", ")
             details = {p.split("=")[0]: p.split("=")[1] for p in parts}
-            
+
             error_type = details.get("type", "unknown")
             routing_errors[error_type] = routing_errors.get(error_type, 0) + 1
 
@@ -324,10 +325,10 @@ def _handle_stats(repo_root: Path) -> int:
                 print(f"│     {etype:<15} {count:<28}│")
 
         print("└───────────────────────────────────────────────────────┘")
-        
+
     finally:
         conn.close()
-    
+
     return 0
 
 
@@ -340,7 +341,7 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = 
     pattern = args[0]
     path = args[1] if len(args) > 1 else None
     agent_id = os.getenv("TE_AGENT_ID")
-    
+
     # Build full command string for telemetry
     full_cmd = "grep " + " ".join(args)
 
@@ -356,6 +357,7 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = 
     # Output
     if json_mode:
         import json
+
         output = json.dumps(result.to_dict(), indent=2)
         print(output)
     else:
@@ -382,17 +384,19 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = 
     return 0
 
 
-def _handle_passthrough(command: str, args: list[str], repo_root: Path, json_mode: bool = False) -> int:
+def _handle_passthrough(
+    command: str, args: list[str], repo_root: Path, json_mode: bool = False
+) -> int:
     """
     Pass-through handler for unknown commands.
-    
+
     Executes command via bash subprocess and logs telemetry.
     This is the whole point of TE - transparent wrapper that logs everything.
     """
     # Build full command
     cmd_parts = [command] + args
     full_cmd = " ".join(cmd_parts)
-    
+
     with TeTimer() as timer:
         try:
             result = subprocess.run(
@@ -403,15 +407,16 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path, json_mod
                 timeout=30,  # TODO: make configurable
                 check=False,
             )
-            
+
             # Output
             if json_mode:
                 import json
+
                 response = {
                     "stdout": result.stdout,
                     "stderr": result.stderr,
                     "exit_code": result.returncode,
-                    "error": None
+                    "error": None,
                 }
                 output_content = json.dumps(response, indent=2)
                 print(output_content)
@@ -422,39 +427,41 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path, json_mod
                     print(result.stdout, end="")
                 if result.stderr:
                     print(result.stderr, end="", file=sys.stderr)
-                
+
                 output_size = len(result.stdout) + len(result.stderr)
                 output_content = result.stdout + result.stderr  # Capture for telemetry
-            
+
             exit_code = result.returncode
             error = None
-            
+
         except subprocess.TimeoutExpired:
             msg = f"command timed out after 30s: {full_cmd}"
             if json_mode:
                 import json
+
                 print(json.dumps({"error": msg, "exit_code": 124}, indent=2))
             else:
                 print(f"[TE] {msg}", file=sys.stderr)
-            
+
             output_size = 0
             output_content = ""
             exit_code = 124  # timeout exit code
             error = "timeout"
-            
+
         except Exception as e:
             msg = f"execution failed: {e}"
             if json_mode:
                 import json
+
                 print(json.dumps({"error": msg, "exit_code": 1}, indent=2))
             else:
                 print(f"[TE] {msg}", file=sys.stderr)
-                
+
             output_size = 0
             output_content = ""
             exit_code = 1
             error = str(e)
-    
+
     # Log telemetry for pass-through command
     log_event(
         cmd=full_cmd,
@@ -468,7 +475,7 @@ def _handle_passthrough(command: str, args: list[str], repo_root: Path, json_mod
         output_text=output_content,
         repo_root=repo_root,
     )
-    
+
     return exit_code
 
 
@@ -479,13 +486,14 @@ def main() -> int:
     # Version
     if args.version:
         from . import __version__
+
         print(f"te {__version__}")
         return 0
 
     # List handles
     if args.list_handles:
         return _handle_list_handles()
-    
+
     # Show stats
     if args.stats:
         repo_root = _find_repo_root()
@@ -502,7 +510,7 @@ def main() -> int:
         print("[TE] other commands pass through to bash", file=sys.stderr)
         print("[TE] try: te --help", file=sys.stderr)
         return 1
-    
+
     command = remaining[0]
     cmd_args = remaining[1:] if len(remaining) > 1 else []
     json_mode = args.json
@@ -517,7 +525,7 @@ def main() -> int:
 
     # Check if this is a known enriched command
     is_enriched = command in ENRICHED_COMMANDS
-    
+
     # Check tool-specific enabled flags
     tool_enabled = True
     if command == "grep":
@@ -526,7 +534,7 @@ def main() -> int:
         tool_enabled = cfg.cat_enabled
     elif command == "find":
         tool_enabled = cfg.find_enabled
-    
+
     # Dispatch to enriched handler
     if command == "run":
         if not cmd_args:
@@ -551,7 +559,9 @@ def main() -> int:
                 print("[TE] repo read requires --root and --path", file=sys.stderr)
                 return 1
         # Fallback for other repo commands
-        return _handle_passthrough("python3", ["-m", "tools.rag_repo.cli_entry"] + cmd_args, repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            "python3", ["-m", "tools.rag_repo.cli_entry"] + cmd_args, repo_root, json_mode=json_mode
+        )
 
     if command == "rag":
         # Map 'te rag query ...' to 'python3 -m tools.rag.cli search ...'
@@ -562,27 +572,29 @@ def main() -> int:
                 q_idx = cmd_args.index("--q") + 1
                 query = cmd_args[q_idx]
                 new_args.append(query)
-                
+
                 # Map --k to --limit
                 if "--k" in cmd_args:
                     k_idx = cmd_args.index("--k") + 1
                     new_args.extend(["--limit", cmd_args[k_idx]])
-                
+
                 # Pass --json if in json mode
                 if json_mode:
                     new_args.append("--json")
-                    
+
                 return _handle_passthrough("python3", new_args, repo_root, json_mode=json_mode)
             except (ValueError, IndexError):
                 print("[TE] rag query requires --q", file=sys.stderr)
                 return 1
         # Fallback
-        return _handle_passthrough("python3", ["-m", "tools.rag.cli"] + cmd_args, repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            "python3", ["-m", "tools.rag.cli"] + cmd_args, repo_root, json_mode=json_mode
+        )
 
     # If -i/--raw is set, OR command is unknown, OR tool is disabled → passthrough
     if args.raw or not is_enriched or not tool_enabled:
         return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
-    
+
     if command == "grep":
         return _handle_grep(cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode)
 

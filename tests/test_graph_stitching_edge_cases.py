@@ -33,7 +33,7 @@ class TestOneHopNeighborExpansion:
                 {"type": "CALLS", "source": "func_a", "target": "func_c"},
                 {"type": "CALLS", "source": "func_c", "target": "func_d"},
                 {"type": "CALLS", "source": "func_d", "target": "func_e"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -115,10 +115,7 @@ class TestOneHopNeighborExpansion:
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
 
-        graph = {
-            "nodes": [],
-            "edges": []
-        }
+        graph = {"nodes": [], "edges": []}
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
         graph_path.parent.mkdir(parents=True)
@@ -138,7 +135,7 @@ class TestOneHopNeighborExpansion:
                 {"id": "func_a", "path": "file1.py"},
                 {"id": "func_b", "path": "file2.py"},
             ],
-            "edges": []  # No connections
+            "edges": [],  # No connections
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -164,7 +161,7 @@ class TestOneHopNeighborExpansion:
                 {"type": "CALLS", "source": "func_a", "target": "func_b"},
                 {"type": "CALLS", "source": "func_b", "target": "func_c"},
                 {"type": "CALLS", "source": "func_c", "target": "func_a"},  # Cycle
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -187,7 +184,7 @@ class TestOneHopNeighborExpansion:
             ],
             "edges": [
                 {"type": "CALLS", "source": "func_a", "target": "func_a"},  # Self-loop
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -213,7 +210,7 @@ class TestOneHopNeighborExpansion:
                 {"type": "CALLS", "source": "func_a", "target": "func_b"},
                 {"type": "READS", "source": "func_b", "target": "var_x"},
                 {"type": "WRITES", "source": "func_b", "target": "var_x"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -251,7 +248,7 @@ class TestOneHopNeighborExpansion:
             ],
             "edges": [
                 {"type": "CALLS", "source": "func_a", "target": "nonexistent"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -270,8 +267,7 @@ class TestOneHopNeighborExpansion:
         # Create large graph
         nodes = [{"id": f"func_{i}", "path": f"file_{i}.py"} for i in range(100)]
         edges = [
-            {"type": "CALLS", "source": f"func_{i}", "target": f"func_{i+1}"}
-            for i in range(99)
+            {"type": "CALLS", "source": f"func_{i}", "target": f"func_{i + 1}"} for i in range(99)
         ]
 
         graph = {"nodes": nodes, "edges": edges}
@@ -298,7 +294,7 @@ class TestOneHopNeighborExpansion:
             "edges": [
                 {"type": "CALLS", "source": "функция", "target": "関数"},
                 {"type": "CALLS", "source": "関数", "target": "函数"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -332,7 +328,7 @@ class TestGraphStitchFailures:
                 {"type": "CALLS", "source": "func_a", "target": "func_c"},
                 {"type": "CALLS", "source": "func_c", "target": "func_d"},
                 {"type": "CALLS", "source": "func_d", "target": "func_e"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -368,7 +364,7 @@ class TestGraphStitchFailures:
             graph_path.unlink()
 
         # Write and then close the file before changing permissions
-        with graph_path.open('w') as f:
+        with graph_path.open("w") as f:
             f.write('{"nodes": [], "edges": []}')
 
         # Make file unreadable
@@ -399,7 +395,7 @@ class TestGraphStitchFailures:
         edges = [
             {"type": "CALLS", "source": f"func_{i}", "target": f"func_{j}"}
             for i in range(1000)
-            for j in range(i-5, i+5)
+            for j in range(i - 5, i + 5)
             if 0 <= j < 1000 and j != i
         ]
 
@@ -430,7 +426,7 @@ class TestGraphStitchFailures:
                 {"id": "func_c"},  # Missing path
                 {},  # Empty node
             ],
-            "edges": []
+            "edges": [],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -456,7 +452,7 @@ class TestGraphStitchFailures:
                 {"source": "func_a", "target": "func_b"},  # Missing type
                 {"type": "CALLS", "target": "func_b"},  # Missing source
                 {"type": "CALLS", "source": "func_a"},  # Missing target
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -477,7 +473,7 @@ class TestGraphStitchFailures:
                 {"id": "func_a", "path": "file1.py"},
                 {"id": "func_a", "path": "file2.py"},  # Duplicate ID
             ],
-            "edges": []
+            "edges": [],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -501,7 +497,7 @@ class TestGraphStitchFailures:
             "edges": [
                 {"type": "CALLS", "source": "func_a", "target": "func_b"},
                 {"type": "CALLS", "source": "func_a", "target": "func_b"},  # Duplicate
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -529,7 +525,7 @@ class TestGraphStitchFailures:
                 {"type": "CALLS", "source": "func_a", "target": "func_b"},
                 # Component 2: c -> d (disconnected from component 1)
                 {"type": "CALLS", "source": "func_c", "target": "func_d"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -588,7 +584,7 @@ class TestMixedRAGStitchedResults:
                 {"type": "CALLS", "source": "func_a", "target": "func_c"},
                 {"type": "CALLS", "source": "func_c", "target": "func_d"},
                 {"type": "CALLS", "source": "func_d", "target": "func_e"},
-            ]
+            ],
         }
 
         graph_path = repo_root / ".llmc" / "rag_graph.json"
@@ -658,4 +654,3 @@ class TestMixedRAGStitchedResults:
         repo_root = self.create_test_graph(tmp_path)
 
         rag_items = [Mock(file=f"file{i}.py") for i in range(15)]
-

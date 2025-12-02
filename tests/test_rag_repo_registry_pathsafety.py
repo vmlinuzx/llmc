@@ -15,7 +15,7 @@ def _load_entries(mod, yaml_path: Path):
         with yaml_path.open("r", encoding="utf-8") as handle:
             doc = yaml.safe_load(handle)
         entries = []
-        for item in (doc.get("repos", []) or []):
+        for item in doc.get("repos", []) or []:
             entry = mod._make_registry_entry_from_yaml(item)
             if entry:
                 entries.append(entry)
@@ -62,4 +62,3 @@ def test_registry_workspace_validation(tmp_path: Path) -> None:
     names = _names(entries)
     assert "okrepo" in names
     assert "badrepo" not in names
-

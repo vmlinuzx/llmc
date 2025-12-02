@@ -10,8 +10,7 @@ def _make_repo_with_single_function(tmp_path: Path) -> Path:
     repo_root.mkdir()
     source = repo_root / "foo.py"
     source.write_text(
-        "def bar():\n"
-        "    return 42\n",
+        "def bar():\n    return 42\n",
         encoding="utf-8",
     )
     return repo_root
@@ -132,16 +131,11 @@ def test_graph_json_enriched_entity_count_matches_db(tmp_path: Path) -> None:
     db = Database(db_path)
     try:
         conn = db.conn
-        (enrich_count,) = conn.execute(
-            "SELECT COUNT(*) FROM enrichments"
-        ).fetchone()
+        (enrich_count,) = conn.execute("SELECT COUNT(*) FROM enrichments").fetchone()
     finally:
         db.close()
 
-    enriched_entities = [
-        e for e in graph.entities
-        if "summary" in (e.metadata or {})
-    ]
+    enriched_entities = [e for e in graph.entities if "summary" in (e.metadata or {})]
 
     assert enriched_entities, "Expected at least one enriched entity in graph"
     assert len(enriched_entities) <= enrich_count
@@ -154,10 +148,7 @@ def test_graph_json_enriched_entities_have_consistent_locations(tmp_path: Path) 
 
     graph = build_graph_for_repo(repo_root, require_enrichment=True, db_path=db_path)
 
-    enriched_entities = [
-        e for e in graph.entities
-        if "summary" in (e.metadata or {})
-    ]
+    enriched_entities = [e for e in graph.entities if "summary" in (e.metadata or {})]
     assert enriched_entities, "Expected at least one enriched entity in graph"
 
     for entity in enriched_entities:
@@ -171,4 +162,3 @@ def test_graph_json_enriched_entities_have_consistent_locations(tmp_path: Path) 
         assert isinstance(entity.end_line, int), "Expected int end_line"
         assert entity.start_line >= 1
         assert entity.start_line <= entity.end_line
-

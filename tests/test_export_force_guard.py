@@ -18,4 +18,3 @@ def test_export_force_guard(tmp_path: Path) -> None:
     # Should succeed with force
     result = export_bundle(repo, None, "exports", force=True)
     assert "export_dir" in result
-

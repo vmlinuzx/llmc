@@ -304,9 +304,7 @@ class ASTChunker:
                         depth=depth + 1,
                     )
                 )
-            records.extend(
-                self._emit_node(child, language, parent_span=span_id, depth=depth + 1)
-            )
+            records.extend(self._emit_node(child, language, parent_span=span_id, depth=depth + 1))
             cursor = max(cursor, child.end_byte)
 
         if cursor < node.end_byte:
@@ -523,9 +521,7 @@ class ASTChunker:
         self._line_offsets.append(len(text) + 1)
 
     def _slice(self, start_byte: int, end_byte: int) -> str:
-        return self._text_bytes[start_byte:end_byte].decode(
-            "utf-8", errors="ignore"
-        )
+        return self._text_bytes[start_byte:end_byte].decode("utf-8", errors="ignore")
 
     def _char_length(self, start_byte: int, end_byte: int) -> int:
         return self._byte_to_char(end_byte) - self._byte_to_char(start_byte)

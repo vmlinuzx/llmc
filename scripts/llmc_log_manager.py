@@ -55,32 +55,32 @@ class LLMCLogManager:
         self.max_size_bytes = int(max_size_mb) * 1024 * 1024
         self.keep_jsonl_lines = int(keep_jsonl_lines)
         self.enabled = bool(enabled)
-    
+
     def find_log_files(self, log_dir: Path) -> list[Path]:
         """Find all log files in directory."""
         if not log_dir.exists():
             return []
-        
+
         patterns = ["*.log", "*.log.*", "*.jsonl"]
         files: list[Path] = []
         for pattern in patterns:
             files.extend(log_dir.glob(pattern))
         return sorted(files)
-    
+
     def get_file_size_info(self, file_path: Path) -> dict[str, Any]:
         """Get file size and modification info."""
         if not file_path.exists():
             return {"exists": False}
-        
+
         stat = file_path.stat()
         return {
             "exists": True,
             "size_bytes": stat.st_size,
             "size_mb": round(stat.st_size / (1024 * 1024), 2),
             "modified": time.ctime(stat.st_mtime),
-            "age_hours": round((time.time() - stat.st_mtime) / 3600, 1)
+            "age_hours": round((time.time() - stat.st_mtime) / 3600, 1),
         }
-    
+
     def truncate_log(self, file_path: Path, keep_lines: int | None = None) -> dict[str, Any]:
         """Truncate log file to last N lines (JSONL) or by size (others)."""
         if not file_path.exists():
@@ -89,7 +89,7 @@ class LLMCLogManager:
         original_size = file_path.stat().st_size
 
         # For JSONL files, keep structure intact
-        if file_path.suffix == '.jsonl':
+        if file_path.suffix == ".jsonl":
             # Determine number of lines to keep
             n_keep = self.keep_jsonl_lines if keep_lines is None else int(keep_lines)
             lines = file_path.read_text().splitlines()
@@ -105,79 +105,80 @@ class LLMCLogManager:
                 "truncated": True,
                 "bytes_saved": bytes_saved,
                 "lines_kept": n_keep,
-                "lines_removed": len(lines) - n_keep
+                "lines_removed": len(lines) - n_keep,
             }
-        
+
         # For regular logs, just truncate to max size
         if original_size > self.max_size_bytes:
             # Simple truncate - keep last portion of file
             content = file_path.read_text()
             if len(content) > self.max_size_bytes:
                 # Keep last max_size_bytes characters
-                truncated = content[-self.max_size_bytes:]
+                truncated = content[-self.max_size_bytes :]
                 file_path.write_text(truncated)
                 return {
                     "truncated": True,
                     "bytes_saved": original_size - len(truncated.encode()),
-                    "method": "size_truncate"
+                    "method": "size_truncate",
                 }
-        
+
         return {"truncated": False, "reason": "File within size limit"}
-    
+
     def check_logs(self, log_dir: Path) -> dict[str, Any]:
         """Check all logs and return summary."""
         log_files = self.find_log_files(log_dir)
         results = []
         total_size = 0
         oversized_files = []
-        
+
         for log_file in log_files:
             info = self.get_file_size_info(log_file)
-            results.append({
-                "file": str(log_file.relative_to(log_dir)),
-                **info
-            })
-            
+            results.append({"file": str(log_file.relative_to(log_dir)), **info})
+
             if info.get("exists", False):
                 total_size += info["size_bytes"]
                 if info["size_bytes"] > self.max_size_bytes:
                     oversized_files.append(log_file)
-        
+
         return {
             "log_directory": str(log_dir),
             "total_files": len(log_files),
             "total_size_mb": round(total_size / (1024 * 1024), 2),
             "oversized_count": len(oversized_files),
-            "files": results
+            "files": results,
         }
-    
+
     def rotate_logs(self, log_dir: Path) -> dict[str, Any]:
         """Rotate logs that exceed size limit.
 
         Respects the manager's `enabled` flag; returns a no-op summary if disabled.
         """
         if not self.enabled:
-            return {"rotated_files": 0, "rotations": [], "max_size_mb": self.max_size_bytes // (1024 * 1024)}
+            return {
+                "rotated_files": 0,
+                "rotations": [],
+                "max_size_mb": self.max_size_bytes // (1024 * 1024),
+            }
         oversized = []
         rotation_summary = []
-        
+
         for log_file in self.find_log_files(log_dir):
             info = self.get_file_size_info(log_file)
-            
+
             if info.get("exists", False) and info["size_bytes"] > self.max_size_bytes:
                 truncate_result = self.truncate_log(log_file)
                 rotate_info = {
                     "file": str(log_file.relative_to(log_dir)),
                     "original_size_mb": info["size_mb"],
-                    "action": "truncated"
+                    "action": "truncated",
                 }
-                
+
                 if truncate_result.get("truncated"):
                     rotate_info.update(truncate_result)
                     oversized.append(rotate_info)
-                
+
                 rotation_summary.append(rotate_info)
-        
+
         return {
             "rotated_files": len(oversized),
             "rotations": rotation_summary,
@@ -189,9 +190,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="LLMC Log Manager - Simple log rotation",
         epilog="Examples:\n"
-               "  llmc_log_manager.py --check logs/\n"
-               "  llmc_log_manager.py --rotate logs/\n"
-               "  llmc_log_manager.py --rotate --max-size 5 logs/"
+        "  llmc_log_manager.py --check logs/\n"
+        "  llmc_log_manager.py --rotate logs/\n"
+        "  llmc_log_manager.py --rotate --max-size 5 logs/",
     )
     parser.add_argument("log_dir", nargs="?", help="Log directory path (overrides config)")
     parser.add_argument("--check", action="store_true", help="Check log sizes without rotating")
@@ -246,24 +247,26 @@ def main():
             print(f"   Total files: {result['total_files']}")
             print(f"   Total size: {result['total_size_mb']} MB")
             print(f"   Oversized: {result['oversized_count']}")
-            
-            if result['oversized_count'] > 0:
+
+            if result["oversized_count"] > 0:
                 print("\n⚠️  Oversized files:")
-                for file_info in result['files']:
-                    if file_info.get('size_bytes', 0) > manager.max_size_bytes:
+                for file_info in result["files"]:
+                    if file_info.get("size_bytes", 0) > manager.max_size_bytes:
                         print(f"   {file_info['file']}: {file_info['size_mb']} MB")
             else:
                 print("✅ All logs within size limit")
     elif args.rotate:
         result = manager.rotate_logs(log_dir)
         if not args.quiet:
-            if result['rotated_files'] > 0:
+            if result["rotated_files"] > 0:
                 print("🔄 Log Rotation Complete")
                 print(f"   Rotated: {result['rotated_files']} files")
-                for rotation in result['rotations']:
-                    if rotation.get('truncated'):
-                        if 'bytes_saved' in rotation:
-                            print(f"   {rotation['file']}: saved {round(rotation['bytes_saved']/1024/1024, 1)} MB")
+                for rotation in result["rotations"]:
+                    if rotation.get("truncated"):
+                        if "bytes_saved" in rotation:
+                            print(
+                                f"   {rotation['file']}: saved {round(rotation['bytes_saved'] / 1024 / 1024, 1)} MB"
+                            )
             else:
                 print("✅ No logs needed rotation")
     else:

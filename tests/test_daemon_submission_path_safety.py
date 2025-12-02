@@ -37,4 +37,3 @@ def test_validate_job_paths_rejects_repo_outside(tmp_path: Path) -> None:
     cfg.repos_root.mkdir()
     with pytest.raises(PathTraversalError):
         dapi.validate_job_paths(cfg, "../../etc", None)
-

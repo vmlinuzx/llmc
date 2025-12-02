@@ -24,11 +24,12 @@ def index(
         stats = run_index_repo(since=since, export_json=not no_export)
         typer.echo(
             f"Indexed {stats['files']} files, {stats['spans']} spans in {stats.get('duration_sec', 0):.2f}s "
-            f"(skipped={stats.get('skipped',0)}, unchanged={stats.get('unchanged',0)})"
+            f"(skipped={stats.get('skipped', 0)}, unchanged={stats.get('unchanged', 0)})"
         )
     except Exception as e:
         typer.echo(f"Error indexing repo: {e}", err=True)
         raise typer.Exit(code=1)
+
 
 def search(
     query: str,
@@ -46,7 +47,7 @@ def search(
                     "file": str(r.file_path),
                     "line": r.start_line,
                     "text": r.text,
-                    "symbol": r.symbol
+                    "symbol": r.symbol,
                 }
                 for r in results
             ]
@@ -59,6 +60,7 @@ def search(
         typer.echo(f"Error searching: {e}", err=True)
         raise typer.Exit(code=1)
 
+
 def inspect(
     symbol: str | None = typer.Option(None, "--symbol", "-s", help="Symbol to inspect"),
     path: str | None = typer.Option(None, "--path", "-p", help="File path"),
@@ -70,19 +72,16 @@ def inspect(
     if not symbol and not path:
         typer.echo("Must provide --symbol or --path")
         raise typer.Exit(code=1)
-    
+
     try:
         result = run_inspect_entity(
-            repo_root=repo_root,
-            symbol=symbol,
-            path=path,
-            line=line,
-            include_full_source=full
+            repo_root=repo_root, symbol=symbol, path=path, line=line, include_full_source=full
         )
-        typer.echo(result) 
+        typer.echo(result)
     except Exception as e:
         typer.echo(f"Error inspecting: {e}", err=True)
         raise typer.Exit(code=1)
+
 
 def plan(
     query: str,
@@ -93,15 +92,13 @@ def plan(
     repo_root = find_repo_root()
     try:
         result = run_generate_plan(
-            query=query,
-            limit=limit,
-            min_confidence=min_confidence,
-            repo_root=repo_root
+            query=query, limit=limit, min_confidence=min_confidence, repo_root=repo_root
         )
         typer.echo(result)
     except Exception as e:
         typer.echo(f"Error planning: {e}", err=True)
         raise typer.Exit(code=1)
+
 
 def stats(
     json_output: bool = typer.Option(False, "--json", help="Emit stats as JSON."),
@@ -112,16 +109,16 @@ def stats(
     if not db_file.exists():
         typer.echo("No index database found. Run `llmc index` first.")
         return
-    
+
     db = Database(db_file)
     try:
         info = db.stats()
     finally:
         db.close()
-        
+
     est_tokens = get_est_tokens_per_span(repo_root)
     estimated_remote_tokens = info["spans"] * est_tokens
-    
+
     data = {
         "repo": repo_root.name,
         "files": info["files"],
@@ -130,7 +127,7 @@ def stats(
         "enrichments": info["enrichments"],
         "estimated_remote_tokens": estimated_remote_tokens,
     }
-    
+
     if json_output:
         typer.echo(json.dumps(data, indent=2))
     else:
@@ -140,6 +137,7 @@ def stats(
         typer.echo(f"Embeddings: {data['embeddings']}")
         typer.echo(f"Enrichments: {data['enrichments']}")
         typer.echo(f"Est. Remote Tokens: {data['estimated_remote_tokens']:,}")
+
 
 def doctor(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
@@ -151,6 +149,7 @@ def doctor(
 
 # Phase 5: Advanced RAG Commands
 
+
 def sync(
     paths: list[str] | None = typer.Option(None, "--path", help="Specific file paths to sync"),
     since: str | None = typer.Option(None, help="Sync files changed since commit"),
@@ -159,9 +158,9 @@ def sync(
     """Incrementally update spans for selected files."""
     from tools.rag.indexer import sync_paths
     from tools.rag.utils import git_changed_paths
-    
+
     repo_root = find_repo_root()
-    
+
     # Determine which files to sync
     path_list = []
     if since:
@@ -170,20 +169,21 @@ def sync(
         path_list = [Path(p) for p in paths]
     elif stdin:
         import sys
+
         for line in sys.stdin:
             line = line.strip()
             if line:
                 path_list.append(Path(line))
-    
+
     if not path_list:
         typer.echo("No paths to sync. Use --path, --since, or --stdin")
         raise typer.Exit(code=1)
-    
+
     try:
         stats = sync_paths(path_list)
         typer.echo(
             f"Synced {stats['files']} files, {stats['spans']} spans, "
-            f"deleted={stats.get('deleted',0)}, unchanged={stats.get('unchanged',0)} "
+            f"deleted={stats.get('deleted', 0)}, unchanged={stats.get('unchanged', 0)} "
             f"in {stats['duration_sec']:.2f}s"
         )
     except Exception as e:
@@ -199,13 +199,13 @@ def enrich(
 ):
     """Preview or execute enrichment tasks (summary/tags)."""
     from tools.rag.workers import default_enrichment_callable, enrichment_plan, execute_enrichment
-    
+
     repo_root = find_repo_root()
     db_file = index_path_for_read(repo_root)
     if not db_file.exists():
         typer.echo("No index database found. Run `llmc index` first.")
         raise typer.Exit(code=1)
-    
+
     db = Database(db_file)
     try:
         if dry_run:
@@ -216,19 +216,19 @@ def enrich(
             typer.echo(json.dumps(plan, indent=2, ensure_ascii=False))
             typer.echo("\n(Dry run only. Remove --dry-run to persist enrichment results.)")
             return
-        
+
         llm = default_enrichment_callable(model)
         successes, errors = execute_enrichment(
             db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown
         )
     finally:
         db.close()
-    
+
     if successes:
         typer.echo(f"✅ Stored enrichment metadata for {successes} spans using {model}")
     else:
         typer.echo("No spans enriched.")
-    
+
     if errors:
         for err in errors:
             typer.echo(f"❌ ERROR: {err}", err=True)
@@ -243,18 +243,18 @@ def embed(
 ):
     """Preview or execute embedding jobs for spans."""
     from tools.rag.workers import embedding_plan, execute_embeddings
-    
+
     repo_root = find_repo_root()
     db_file = index_path_for_read(repo_root)
     if not db_file.exists():
         typer.echo("No index database found. Run `llmc index` first.")
         raise typer.Exit(code=1)
-    
+
     db = Database(db_file)
     try:
         model_arg = None if model == "auto" else model
         dim_arg = None if dim <= 0 else dim
-        
+
         if dry_run:
             plan = embedding_plan(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
             if not plan:
@@ -263,17 +263,19 @@ def embed(
             typer.echo(json.dumps(plan, indent=2, ensure_ascii=False))
             typer.echo("\n(Dry run only. Remove --dry-run to persist embeddings.)")
             return
-        
+
         results, used_model, used_dim = execute_embeddings(
             db, repo_root, limit=limit, model=model_arg, dim=dim_arg
         )
     finally:
         db.close()
-    
+
     if not results:
         typer.echo("No spans pending embedding.")
     else:
-        typer.echo(f"✅ Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim})")
+        typer.echo(
+            f"✅ Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim})"
+        )
 
 
 def graph(
@@ -282,15 +284,15 @@ def graph(
 ):
     """Build a schema graph for the current repository."""
     from tools.rag.schema import build_graph_for_repo as schema_build_graph_for_repo
-    
+
     repo_root = find_repo_root()
-    
+
     # Default output location
     if output is None:
         llmc_dir = repo_root / ".llmc"
         llmc_dir.mkdir(parents=True, exist_ok=True)
         output = llmc_dir / "rag_graph.json"
-    
+
     try:
         graph_obj = schema_build_graph_for_repo(
             repo_root,
@@ -302,7 +304,7 @@ def graph(
     except FileNotFoundError as err:
         typer.echo(str(err), err=True)
         raise typer.Exit(code=1)
-    
+
     graph_obj.save(output)
     typer.echo(f"✅ Wrote graph JSON to {output}")
 
@@ -312,7 +314,7 @@ def export(
 ):
     """Export all RAG data to tar.gz archive."""
     from tools.rag.export_data import run_export
-    
+
     repo_root = find_repo_root()
     output_path = Path(output) if output else None
     run_export(repo_root=repo_root, output_path=output_path)
@@ -325,28 +327,34 @@ def benchmark(
 ):
     """Run a lightweight embedding quality benchmark."""
     from tools.rag.benchmark import run_embedding_benchmark
-    
+
     metrics = run_embedding_benchmark()
-    success = metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
-    
+    success = (
+        metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+    )
+
     report = {
         **metrics,
         "top1_threshold": top1_threshold,
         "margin_threshold": margin_threshold,
         "passed": success,
     }
-    
+
     if json_output:
         typer.echo(json.dumps(report, indent=2, ensure_ascii=False))
     else:
         typer.echo("Embedding benchmark results:")
         typer.echo(f"  cases           : {int(report['cases'])}")
-        typer.echo(f"  top1_accuracy   : {report['top1_accuracy']:.3f} (threshold {top1_threshold:.2f})")
-        typer.echo(f"  avg_margin      : {report['avg_margin']:.3f} (threshold {margin_threshold:.2f})")
+        typer.echo(
+            f"  top1_accuracy   : {report['top1_accuracy']:.3f} (threshold {top1_threshold:.2f})"
+        )
+        typer.echo(
+            f"  avg_margin      : {report['avg_margin']:.3f} (threshold {margin_threshold:.2f})"
+        )
         typer.echo(f"  avg_positive    : {report['avg_positive_score']:.3f}")
         typer.echo(f"  avg_negative    : {report['avg_negative_score']:.3f}")
         typer.echo(f"  status          : {'✅ PASS' if success else '❌ FAIL'}")
-    
+
     if not success:
         raise typer.Exit(code=1)
 
@@ -359,12 +367,12 @@ def nav_search(
 ):
     """Semantic/structural search using graph when fresh, else local fallback."""
     from tools.rag import tool_rag_search
-    
+
     repo_root = find_repo_root()
-    
+
     try:
         result = tool_rag_search(query, repo_root=repo_root, limit=limit)
-        
+
         if json_output:
             # Format as JSON
             payload = {
@@ -380,11 +388,11 @@ def nav_search(
                                 "path": it.snippet.location.path,
                                 "start_line": it.snippet.location.start_line,
                                 "end_line": it.snippet.location.end_line,
-                            }
-                        }
+                            },
+                        },
                     }
                     for it in result.items
-                ]
+                ],
             }
             typer.echo(json.dumps(payload, indent=2))
         else:
@@ -405,12 +413,12 @@ def nav_where_used(
 ):
     """Find where a symbol is used (callers, importers)."""
     from tools.rag import tool_where_used
-    
+
     repo_root = find_repo_root()
-    
+
     try:
         result = tool_where_used(symbol, repo_root=repo_root, limit=limit)
-        
+
         if json_output:
             typer.echo(json.dumps(result, indent=2, default=str))
         else:
@@ -429,12 +437,12 @@ def nav_lineage(
 ):
     """Show symbol lineage (parents, children, dependencies)."""
     from tools.rag import tool_lineage
-    
+
     repo_root = find_repo_root()
-    
+
     try:
         result = tool_lineage(symbol, repo_root=repo_root, depth=depth)
-        
+
         if json_output:
             typer.echo(json.dumps(result, indent=2, default=str))
         else:

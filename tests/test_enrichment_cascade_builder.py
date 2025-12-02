@@ -73,14 +73,16 @@ def test_build_cascade_for_ollama_backend(monkeypatch: pytest.MonkeyPatch) -> No
         {"label": "backup", "url": "http://backup:11434"},
     ]
 
-    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = qeb._build_cascade_for_attempt(
-        backend="auto",
-        tier_for_attempt="7b",
-        repo_root=Path("."),
-        args=_make_args(),
-        ollama_host_chain=ollama_hosts,
-        current_host_idx=0,
-        host_chain_count=len(ollama_hosts),
+    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = (
+        qeb._build_cascade_for_attempt(
+            backend="auto",
+            tier_for_attempt="7b",
+            repo_root=Path("."),
+            args=_make_args(),
+            ollama_host_chain=ollama_hosts,
+            current_host_idx=0,
+            host_chain_count=len(ollama_hosts),
+        )
     )
 
     assert isinstance(cascade, BackendCascade)
@@ -109,14 +111,16 @@ def test_build_cascade_for_gateway_backend(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(qeb, "_OllamaBackendAdapter", _FakeOllamaAdapter)
     monkeypatch.setattr(qeb, "_GatewayBackendAdapter", _FakeGatewayAdapter)
 
-    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = qeb._build_cascade_for_attempt(
-        backend="gateway",
-        tier_for_attempt="nano",
-        repo_root=Path("."),
-        args=_make_args(),
-        ollama_host_chain=[],
-        current_host_idx=0,
-        host_chain_count=1,
+    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = (
+        qeb._build_cascade_for_attempt(
+            backend="gateway",
+            tier_for_attempt="nano",
+            repo_root=Path("."),
+            args=_make_args(),
+            ollama_host_chain=[],
+            current_host_idx=0,
+            host_chain_count=1,
+        )
     )
 
     assert isinstance(cascade, BackendCascade)
@@ -131,7 +135,9 @@ def test_build_cascade_for_gateway_backend(monkeypatch: pytest.MonkeyPatch) -> N
     assert selected_backend in {"gateway", "nano"}
 
 
-def test_build_cascade_for_unknown_backend_falls_back_to_ollama(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_build_cascade_for_unknown_backend_falls_back_to_ollama(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         qeb,
         "PRESET_CACHE",
@@ -143,14 +149,16 @@ def test_build_cascade_for_unknown_backend_falls_back_to_ollama(monkeypatch: pyt
     monkeypatch.setattr(qeb, "_OllamaBackendAdapter", _FakeOllamaAdapter)
     monkeypatch.setattr(qeb, "_GatewayBackendAdapter", _FakeGatewayAdapter)
 
-    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = qeb._build_cascade_for_attempt(
-        backend="weird",
-        tier_for_attempt="7b",
-        repo_root=Path("."),
-        args=_make_args(),
-        ollama_host_chain=[],
-        current_host_idx=0,
-        host_chain_count=1,
+    cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name = (
+        qeb._build_cascade_for_attempt(
+            backend="weird",
+            tier_for_attempt="7b",
+            repo_root=Path("."),
+            args=_make_args(),
+            ollama_host_chain=[],
+            current_host_idx=0,
+            host_chain_count=1,
+        )
     )
 
     assert isinstance(cascade, BackendCascade)

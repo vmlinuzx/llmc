@@ -20,7 +20,8 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--model", default=None)
-    ap.add_argument("--shadow-profile",
+    ap.add_argument(
+        "--shadow-profile",
         default=None,
         help="Run a parallel dry-run under another profile and log telemetry",
     )

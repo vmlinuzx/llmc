@@ -17,22 +17,29 @@ try:
     from llmc.te.telemetry import log_routing_event
 except ImportError:
     # No-op fallback when llmc module is not available
-    def log_routing_event(mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs) -> None:
+    def log_routing_event(
+        mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs
+    ) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass
+
 
 # Set up logging for this module
 log = logging.getLogger(__name__)
 
+
 # Custom exception for configuration errors
 class ConfigError(Exception):
     """Custom exception for errors found in configuration."""
+
     pass
+
 
 # Custom warning filter to log warnings only once per message
 class ConfigWarningFilter(logging.Filter):
     """Filters out duplicate warning messages."""
-    def __init__(self, name=''):
+
+    def __init__(self, name=""):
         super().__init__(name)
         self.seen = set()
 
@@ -41,6 +48,7 @@ class ConfigWarningFilter(logging.Filter):
             return False
         self.seen.add(record.msg)
         return True
+
 
 # Apply the filter to prevent log spam from config warnings
 for handler in logging.root.handlers:
@@ -124,7 +132,7 @@ def get_est_tokens_per_span(repo_root: Path | None = None) -> int:
 def get_vacuum_interval_hours(repo_root: Path | None = None) -> int:
     """
     Return the vacuum interval in hours. Default is 24.
-    
+
     Precedence:
     - Environment variable LLMC_RAG_VACUUM_INTERVAL_HOURS
     - [enrichment].vacuum_interval_hours in llmc.toml
@@ -153,7 +161,7 @@ def get_vacuum_interval_hours(repo_root: Path | None = None) -> int:
     return 24
 
 
-@lru_cache(maxsize=128) # Cache to avoid log spam for repeated missing slice types
+@lru_cache(maxsize=128)  # Cache to avoid log spam for repeated missing slice types
 def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> str:
     """
     Determines the route_name for a given slice_type.
@@ -162,7 +170,7 @@ def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> 
     """
     cfg = load_config(repo_root)
     slice_type_to_route = cfg.get("routing", {}).get("slice_type_to_route", {})
-    
+
     route_name = slice_type_to_route.get(slice_type)
     if route_name is None:
         log.warning(
@@ -181,8 +189,11 @@ def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> 
         return "docs"
     return route_name
 
+
 @lru_cache(maxsize=128)
-def resolve_route(route_name: str, operation_type: str, repo_root: Path | None = None) -> tuple[str, str]:
+def resolve_route(
+    route_name: str, operation_type: str, repo_root: Path | None = None
+) -> tuple[str, str]:
     """
     Resolves the embedding profile and index for a given route name.
     Handles missing route configurations and missing profile references with fallbacks or errors.
@@ -199,14 +210,14 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
         ConfigError: If a critical configuration is missing and no fallback is possible.
     """
     cfg = load_config(repo_root)
-    
+
     # 1. Check for missing embeddings.routes.* entries
     routes_cfg = cfg.get("embeddings", {}).get("routes", {})
     route_details = routes_cfg.get(route_name)
 
     # Fallback logic for missing route_name
     if route_details is None:
-        if route_name != "docs": # Avoid infinite recursion if "docs" route itself is missing
+        if route_name != "docs":  # Avoid infinite recursion if "docs" route itself is missing
             log.warning(
                 f"Config: Missing 'embeddings.routes.{route_name}' for {operation_type}. "
                 "Falling back to 'docs' route."
@@ -222,7 +233,7 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
                 repo_root=repo_root,
             )
             return resolve_route("docs", operation_type, repo_root)
-        else: # "docs" route is missing, this is a critical error
+        else:  # "docs" route is missing, this is a critical error
             error_msg = (
                 "Critical Config Error: 'embeddings.routes.docs' is missing, "
                 "and no fallback is possible. Please define it in llmc.toml."
@@ -287,7 +298,7 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
     profile_details = profiles_cfg.get(profile_name)
 
     if profile_details is None:
-        if route_name == "docs": # Fallback to default_docs only if the target route is "docs"
+        if route_name == "docs":  # Fallback to default_docs only if the target route is "docs"
             log.warning(
                 f"Config: Profile '{profile_name}' referenced by route '{route_name}' "
                 f"for {operation_type} is missing. Attempting to use 'default_docs' profile."
@@ -308,7 +319,10 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
             # Here we assume 'default_docs' is a profile name, not a route name.
             default_docs_profile = profiles_cfg.get("default_docs")
             if default_docs_profile:
-                return "default_docs", index_name # Use the default_docs profile but keep the index_name from the original route
+                return (
+                    "default_docs",
+                    index_name,
+                )  # Use the default_docs profile but keep the index_name from the original route
             else:
                 error_msg = (
                     f"Config Error: Route '{route_name}' for {operation_type} refers to missing profile "
@@ -328,7 +342,7 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
                     repo_root=repo_root,
                 )
                 raise ConfigError(error_msg)
-        else: # Cannot fallback for non-docs routes, raise error
+        else:  # Cannot fallback for non-docs routes, raise error
             error_msg = (
                 f"Config Error: Route '{route_name}' for {operation_type} refers to missing profile "
                 f"'{profile_name}'. Please define the profile in llmc.toml."
@@ -346,7 +360,7 @@ def resolve_route(route_name: str, operation_type: str, repo_root: Path | None =
                 repo_root=repo_root,
             )
             raise ConfigError(error_msg)
-            
+
     return profile_name, index_name
 
 
@@ -371,6 +385,7 @@ def get_exclude_dirs(repo_root: Path | None = None) -> set[str]:
         ".DS_Store",
         "Thumbs.db",
     }
+
 
 MODEL_PRESETS = {
     # Preferred embedding profile: intfloat/e5-base-v2 with instruct-style prefixes.
@@ -574,7 +589,9 @@ def is_multi_route_enabled(repo_root: Path | None = None) -> bool:
     return cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False)
 
 
-def get_multi_route_config(primary_route: str, repo_root: Path | None = None) -> list[tuple[str, float]]:
+def get_multi_route_config(
+    primary_route: str, repo_root: Path | None = None
+) -> list[tuple[str, float]]:
     """
     Returns a list of (route_name, weight) tuples for the given primary route.
     Always includes the primary route itself with weight 1.0.
@@ -582,20 +599,20 @@ def get_multi_route_config(primary_route: str, repo_root: Path | None = None) ->
     """
     # Always start with the primary route
     routes = [(primary_route, 1.0)]
-    
+
     if not is_multi_route_enabled(repo_root):
         return routes
 
     cfg = load_config(repo_root)
     multi_route_cfg = cfg.get("routing", {}).get("multi_route", {})
-    
+
     # Look for config specifically for this primary route (e.g., "code_primary")
     primary_key = f"{primary_route}_primary"
     route_cfg = multi_route_cfg.get(primary_key)
-    
+
     if not route_cfg:
         return routes
-        
+
     # Verify the config actually matches the primary route we expect
     if route_cfg.get("primary") != primary_route:
         log.warning(
@@ -612,7 +629,7 @@ def get_multi_route_config(primary_route: str, repo_root: Path | None = None) ->
         weight = sec.get("weight", 1.0)
         if r_name:
             routes.append((r_name, float(weight)))
-            
+
     return routes
 
 

@@ -84,13 +84,16 @@ class TestExponentialBackoff:
         # The reset logic is in worker/daemon code, state just stores the value
         assert state.last_run_status == "success"
 
-    @pytest.mark.parametrize("failure_count,expected_multiplier", [
-        (1, 1),   # First failure: 60 * 2^0 = 60
-        (2, 2),   # Second: 60 * 2^1 = 120
-        (3, 4),   # Third: 60 * 2^2 = 240
-        (4, 8),   # Fourth: 60 * 2^3 = 480
-        (5, 16),  # Fifth: 60 * 2^4 = 960
-    ])
+    @pytest.mark.parametrize(
+        "failure_count,expected_multiplier",
+        [
+            (1, 1),  # First failure: 60 * 2^0 = 60
+            (2, 2),  # Second: 60 * 2^1 = 120
+            (3, 4),  # Third: 60 * 2^2 = 240
+            (4, 8),  # Fourth: 60 * 2^3 = 480
+            (5, 16),  # Fifth: 60 * 2^4 = 960
+        ],
+    )
     def test_exponential_backoff_multiplier_progression(self, failure_count, expected_multiplier):
         """Test backoff multiplier increases as 2^(n-1)."""
         base = 60
@@ -417,6 +420,7 @@ class TestSchedulerEdgeCases:
         mock_workers = Mock(spec=WorkerPool)
 
         from datetime import timedelta
+
         now = utc_now()
         mock_registry.load.return_value = {"repo1": Mock(spec=RepoDescriptor)}
         mock_state_store.load_all.return_value = {

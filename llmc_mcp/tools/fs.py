@@ -259,8 +259,6 @@ def list_dir(
                 error=f"Not a directory: {resolved}",
             )
 
-        
-
         entries: list[dict[str, Any]] = []
 
         total_count = 0
@@ -395,7 +393,6 @@ def stat_path(
         )
 
 
-
 # ============================================================================
 # Write Operations (L1 Phase 2)
 # ============================================================================
@@ -429,10 +426,11 @@ def write_file(
     try:
         resolved = validate_path(path, allowed_roots)
         content_bytes = content.encode("utf-8")
-        
+
         if len(content_bytes) > max_bytes:
             return FsResult(
-                success=False, data=None,
+                success=False,
+                data=None,
                 meta={"path": str(resolved)},
                 error=f"Content too large: {len(content_bytes)} > {max_bytes}",
             )
@@ -442,7 +440,8 @@ def write_file(
             existing_hash = hashlib.sha256(resolved.read_bytes()).hexdigest()
             if existing_hash != expected_sha256:
                 return FsResult(
-                    success=False, data=None,
+                    success=False,
+                    data=None,
                     meta={"path": str(resolved), "actual_sha256": existing_hash},
                     error="SHA256 mismatch",
                 )
@@ -465,8 +464,9 @@ def write_file(
     except PathSecurityError as e:
         return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
     except Exception as e:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Write error: {e}")
-
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error=f"Write error: {e}"
+        )
 
 
 def create_directory(
@@ -484,11 +484,15 @@ def create_directory(
             meta={"path": str(resolved)},
         )
     except FileExistsError:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error="Directory exists")
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error="Directory exists"
+        )
     except PathSecurityError as e:
         return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
     except Exception as e:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Mkdir error: {e}")
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error=f"Mkdir error: {e}"
+        )
 
 
 def move_file(
@@ -500,10 +504,12 @@ def move_file(
     try:
         src_resolved = validate_path(source, allowed_roots)
         dst_resolved = validate_path(dest, allowed_roots)
-        
+
         if not src_resolved.exists():
-            return FsResult(success=False, data=None, meta={"source": str(source)}, error="Source not found")
-        
+            return FsResult(
+                success=False, data=None, meta={"source": str(source)}, error="Source not found"
+            )
+
         shutil.move(str(src_resolved), str(dst_resolved))
         return FsResult(
             success=True,
@@ -524,28 +530,41 @@ def delete_file(
     """Delete a file or directory."""
     try:
         resolved = validate_path(path, allowed_roots)
-        
+
         if not resolved.exists():
-            return FsResult(success=False, data=None, meta={"path": str(path)}, error="Path not found")
-        
+            return FsResult(
+                success=False, data=None, meta={"path": str(path)}, error="Path not found"
+            )
+
         # Safety: don't delete allowed roots themselves
         for root in allowed_roots:
             if resolved == Path(root).resolve():
-                return FsResult(success=False, data=None, meta={"path": str(path)}, error="Cannot delete allowed root")
-        
+                return FsResult(
+                    success=False,
+                    data=None,
+                    meta={"path": str(path)},
+                    error="Cannot delete allowed root",
+                )
+
         if resolved.is_dir():
             if not recursive:
-                return FsResult(success=False, data=None, meta={"path": str(path)}, error="Is directory, use recursive=True")
+                return FsResult(
+                    success=False,
+                    data=None,
+                    meta={"path": str(path)},
+                    error="Is directory, use recursive=True",
+                )
             shutil.rmtree(resolved)
         else:
             resolved.unlink()
-        
+
         return FsResult(success=True, data={"deleted": str(resolved)}, meta={})
     except PathSecurityError as e:
         return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
     except Exception as e:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Delete error: {e}")
-
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error=f"Delete error: {e}"
+        )
 
 
 def edit_block(
@@ -557,51 +576,55 @@ def edit_block(
 ) -> FsResult:
     """
     Surgical text replacement in a file.
-    
+
     Args:
         path: File to edit
         allowed_roots: Allowed directories
         old_text: Text to find and replace
         new_text: Replacement text
         expected_replacements: Expected number of matches (default 1)
-    
+
     Returns:
         FsResult with replacement count and snippets
     """
     try:
         resolved = validate_path(path, allowed_roots)
-        
+
         if not resolved.exists():
-            return FsResult(success=False, data=None, meta={"path": str(path)}, error="File not found")
+            return FsResult(
+                success=False, data=None, meta={"path": str(path)}, error="File not found"
+            )
         if not resolved.is_file():
             return FsResult(success=False, data=None, meta={"path": str(path)}, error="Not a file")
-        
+
         content = resolved.read_text(encoding="utf-8")
         count = content.count(old_text)
-        
+
         if count == 0:
             # Try to find close match for helpful error
             return FsResult(
-                success=False, data=None,
+                success=False,
+                data=None,
                 meta={"path": str(path)},
                 error="Text not found in file",
             )
-        
+
         if count != expected_replacements:
             return FsResult(
-                success=False, data=None,
+                success=False,
+                data=None,
                 meta={"path": str(path), "actual_count": count},
                 error=f"Expected {expected_replacements} matches, found {count}",
             )
-        
+
         # Do the replacement
         new_content = content.replace(old_text, new_text)
-        
+
         # Write atomically
         tmp_path = resolved.with_suffix(resolved.suffix + ".tmp")
         tmp_path.write_text(new_content, encoding="utf-8")
         tmp_path.replace(resolved)
-        
+
         return FsResult(
             success=True,
             data={"replacements": count},
@@ -610,6 +633,10 @@ def edit_block(
     except PathSecurityError as e:
         return FsResult(success=False, data=None, meta={"path": str(path)}, error=str(e))
     except UnicodeDecodeError:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error="File is not UTF-8 text")
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error="File is not UTF-8 text"
+        )
     except Exception as e:
-        return FsResult(success=False, data=None, meta={"path": str(path)}, error=f"Edit error: {e}")
+        return FsResult(
+            success=False, data=None, meta={"path": str(path)}, error=f"Edit error: {e}"
+        )

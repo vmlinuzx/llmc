@@ -41,4 +41,3 @@ def test_safefs_blocks_escape(tmp_path: Path) -> None:
     fs = SafeFS(base)
     with pytest.raises(PathTraversalError):
         fs.open_write("../../etc/passwd")
-

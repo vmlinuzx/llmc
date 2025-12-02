@@ -46,7 +46,7 @@ class QualityChecker:
 
         # Total enrichments
         cursor.execute("SELECT COUNT(*) FROM enrichments")
-        stats['total'] = cursor.fetchone()[0]
+        stats["total"] = cursor.fetchone()[0]
 
         # By model
         cursor.execute("""
@@ -54,14 +54,14 @@ class QualityChecker:
             FROM enrichments
             GROUP BY model
         """)
-        stats['by_model'] = {row['model']: row['count'] for row in cursor.fetchall()}
+        stats["by_model"] = {row["model"]: row["count"] for row in cursor.fetchall()}
 
         # Recent (last 24h)
         cursor.execute("""
             SELECT COUNT(*) FROM enrichments
             WHERE created_at > datetime('now', '-1 day')
         """)
-        stats['recent_24h'] = cursor.fetchone()[0]
+        stats["recent_24h"] = cursor.fetchone()[0]
 
         return stats
 
@@ -69,35 +69,30 @@ class QualityChecker:
         """Check for all quality issues using canonical classifier."""
         cursor = self.conn.cursor()
 
-        issues = {
-            'placeholders': [],
-            'empty': [],
-            'short': [],
-            'ok': []
-        }
+        issues = {"placeholders": [], "empty": [], "short": [], "ok": []}
 
         # Fetch all enrichments
         cursor.execute("SELECT span_hash, summary, model, created_at FROM enrichments")
 
         for row in cursor.fetchall():
-            result = classify_quality(row['summary'])
+            result = classify_quality(row["summary"])
 
             entry = {
-                'span_hash': row['span_hash'],
-                'summary': row['summary'][:100],
-                'model': row['model'],
-                'created_at': row['created_at'],
-                'reason': result.reason
+                "span_hash": row["span_hash"],
+                "summary": row["summary"][:100],
+                "model": row["model"],
+                "created_at": row["created_at"],
+                "reason": result.reason,
             }
 
-            if result.classification == 'PLACEHOLDER':
-                issues['placeholders'].append(entry)
-            elif result.classification == 'EMPTY':
-                issues['empty'].append(entry)
-            elif result.classification == 'SHORT':
-                issues['short'].append(entry)
-            elif result.classification == 'OK':
-                issues['ok'].append(entry)
+            if result.classification == "PLACEHOLDER":
+                issues["placeholders"].append(entry)
+            elif result.classification == "EMPTY":
+                issues["empty"].append(entry)
+            elif result.classification == "SHORT":
+                issues["short"].append(entry)
+            elif result.classification == "OK":
+                issues["ok"].append(entry)
 
         return issues
 
@@ -124,28 +119,28 @@ class QualityChecker:
         stats = self.get_enrichment_stats()
         issues = self.check_all_issues()
 
-        total = stats['total']
-        placeholders = len(issues['placeholders'])
-        empty = len(issues['empty'])
-        short = len(issues['short'])
-        ok = len(issues['ok'])
+        total = stats["total"]
+        placeholders = len(issues["placeholders"])
+        empty = len(issues["empty"])
+        short = len(issues["short"])
+        ok = len(issues["ok"])
 
         # Calculate quality score (OK / total)
         quality_score = (ok / total * 100) if total > 0 else 0
 
         report = {
-            'timestamp': datetime.now(UTC).isoformat(),
-            'database': str(self.db_path),
-            'rule_version': RULE_VERSION,
-            'stats': stats,
-            'issues': {
-                'placeholder_count': placeholders,
-                'empty_count': empty,
-                'short_count': short,
-                'ok_count': ok,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "database": str(self.db_path),
+            "rule_version": RULE_VERSION,
+            "stats": stats,
+            "issues": {
+                "placeholder_count": placeholders,
+                "empty_count": empty,
+                "short_count": short,
+                "ok_count": ok,
             },
-            'quality_score': quality_score,
-            'status': 'PASS' if quality_score >= 90 else 'FAIL'
+            "quality_score": quality_score,
+            "status": "PASS" if quality_score >= 90 else "FAIL",
         }
 
         return report
@@ -159,7 +154,7 @@ def print_report(report: dict, verbose: bool = True):
     print("=" * 70)
     print()
 
-    stats = report['stats']
+    stats = report["stats"]
     print("📊 Statistics:")
     print(f"  Total enrichments: {stats['total']}")
     print(f"  Recent (24h): {stats['recent_24h']}")
@@ -170,15 +165,15 @@ def print_report(report: dict, verbose: bool = True):
 
     # Model distribution
     print("🤖 Model Distribution:")
-    for model, count in stats['by_model'].items():
-        pct = (count / stats['total'] * 100) if stats['total'] > 0 else 0
+    for model, count in stats["by_model"].items():
+        pct = (count / stats["total"] * 100) if stats["total"] > 0 else 0
         print(f"  {model}: {count} ({pct:.1f}%)")
     print()
 
     # Issues
-    placeholder = report['issues']['placeholder_count']
-    empty = report['issues']['empty_count']
-    short = report['issues']['short_count']
+    placeholder = report["issues"]["placeholder_count"]
+    empty = report["issues"]["empty_count"]
+    short = report["issues"]["short_count"]
 
     print("🚨 Issues Found:")
     print(f"  Placeholder/fake data: {placeholder}")
@@ -189,7 +184,7 @@ def print_report(report: dict, verbose: bool = True):
     if verbose and (placeholder > 0 or empty > 0 or short > 0):
         if placeholder > 0:
             print("❌ Placeholder Examples:")
-            for entry in report['issues']['placeholders'][:5]:
+            for entry in report["issues"]["placeholders"][:5]:
                 print(f"  - {entry['span_hash'][:12]}... | {entry['summary'][:60]}...")
                 print(f"    Reason: {entry['reason']}")
             if placeholder > 5:
@@ -198,7 +193,7 @@ def print_report(report: dict, verbose: bool = True):
 
         if empty > 0:
             print("⚠️  Empty Examples:")
-            for entry in report['issues']['empty'][:5]:
+            for entry in report["issues"]["empty"][:5]:
                 print(f"  - {entry['span_hash'][:12]}... | {entry['reason']}")
             if empty > 5:
                 print(f"  ... and {empty - 5} more")
@@ -206,7 +201,7 @@ def print_report(report: dict, verbose: bool = True):
 
         if short > 0:
             print("📉 Short Examples:")
-            for entry in report['issues']['short'][:5]:
+            for entry in report["issues"]["short"][:5]:
                 print(f"  - {entry['span_hash'][:12]}... | {entry['summary'][:60]}...")
                 print(f"    Reason: {entry['reason']}")
             if short > 5:
@@ -255,7 +250,7 @@ def main():
             print_report(report, verbose=not args.quiet)
 
         # Exit code based on quality
-        return 0 if report['status'] == 'PASS' else 1
+        return 0 if report["status"] == "PASS" else 1
 
     finally:
         checker.close()

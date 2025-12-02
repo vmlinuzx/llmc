@@ -194,10 +194,21 @@ class TestEnrichmentRouterMetricsEvent:
         )
         json_out = event.to_json()
         expected_keys = {
-            "timestamp", "span_hash", "slice_type", "chain_name",
-            "backend_name", "provider", "model", "routing_tier",
-            "success", "failure_type", "duration_sec", "attempt_index",
-            "total_attempts", "reason", "extra",
+            "timestamp",
+            "span_hash",
+            "slice_type",
+            "chain_name",
+            "backend_name",
+            "provider",
+            "model",
+            "routing_tier",
+            "success",
+            "failure_type",
+            "duration_sec",
+            "attempt_index",
+            "total_attempts",
+            "reason",
+            "extra",
         }
         assert set(json_out.keys()) == expected_keys
 
@@ -441,7 +452,6 @@ class TestNormalizeSliceType:
         assert router.normalize_slice_type("   ") == "unknown"
 
 
-
 # -----------------------------------------------------------------------------
 # Phase 3 Tests - build_router_from_toml and env overrides (SDD 4.1.2, 6.1)
 # -----------------------------------------------------------------------------
@@ -502,9 +512,7 @@ code = "code_chain"
     )
 
     # With env override
-    router = build_router_from_toml(
-        repo_root, env={"LLMC_ENRICH_DISABLE_ROUTING": "1"}
-    )
+    router = build_router_from_toml(repo_root, env={"LLMC_ENRICH_DISABLE_ROUTING": "1"})
     assert router.enable_routing is False  # Forced off by env
 
 
@@ -546,7 +554,7 @@ def test_router_max_tier_filtering() -> None:
         approx_token_count=100,
     )
     decision = router.choose_chain(slice_view)
-    
+
     # Should only have 7b backend
     assert len(decision.backend_specs) == 1
     assert decision.backend_specs[0].routing_tier == "7b"

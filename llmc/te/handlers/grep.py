@@ -221,7 +221,7 @@ def handle_grep(
     def relative_dir(path: str) -> str:
         """Get relative directory path."""
         if path.startswith(workspace_str):
-            path = path[len(workspace_str):].lstrip("/")
+            path = path[len(workspace_str) :].lstrip("/")
         if "/" in path:
             return path.rsplit("/", 1)[0]
         return "."
@@ -251,7 +251,7 @@ def handle_grep(
         # Use relative path for cleaner output
         display_path = match.path
         if display_path.startswith(workspace_str):
-            display_path = display_path[len(workspace_str):].lstrip("/")
+            display_path = display_path[len(workspace_str) :].lstrip("/")
         line = f"{display_path}:{match.line_no}: {match.content}"
         if chars_used + len(line) > budget:
             truncated = True
@@ -264,9 +264,7 @@ def handle_grep(
     remaining_non_test = len(non_test) - matches_shown
     if remaining_non_test > 0:
         # Compute directory breakdown for remaining (using relative paths)
-        remaining_dirs = Counter(
-            relative_dir(m.path) for m in non_test[matches_shown:]
-        )
+        remaining_dirs = Counter(relative_dir(m.path) for m in non_test[matches_shown:])
         dir_summary = ", ".join(f"{d} ({c})" for d, c in remaining_dirs.most_common(3))
         breadcrumbs.append(format_breadcrumb(f"{remaining_non_test} more in: {dir_summary}"))
         truncated = True

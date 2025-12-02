@@ -18,4 +18,3 @@ def test_snapshot_creates_tar(tmp_path: Path) -> None:
     with tarfile.open(out, "r:gz") as tar:
         names = tar.getnames()
         assert "dir/f.txt" in names
-

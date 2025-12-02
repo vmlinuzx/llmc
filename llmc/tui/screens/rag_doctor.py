@@ -144,10 +144,20 @@ class RAGDoctorScreen(Screen):
                         yield Static("Guidance will appear here.", id="guidance-text")
                         with Vertical(id="action-buttons", classes="hidden"):
                             yield Label("\nActions:", classes="section-header")
-                            yield Button("Dry Run: Embed Pending", id="btn-embed-dry", variant="default")
-                            yield Label("  - Shows a plan of up to 20 spans that would be embedded, without making changes.", classes="description")
-                            yield Button("Execute: Embed Pending", id="btn-embed-exec", variant="error")
-                            yield Label("  - Processes up to 100 pending spans, creating their embeddings.", classes="description")
+                            yield Button(
+                                "Dry Run: Embed Pending", id="btn-embed-dry", variant="default"
+                            )
+                            yield Label(
+                                "  - Shows a plan of up to 20 spans that would be embedded, without making changes.",
+                                classes="description",
+                            )
+                            yield Button(
+                                "Execute: Embed Pending", id="btn-embed-exec", variant="error"
+                            )
+                            yield Label(
+                                "  - Processes up to 100 pending spans, creating their embeddings.",
+                                classes="description",
+                            )
                         yield Label("\nCommand Output:", id="output-label", classes="hidden")
                         yield RichLog(id="command-log", classes="hidden", markup=True)
         yield Footer()
@@ -156,7 +166,7 @@ class RAGDoctorScreen(Screen):
         # Initialize tables
         table = self.query_one("#stats-table", DataTable)
         table.add_columns("Metric", "Value")
-        
+
         offenders = self.query_one("#offenders-table", DataTable)
         offenders.add_columns("File", "Pending Spans")
 
@@ -166,16 +176,21 @@ class RAGDoctorScreen(Screen):
         if event.button.id == "btn-refresh":
             self.action_refresh()
         elif event.button.id == "btn-embed-dry":
-            self.run_worker(lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --limit 20"), thread=True)
+            self.run_worker(
+                lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --limit 20"), thread=True
+            )
         elif event.button.id == "btn-embed-exec":
-            self.run_worker(lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --execute --limit 100"), thread=True)
+            self.run_worker(
+                lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --execute --limit 100"),
+                thread=True,
+            )
 
     def action_refresh(self) -> None:
         """Trigger a background refresh of the doctor report."""
         badge = self.query_one("#status-badge", Static)
         badge.update("Running Doctor...")
         badge.remove_class("status-ok", "status-warn", "status-broken")
-        
+
         self.run_worker(self._load_data, thread=True)
 
     def _load_data(self) -> None:
@@ -191,7 +206,7 @@ class RAGDoctorScreen(Screen):
         badge = self.query_one("#status-badge", Static)
         badge.update("ERROR")
         badge.add_class("status-broken")
-        
+
         summary = self.query_one("#summary-text", Static)
         summary.update(f"Failed to run RAG Doctor:\n\n{error_msg}")
 
@@ -207,48 +222,50 @@ class RAGDoctorScreen(Screen):
             # Construct command: use TE wrapper
             te_script = self.repo_root / "scripts" / "te"
             cmd = [str(te_script)] + cmd_suffix.split()
-            
+
             # Set environment for TE
             env = dict(subprocess.os.environ)
             env["TE_AGENT_ID"] = "manual-dave"
-            
+
             proc = subprocess.Popen(
-                cmd, 
+                cmd,
                 cwd=self.repo_root,
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.STDOUT, 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 env=env,
-                bufsize=1
+                bufsize=1,
             )
 
             if proc.stdout:
                 for line in proc.stdout:
                     self.app.call_from_thread(log.write, line.rstrip())
-            
+
             proc.wait()
             if proc.returncode == 0:
                 self.app.call_from_thread(log.write, "\n[bold green]Success.[/]")
                 # Auto-refresh doctor stats on success if it was an execution
                 if "--execute" in cmd_suffix:
-                     self.app.call_from_thread(self.action_refresh)
+                    self.app.call_from_thread(self.action_refresh)
             else:
-                self.app.call_from_thread(log.write, f"\n[bold red]Failed (exit code {proc.returncode}).[/]")
+                self.app.call_from_thread(
+                    log.write, f"\n[bold red]Failed (exit code {proc.returncode}).[/]"
+                )
 
         except Exception as e:
-             self.app.call_from_thread(log.write, f"\n[bold red]Error launching command: {e}[/]")
+            self.app.call_from_thread(log.write, f"\n[bold red]Error launching command: {e}[/]")
 
     def update_ui(self, report: dict[str, Any]) -> None:
         self.report = report
         status = report.get("status", "UNKNOWN")
         stats = report.get("stats") or {}
         issues = report.get("issues", [])
-        
+
         # 1. Update Badge
         badge = self.query_one("#status-badge", Static)
         badge.update(f"Status: {status}")
         badge.remove_class("status-ok", "status-warn", "status-broken")
-        
+
         if status == "OK":
             badge.add_class("status-ok")
         elif status in ("WARN", "DEGRADED"):
@@ -260,15 +277,17 @@ class RAGDoctorScreen(Screen):
         table = self.query_one("#stats-table", DataTable)
         table.clear()
         if stats:
-            table.add_rows([
-                ("Files", str(stats.get("files", 0))),
-                ("Spans", str(stats.get("spans", 0))),
-                ("Enrichments", str(stats.get("enrichments", 0))),
-                ("Embeddings", str(stats.get("embeddings", 0))),
-                ("Pending Embeddings", str(stats.get("pending_embeddings", 0))),
-                ("Pending Enrichments", str(stats.get("pending_enrichments", 0))),
-                ("Orphans", str(stats.get("orphan_enrichments", 0))),
-            ])
+            table.add_rows(
+                [
+                    ("Files", str(stats.get("files", 0))),
+                    ("Spans", str(stats.get("spans", 0))),
+                    ("Enrichments", str(stats.get("enrichments", 0))),
+                    ("Embeddings", str(stats.get("embeddings", 0))),
+                    ("Pending Embeddings", str(stats.get("pending_embeddings", 0))),
+                    ("Pending Enrichments", str(stats.get("pending_enrichments", 0))),
+                    ("Orphans", str(stats.get("orphan_enrichments", 0))),
+                ]
+            )
 
         # 3. Update Summary Tab
         summary_widget = self.query_one("#summary-text", Static)
@@ -292,7 +311,7 @@ class RAGDoctorScreen(Screen):
         # 5. Update Guidance Tab
         guidance_widget = self.query_one("#guidance-text", Static)
         guidance_widget.update(self._generate_guidance(report))
-        
+
         # Toggle Action Buttons
         stats = report.get("stats") or {}
         actions_panel = self.query_one("#action-buttons", Vertical)
@@ -306,9 +325,9 @@ class RAGDoctorScreen(Screen):
         stats = report.get("stats") or {}
         pending_emb = stats.get("pending_embeddings", 0)
         orphans = stats.get("orphan_enrichments", 0)
-        
+
         lines = []
-        
+
         if status == "NO_DB":
             lines.append("RAG index not found. Initialize it:")
             lines.append(self._te_cmd("rag index"))
@@ -328,7 +347,7 @@ class RAGDoctorScreen(Screen):
             lines.append("Recommended action (investigate):")
             lines.append(self._te_cmd("python3 -m tools.rag.cli doctor --json"))
             lines.append("")
-            
+
         if not lines:
             lines.append("Check summary tab for details.")
 

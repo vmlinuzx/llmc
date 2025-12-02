@@ -12,7 +12,7 @@ M0-M3 Tools:
 - list_dir: Directory listing
 - stat: File/dir metadata
 - run_cmd: Command execution with allowlist (M3)
-""" # noqa: I001
+"""  # noqa: I001
 
 from __future__ import annotations
 
@@ -478,7 +478,10 @@ TOOLS: list[Tool] = [
                 "path": {"type": "string", "description": "File path to write"},
                 "content": {"type": "string", "description": "Text content to write"},
                 "mode": {"type": "string", "enum": ["rewrite", "append"], "default": "rewrite"},
-                "expected_sha256": {"type": "string", "description": "If set, verify file hash before write"},
+                "expected_sha256": {
+                    "type": "string",
+                    "description": "If set, verify file hash before write",
+                },
             },
             "required": ["path", "content"],
         },
@@ -514,7 +517,11 @@ TOOLS: list[Tool] = [
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "Path to delete"},
-                "recursive": {"type": "boolean", "default": False, "description": "Required for directories"},
+                "recursive": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Required for directories",
+                },
             },
             "required": ["path"],
         },
@@ -528,7 +535,11 @@ TOOLS: list[Tool] = [
                 "path": {"type": "string", "description": "File to edit"},
                 "old_text": {"type": "string", "description": "Text to find"},
                 "new_text": {"type": "string", "description": "Replacement text"},
-                "expected_replacements": {"type": "integer", "default": 1, "description": "Expected match count"},
+                "expected_replacements": {
+                    "type": "integer",
+                    "default": 1,
+                    "description": "Expected match count",
+                },
             },
             "required": ["path", "old_text", "new_text"],
         },
@@ -567,8 +578,6 @@ Only stdout is returned - filter data locally to save tokens.""",
 )
 
 
-
-
 class LlmcMcpServer:
     """LLMC MCP Server implementation."""
 
@@ -587,7 +596,9 @@ class LlmcMcpServer:
 
         self._register_dynamic_executables()
         self._register_handlers()
-        logger.info(f"LLMC MCP Server initialized ({config.config_version}, mode={'code_exec' if config.code_execution.enabled else 'classic'})")
+        logger.info(
+            f"LLMC MCP Server initialized ({config.config_version}, mode={'code_exec' if config.code_execution.enabled else 'classic'})"
+        )
 
     def _init_classic_mode(self):
         """Initialize classic mode with all 23 tools registered."""
@@ -628,12 +639,12 @@ class LlmcMcpServer:
     def _init_code_execution_mode(self):
         """
         Initialize code execution mode (Phase 2 - Anthropic Code Mode pattern).
-        
+
         Only bootstrap tools are registered as MCP tools.
         All other tools become importable stubs in .llmc/stubs/.
         Claude navigates the stubs directory, reads definitions on-demand,
         writes Python code that imports and calls them.
-        
+
         98% token reduction vs classic mode.
         """
         from llmc_mcp.tools.code_exec import generate_stubs
@@ -668,7 +679,7 @@ class LlmcMcpServer:
     async def _handle_execute_code(self, args: dict) -> list[TextContent]:
         """
         Handle execute_code tool - run Python code with access to tool stubs.
-        
+
         This is the core of code execution mode. Claude writes Python code
         that imports from stubs and processes data locally. Only stdout
         is returned to the conversation context.
@@ -716,12 +727,13 @@ class LlmcMcpServer:
                     "linux_fs_edit": self._handle_fs_edit,
                 }
                 handler = classic_handlers.get(name)
-            
+
             if not handler:
                 return {"error": f"Unknown tool: {name}"}
 
             # Run async handler synchronously (from thread pool to avoid nested loop issues)
             import concurrent.futures
+
             def _run_async():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
@@ -733,7 +745,7 @@ class LlmcMcpServer:
                         return loop.run_until_complete(handler())
                 finally:
                     loop.close()
-            
+
             try:
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(_run_async)
@@ -771,7 +783,7 @@ class LlmcMcpServer:
 
         for name, path in self.config.tools.executables.items():
             logger.info(f"Registering dynamic executable tool: {name} -> {path}")
-            
+
             # Create Tool definition
             tool = Tool(
                 name=name,
@@ -795,9 +807,11 @@ class LlmcMcpServer:
 
     def _create_executable_handler(self, cmd_path: str) -> Callable:
         """Create a handler closure for a specific executable."""
+
         async def handler(args: dict) -> list[TextContent]:
             cmd_args = args.get("args", [])
             return await self._handle_run_executable(cmd_path, cmd_args)
+
         return handler
 
     async def _handle_run_executable(self, cmd_path: str, args: list[str]) -> list[TextContent]:
@@ -832,18 +846,27 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
         except subprocess.TimeoutExpired:
-            return [TextContent(type="text", text=json.dumps({
-                "success": False,
-                "error": f"Command timed out after {self.config.tools.exec_timeout}s",
-                "exit_code": -1
-            }, indent=2))]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "success": False,
+                            "error": f"Command timed out after {self.config.tools.exec_timeout}s",
+                            "exit_code": -1,
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
         except Exception as e:
             logger.exception(f"Error running {cmd_path}")
-            return [TextContent(type="text", text=json.dumps({
-                "success": False,
-                "error": str(e),
-                "exit_code": -1
-            }, indent=2))]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps({"success": False, "error": str(e), "exit_code": -1}, indent=2),
+                )
+            ]
 
     def _register_handlers(self):
         """Register MCP protocol handlers."""
@@ -867,7 +890,7 @@ class LlmcMcpServer:
             try:
                 handler = self.tool_handlers.get(name)
                 if handler:
-                    assert handler is not None # Mypy: handler can be None
+                    assert handler is not None  # Mypy: handler can be None
                     # Handle args being optional for some handlers
                     from collections.abc import Callable  # Added for Callable type hint
                     import inspect
@@ -1058,7 +1081,6 @@ class LlmcMcpServer:
         # Return normalized structure (data + meta)
         return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
 
-
     async def _handle_rag_where_used(self, args: dict) -> list[TextContent]:
         import json
 
@@ -1132,7 +1154,7 @@ class LlmcMcpServer:
                 symbol=symbol,
                 path=path,
                 include_full_source=include_full_source,
-                max_neighbors=max_neighbors
+                max_neighbors=max_neighbors,
             )
             return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
         except Exception as e:
@@ -1154,7 +1176,6 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
-
 
     async def _handle_read_file(self, args: dict) -> list[TextContent]:
         """Read file handler."""
@@ -1279,7 +1300,7 @@ class LlmcMcpServer:
 
         # Smart grep interceptor: detect search patterns and show RAG preview
         grep_pattern = None
-        
+
         # Detect grep -r / grep -R
         if "grep -r" in command.lower() or "grep -R" in command.lower():
             match = re.search(r'grep\s+-[rR]\w*\s+["\']?([^"\']+)["\']?', command)
@@ -1290,7 +1311,7 @@ class LlmcMcpServer:
             match = re.search(r'rg\s+["\']?([^"\']+)["\']?', command)
             if match:
                 grep_pattern = match.group(1)
-        
+
         # If we detected a search pattern worth trying RAG on
         if grep_pattern and len(grep_pattern) > 2 and not grep_pattern.startswith("-"):
             try:
@@ -1302,7 +1323,7 @@ class LlmcMcpServer:
                     enrich_mode="auto",
                     include_features=False,
                 )
-                
+
                 if not rag_result.error and rag_result.data:
                     # Format RAG preview
                     preview = "🎯 Smart Search Results (AI-powered semantic search):\n\n"
@@ -1311,26 +1332,36 @@ class LlmcMcpServer:
                         preview += f"{i}. {item['path']}:{lines[0]}-{lines[1]}\n"
                         preview += f"   Symbol: {item['symbol']} ({item['kind']})\n"
                         preview += f"   Relevance: {item['score']:.3f}\n"
-                        if item.get('summary'):
-                            summary = item['summary'][:120]
-                            preview += f"   {summary}{'...' if len(item['summary']) > 120 else ''}\n"
+                        if item.get("summary"):
+                            summary = item["summary"][:120]
+                            preview += (
+                                f"   {summary}{'...' if len(item['summary']) > 120 else ''}\n"
+                            )
                         preview += "\n"
-                    
+
                     preview += "💡 These are semantic search results with AI understanding.\n"
                     preview += "   They find MEANING, not just text matches.\n"
                     preview += f"   Original command: {command}\n"
                     preview += "   Run the original command if you need exact string matching.\n"
-                    
+
                     # Return RAG results instead of grep
-                    return [TextContent(type="text", text=json.dumps({
-                        "success": True,
-                        "smart_search": True,
-                        "stdout": preview,
-                        "rag_results": rag_result.data,
-                        "original_command": command,
-                        "hint": "Smart search intercepted grep. These semantic results are often better. Use grep directly if you need exact text matching."
-                    }, indent=2))]
-                    
+                    return [
+                        TextContent(
+                            type="text",
+                            text=json.dumps(
+                                {
+                                    "success": True,
+                                    "smart_search": True,
+                                    "stdout": preview,
+                                    "rag_results": rag_result.data,
+                                    "original_command": command,
+                                    "hint": "Smart search intercepted grep. These semantic results are often better. Use grep directly if you need exact text matching.",
+                                },
+                                indent=2,
+                            ),
+                        )
+                    ]
+
             except Exception as e:
                 # If RAG fails, fall through to normal grep
                 logger.debug(f"Smart grep RAG fallback failed: {e}")
@@ -1609,6 +1640,7 @@ class LlmcMcpServer:
     async def _handle_fs_write(self, args: dict) -> list[TextContent]:
         """Handle linux_fs_write tool."""
         from llmc_mcp.tools.fs import write_file
+
         path = args.get("path", "")
         content = args.get("content", "")
         mode = args.get("mode", "rewrite")
@@ -1617,48 +1649,76 @@ class LlmcMcpServer:
             return [TextContent(type="text", text='{"error": "path and content required"}')]
         result = write_file(path, self.config.tools.allowed_roots, content, mode, expected_sha256)
         if result.success:
-            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
-        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                )
+            ]
+        return [
+            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+        ]
 
     async def _handle_fs_mkdir(self, args: dict) -> list[TextContent]:
         """Handle linux_fs_mkdir tool."""
         from llmc_mcp.tools.fs import create_directory
+
         path = args.get("path", "")
         exist_ok = args.get("exist_ok", True)
         if not path:
             return [TextContent(type="text", text='{"error": "path required"}')]
         result = create_directory(path, self.config.tools.allowed_roots, exist_ok)
         if result.success:
-            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
-        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                )
+            ]
+        return [
+            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+        ]
 
     async def _handle_fs_move(self, args: dict) -> list[TextContent]:
         """Handle linux_fs_move tool."""
         from llmc_mcp.tools.fs import move_file
+
         source = args.get("source", "")
         dest = args.get("dest", "")
         if not source or not dest:
             return [TextContent(type="text", text='{"error": "source and dest required"}')]
         result = move_file(source, dest, self.config.tools.allowed_roots)
         if result.success:
-            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
-        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                )
+            ]
+        return [
+            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+        ]
 
     async def _handle_fs_delete(self, args: dict) -> list[TextContent]:
         """Handle linux_fs_delete tool."""
         from llmc_mcp.tools.fs import delete_file
+
         path = args.get("path", "")
         recursive = args.get("recursive", False)
         if not path:
             return [TextContent(type="text", text='{"error": "path required"}')]
         result = delete_file(path, self.config.tools.allowed_roots, recursive)
         if result.success:
-            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
-        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                )
+            ]
+        return [
+            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+        ]
 
     async def _handle_fs_edit(self, args: dict) -> list[TextContent]:
         """Handle linux_fs_edit tool."""
         from llmc_mcp.tools.fs import edit_block
+
         path = args.get("path", "")
         old_text = args.get("old_text", "")
         new_text = args.get("new_text", "")
@@ -1667,8 +1727,14 @@ class LlmcMcpServer:
             return [TextContent(type="text", text='{"error": "path and old_text required"}')]
         result = edit_block(path, self.config.tools.allowed_roots, old_text, new_text, expected)
         if result.success:
-            return [TextContent(type="text", text=json.dumps({"data": result.data, "meta": result.meta}))]
-        return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                )
+            ]
+        return [
+            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+        ]
 
     async def run(self):
         """Run the server with stdio transport."""
@@ -1710,7 +1776,7 @@ def main():
         config.observability.log_level = args.log_level
 
     # Set up logging (use observability config if enabled)
-    global logger # noqa: PLW0603
+    global logger  # noqa: PLW0603
     if config.observability.enabled:
         logger = setup_logging(config.observability, "llmc-mcp")
     else:

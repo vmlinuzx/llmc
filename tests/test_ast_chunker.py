@@ -28,7 +28,7 @@ def function_two():
     return y
 '''
 
-SHELL_TEST_FILE = '''
+SHELL_TEST_FILE = """
 #!/bin/bash
 # Test shell script
 
@@ -45,9 +45,9 @@ class_two() {
 function_three() {
     echo "Third function"
 }
-'''
+"""
 
-MARKDOWN_TEST_FILE = '''
+MARKDOWN_TEST_FILE = """
 # Section One
 
 This is content under section one.
@@ -63,7 +63,8 @@ Different content.
 ## Subsection B
 
 Even more content.
-'''
+"""
+
 
 def test_ast_chunker_python():
     """Test AST chunker with Python file"""
@@ -77,8 +78,11 @@ def test_ast_chunker_python():
         print(f"  Chunk: {chunk_meta.get('span_type', 'unknown')} - {chunk_text[:50]}")
 
     assert len(chunks) > 0, "No chunks generated from Python file"
-    assert any('function_one' in chunk_text for chunk_text, _ in chunks), "function_one not found in chunks"
-    assert any('MyClass' in chunk_text for chunk_text, _ in chunks), "MyClass not found in chunks"
+    assert any("function_one" in chunk_text for chunk_text, _ in chunks), (
+        "function_one not found in chunks"
+    )
+    assert any("MyClass" in chunk_text for chunk_text, _ in chunks), "MyClass not found in chunks"
+
 
 def test_ast_chunker_shell():
     """Test AST chunker with shell script"""
@@ -93,6 +97,7 @@ def test_ast_chunker_shell():
 
     assert len(chunks) > 0, "No chunks generated from shell script"
 
+
 def test_ast_chunker_markdown():
     """Test AST chunker with markdown file"""
     from scripts.rag.ast_chunker import ASTChunker
@@ -105,18 +110,21 @@ def test_ast_chunker_markdown():
         print(f"  Chunk: {chunk_meta.get('span_type', 'unknown')} - {chunk_text[:50]}")
 
     assert len(chunks) > 0, "No chunks generated from markdown file"
-    assert any('Section One' in chunk_text for chunk_text, _ in chunks), "Section One not found in chunks"
+    assert any("Section One" in chunk_text for chunk_text, _ in chunks), (
+        "Section One not found in chunks"
+    )
+
 
 def test_ast_chunker_syntax_error_robustness():
     """Test AST chunker handles syntax errors gracefully"""
     from scripts.rag.ast_chunker import ASTChunker
 
-    bad_python = '''
+    bad_python = """
 def function_one(
     # Missing closing parenthesis
     x = 1
     return x
-'''
+"""
 
     chunker = ASTChunker()
 

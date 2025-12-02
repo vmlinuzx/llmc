@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """LLMC RAG Client - Unified facade for RAG operations."""
+
 from pathlib import Path
 from typing import Any
 
@@ -17,10 +18,11 @@ from tools.rag_nav.tool_handlers import (
 class RAGClient:
     """
     Unified Client Facade for the LLMC RAG System.
-    
+
     This class abstracts the underlying tool handlers and provides a clean
     API for the TUI and other consumers to interact with the RAG service.
     """
+
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root
 
@@ -32,10 +34,12 @@ class RAGClient:
         """Find usages of a symbol."""
         return tool_rag_where_used(self.repo_root, symbol, limit)
 
-    def lineage(self, symbol: str, direction: str = "downstream", limit: int | None = None) -> LineageResult:
+    def lineage(
+        self, symbol: str, direction: str = "downstream", limit: int | None = None
+    ) -> LineageResult:
         """Trace data flow (upstream/downstream)."""
         return tool_rag_lineage(self.repo_root, symbol, direction, limit)
-    
+
     def get_stats(self) -> dict[str, Any]:
         """Get system health and graph statistics."""
         stats = tool_rag_stats(self.repo_root)

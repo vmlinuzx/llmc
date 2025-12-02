@@ -1,4 +1,3 @@
-
 from typing import Any
 
 
@@ -21,4 +20,3 @@ def assert_error_envelope(res: Any) -> None:
     assert getattr(res.meta, "status", None) == "ERROR"
     assert getattr(res.meta, "error_code", None)
     assert getattr(res.meta, "message", None)
-

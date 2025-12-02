@@ -12,6 +12,7 @@ Tests cover complete workflows from operator perspective:
    - Confirm daemon runs refresh jobs
    - Verify index status metadata and graph artifacts are updated
 """
+
 import os
 from pathlib import Path
 import subprocess
@@ -37,16 +38,18 @@ class TestLocalDevWorkflow:
                 # Try to register the repo
                 result = subprocess.run(
                     [str(llmc_rag_repo), "add", str(repo_path)],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
                 )
                 # May fail without full setup, but documents the workflow
 
             # Step 2: Check that daemon script exists
             daemon_script = Path(__file__).parent.parent / "scripts" / "llmc-rag-service"
-            assert daemon_script.exists() or daemon_script.with_suffix(".py").exists(), \
+            assert daemon_script.exists() or daemon_script.with_suffix(".py").exists(), (
                 "Daemon service script should exist"
+            )
 
     def test_wrapper_with_repo_context(self):
         """Test wrapper scripts can work with repository context."""
@@ -68,10 +71,11 @@ class TestLocalDevWorkflow:
                 # Try to run with --help or check it fails gracefully
                 result = subprocess.run(
                     [str(cmw), "--repo", str(repo_path), "test"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     env=env,
-                    timeout=10
+                    timeout=10,
                 )
                 # May fail due to missing CLI, but repo detection should work
 
@@ -89,10 +93,11 @@ class TestLocalDevWorkflow:
             if helper_script.exists():
                 result = subprocess.run(
                     [str(helper_script), "--repo", str(repo_path)],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     input="test query",
-                    timeout=10
+                    timeout=10,
                 )
                 # Should handle query (may not find index, but processes it)
 
@@ -108,11 +113,7 @@ class TestLocalDevWorkflow:
             # Test with no auth token (should fail with clear error)
             env = {}
             result = subprocess.run(
-                [str(cmw), "test"],
-                check=False, capture_output=True,
-                text=True,
-                env=env,
-                timeout=10
+                [str(cmw), "test"], check=False, capture_output=True, text=True, env=env, timeout=10
             )
 
             # Should fail and provide clear error message
@@ -131,9 +132,10 @@ class TestLocalDevWorkflow:
                 # Test with --repo flag
                 result = subprocess.run(
                     [str(cw), "--repo", str(repo_path), "test query"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
-                    timeout=10
+                    timeout=10,
                 )
                 # May fail without codex CLI, but should parse args
 
@@ -157,10 +159,11 @@ class TestLocalDevWorkflow:
                 for repo in [repo1, repo2]:
                     result = subprocess.run(
                         [str(cmw), "--repo", str(repo), "test"],
-                        check=False, capture_output=True,
+                        check=False,
+                        capture_output=True,
                         text=True,
                         env=env,
-                        timeout=10
+                        timeout=10,
                     )
                     # Documents multi-repo capability
 
@@ -183,10 +186,11 @@ class TestLocalDevWorkflow:
 
                 result = subprocess.run(
                     [str(cmw), "test"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     env=env,
-                    timeout=10
+                    timeout=10,
                 )
                 # Should include living history if available
 
@@ -207,9 +211,10 @@ class TestCronDrivenRefreshWorkflow:
                 # Run cron wrapper
                 result = subprocess.run(
                     [str(cron_script), "--repo", str(tmpdir)],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
-                    timeout=5  # Prevent hanging
+                    timeout=5,  # Prevent hanging
                 )
                 # Should create log directories
 
@@ -273,10 +278,7 @@ class TestCronDrivenRefreshWorkflow:
 
                 # Should require path arguments
                 result = subprocess.run(
-                    [str(sync_script)],
-                    check=False, capture_output=True,
-                    text=True,
-                    timeout=10
+                    [str(sync_script)], check=False, capture_output=True, text=True, timeout=10
                 )
                 # Should fail due to missing args
                 assert result.returncode != 0
@@ -358,8 +360,7 @@ class TestWorkflowIntegration:
             if not script.name.startswith("."):
                 with open(script) as f:
                     first_line = f.readline().strip()
-                    assert first_line.startswith("#!"), \
-                        f"{script.name} should have a shebang"
+                    assert first_line.startswith("#!"), f"{script.name} should have a shebang"
 
     def test_scripts_use_set_euo_pipefail(self):
         """Test that shell scripts use strict error handling."""
@@ -419,10 +420,10 @@ class TestWorkflowIntegration:
 
                 # Should have error function or clear error messages
                 has_errors = (
-                    "err()" in content or
-                    "echo" in content or
-                    "Error:" in content or
-                    "error" in content.lower()
+                    "err()" in content
+                    or "echo" in content
+                    or "Error:" in content
+                    or "error" in content.lower()
                 )
                 assert has_errors, f"{script.name} should have error handling"
 
@@ -432,8 +433,7 @@ class TestWorkflowIntegration:
         shell_scripts = scripts_dir.glob("*.sh")
 
         for script in shell_scripts:
-            assert os.access(script, os.X_OK), \
-                f"{script.name} should be executable"
+            assert os.access(script, os.X_OK), f"{script.name} should be executable"
 
     def test_run_in_tmux_helper_exists(self):
         """Test that run_in_tmux.sh helper exists."""

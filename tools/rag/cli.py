@@ -68,7 +68,7 @@ def index(since: str | None, no_export: bool) -> None:
     stats = index_repo(since=since, export_json=not no_export)
     click.echo(
         f"Indexed {stats['files']} files, {stats['spans']} spans in {stats['duration_sec']}s "
-        f"(skipped={stats.get('skipped',0)}, unchanged={stats.get('unchanged',0)})"
+        f"(skipped={stats.get('skipped', 0)}, unchanged={stats.get('unchanged', 0)})"
     )
 
 
@@ -85,9 +85,21 @@ def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
 
 
 @cli.command()
-@click.option("--path", "paths", multiple=True, type=click.Path(), help="Specific file or directory paths to sync")
+@click.option(
+    "--path",
+    "paths",
+    multiple=True,
+    type=click.Path(),
+    help="Specific file or directory paths to sync",
+)
 @click.option("--since", metavar="SHA", help="Sync files changed since commit")
-@click.option("--stdin", "use_stdin", is_flag=True, default=False, help="Read newline-delimited paths from stdin")
+@click.option(
+    "--stdin",
+    "use_stdin",
+    is_flag=True,
+    default=False,
+    help="Read newline-delimited paths from stdin",
+)
 def sync(paths: Iterable[str], since: str | None, use_stdin: bool) -> None:
     """Incrementally update spans for selected files."""
     from .indexer import sync_paths
@@ -107,7 +119,7 @@ def sync(paths: Iterable[str], since: str | None, use_stdin: bool) -> None:
     stats = sync_paths(path_list)
     click.echo(
         f"Synced {stats['files']} files, {stats['spans']} spans, "
-        f"deleted={stats.get('deleted',0)}, unchanged={stats.get('unchanged',0)} in {stats['duration_sec']}s"
+        f"deleted={stats.get('deleted', 0)}, unchanged={stats.get('unchanged', 0)} in {stats['duration_sec']}s"
     )
 
 
@@ -207,10 +219,28 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
 
 
 @cli.command()
-@click.option("--limit", default=10, show_default=True, help="Maximum spans to include in the plan.")
-@click.option("--dry-run/--execute", default=True, show_default=True, help="Preview work items instead of running the LLM.")
-@click.option("--model", default="local-qwen", show_default=True, help="Model identifier to record with enrichment results.")
-@click.option("--cooldown", default=0, show_default=True, type=int, help="Skip spans whose files changed within the last N seconds.")
+@click.option(
+    "--limit", default=10, show_default=True, help="Maximum spans to include in the plan."
+)
+@click.option(
+    "--dry-run/--execute",
+    default=True,
+    show_default=True,
+    help="Preview work items instead of running the LLM.",
+)
+@click.option(
+    "--model",
+    default="local-qwen",
+    show_default=True,
+    help="Model identifier to record with enrichment results.",
+)
+@click.option(
+    "--cooldown",
+    default=0,
+    show_default=True,
+    type=int,
+    help="Skip spans whose files changed within the last N seconds.",
+)
 def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
     """Preview or execute enrichment tasks (summary/tags) for spans."""
     repo_root = _find_repo_root()
@@ -230,7 +260,9 @@ def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
             return
 
         llm = default_enrichment_callable(model)
-        successes, errors = execute_enrichment(db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown)
+        successes, errors = execute_enrichment(
+            db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown
+        )
     finally:
         db.close()
 
@@ -245,10 +277,28 @@ def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
 
 
 @cli.command()
-@click.option("--limit", default=10, show_default=True, help="Maximum spans to include in the plan.")
-@click.option("--dry-run/--execute", default=True, show_default=True, help="Preview work items instead of generating embeddings.")
-@click.option("--model", default="auto", show_default=True, help="Embedding model identifier (`auto` uses configured default).")
-@click.option("--dim", default=0, show_default=True, type=int, help="Embedding dimension (0 uses the model default).")
+@click.option(
+    "--limit", default=10, show_default=True, help="Maximum spans to include in the plan."
+)
+@click.option(
+    "--dry-run/--execute",
+    default=True,
+    show_default=True,
+    help="Preview work items instead of generating embeddings.",
+)
+@click.option(
+    "--model",
+    default="auto",
+    show_default=True,
+    help="Embedding model identifier (`auto` uses configured default).",
+)
+@click.option(
+    "--dim",
+    default=0,
+    show_default=True,
+    type=int,
+    help="Embedding dimension (0 uses the model default).",
+)
 def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
     """Preview or execute embedding jobs for spans."""
     repo_root = _find_repo_root()
@@ -269,13 +319,17 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
             click.echo(json.dumps(plan, indent=2, ensure_ascii=False))
             click.echo("\n(Dry run only. Pass --execute to persist embeddings.)")
             return
-        results, used_model, used_dim = execute_embeddings(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
+        results, used_model, used_dim = execute_embeddings(
+            db, repo_root, limit=limit, model=model_arg, dim=dim_arg
+        )
     finally:
         db.close()
     if not results:
         click.echo("No spans pending embedding.")
     else:
-        click.echo(f"Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim}).")
+        click.echo(
+            f"Stored embeddings for {len(results)} spans using {used_model} (dim={used_dim})."
+        )
 
 
 @cli.command()
@@ -287,7 +341,7 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
     """Run a cosine-similarity search over the local embedding index."""
     phrase = " ".join(query).strip()
     if not phrase:
-        click.echo("Provide a query, e.g. `rag search \"How do we verify JWTs?\"`")
+        click.echo('Provide a query, e.g. `rag search "How do we verify JWTs?"`')
         return
     try:
         results = search_spans(phrase, limit=limit, debug=debug)
@@ -325,7 +379,9 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
             click.echo(f"    summary: {result.summary}")
         if debug and result.debug_info:
             # Minimal debug output for text mode, mostly for verification
-            click.echo(f"    [DEBUG] Graph Node: {result.debug_info.get('graph', {}).get('node_id', 'N/A')}")
+            click.echo(
+                f"    [DEBUG] Graph Node: {result.debug_info.get('graph', {}).get('node_id', 'N/A')}"
+            )
 
 
 @cli.command()
@@ -347,7 +403,9 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
 def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> None:
     """Run a lightweight embedding quality benchmark."""
     metrics = run_embedding_benchmark()
-    success = metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+    success = (
+        metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+    )
     report = {
         **metrics,
         "top1_threshold": top1_threshold,
@@ -392,11 +450,18 @@ def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> 
     is_flag=True,
     help="Emit plan as JSON (default; kept for ergonomics).",
 )
-def plan(query: list[str], limit: int, min_score: float, min_confidence: float, no_log: bool, as_json: bool) -> None:
+def plan(
+    query: list[str],
+    limit: int,
+    min_score: float,
+    min_confidence: float,
+    no_log: bool,
+    as_json: bool,
+) -> None:
     """Generate a heuristic retrieval plan for a natural language query."""
     question = " ".join(query).strip()
     if not question:
-        click.echo("Provide a query, e.g. `rag plan \"Where do we validate JWTs?\"`")
+        click.echo('Provide a query, e.g. `rag plan "Where do we validate JWTs?"`')
         raise SystemExit(1)
 
     repo_root = _find_repo_root()
@@ -417,7 +482,10 @@ def plan(query: list[str], limit: int, min_score: float, min_confidence: float, 
     # compatibility and ergonomics (e.g., piping into jq).
     click.echo(json.dumps(plan_as_dict(result), indent=2, ensure_ascii=False))
     if result.fallback_recommended:
-        click.echo("\n⚠️  Confidence below threshold; include additional context or full-text search.", err=True)
+        click.echo(
+            "\n⚠️  Confidence below threshold; include additional context or full-text search.",
+            err=True,
+        )
 
 
 @cli.command()
@@ -451,7 +519,7 @@ def doctor(as_json: bool, verbose: bool) -> None:
 def export(output: str | None) -> None:
     """Export all RAG data to tar.gz archive."""
     from .export_data import run_export
-    
+
     repo_root = _find_repo_root()
     output_path = Path(output) if output else None
     run_export(repo_root=repo_root, output_path=output_path)
@@ -463,55 +531,53 @@ def export(output: str | None) -> None:
 @click.option("--line", type=int, help="Line number to focus on (if path provided).")
 @click.option("--full", "full_source", is_flag=True, help="Include full source code.")
 @click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
-def inspect(path: str | None, symbol: str | None, line: int | None, full_source: bool, as_json: bool) -> None:
+def inspect(
+    path: str | None, symbol: str | None, line: int | None, full_source: bool, as_json: bool
+) -> None:
     """Fast inspection of a file or symbol with graph + enrichment context.
-    
+
     Does NOT load embedding models.
     """
     from .inspector import inspect_entity
-    
+
     if not path and not symbol:
         click.echo("Error: Must provide either --path or --symbol", err=True)
         raise SystemExit(1)
-        
+
     repo_root = _find_repo_root()
-    
+
     try:
         result = inspect_entity(
-            repo_root,
-            path=path,
-            symbol=symbol,
-            line=line,
-            include_full_source=full_source
+            repo_root, path=path, symbol=symbol, line=line, include_full_source=full_source
         )
     except Exception as e:
         click.echo(f"Error inspecting entity: {e}", err=True)
         raise SystemExit(1)
-        
+
     if as_json:
         click.echo(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
         return
-        
+
     # Text Output
     click.echo(f"# FILE: {result.path}")
     click.echo(f"# SOURCE_MODE: {result.source_mode}")
     if symbol:
         click.echo(f"# SYMBOL: {symbol}")
-    
+
     prov_kind = result.provenance.get("kind", "unknown")
     click.echo(f"# KIND: {prov_kind}")
-    
+
     summary = result.file_summary or result.enrichment.get("summary")
     if summary:
         click.echo(f"# SUMMARY: {summary}")
-        
+
     if result.defined_symbols:
         click.echo("# DEFINED SYMBOLS:")
         for sym in result.defined_symbols[:10]:
             click.echo(f"#   - {sym.name} ({sym.type}, line {sym.line})")
-            
+
     click.echo("# RELATIONSHIPS:")
-    
+
     def print_rels(label, items):
         if items:
             vals = ", ".join(i.symbol or i.path for i in items)
@@ -523,9 +589,18 @@ def inspect(path: str | None, symbol: str | None, line: int | None, full_source:
     print_rels("Called by", result.incoming_calls)
     print_rels("Tests", result.related_tests)
     print_rels("Docs", result.related_docs)
-    
+
     # Check if graph seems empty/disconnected for this file
-    has_rels = any([result.parents, result.children, result.outgoing_calls, result.incoming_calls, result.related_tests, result.related_docs])
+    has_rels = any(
+        [
+            result.parents,
+            result.children,
+            result.outgoing_calls,
+            result.incoming_calls,
+            result.related_tests,
+            result.related_docs,
+        ]
+    )
     if not has_rels:
         status = result.graph_status
         if status == "graph_missing":
@@ -534,13 +609,13 @@ def inspect(path: str | None, symbol: str | None, line: int | None, full_source:
             click.echo("# GRAPH STATUS: ⚠️  File not found in graph index.")
         elif status == "isolated":
             click.echo("# GRAPH STATUS: ⚠️  File indexed but isolated (no relationships found).")
-    
+
     click.echo("")
     if result.primary_span:
         click.echo(f"# SNIPPET (lines {result.primary_span[0]}-{result.primary_span[1]}):")
     else:
         click.echo("# SNIPPET:")
-    
+
     if full_source and result.full_source:
         click.echo(result.full_source)
     else:
@@ -581,7 +656,13 @@ def _route_to_dict(repo_root: Path) -> dict:
             if is_dataclass(status):
                 status_dict = asdict(status)
             else:
-                fields = ["index_state", "last_indexed_commit", "last_indexed_at", "schema_version", "last_error"]
+                fields = [
+                    "index_state",
+                    "last_indexed_commit",
+                    "last_indexed_at",
+                    "schema_version",
+                    "last_error",
+                ]
                 status_dict = {k: getattr(status, k, None) for k in fields}
         except Exception:
             status_dict = None
@@ -598,6 +679,7 @@ def _route_to_dict(repo_root: Path) -> dict:
 def _preview_line(text: str, width: int) -> str:
     """Collapse whitespace and truncate to width."""
     import re as _re
+
     s = _re.sub(r"\s+", " ", (text or "").strip())
     if len(s) > width:
         return s[: max(0, width - 1)] + "…"
@@ -644,7 +726,15 @@ def _emit_start_event(command: str, **kw) -> None:
 
 
 def _emit_end_event(command: str, total: int, elapsed_ms: int) -> None:
-    _emit_jsonl_line({"type": "end", "command": command, "total": total, "elapsed_ms": elapsed_ms, "ts": _now_iso()})
+    _emit_jsonl_line(
+        {
+            "type": "end",
+            "command": command,
+            "total": total,
+            "elapsed_ms": elapsed_ms,
+            "ts": _now_iso(),
+        }
+    )
 
 
 def _emit_error_event(command: str, message: str, code: str | None = None) -> None:
@@ -731,7 +821,9 @@ def nav_print_schema() -> None:
 )
 @click.option("--limit", "-n", default=10, show_default=True, help="Max results to return.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
-@click.option("--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line.")
+@click.option(
+    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+)
 @click.option(
     "--jsonl-compact",
     "as_jsonl_compact",
@@ -744,7 +836,9 @@ def nav_print_schema() -> None:
     show_default=True,
     help="Show first-line preview of the snippet in text mode.",
 )
-@click.option("--width", "-w", default=96, show_default=True, help="Max preview width in characters.")
+@click.option(
+    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+)
 @click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
 def nav_search(
     query: list[str],
@@ -872,7 +966,9 @@ def nav_search(
 )
 @click.option("--limit", "-n", default=50, show_default=True, help="Max results to return.")
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
-@click.option("--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line.")
+@click.option(
+    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+)
 @click.option(
     "--jsonl-compact",
     "as_jsonl_compact",
@@ -885,7 +981,9 @@ def nav_search(
     show_default=True,
     help="Show first-line preview of the snippet in text mode.",
 )
-@click.option("--width", "-w", default=96, show_default=True, help="Max preview width in characters.")
+@click.option(
+    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+)
 @click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
 def nav_where_used(
     symbol: str,
@@ -1010,9 +1108,13 @@ def nav_where_used(
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Repository root (defaults to auto-detected).",
 )
-@click.option("--max-results", "-n", default=50, show_default=True, help="Max lineage hops to return.")
+@click.option(
+    "--max-results", "-n", default=50, show_default=True, help="Max lineage hops to return."
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
-@click.option("--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line.")
+@click.option(
+    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+)
 @click.option(
     "--jsonl-compact",
     "as_jsonl_compact",
@@ -1025,7 +1127,9 @@ def nav_where_used(
     show_default=True,
     help="Show first-line preview of the snippet in text mode.",
 )
-@click.option("--width", "-w", default=96, show_default=True, help="Max preview width in characters.")
+@click.option(
+    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+)
 @click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
 def nav_lineage(
     symbol: str,
@@ -1054,7 +1158,9 @@ def nav_lineage(
         if as_jsonl or as_jsonl_compact:
             _emit_start_event("lineage", symbol=symbol, direction=direction)
             _emit_jsonl_line({"type": "route", "route": route_info})
-        result = tool_rag_lineage(symbol, direction=direction, repo_root=repo_root, max_results=max_results)
+        result = tool_rag_lineage(
+            symbol, direction=direction, repo_root=repo_root, max_results=max_results
+        )
     except Exception as exc:
         if as_jsonl or as_jsonl_compact:
             _emit_error_event("lineage", f"{exc.__class__.__name__}: {exc}")
@@ -1142,30 +1248,33 @@ def routing() -> None:
     """Routing tools and evaluation."""
     pass
 
+
 @routing.command()
-@click.option("--dataset", type=click.Path(exists=True), required=True, help="Path to JSONL dataset")
+@click.option(
+    "--dataset", type=click.Path(exists=True), required=True, help="Path to JSONL dataset"
+)
 @click.option("--top-k", default=10, help="Number of results to retrieve")
 @click.option("--json", "as_json", is_flag=True, help="Output results as JSON")
 def eval(dataset: str, top_k: int, as_json: bool) -> None:
     """Evaluate routing and retrieval quality."""
     from tools.rag.eval.routing_eval import evaluate_routing
-    
+
     try:
         metrics = evaluate_routing(Path(dataset), top_k=top_k)
-        
+
         if as_json:
             click.echo(json.dumps(metrics, indent=2))
         else:
             click.echo("=== Routing Evaluation Results ===")
             click.echo(f"Total Examples:     {metrics.get('total_examples', 0)}")
-            if 'error' in metrics:
+            if "error" in metrics:
                 click.echo(f"Error: {metrics['error']}")
                 return
-                
+
             click.echo(f"Routing Accuracy:   {metrics['routing_accuracy']:.2%}")
             click.echo(f"Retrieval Hit@{top_k}:    {metrics['retrieval_hit_at_k']:.2%}")
             click.echo(f"Retrieval MRR:      {metrics['retrieval_mrr']:.4f}")
-            
+
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)

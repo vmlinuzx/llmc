@@ -19,12 +19,16 @@ try:
         PathTraversalError,
         validate_repo_paths,
     )
+
     _LEGACY_REPO_API_AVAILABLE = True
 except Exception:  # pragma: no cover - compatibility guard
     _LEGACY_REPO_API_AVAILABLE = False
 
 if not _LEGACY_REPO_API_AVAILABLE:
-    pytest.skip("Legacy RAG repo integration API not present; skipping edge-case tests", allow_module_level=True)
+    pytest.skip(
+        "Legacy RAG repo integration API not present; skipping edge-case tests",
+        allow_module_level=True,
+    )
 
 
 class TestRepoIntegration:
@@ -76,11 +80,21 @@ setup(name='test')
 
         # Initialize git repo
         import subprocess
+
         subprocess.run(["git", "init"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
+        )
         subprocess.run(["git", "add", "."], cwd=repo_root, check=True, capture_output=True)
-        subprocess.run(["git", "commit", "-m", "Initial"], cwd=repo_root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial"], cwd=repo_root, check=True, capture_output=True
+        )
 
         # Verify git head exists
         git_head = repo_root / ".git" / "HEAD"
@@ -88,11 +102,7 @@ setup(name='test')
 
         # Get commit SHA
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
         )
         commit_sha = result.stdout.strip()
         assert len(commit_sha) == 40  # Full SHA length
@@ -277,6 +287,7 @@ class TestWorkspaceCleanup:
 
         # Test permission handling
         import stat
+
         readonly_file.chmod(stat.S_IRUSR)
 
         # Should handle read-only files appropriately

@@ -5,7 +5,7 @@ Adversarial testing of the enrichment router system
 
 import sys
 
-sys.path.insert(0, '/home/vmlinux/src/llmc')
+sys.path.insert(0, "/home/vmlinux/src/llmc")
 
 from pathlib import Path
 
@@ -197,9 +197,10 @@ def test_enrichment_router_edge_cases():
     except Exception as e:
         print(f"  💥 String conversion error: {e}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("ENRICHMENT ROUTER ADVERSARIAL TEST COMPLETE")
-    print("="*60)
+    print("=" * 60)
+
 
 if __name__ == "__main__":
     test_enrichment_router_edge_cases()

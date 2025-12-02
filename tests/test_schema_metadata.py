@@ -157,4 +157,3 @@ def test_entity_location_fields_round_trip():
     assert entity_rt.start_line == 10
     assert entity_rt.end_line == 20
     assert entity_rt.start_line <= entity_rt.end_line
-

@@ -15,7 +15,17 @@ class DummyCtx:
 def test_te_run_injects_json_and_env(monkeypatch):
     captured = {}
 
-    def fake_run(argv, stdout=None, stderr=None, cwd=None, timeout=None, env=None, text=None, check=None, capture_output=None):
+    def fake_run(
+        argv,
+        stdout=None,
+        stderr=None,
+        cwd=None,
+        timeout=None,
+        env=None,
+        text=None,
+        check=None,
+        capture_output=None,
+    ):
         captured["argv"] = argv
         captured["env"] = env
         # Simulate TE --json stdout

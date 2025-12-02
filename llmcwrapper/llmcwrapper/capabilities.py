@@ -7,7 +7,7 @@ CAPABILITIES = {
         "json": True,
         "vision": False,
         "responses_api": False,  # using messages v1 by default
-        "tool_choice": True
+        "tool_choice": True,
     },
     "minimax": {
         "tools": False,  # TODO: verify; set True when implemented
@@ -15,6 +15,6 @@ CAPABILITIES = {
         "json": True,
         "vision": False,
         "responses_api": False,
-        "tool_choice": False
-    }
+        "tool_choice": False,
+    },
 }

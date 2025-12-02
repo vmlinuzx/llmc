@@ -36,7 +36,7 @@ class TestPromoteOnce:
             current_tier=current_tier,
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "14b"
 
@@ -46,7 +46,7 @@ class TestPromoteOnce:
             current_tier=current_tier,
             metrics=metrics,
             settings=settings,
-            promote_once=False
+            promote_once=False,
         )
         assert next_tier is None
 
@@ -61,7 +61,7 @@ class TestPromoteOnce:
             current_tier="nano",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier is None
 
@@ -84,7 +84,7 @@ class TestPromoteOnce:
                 current_tier=tier,
                 metrics=metrics,
                 settings=settings,
-                promote_once=False
+                promote_once=False,
             )
             assert next_tier is None, f"Should not promote from {tier} on {failure_type}"
 
@@ -111,7 +111,7 @@ class TestRoundRobinMaxRetries:
             current_tier=current_tier,
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "14b"
 
@@ -121,7 +121,7 @@ class TestRoundRobinMaxRetries:
             current_tier="14b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "nano"
 
@@ -131,7 +131,7 @@ class TestRoundRobinMaxRetries:
             current_tier="nano",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier is None
 
@@ -146,7 +146,7 @@ class TestRoundRobinMaxRetries:
             current_tier="14b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "nano"
 
@@ -156,7 +156,7 @@ class TestRoundRobinMaxRetries:
             current_tier="7b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "14b"
 
@@ -166,7 +166,7 @@ class TestRoundRobinMaxRetries:
             current_tier="14b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "nano"
 
@@ -185,7 +185,7 @@ class TestRoundRobinMaxRetries:
                 current_tier="7b",
                 metrics=metrics,
                 settings=settings,
-                promote_once=True
+                promote_once=True,
             )
 
             # Based on failure type
@@ -259,7 +259,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
             current_tier="7b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "nano"
 
@@ -274,7 +274,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
             current_tier="14b",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier == "nano"
 
@@ -289,7 +289,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
             current_tier="nano",
             metrics=metrics,
             settings=settings,
-            promote_once=True
+            promote_once=True,
         )
         assert next_tier is None
 
@@ -309,7 +309,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 current_tier="7b",
                 metrics=metrics,
                 settings=settings,
-                promote_once=True
+                promote_once=True,
             )
             assert next_tier_7b == "nano", f"Failure {failure_type} from 7b should demote to nano"
 
@@ -318,7 +318,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 current_tier="14b",
                 metrics=metrics,
                 settings=settings,
-                promote_once=True
+                promote_once=True,
             )
             assert next_tier_14b == "nano", f"Failure {failure_type} from 14b should demote to nano"
 
@@ -329,7 +329,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 current_tier="7b",
                 metrics=metrics,
                 settings=settings,
-                promote_once=True
+                promote_once=True,
             )
             assert next_tier_7b == "14b", f"Failure {failure_type} from 7b should promote to 14b"
 
@@ -340,7 +340,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 current_tier="14b",
                 metrics=metrics,
                 settings=settings,
-                promote_once=True
+                promote_once=True,
             )
             assert next_tier_14b == "nano", f"Failure {failure_type} from 14b should demote to nano"
 
@@ -355,7 +355,7 @@ class TestDemoteOnTimeoutRespectsPolicy:
             current_tier="7b",
             metrics=metrics,
             settings=settings,
-            promote_once=False
+            promote_once=False,
         )
         assert next_tier is None
 
@@ -399,11 +399,12 @@ class TestTierTransitionMatrix:
                     current_tier=current_tier,
                     metrics=metrics,
                     settings=settings,
-                    promote_once=True
+                    promote_once=True,
                 )
                 expected_result = expected.get((current_tier, failure_type))
-                assert result == expected_result, \
+                assert result == expected_result, (
                     f"Failed: {current_tier} + {failure_type} -> {result}, expected {expected_result}"
+                )
 
 
 class TestClassifyFailure:

@@ -18,6 +18,7 @@ from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_wo
 # 7. Repo Registration Tool Tests
 # ==============================================================================
 
+
 def test_tool_config_default(tmp_path: Path) -> None:
     """Test loading tool config with defaults."""
     # No config file exists, should return defaults

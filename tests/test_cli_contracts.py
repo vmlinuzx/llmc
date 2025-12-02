@@ -32,6 +32,7 @@ class TestFlagExclusivity:
     def runner(self):
         """Create a click test runner."""
         from click.testing import CliRunner
+
         return CliRunner()
 
     def test_nav_search_json_vs_jsonl_exclusivity(self, runner):
@@ -87,7 +88,9 @@ class TestFlagExclusivity:
                 mock_result.freshness_state = "FRESH"
                 mock_search.return_value = mock_result
 
-                result = runner.invoke(cli, ["nav", "search", "test query", "--repo", str(repo_root)])
+                result = runner.invoke(
+                    cli, ["nav", "search", "test query", "--repo", str(repo_root)]
+                )
 
                 # Should succeed (exit code might vary based on implementation)
                 # assert result.exit_code == 0
@@ -103,7 +106,9 @@ class TestFlagExclusivity:
                 mock_result.items = []
                 mock_search.return_value = mock_result
 
-                result = runner.invoke(cli, ["nav", "search", "--jsonl", "test", "--repo", str(repo_root)])
+                result = runner.invoke(
+                    cli, ["nav", "search", "--jsonl", "test", "--repo", str(repo_root)]
+                )
 
                 # Should work with jsonl only
                 assert "--jsonl" in result.output or len(result.output) > 0
@@ -117,6 +122,7 @@ class TestFlagExclusivity:
             with patch("tools.rag.tool_rag_search") as mock_search:
                 # Create a more complete mock that can be serialized
                 from tools.rag.nav_meta import RagResult, RagToolMeta
+
                 meta = RagToolMeta(
                     status="OK",
                     source="TEST",
@@ -125,7 +131,9 @@ class TestFlagExclusivity:
                 mock_result = RagResult(meta=meta, items=[])
                 mock_search.return_value = mock_result
 
-                result = runner.invoke(cli, ["nav", "search", "--json", "test", "--repo", str(repo_root)])
+                result = runner.invoke(
+                    cli, ["nav", "search", "--json", "test", "--repo", str(repo_root)]
+                )
 
                 # Should work with json only
                 assert result.exit_code == 0 or len(result.output) > 0
@@ -150,26 +158,30 @@ class TestJsonlEventOrder:
             _emit_jsonl_line({"type": "route", "route": route_info})
 
             # Emit items
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test.py",
-                "path": "test.py",
-                "start_line": 1,
-                "end_line": 10
-            })
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test2.py",
-                "path": "test2.py",
-                "start_line": 5,
-                "end_line": 15
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test.py",
+                    "path": "test.py",
+                    "start_line": 1,
+                    "end_line": 10,
+                }
+            )
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test2.py",
+                    "path": "test2.py",
+                    "start_line": 5,
+                    "end_line": 15,
+                }
+            )
 
             # Emit end
             _emit_end_event("search", total=2, elapsed_ms=100)
 
         output = captured.getvalue()
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
 
         # Verify event order
         assert len(lines) >= 4
@@ -197,7 +209,7 @@ class TestJsonlEventOrder:
             _emit_error_event("search", "Test error message")
 
         output = captured.getvalue()
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
 
         # Should have start and error events
         assert len(lines) >= 2
@@ -252,13 +264,15 @@ class TestJsonlEventOrder:
         captured = io.StringIO()
 
         with patch("sys.stdout", captured):
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test.py",
-                "path": "test.py",
-                "start_line": 1,
-                "end_line": 10
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test.py",
+                    "path": "test.py",
+                    "start_line": 1,
+                    "end_line": 10,
+                }
+            )
 
         output = captured.getvalue()
         event = json.loads(output.strip())
@@ -329,13 +343,15 @@ class TestCompactModeShape:
             loc.start_line = 10
             loc.end_line = 20
 
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test.py",
-                "path": loc.path,
-                "start_line": loc.start_line,
-                "end_line": loc.end_line
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test.py",
+                    "path": loc.path,
+                    "start_line": loc.start_line,
+                    "end_line": loc.end_line,
+                }
+            )
 
         output = captured.getvalue()
         event = json.loads(output.strip())
@@ -352,13 +368,15 @@ class TestCompactModeShape:
         captured = io.StringIO()
 
         with patch("sys.stdout", captured):
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "module/test.py",
-                "path": "module/test.py",
-                "start_line": 1,
-                "end_line": 5
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "module/test.py",
+                    "path": "module/test.py",
+                    "start_line": 1,
+                    "end_line": 5,
+                }
+            )
 
         output = captured.getvalue()
         event = json.loads(output.strip())
@@ -384,12 +402,8 @@ class TestCompactModeShape:
             "end_line": 10,
             "snippet": {
                 "text": "def test_function():\n    pass",
-                "location": {
-                    "path": "test.py",
-                    "start_line": 1,
-                    "end_line": 2
-                }
-            }
+                "location": {"path": "test.py", "start_line": 1, "end_line": 2},
+            },
         }
 
         # Full mode should have snippet
@@ -402,21 +416,13 @@ class TestCompactModeShape:
 
         captured = io.StringIO()
 
-        test_paths = [
-            "src/module/file.py",
-            "tests/test_file.py",
-            "dir/subdir/file.py"
-        ]
+        test_paths = ["src/module/file.py", "tests/test_file.py", "dir/subdir/file.py"]
 
         for path in test_paths:
             with patch("sys.stdout", captured):
-                _emit_jsonl_line({
-                    "type": "item",
-                    "file": path,
-                    "path": path,
-                    "start_line": 1,
-                    "end_line": 5
-                })
+                _emit_jsonl_line(
+                    {"type": "item", "file": path, "path": path, "start_line": 1, "end_line": 5}
+                )
             captured.truncate(0)
             captured.seek(0)
 
@@ -434,13 +440,15 @@ class TestCompactModeShape:
             captured = io.StringIO()
 
             with patch("sys.stdout", captured):
-                _emit_jsonl_line({
-                    "type": "item",
-                    "file": "test.py",
-                    "path": "test.py",
-                    "start_line": case["start"],
-                    "end_line": case["end"]
-                })
+                _emit_jsonl_line(
+                    {
+                        "type": "item",
+                        "file": "test.py",
+                        "path": "test.py",
+                        "start_line": case["start"],
+                        "end_line": case["end"],
+                    }
+                )
 
             output = captured.getvalue()
             event = json.loads(output.strip())
@@ -460,9 +468,7 @@ class TestSchemaConformance:
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "required": ["type"],
-            "properties": {
-                "type": {"type": "string"}
-            },
+            "properties": {"type": {"type": "string"}},
             "allOf": [
                 {
                     "if": {"properties": {"type": {"const": "start"}}},
@@ -471,9 +477,9 @@ class TestSchemaConformance:
                         "properties": {
                             "command": {"type": "string"},
                             "query": {"type": "string"},
-                            "ts": {"type": "string"}
-                        }
-                    }
+                            "ts": {"type": "string"},
+                        },
+                    },
                 },
                 {
                     "if": {"properties": {"type": {"const": "end"}}},
@@ -483,11 +489,11 @@ class TestSchemaConformance:
                             "command": {"type": "string"},
                             "total": {"type": "integer"},
                             "elapsed_ms": {"type": "number"},
-                            "ts": {"type": "string"}
-                        }
-                    }
-                }
-            ]
+                            "ts": {"type": "string"},
+                        },
+                    },
+                },
+            ],
         }
         return schema
 
@@ -550,13 +556,15 @@ class TestSchemaConformance:
         captured = io.StringIO()
 
         with patch("sys.stdout", captured):
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test.py",
-                "path": "test.py",
-                "start_line": 1,
-                "end_line": 10
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test.py",
+                    "path": "test.py",
+                    "start_line": 1,
+                    "end_line": 10,
+                }
+            )
 
         output = captured.getvalue()
         event = json.loads(output.strip())
@@ -591,7 +599,12 @@ class TestSchemaConformance:
             ("start", lambda: _emit_start_event("test", query="q")),
             ("end", lambda: _emit_end_event("test", total=1, elapsed_ms=10)),
             ("route", lambda: _emit_jsonl_line({"type": "route", "route": {}})),
-            ("item", lambda: _emit_jsonl_line({"type": "item", "path": "f", "start_line": 1, "end_line": 2})),
+            (
+                "item",
+                lambda: _emit_jsonl_line(
+                    {"type": "item", "path": "f", "start_line": 1, "end_line": 2}
+                ),
+            ),
             ("error", lambda: _emit_error_event("test", "error")),
         ]
 
@@ -623,7 +636,7 @@ class TestJsonlOutputEdgeCases:
             _emit_end_event("search", total=0, elapsed_ms=50)
 
         output = captured.getvalue()
-        lines = output.strip().split('\n')
+        lines = output.strip().split("\n")
 
         # Should have start and end events only
         assert len(lines) == 2
@@ -639,13 +652,15 @@ class TestJsonlOutputEdgeCases:
         captured = io.StringIO()
 
         with patch("sys.stdout", captured):
-            _emit_jsonl_line({
-                "type": "item",
-                "file": "test-文件.py",
-                "path": "path/with spaces/file.py",
-                "start_line": 1,
-                "end_line": 10
-            })
+            _emit_jsonl_line(
+                {
+                    "type": "item",
+                    "file": "test-文件.py",
+                    "path": "path/with spaces/file.py",
+                    "start_line": 1,
+                    "end_line": 10,
+                }
+            )
 
         output = captured.getvalue()
 
@@ -680,10 +695,10 @@ class TestJsonlOutputEdgeCases:
         output = captured.getvalue()
 
         # Should end with newline
-        assert output.endswith('\n')
+        assert output.endswith("\n")
 
         # Should not have extra newlines
-        assert output.count('\n') == 1
+        assert output.count("\n") == 1
 
 
 if __name__ == "__main__":

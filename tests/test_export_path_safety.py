@@ -20,4 +20,3 @@ def test_resolve_export_dir_blocks_escape(tmp_path: Path) -> None:
     (repo / ".llmc" / "workspace").mkdir(parents=True)
     with pytest.raises(PathTraversalError):
         resolve_export_dir(repo, None, "../../etc")
-

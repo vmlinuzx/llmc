@@ -1,10 +1,8 @@
 # llmcwrapper/costs.py
 # Configurable per-provider/model pricing (USD per 1K tokens). Defaults are 0.0 to avoid surprises.
 # Override via user/project config under [pricing.<provider>.<model>].
-DEFAULT_PRICING = {
-    "anthropic": {},
-    "minimax": {}
-}
+DEFAULT_PRICING = {"anthropic": {}, "minimax": {}}
+
 
 def estimate_cost(provider, model, input_tokens, output_tokens, pricing):
     prov = (pricing or {}).get(provider, {}) or DEFAULT_PRICING.get(provider, {})

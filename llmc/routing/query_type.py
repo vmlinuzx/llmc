@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from typing import Any
@@ -31,17 +30,9 @@ def classify_query(text: str | None, tool_context: dict[str, Any] | None = None)
         if raw_tool_id:
             tool_id = raw_tool_id.lower()
             if "code" in tool_id or "refactor" in tool_id or "analyze" in tool_id:
-                return {
-                    "route_name": "code",
-                    "confidence": 1.0,
-                    "reasons": ["tool-context=code"]
-                }
+                return {"route_name": "code", "confidence": 1.0, "reasons": ["tool-context=code"]}
             elif "erp" in tool_id or "product" in tool_id or "lookup" in tool_id:
-                return {
-                    "route_name": "erp",
-                    "confidence": 1.0,
-                    "reasons": ["tool-context=erp"]
-                }
+                return {"route_name": "erp", "confidence": 1.0, "reasons": ["tool-context=erp"]}
 
     # Load config
     cfg = load_routing_config()
@@ -100,6 +91,7 @@ def classify_query(text: str | None, tool_context: dict[str, Any] | None = None)
         "confidence": confidence,
         "reasons": reasons,
     }
+
 
 # Backward compatibility exports for legacy test modules
 # TODO: Update legacy tests to use new names and remove these aliases in a future cleanup phase

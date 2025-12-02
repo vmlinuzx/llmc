@@ -52,6 +52,7 @@ def test_worker_marks_repo_running(tmp_path: Path) -> None:
 
     # Wait for job to start
     import time
+
     time.sleep(0.5)
 
     # Check repo is marked as running
@@ -85,6 +86,7 @@ def test_worker_success_path(tmp_path: Path) -> None:
 
     # Wait for completion
     import time
+
     time.sleep(2)
 
     # Check final state
@@ -141,6 +143,7 @@ def test_worker_failure_path(tmp_path: Path) -> None:
 
     # Wait for completion
     import time
+
     time.sleep(2)
 
     # Check final state
@@ -191,6 +194,7 @@ def test_worker_consecutive_failures(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(2)
 
         # Check failure count
@@ -238,6 +242,7 @@ def test_worker_exponential_backoff(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(2)
 
         state = state_store.get(repo.repo_id)
@@ -298,6 +303,7 @@ def test_worker_max_backoff_cap(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(2)
 
     state = state_store.get(repo.repo_id)
@@ -334,6 +340,7 @@ def test_worker_concurrent_jobs(tmp_path: Path) -> None:
 
     # Wait for jobs to start
     import time
+
     time.sleep(1)
 
     # Should have at most max_jobs running
@@ -369,6 +376,7 @@ def test_worker_race_condition_prevention(tmp_path: Path) -> None:
 
     # Wait for jobs to process
     import time
+
     time.sleep(2)
 
     # Repo should only be running once (race condition prevented)
@@ -417,6 +425,7 @@ def test_worker_with_profile(tmp_path: Path) -> None:
 
         # Wait for completion
         import time
+
         time.sleep(1)
 
     # Verify profile was passed
@@ -468,6 +477,7 @@ exit 0
 
     # Wait for completion
     import time
+
     time.sleep(2)
 
     # Check that output is captured in state
@@ -511,6 +521,7 @@ def test_worker_state_persistence(tmp_path: Path) -> None:
     workers1.submit_jobs([job])
 
     import time
+
     time.sleep(2)
 
     # Check state after first run
@@ -565,6 +576,7 @@ def test_worker_error_with_exception(tmp_path: Path) -> None:
 
     # Wait for completion
     import time
+
     time.sleep(2)
 
     # Should handle exception and mark as error

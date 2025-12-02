@@ -17,9 +17,10 @@ def _check_url(url: str) -> str:
     except Exception as e:
         return yellow(f"WARN ({e})")
 
+
 def main():
     ap = argparse.ArgumentParser(description="LLMC doctor: config & health checks.")
-    ap.add_argument("--profile", default=os.environ.get("LLMC_PROFILE","daily"))
+    ap.add_argument("--profile", default=os.environ.get("LLMC_PROFILE", "daily"))
     ap.add_argument("--overlay", action="append", default=[])
     args = ap.parse_args()
 

@@ -183,7 +183,7 @@ class TestBenchmarkCase:
             name="test-case",
             query="test query",
             positives=["pos1", "pos2"],
-            negatives=["neg1", "neg2"]
+            negatives=["neg1", "neg2"],
         )
 
         assert case.name == "test-case"
@@ -193,12 +193,7 @@ class TestBenchmarkCase:
 
     def test_benchmark_case_frozen(self):
         """Test that BenchmarkCase is frozen."""
-        case = BenchmarkCase(
-            name="test",
-            query="query",
-            positives=["p"],
-            negatives=["n"]
-        )
+        case = BenchmarkCase(name="test", query="query", positives=["p"], negatives=["n"])
 
         # Should not be able to modify after creation
         with pytest.raises(Exception):
@@ -207,10 +202,7 @@ class TestBenchmarkCase:
     def test_benchmark_case_immutable_tuple(self):
         """Test BenchmarkCase with tuples."""
         case = BenchmarkCase(
-            name="tuple-case",
-            query="query",
-            positives=("pos1", "pos2"),
-            negatives=("neg1", "neg2")
+            name="tuple-case", query="query", positives=("pos1", "pos2"), negatives=("neg1", "neg2")
         )
 
         # Should accept tuples
@@ -220,10 +212,7 @@ class TestBenchmarkCase:
     def test_benchmark_case_single_example(self):
         """Test BenchmarkCase with single positive/negative."""
         case = BenchmarkCase(
-            name="single",
-            query="query",
-            positives=["positive"],
-            negatives=["negative"]
+            name="single", query="query", positives=["positive"], negatives=["negative"]
         )
 
         assert len(case.positives) == 1
@@ -235,10 +224,7 @@ class TestBenchmarkCase:
         negatives = [f"negative_{i}" for i in range(10)]
 
         case = BenchmarkCase(
-            name="multiple",
-            query="query",
-            positives=positives,
-            negatives=negatives
+            name="multiple", query="query", positives=positives, negatives=negatives
         )
 
         assert len(case.positives) == 10
@@ -246,12 +232,7 @@ class TestBenchmarkCase:
 
     def test_benchmark_case_with_empty_lists(self):
         """Test BenchmarkCase with empty examples."""
-        case = BenchmarkCase(
-            name="empty",
-            query="query",
-            positives=[],
-            negatives=[]
-        )
+        case = BenchmarkCase(name="empty", query="query", positives=[], negatives=[])
 
         assert case.positives == []
         assert case.negatives == []
@@ -517,12 +498,14 @@ class TestRunEmbeddingBenchmark:
     def test_run_embedding_benchmark_single_case(self, mock_build_backend):
         """Test benchmark with single benchmark case."""
         # Replace CASES with single case
-        single_case = (BenchmarkCase(
-            name="single-test",
-            query="test query",
-            positives=["positive"],
-            negatives=["negative"]
-        ),)
+        single_case = (
+            BenchmarkCase(
+                name="single-test",
+                query="test query",
+                positives=["positive"],
+                negatives=["negative"],
+            ),
+        )
 
         with patch("tools.rag.benchmark.CASES", single_case):
             mock_backend = Mock()
@@ -541,12 +524,14 @@ class TestBenchmarkEdgeCases:
     @patch("tools.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_empty_positives(self, mock_build_backend):
         """Test benchmark with case having no positives."""
-        empty_case = (BenchmarkCase(
-            name="empty-positives",
-            query="test",
-            positives=[],  # No positives
-            negatives=["negative1"]
-        ),)
+        empty_case = (
+            BenchmarkCase(
+                name="empty-positives",
+                query="test",
+                positives=[],  # No positives
+                negatives=["negative1"],
+            ),
+        )
 
         with patch("tools.rag.benchmark.CASES", empty_case):
             mock_backend = Mock()
@@ -562,12 +547,14 @@ class TestBenchmarkEdgeCases:
     @patch("tools.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_empty_negatives(self, mock_build_backend):
         """Test benchmark with case having no negatives."""
-        empty_case = (BenchmarkCase(
-            name="empty-negatives",
-            query="test",
-            positives=["positive1"],
-            negatives=[]  # No negatives
-        ),)
+        empty_case = (
+            BenchmarkCase(
+                name="empty-negatives",
+                query="test",
+                positives=["positive1"],
+                negatives=[],  # No negatives
+            ),
+        )
 
         with patch("tools.rag.benchmark.CASES", empty_case):
             mock_backend = Mock()
@@ -583,12 +570,11 @@ class TestBenchmarkEdgeCases:
     @patch("tools.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_all_equal_scores(self, mock_build_backend):
         """Test benchmark when all candidates have equal scores."""
-        equal_case = (BenchmarkCase(
-            name="equal-scores",
-            query="test",
-            positives=["positive1"],
-            negatives=["negative1"]
-        ),)
+        equal_case = (
+            BenchmarkCase(
+                name="equal-scores", query="test", positives=["positive1"], negatives=["negative1"]
+            ),
+        )
 
         with patch("tools.rag.benchmark.CASES", equal_case):
             mock_backend = Mock()

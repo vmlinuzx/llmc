@@ -2,6 +2,7 @@
 """
 Search Screen - Interactive RAG code search
 """
+
 import json
 from pathlib import Path
 import subprocess
@@ -33,7 +34,7 @@ def _format_result_text(result: dict[str, Any]) -> str:
     summary = result.get("summary", "")
     metadata = result.get("metadata", result.get("meta", {})) or {}
     relations = metadata.get("relations") or result.get("relations") or []
-    
+
     norm_score = float(result.get("normalized_score", 0.0) or 0.0)
 
     text_parts = []
@@ -73,14 +74,14 @@ class ResultWidget(Static):
 
 class SearchScreen(Screen):
     """Interactive code search using RAG"""
-    
+
     def _format_entity_id(self, entity_id: str) -> str:
         """Formats internal entity ID to human-readable string, handling prefixes like 'Extends: '."""
         # Handle "Extends: type:some_id" or "Calls: type:some_id"
         if ": " in entity_id and entity_id.split(": ", 1)[0] in ("Extends", "Calls"):
             prefix, actual_id = entity_id.split(": ", 1)
             return f"{prefix}: {self._format_entity_id(actual_id)}"
-            
+
         if ":" in entity_id:
             kind, name = entity_id.split(":", 1)
             # For 'type' and 'sym', strip module path
@@ -88,7 +89,7 @@ class SearchScreen(Screen):
                 return name.rsplit(".", 1)[-1]
             return name
         return entity_id
-    
+
     CSS = """
     SearchScreen {
         layout: vertical;
@@ -201,7 +202,7 @@ class SearchScreen(Screen):
         margin-top: 1;
     }
     """
-    
+
     BINDINGS = [
         ("escape", "app.pop_screen", "Back"),
         ("ctrl+r", "clear", "Clear"),
@@ -209,14 +210,14 @@ class SearchScreen(Screen):
         ("1", "nav_monitor", "Monitor"),
         ("2", "nav_search", "Search"),
     ]
-    
+
     def __init__(self):
         super().__init__()
         self.menu_items = [
             ("1", "Monitor System", self.action_nav_monitor),
             ("2", "Search Code", self.action_nav_search),
         ]
-    
+
     def compose(self) -> ComposeResult:
         """Create the search interface"""
         yield Static("LLMC Search", id="header")
@@ -226,14 +227,17 @@ class SearchScreen(Screen):
                 with Container(id="query-panel", classes="panel"):
                     yield Input(
                         placeholder="Enter search query (e.g. 'authentication logic', 'cache implementation')...",
-                        id="query-input"
+                        id="query-input",
                     )
                     yield Button("Search (Enter)", id="search-btn", variant="primary")
 
                 with Container(id="results-panel", classes="panel"):
                     yield Static("Results + Context", classes="panel-title")
                     with ScrollableContainer(id="results-container"):
-                        yield Static("Enter a query and press Search or Enter to begin", classes="status-message")
+                        yield Static(
+                            "Enter a query and press Search or Enter to begin",
+                            classes="status-message",
+                        )
 
             with Container(id="right-column"):
                 with Container(id="details-panel", classes="panel"):
@@ -250,17 +254,17 @@ class SearchScreen(Screen):
                         )
 
         yield Static("[esc] Back   [enter] Search   [ctrl+r] Clear", id="footer")
-    
+
     def on_mount(self) -> None:
         """Focus the search input when mounted"""
         self.query_one("#header", Static).update(f"LLMC Search :: repo {self.app.repo_root}")
         self.query_one("#query-input", Input).focus()
-    
+
     def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle Enter key in search input"""
         if event.input.id == "query-input":
             self.perform_search()
-    
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle search button click and menu clicks."""
         if event.button.id == "search-btn":
@@ -275,55 +279,55 @@ class SearchScreen(Screen):
         handler = mapping.get(btn_id)
         if handler:
             handler()
-    
+
     def action_search(self) -> None:
         """Trigger search via Enter binding."""
         self.perform_search()
-    
+
     def perform_search(self) -> None:
         """Execute RAG search and display results"""
         search_input = self.query_one("#query-input", Input)
         query = search_input.value.strip()
-        
+
         if not query:
             self.show_status("⚠️  Please enter a search query")
             return
-        
+
         self.show_status(f"🔄 Searching for: {query}...")
-        
+
         try:
             # Call RAG CLI
             repo_root = self.app.repo_root
             cmd = [
-                "python3", "-m", "tools.rag.cli",
-                "search", query,
-                "--limit", "20",
+                "python3",
+                "-m",
+                "tools.rag.cli",
+                "search",
+                query,
+                "--limit",
+                "20",
                 "--json",
-                "--debug"
+                "--debug",
             ]
-            
+
             result = subprocess.run(
-                cmd,
-                check=False, cwd=repo_root,
-                capture_output=True,
-                text=True,
-                timeout=30
+                cmd, check=False, cwd=repo_root, capture_output=True, text=True, timeout=30
             )
-            
+
             if result.returncode != 0:
                 self.show_status(f"❌ Search failed: {result.stderr}")
                 return
-            
+
             # Parse results
             results = json.loads(result.stdout)
-            
+
             if not results:
                 self.show_status(f"No results found for: {query}")
                 return
-            
+
             # Display results
             self.display_results(results, query)
-        
+
         except subprocess.TimeoutExpired:
             self.show_status("⏱️  Search timed out")
         except json.JSONDecodeError as e:
@@ -336,26 +340,28 @@ class SearchScreen(Screen):
         results_container = self.query_one("#results-container")
         results_container.remove_children()
         results_container.mount(Static(message, classes="status-message"))
-    
+
     def display_results(self, results: list[dict[str, Any]], query: str) -> None:
         """Display search results"""
         results_container = self.query_one("#results-container")
         results_container.remove_children()
-        
-        header = Static(f"Found {len(results)} results for: [bold]{query}[/bold]\n", classes="results-header")
+
+        header = Static(
+            f"Found {len(results)} results for: [bold]{query}[/bold]\n", classes="results-header"
+        )
         results_container.mount(header)
-        
+
         for result in results:
             result_widget = self.create_result_widget(result)
             results_container.mount(result_widget)
-        
+
         # Reset details panel prompt for new result set
         self.update_details("Click a result to load its snippet here.")
-    
+
     def create_result_widget(self, result: dict[str, Any]) -> Static:
         """Create a clickable result widget."""
         return ResultWidget(result)
-    
+
     def action_clear(self) -> None:
         """Clear search and results"""
         self.query_one("#query-input", Input).value = ""
@@ -375,15 +381,17 @@ class SearchScreen(Screen):
         symbol = result.get("symbol", "")
         lines = result.get("lines", [])
         debug = result.get("debug") or {}
-        
+
         parts = []
-        
+
         # Header
         parts.append(f"[bold cyan]{path}[/bold cyan]")
         graph_info = debug.get("graph") or {}
         node_type = graph_info.get("node_type", "unknown")
         line_str = f"{lines[0]}-{lines[1]}" if len(lines) > 1 else str(lines[0]) if lines else "?"
-        parts.append(f"Symbol: [magenta]{symbol}[/magenta] ([blue]{node_type}[/blue])  Span: {line_str}")
+        parts.append(
+            f"Symbol: [magenta]{symbol}[/magenta] ([blue]{node_type}[/blue])  Span: {line_str}"
+        )
         parts.append("")
 
         # Search
@@ -391,9 +399,11 @@ class SearchScreen(Screen):
         norm_score = float(result.get("normalized_score", 0.0) or 0.0)
         parts.append("[bold]Search[/bold]")
         parts.append(f"  Rank:       #{search_info.get('rank', '?')}")
-        parts.append(f"  Score:      [green]{norm_score:.1f}[/green] ({search_info.get('score', 0.0):.4f})")
+        parts.append(
+            f"  Score:      [green]{norm_score:.1f}[/green] ({search_info.get('score', 0.0):.4f})"
+        )
         if "embedding_similarity" in search_info:
-             parts.append(f"  Embedding:  {search_info['embedding_similarity']:.4f}")
+            parts.append(f"  Embedding:  {search_info['embedding_similarity']:.4f}")
         parts.append("")
 
         # Graph
@@ -404,12 +414,12 @@ class SearchScreen(Screen):
                 parts.append("  Parents:")
                 for p in graph_info["parents"]:
                     parts.append(f"    - {self._format_entity_id(p)}")
-            
+
             if graph_info.get("children"):
                 parts.append("  Children:")
                 for c in graph_info["children"]:
                     parts.append(f"    - {self._format_entity_id(c)}")
-            
+
             if graph_info.get("related_code"):
                 parts.append("  Related code:")
                 for r in graph_info["related_code"]:
@@ -426,39 +436,39 @@ class SearchScreen(Screen):
         # Enrichment
         enrich = debug.get("enrichment")
         parts.append("[bold]Enrichment[/bold]")
-        
+
         def _format_list_field(val: Any) -> str | None:
             if not val:
                 return None
             if val == "[]":
                 return None
-            
+
             generic_placeholders = {"params", "returns", "args", "kwargs", "none"}
-            
+
             if isinstance(val, list):
                 # Filter out generic placeholders and format
                 filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
                 if not filtered_list:
                     return None
                 return ", ".join(filtered_list)
-            
+
             if isinstance(val, str) and val.lower() in generic_placeholders:
                 return None
-                
+
             return str(val)
 
         if enrich:
             if enrich.get("summary"):
                 parts.append(f"  Summary:   [dim]{enrich['summary']}[/dim]")
-            
+
             inputs = _format_list_field(enrich.get("inputs"))
             if inputs:
                 parts.append(f"  Inputs:    {inputs}")
-            
+
             outputs = _format_list_field(enrich.get("outputs"))
             if outputs:
                 parts.append(f"  Outputs:   {outputs}")
-            
+
             side_effects = _format_list_field(enrich.get("side_effects"))
             if side_effects:
                 parts.append(f"  Side Effects: {side_effects}")
@@ -466,10 +476,10 @@ class SearchScreen(Screen):
             pitfalls = _format_list_field(enrich.get("pitfalls"))
             if pitfalls:
                 parts.append(f"  Pitfalls:  {pitfalls}")
-                
+
             parts.append(f"  Evidence:  {enrich.get('evidence_count', 0)} spans")
         else:
-             parts.append("  (none)")
+            parts.append("  (none)")
         parts.append("")
 
         # Provenance
@@ -477,7 +487,7 @@ class SearchScreen(Screen):
         parts.append("[bold]Provenance[/bold]")
         parts.append(f"  Kind:       {prov.get('kind', result.get('kind', 'unknown'))}")
         if prov.get("last_commit"):
-             parts.append(f"  Commit:     {prov['last_commit']}")
+            parts.append(f"  Commit:     {prov['last_commit']}")
         parts.append("")
 
         # Snippet
@@ -520,6 +530,7 @@ class SearchScreen(Screen):
         """Go to the monitor screen."""
         try:
             from llmc.tui.screens.monitor import MonitorScreen
+
             self.app.push_screen(MonitorScreen())
         except Exception as exc:
             self.show_status(f"❌ Cannot open monitor: {exc}")

@@ -188,7 +188,9 @@ def run_embed(repo_root: Path, limit: int) -> str:
     if env.get("PYTHONPATH"):
         py_paths.append(env["PYTHONPATH"])
     env["PYTHONPATH"] = os.pathsep.join(py_paths)
-    result = subprocess.run(cmd, check=False, cwd=repo_root, capture_output=True, text=True, env=env)
+    result = subprocess.run(
+        cmd, check=False, cwd=repo_root, capture_output=True, text=True, env=env
+    )
 
     stdout = (result.stdout or "").strip()
     stderr = (result.stderr or "").strip()
@@ -280,7 +282,9 @@ def run_enrich(
         ) from exc
     except subprocess.CalledProcessError as exc:
         if exc.returncode == 2:
-            raise RuntimeError("No reachable LLM hosts found. Is Athena (or configured backend) down?") from exc
+            raise RuntimeError(
+                "No reachable LLM hosts found. Is Athena (or configured backend) down?"
+            ) from exc
         raise
 
 
@@ -310,7 +314,10 @@ def ensure_doc_sync(repo_root: Path, doc_paths: Sequence[str]) -> None:
 
 def command_indexenrich(args: argparse.Namespace) -> None:
     repo = (args.repo or find_repo_root()).resolve()
-    doc_paths = args.doc_path or ["DOCS/preprocessor_flow.md", "DOCS/archive/preprocessor_flow_legacy.md"]
+    doc_paths = args.doc_path or [
+        "DOCS/preprocessor_flow.md",
+        "DOCS/archive/preprocessor_flow_legacy.md",
+    ]
     ensure_doc_sync(repo, doc_paths)
 
     index_path = index_path_for_write(repo)
@@ -320,9 +327,13 @@ def command_indexenrich(args: argparse.Namespace) -> None:
     else:
         log("No file diffs detected (workspace matches RAG cache).")
 
-    backend = args.backend or ("gateway" if args.force_nano else os.getenv("ENRICH_BACKEND", "ollama"))
+    backend = args.backend or (
+        "gateway" if args.force_nano else os.getenv("ENRICH_BACKEND", "ollama")
+    )
     router = args.router or os.getenv("ENRICH_ROUTER", "off")
-    start_tier = args.start_tier or os.getenv("ENRICH_START_TIER", ("nano" if args.force_nano else "7b"))
+    start_tier = args.start_tier or os.getenv(
+        "ENRICH_START_TIER", ("nano" if args.force_nano else "7b")
+    )
     run_enrich(
         repo,
         backend=backend,
@@ -389,7 +400,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified RAG maintenance runner")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    detect_parser = sub.add_parser("detect", help="List files whose hashes differ from the RAG index")
+    detect_parser = sub.add_parser(
+        "detect", help="List files whose hashes differ from the RAG index"
+    )
     detect_parser.add_argument("--repo", type=Path, default=None)
     detect_parser.add_argument("--index", type=Path, default=None)
     detect_parser.add_argument("--json", action="store_true")
@@ -397,14 +410,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     idx_parser = sub.add_parser("indexenrich", help="Incremental sync + enrich + embed pipeline")
     idx_parser.add_argument("--repo", type=Path, default=None)
-    idx_parser.add_argument("--doc-path", action="append", help="Additional doc paths to always sync")
+    idx_parser.add_argument(
+        "--doc-path", action="append", help="Additional doc paths to always sync"
+    )
     idx_parser.add_argument("--backend", default=None)
     idx_parser.add_argument("--router", default=None)
     idx_parser.add_argument("--start-tier", default=None)
     idx_parser.add_argument("--batch-size", type=int, default=5)
     idx_parser.add_argument("--embed-limit", type=int, default=None)
     idx_parser.add_argument("--embed-iterations", type=int, default=20)
-    idx_parser.add_argument("--force-nano", action="store_true", help="Force nano tier via gateway backend")
+    idx_parser.add_argument(
+        "--force-nano", action="store_true", help="Force nano tier via gateway backend"
+    )
     idx_parser.set_defaults(func=command_indexenrich)
 
     refresh_parser = sub.add_parser("refresh", help="General-purpose RAG refresh loop")

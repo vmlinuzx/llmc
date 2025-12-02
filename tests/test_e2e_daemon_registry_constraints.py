@@ -38,4 +38,3 @@ def test_daemon_rejects_outside(tmp_path: Path) -> None:
     cfg.repos_root.mkdir()
     with pytest.raises(PathTraversalError):
         dreg._normalize_paths(cfg, "../../etc", None)
-

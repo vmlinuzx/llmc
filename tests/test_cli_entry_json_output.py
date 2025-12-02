@@ -13,4 +13,3 @@ def test_cli_json_output(tmp_path, capsys) -> None:
     out = capsys.readouterr().out
     data = json.loads(out)
     assert "workspace_root" in data
-

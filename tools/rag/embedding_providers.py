@@ -248,9 +248,7 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         try:
             resp = requests.post(url, json=payload, timeout=self._timeout)
         except Exception as exc:  # pragma: no cover - network error path
-            raise EmbeddingError(
-                f"Error calling Ollama embeddings endpoint: {exc}"
-            ) from exc
+            raise EmbeddingError(f"Error calling Ollama embeddings endpoint: {exc}") from exc
 
         if resp.status_code != 200:
             raise EmbeddingError(
@@ -260,9 +258,7 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         try:
             data = resp.json()
         except Exception as exc:  # pragma: no cover - bad JSON
-            raise EmbeddingError(
-                f"Invalid JSON from Ollama embeddings endpoint: {exc}"
-            ) from exc
+            raise EmbeddingError(f"Invalid JSON from Ollama embeddings endpoint: {exc}") from exc
 
         if "embedding" in data:
             emb = data["embedding"]
