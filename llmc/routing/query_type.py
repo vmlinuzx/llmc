@@ -29,19 +29,21 @@ def classify_query(text: Optional[str], tool_context: Optional[Dict[str, Any]] =
 
     # 1. Tool/context hint (highest priority) - Phase 4 Bugfix
     if tool_context and "tool_id" in tool_context:
-        tool_id = tool_context["tool_id"].lower()
-        if "code" in tool_id or "refactor" in tool_id or "analyze" in tool_id:
-            return {
-                "route_name": "code",
-                "confidence": 1.0,
-                "reasons": ["tool-context=code"]
-            }
-        elif "erp" in tool_id or "product" in tool_id or "lookup" in tool_id:
-            return {
-                "route_name": "erp",
-                "confidence": 1.0,
-                "reasons": ["tool-context=erp"]
-            }
+        raw_tool_id = tool_context["tool_id"]
+        if raw_tool_id:
+            tool_id = raw_tool_id.lower()
+            if "code" in tool_id or "refactor" in tool_id or "analyze" in tool_id:
+                return {
+                    "route_name": "code",
+                    "confidence": 1.0,
+                    "reasons": ["tool-context=code"]
+                }
+            elif "erp" in tool_id or "product" in tool_id or "lookup" in tool_id:
+                return {
+                    "route_name": "erp",
+                    "confidence": 1.0,
+                    "reasons": ["tool-context=erp"]
+                }
 
     # Load config
     cfg = load_routing_config()

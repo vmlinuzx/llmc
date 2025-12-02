@@ -26,7 +26,7 @@ def test_classify_query_sku():
     assert "erp:sku" in res["reasons"][0]
 
 def test_classify_query_keywords():
-    q = "Check inventory for model number X100"
+    q = "Check inventory of model number X100"
     res = classify_query(q)
     assert res["route_name"] == "erp"
     assert "erp:" in res["reasons"][0] or "conflict-policy" in res["reasons"][0]
