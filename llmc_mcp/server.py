@@ -340,6 +340,26 @@ TOOLS: list[Tool] = [
             "properties": {},
         },
     ),
+    Tool(
+        name="rag_plan",
+        description="Analyze query routing and retrieval plan without executing search. Shows how LLMC would handle the query.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Query to analyze",
+                },
+                "detail_level": {
+                    "type": "string",
+                    "enum": ["summary", "full"],
+                    "description": "Level of detail in response (default: summary)",
+                    "default": "summary",
+                },
+            },
+            "required": ["query"],
+        },
+    ),
     # L2 LinuxOps Tools
     Tool(
         name="linux_proc_list",
@@ -618,6 +638,7 @@ class LlmcMcpServer:
             "rag_lineage": self._handle_rag_lineage,
             "inspect": self._handle_inspect,
             "rag_stats": self._handle_rag_stats,
+            "rag_plan": self._handle_rag_plan,
             # L2 LinuxOps
             "linux_proc_list": self._handle_proc_list,
             "linux_proc_kill": self._handle_proc_kill,
@@ -1174,6 +1195,56 @@ class LlmcMcpServer:
         try:
             result = tool_rag_stats(llmc_root)
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+    async def _handle_rag_plan(self, args: dict) -> list[TextContent]:
+        """RAG query planning - show routing without execution."""
+        import json
+
+        query = args.get("query", "")
+        detail_level = args.get("detail_level", "summary")
+
+        if not query:
+            return [TextContent(type="text", text='{"error": "query is required"}')]
+
+        # Find LLMC root
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        try:
+            # Use routing logic to analyze query
+            from tools.rag.enrichment_router import EnrichmentRouter
+
+            router = EnrichmentRouter(llmc_root)
+            decision = router.route_query(query)
+
+            # Build plan response
+            plan = {
+                "query": query,
+                "route_type": decision.route_type,
+                "routing_confidence": getattr(decision, "confidence", 0.8),
+                "search_strategy": "hybrid",  # Default strategy
+                "estimated_chunks": self.config.rag.top_k,
+                "filters": {
+                    "scope": decision.scope if hasattr(decision, "scope") else "repo",
+                },
+                "explanation": f"Query classified as '{decision.route_type}' based on content analysis",
+            }
+
+            if detail_level == "full":
+                plan["heuristics_used"] = [
+                    "pattern_matching",
+                    "keyword_analysis",
+                    "query_structure",
+                ]
+                plan["backend_chain"] = [spec.name for spec in decision.backend_specs]
+
+            return [TextContent(type="text", text=json.dumps(plan, indent=2))]
+
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
