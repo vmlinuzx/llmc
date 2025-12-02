@@ -1,0 +1,14 @@
+# MCP Connector Test - Otto (Claude)
+# Test file written via LLMC MCP connector
+# Timestamp: 2025-01-01 (or whenever DC runs this)
+
+If you can read this, the write functionality works!
+
+Tested capabilities:
+- llmc:health ✓
+- llmc:rag_search ✓
+- llmc:read_file ✓
+- llmc:list_dir ✓
+- llmc:linux_fs_write ✓ (this file)
+
+Rule 1: Be Cheap - LLMC delivers.
