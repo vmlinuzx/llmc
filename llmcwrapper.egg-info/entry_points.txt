@@ -1,4 +1,5 @@
 [console_scripts]
+llmc = llmc.main:app
 llmc-doctor = llmcwrapper.cli.llmc_doctor:main
 llmc-profile = llmcwrapper.cli.llmc_profile:main
 llmc-rag = llmcwrapper.cli.llmc_rag:main

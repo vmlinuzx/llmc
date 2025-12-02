@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: llmcwrapper
-Version: 0.5.0
+Version: 0.5.5
 Summary: LLM cost compression through intelligent RAG and multi-tier routing
 Author: LLMC Core
 Requires-Python: >=3.9
@@ -8,6 +8,10 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: requests>=2.31
 Requires-Dist: tomli; python_version < "3.11"
+Requires-Dist: typer>=0.9.0
+Requires-Dist: rich>=13.0.0
+Requires-Dist: tomli-w>=1.0.0
+Requires-Dist: textual>=0.41.0
 Provides-Extra: rag
 Requires-Dist: setuptools>=68.0.0; extra == "rag"
 Requires-Dist: tree_sitter==0.20.1; extra == "rag"
@@ -21,9 +25,6 @@ Requires-Dist: watchdog>=3.0.0; extra == "rag"
 Requires-Dist: gitpython>=3.1.40; extra == "rag"
 Requires-Dist: pyyaml>=6.0.1; extra == "rag"
 Requires-Dist: tqdm>=4.66.1; extra == "rag"
-Requires-Dist: fastapi>=0.109.0; extra == "rag"
-Requires-Dist: uvicorn>=0.27.0; extra == "rag"
-Requires-Dist: python-multipart>=0.0.6; extra == "rag"
 Provides-Extra: tui
 Requires-Dist: typer>=0.9.0; extra == "tui"
 Requires-Dist: rich>=13.0.0; extra == "tui"
@@ -32,7 +33,7 @@ Dynamic: license-file
 
 THE LARGE LANGUAGE MODEL COMPRESSOR
 
-**Current Release:** v0.5.0 "Token Umami"
+**Current Release:** v0.5.5 "Modular Mojo"
 
 For the impatient quick start:
 
@@ -42,6 +43,12 @@ llmc-rag-repo add /path/to/repo
 llmc-rag-service register /path/to/repo
 llmc-rag-service start --interval 300 --daemon
 ```
+
+### What's New in v0.6.0 "Modular Mojo"
+- **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
+- **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.
+- **Better Telemetry:** Unified SQLite-backed telemetry for the Tool Envelope.
+- **Quality:** Massive codebase cleanup and new live integration tests.
 
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.

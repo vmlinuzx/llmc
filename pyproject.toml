@@ -9,7 +9,7 @@ description = "LLM cost compression through intelligent RAG and multi-tier routi
 authors = [{name="LLMC Core"}]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["requests>=2.31", "tomli; python_version<'3.11'"]
+dependencies = ["requests>=2.31", "tomli; python_version<'3.11'", "typer>=0.9.0", "rich>=13.0.0", "tomli-w>=1.0.0", "textual>=0.41.0"]
 
 [project.optional-dependencies]
 rag = [
@@ -39,6 +39,7 @@ tui = [
 packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers"]
 
 [project.scripts]
+llmc = "llmc.main:app"
 llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
 llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
 llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"

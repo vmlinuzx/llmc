@@ -1,4 +1,8 @@
 requests>=2.31
+typer>=0.9.0
+rich>=13.0.0
+tomli-w>=1.0.0
+textual>=0.41.0
 
 [:python_version < "3.11"]
 tomli
@@ -16,9 +20,6 @@ watchdog>=3.0.0
 gitpython>=3.1.40
 pyyaml>=6.0.1
 tqdm>=4.66.1
-fastapi>=0.109.0
-uvicorn>=0.27.0
-python-multipart>=0.0.6
 
 [tui]
 typer>=0.9.0
