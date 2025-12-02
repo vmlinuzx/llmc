@@ -1,0 +1,32 @@
+[storage]
+index_path = ".llmc/index_v2.db"
+
+[logging]
+log_directory = ".llmc/logs"
+enable_rotation = true
+max_file_size_mb = 10
+keep_jsonl_lines = 1000
+
+[indexing]
+exclude_dirs = [
+    ".git",
+    ".llmc",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "dist",
+    "build",
+    ".pytest_cache",
+    ".mypy_cache",
+]
+
+[embeddings]
+default_profile = "docs"
+
+[embeddings.profiles.docs]
+provider = "ollama"
+model = "nomic-embed-text"
+dimension = 768
+
+[rag]
+enabled = true
