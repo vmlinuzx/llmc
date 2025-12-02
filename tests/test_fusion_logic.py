@@ -14,14 +14,14 @@ def test_normalize_scores_basic():
     # b: (5-0)/10 = 0.5
     # c: (0-0)/10 = 0.0
     
-    assert norm[0]['normalized_score'] == 1.0
-    assert norm[1]['normalized_score'] == 0.5
-    assert norm[2]['normalized_score'] == 0.0
+    assert norm[0]['_fusion_norm_score'] == 1.0
+    assert norm[1]['_fusion_norm_score'] == 0.5
+    assert norm[2]['_fusion_norm_score'] == 0.0
 
 def test_normalize_scores_single_item():
     results = [{'slice_id': 'a', 'score': 5.0}]
     norm = normalize_scores(results)
-    assert norm[0]['normalized_score'] == 1.0 # Default when max==min
+    assert norm[0]['_fusion_norm_score'] == 1.0 # Default when max==min
 
 def test_normalize_scores_all_same():
     results = [
@@ -29,8 +29,8 @@ def test_normalize_scores_all_same():
         {'slice_id': 'b', 'score': 5.0}
     ]
     norm = normalize_scores(results)
-    assert norm[0]['normalized_score'] == 1.0
-    assert norm[1]['normalized_score'] == 1.0
+    assert norm[0]['_fusion_norm_score'] == 1.0
+    assert norm[1]['_fusion_norm_score'] == 1.0
 
 def test_fuse_scores_single_route():
     # Should behave like normalized * weight
