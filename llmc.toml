@@ -140,7 +140,7 @@ options = { num_ctx = 12288, temperature = 0.2 }
 # provider = "gateway"
 # model = "groq/llama3-70b-8192"
 # routing_tier = "14b"
-# enabled = false
+# enabled = true
 
 # [[enrichment.chain]]
 # name = "google-flash"
@@ -148,7 +148,7 @@ options = { num_ctx = 12288, temperature = 0.2 }
 # provider = "gemini"
 # model = "gemini-1.5-flash"
 # routing_tier = "nano"
-# enabled = false
+# enabled = true
 
 
 # ==============================================================================
@@ -217,13 +217,13 @@ capture_output = true  # Store actual command output for review (privacy/storage
 output_max_bytes = 8192  # Max bytes to capture per command
 
 [tool_envelope.grep]
-enabled = false  # Disable enrichment, passthrough with logging only
+enabled = true  # Disable enrichment, passthrough with logging only
 preview_matches = 10
 max_output_chars = 20000
 timeout_ms = 5000
 
 [tool_envelope.cat]
-enabled = false  # Disable enrichment, passthrough with logging only
+enabled = true  # Disable enrichment, passthrough with logging only
 preview_lines = 50
 max_output_chars = 30000
 
@@ -244,6 +244,24 @@ default = 16000
 [mcp]
 enabled = true
 config_version = "v0"
+
+# ==============================================================================
+# CODE EXECUTION MODE - Anthropic "Code Mode" pattern (Phase 2)
+# ==============================================================================
+# When enabled, replaces 23 tools with 3 bootstrap tools + code execution.
+# Claude navigates .llmc/stubs/ filesystem, reads tool definitions on-demand,
+# writes Python code that imports and calls them. 98% token reduction.
+# Reference: https://www.anthropic.com/engineering/code-execution-with-mcp
+
+[mcp.code_execution]
+enabled = true  # Flip to true when ready for code execution mode
+stubs_dir = ".llmc/stubs"  # Generated tool stubs for Claude to browse
+sandbox = "subprocess"  # "subprocess" | "docker" | "nsjail" (future)
+timeout = 30
+max_output_bytes = 65536
+# Bootstrap tools exposed when code_execution.enabled = true
+# All other tools become importable stubs, not MCP-registered tools
+bootstrap_tools = ["list_dir", "read_file", "execute_code"]
 
 [mcp.server]
 # stdio transport - no host/port needed for Claude Desktop
@@ -290,6 +308,40 @@ include_correlation_id = true
 # Metrics (in-memory for stdio; get_metrics tool to inspect)
 metrics_enabled = true
 # Token audit CSV trail
-csv_token_audit_enabled = false
+csv_token_audit_enabled = true
 csv_path = "./artifacts/mcp_token_audit.csv"
 retention_days = 0  # 0 = keep forever
+
+# ==============================================================================
+# RAG
+# ==============================================================================
+# RAG (Retrieval-Augmented Generation) settings
+
+# ==============================================================================
+# RAG
+# ==============================================================================
+# RAG (Retrieval-Augmented Generation) settings
+
+[rag]
+enabled = true
+
+# ==============================================================================
+# Profiles
+# ==============================================================================
+# Configuration profiles for different modes
+
+[profiles.daily]
+provider = "anthropic"
+model = "claude-3-5-sonnet-latest"
+temperature = 0.3
+
+[profiles.daily.rag]
+enabled = true
+
+[profiles.yolo]
+provider = "minimax"
+model = "m2-lite"
+temperature = 0.2
+
+[profiles.yolo.rag]
+enabled = true

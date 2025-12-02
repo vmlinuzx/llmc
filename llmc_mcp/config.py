@@ -91,6 +91,26 @@ class McpLimitsConfig:
 
 
 @dataclass
+class McpCodeExecutionConfig:
+    """Code execution mode settings (Phase 2 - Anthropic Code Mode pattern)."""
+
+    enabled: bool = False
+    stubs_dir: str = ".llmc/stubs"
+    sandbox: str = "subprocess"  # "subprocess" | "docker" | "nsjail"
+    timeout: int = 30
+    max_output_bytes: int = 65536
+    bootstrap_tools: list[str] = field(
+        default_factory=lambda: ["list_dir", "read_file", "execute_code"]
+    )
+
+    def validate(self) -> None:
+        if self.sandbox not in ("subprocess", "docker", "nsjail"):
+            raise ValueError(f"Invalid sandbox: {self.sandbox}")
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+
+@dataclass
 class McpObservabilityConfig:
     """Observability settings (M4)."""
 
@@ -126,6 +146,7 @@ class McpConfig:
     rag: McpRagConfig = field(default_factory=McpRagConfig)
     limits: McpLimitsConfig = field(default_factory=McpLimitsConfig)
     observability: McpObservabilityConfig = field(default_factory=McpObservabilityConfig)
+    code_execution: McpCodeExecutionConfig = field(default_factory=McpCodeExecutionConfig)
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
 
     def validate(self) -> None:
@@ -135,6 +156,7 @@ class McpConfig:
         self.rag.validate()
         self.limits.validate()
         self.observability.validate()
+        self.code_execution.validate()
 
 
 def _get_nested(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -278,6 +300,19 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.observability.csv_path = obs.get("csv_path", cfg.observability.csv_path)
         cfg.observability.retention_days = obs.get(
             "retention_days", cfg.observability.retention_days
+        )
+
+        # Code Execution (Phase 2 - Code Mode)
+        code_exec = mcp_data.get("code_execution", {})
+        cfg.code_execution.enabled = code_exec.get("enabled", cfg.code_execution.enabled)
+        cfg.code_execution.stubs_dir = code_exec.get("stubs_dir", cfg.code_execution.stubs_dir)
+        cfg.code_execution.sandbox = code_exec.get("sandbox", cfg.code_execution.sandbox)
+        cfg.code_execution.timeout = code_exec.get("timeout", cfg.code_execution.timeout)
+        cfg.code_execution.max_output_bytes = code_exec.get(
+            "max_output_bytes", cfg.code_execution.max_output_bytes
+        )
+        cfg.code_execution.bootstrap_tools = code_exec.get(
+            "bootstrap_tools", cfg.code_execution.bootstrap_tools
         )
 
     # Apply ENV overrides (highest precedence)

@@ -244,7 +244,7 @@ TOOLS: list[Tool] = [
     ),
     # L2 LinuxOps Tools
     Tool(
-        name="linux.proc_list",
+        name="linux_proc_list",
         description="List running processes with CPU/memory usage. Returns bounded results sorted by CPU.",
         inputSchema={
             "type": "object",
@@ -262,7 +262,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.proc_kill",
+        name="linux_proc_kill",
         description="Send signal to a process. Safety guards prevent killing PID 1 or MCP server.",
         inputSchema={
             "type": "object",
@@ -282,7 +282,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.sys_snapshot",
+        name="linux_sys_snapshot",
         description="Get system resource snapshot: CPU, memory, disk usage, and load average.",
         inputSchema={
             "type": "object",
@@ -291,7 +291,7 @@ TOOLS: list[Tool] = [
     ),
     # L3 LinuxOps - Interactive REPLs
     Tool(
-        name="linux.proc_start",
+        name="linux_proc_start",
         description="Start an interactive process/REPL. Returns proc_id for subsequent send/read/stop.",
         inputSchema={
             "type": "object",
@@ -314,7 +314,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.proc_send",
+        name="linux_proc_send",
         description="Send input to a managed process. Newline appended automatically.",
         inputSchema={
             "type": "object",
@@ -332,7 +332,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.proc_read",
+        name="linux_proc_read",
         description="Read output from a managed process with timeout.",
         inputSchema={
             "type": "object",
@@ -351,7 +351,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.proc_stop",
+        name="linux_proc_stop",
         description="Stop a managed process and clean up.",
         inputSchema={
             "type": "object",
@@ -372,7 +372,7 @@ TOOLS: list[Tool] = [
     ),
     # L1 Phase 2 - FS Write Tools
     Tool(
-        name="linux.fs_write",
+        name="linux_fs_write",
         description="Write or append text to a file. Supports atomic writes and SHA256 precondition checks.",
         inputSchema={
             "type": "object",
@@ -386,7 +386,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.fs_mkdir",
+        name="linux_fs_mkdir",
         description="Create a directory (and parent directories if needed).",
         inputSchema={
             "type": "object",
@@ -398,7 +398,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.fs_move",
+        name="linux_fs_move",
         description="Move or rename a file or directory.",
         inputSchema={
             "type": "object",
@@ -410,7 +410,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.fs_delete",
+        name="linux_fs_delete",
         description="Delete a file or directory.",
         inputSchema={
             "type": "object",
@@ -422,7 +422,7 @@ TOOLS: list[Tool] = [
         },
     ),
     Tool(
-        name="linux.fs_edit",
+        name="linux_fs_edit",
         description="Surgical text replacement in a file. Finds and replaces exact text matches.",
         inputSchema={
             "type": "object",
@@ -437,6 +437,37 @@ TOOLS: list[Tool] = [
     ),
 ]
 
+# Code execution mode tool (Phase 2 - Anthropic Code Mode pattern)
+EXECUTE_CODE_TOOL = Tool(
+    name="execute_code",
+    description="""Execute Python code with access to ALL LLMC tools via stubs.
+
+WORKFLOW:
+1. Use list_dir('.llmc/stubs/') to see available tools
+2. Use read_file to check any stub's function signature
+3. Write Python that imports and calls what you need
+
+EXAMPLE:
+```python
+from stubs import rag_search
+results = rag_search(query="router")
+print(results['data'][0]['path'])
+```
+
+Tools: rag_search, rag_query, linux_fs_*, linux_proc_*, run_cmd, and more.
+Only stdout is returned - filter data locally to save tokens.""",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "code": {
+                "type": "string",
+                "description": "Python code to execute. Use 'from stubs import tool_name' to access tools.",
+            },
+        },
+        "required": ["code"],
+    },
+)
+
 
 class LlmcMcpServer:
     """LLMC MCP Server implementation."""
@@ -448,9 +479,19 @@ class LlmcMcpServer:
         # Initialize observability (M4)
         self.obs = ObservabilityContext(config.observability)
 
-        # Initialize tools list (starting with static tools)
-        self.tools = list(TOOLS)
+        # Check for code execution mode (Phase 2)
+        if config.code_execution.enabled:
+            self._init_code_execution_mode()
+        else:
+            self._init_classic_mode()
 
+        self._register_dynamic_executables()
+        self._register_handlers()
+        logger.info(f"LLMC MCP Server initialized ({config.config_version}, mode={'code_exec' if config.code_execution.enabled else 'classic'})")
+
+    def _init_classic_mode(self):
+        """Initialize classic mode with all 23 tools registered."""
+        self.tools = list(TOOLS)
         self.tool_handlers = {
             "health": self._handle_health,
             "list_tools": self._handle_list_tools,
@@ -464,25 +505,149 @@ class LlmcMcpServer:
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
             # L2 LinuxOps
-            "linux.proc_list": self._handle_proc_list,
-            "linux.proc_kill": self._handle_proc_kill,
-            "linux.sys_snapshot": self._handle_sys_snapshot,
+            "linux_proc_list": self._handle_proc_list,
+            "linux_proc_kill": self._handle_proc_kill,
+            "linux_sys_snapshot": self._handle_sys_snapshot,
             # L3 LinuxOps - REPLs
-            "linux.proc_start": self._handle_proc_start,
-            "linux.proc_send": self._handle_proc_send,
-            "linux.proc_read": self._handle_proc_read,
-            "linux.proc_stop": self._handle_proc_stop,
+            "linux_proc_start": self._handle_proc_start,
+            "linux_proc_send": self._handle_proc_send,
+            "linux_proc_read": self._handle_proc_read,
+            "linux_proc_stop": self._handle_proc_stop,
             # L1 Phase 2 - FS Writes
-            "linux.fs_write": self._handle_fs_write,
-            "linux.fs_mkdir": self._handle_fs_mkdir,
-            "linux.fs_move": self._handle_fs_move,
-            "linux.fs_delete": self._handle_fs_delete,
-            "linux.fs_edit": self._handle_fs_edit,
+            "linux_fs_write": self._handle_fs_write,
+            "linux_fs_mkdir": self._handle_fs_mkdir,
+            "linux_fs_move": self._handle_fs_move,
+            "linux_fs_delete": self._handle_fs_delete,
+            "linux_fs_edit": self._handle_fs_edit,
+        }
+        logger.info("Classic mode: 23 tools registered")
+
+    def _init_code_execution_mode(self):
+        """
+        Initialize code execution mode (Phase 2 - Anthropic Code Mode pattern).
+        
+        Only bootstrap tools are registered as MCP tools.
+        All other tools become importable stubs in .llmc/stubs/.
+        Claude navigates the stubs directory, reads definitions on-demand,
+        writes Python code that imports and calls them.
+        
+        98% token reduction vs classic mode.
+        """
+        from llmc_mcp.tools.code_exec import generate_stubs
+
+        # Get LLMC root
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        # Generate stubs for all tools
+        stubs_dir = Path(self.config.code_execution.stubs_dir)
+        logger.info(f"Code execution mode: generating stubs in {llmc_root / stubs_dir}")
+        generated = generate_stubs(TOOLS, stubs_dir, llmc_root)
+        logger.info(f"Generated {len(generated)} stub files")
+
+        # Register only bootstrap tools + execute_code
+        bootstrap = set(self.config.code_execution.bootstrap_tools)
+        self.tools = [t for t in TOOLS if t.name in bootstrap]
+        self.tools.append(EXECUTE_CODE_TOOL)
+
+        # Minimal handler set for bootstrap tools
+        self.tool_handlers = {
+            "health": self._handle_health,
+            "list_tools": self._handle_list_tools,
+            "list_dir": self._handle_list_dir,
+            "read_file": self._handle_read_file,
+            "execute_code": self._handle_execute_code,
         }
 
-        self._register_dynamic_executables()
-        self._register_handlers()
-        logger.info(f"LLMC MCP Server initialized ({config.config_version})")
+        logger.info(f"Code execution mode: {len(self.tools)} bootstrap tools registered")
+
+    async def _handle_execute_code(self, args: dict) -> list[TextContent]:
+        """
+        Handle execute_code tool - run Python code with access to tool stubs.
+        
+        This is the core of code execution mode. Claude writes Python code
+        that imports from stubs and processes data locally. Only stdout
+        is returned to the conversation context.
+        """
+        from llmc_mcp.tools.code_exec import execute_code
+
+        code = args.get("code", "")
+        if not code:
+            return [TextContent(type="text", text='{"error": "code is required"}')]
+
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+        stubs_dir = llmc_root / self.config.code_execution.stubs_dir
+
+        # Create tool caller that routes back to our handlers
+        def tool_caller(name: str, tool_args: dict) -> dict:
+            """Synchronous tool caller for use within executed code."""
+            handler = self.tool_handlers.get(name)
+            if not handler:
+                # Try classic handlers for stub calls
+                classic_handlers = {
+                    "rag_search": self._handle_rag_search,
+                    "read_file": self._handle_read_file,
+                    "list_dir": self._handle_list_dir,
+                    "stat": self._handle_stat,
+                    "run_cmd": self._handle_run_cmd,
+                    "te_run": self._handle_te_run,
+                    "repo_read": self._handle_repo_read,
+                    "rag_query": self._handle_rag_query,
+                    "linux_proc_list": self._handle_proc_list,
+                    "linux_proc_kill": self._handle_proc_kill,
+                    "linux_sys_snapshot": self._handle_sys_snapshot,
+                    "linux_proc_start": self._handle_proc_start,
+                    "linux_proc_send": self._handle_proc_send,
+                    "linux_proc_read": self._handle_proc_read,
+                    "linux_proc_stop": self._handle_proc_stop,
+                    "linux_fs_write": self._handle_fs_write,
+                    "linux_fs_mkdir": self._handle_fs_mkdir,
+                    "linux_fs_move": self._handle_fs_move,
+                    "linux_fs_delete": self._handle_fs_delete,
+                    "linux_fs_edit": self._handle_fs_edit,
+                }
+                handler = classic_handlers.get(name)
+            
+            if not handler:
+                return {"error": f"Unknown tool: {name}"}
+
+            # Run async handler synchronously
+            try:
+                loop = asyncio.new_event_loop()
+                result = loop.run_until_complete(handler(tool_args))
+                loop.close()
+                if result and result[0].text:
+                    return json.loads(result[0].text)
+                return {"error": "Empty result"}
+            except Exception as e:
+                return {"error": str(e)}
+
+        result = execute_code(
+            code=code,
+            tool_caller=tool_caller,
+            timeout=self.config.code_execution.timeout,
+            max_output_bytes=self.config.code_execution.max_output_bytes,
+            stubs_dir=stubs_dir,
+        )
+
+        response = {
+            "success": result.success,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        }
+        if result.error:
+            response["error"] = result.error
+        if result.return_value is not None:
+            response["return_value"] = result.return_value
+
+        return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
     def _register_dynamic_executables(self):
         """Register custom executables defined in config."""
@@ -966,7 +1131,7 @@ class LlmcMcpServer:
 
     # L2 LinuxOps handlers
     async def _handle_proc_list(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_list tool."""
+        """Handle linux_proc_list tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_list
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -984,7 +1149,7 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
     async def _handle_proc_kill(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_kill tool."""
+        """Handle linux_proc_kill tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_kill
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1005,7 +1170,7 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
     async def _handle_sys_snapshot(self, args: dict) -> list[TextContent]:
-        """Handle linux.sys_snapshot tool."""
+        """Handle linux_sys_snapshot tool."""
         from llmc_mcp.tools.linux_ops.sysinfo import mcp_linux_sys_snapshot
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1017,7 +1182,7 @@ class LlmcMcpServer:
 
     # L3 LinuxOps - REPL handlers
     async def _handle_proc_start(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_start tool."""
+        """Handle linux_proc_start tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_start
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1040,7 +1205,7 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
     async def _handle_proc_send(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_send tool."""
+        """Handle linux_proc_send tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_send
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1061,7 +1226,7 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
     async def _handle_proc_read(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_read tool."""
+        """Handle linux_proc_read tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_read
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1082,7 +1247,7 @@ class LlmcMcpServer:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
     async def _handle_proc_stop(self, args: dict) -> list[TextContent]:
-        """Handle linux.proc_stop tool."""
+        """Handle linux_proc_stop tool."""
         from llmc_mcp.tools.linux_ops.proc import mcp_linux_proc_stop
         from llmc_mcp.tools.linux_ops.errors import LinuxOpsError
 
@@ -1104,7 +1269,7 @@ class LlmcMcpServer:
 
     # L1 Phase 2 - FS Write handlers
     async def _handle_fs_write(self, args: dict) -> list[TextContent]:
-        """Handle linux.fs_write tool."""
+        """Handle linux_fs_write tool."""
         from llmc_mcp.tools.fs import write_file
         path = args.get("path", "")
         content = args.get("content", "")
@@ -1118,7 +1283,7 @@ class LlmcMcpServer:
         return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
 
     async def _handle_fs_mkdir(self, args: dict) -> list[TextContent]:
-        """Handle linux.fs_mkdir tool."""
+        """Handle linux_fs_mkdir tool."""
         from llmc_mcp.tools.fs import create_directory
         path = args.get("path", "")
         exist_ok = args.get("exist_ok", True)
@@ -1130,7 +1295,7 @@ class LlmcMcpServer:
         return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
 
     async def _handle_fs_move(self, args: dict) -> list[TextContent]:
-        """Handle linux.fs_move tool."""
+        """Handle linux_fs_move tool."""
         from llmc_mcp.tools.fs import move_file
         source = args.get("source", "")
         dest = args.get("dest", "")
@@ -1142,7 +1307,7 @@ class LlmcMcpServer:
         return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
 
     async def _handle_fs_delete(self, args: dict) -> list[TextContent]:
-        """Handle linux.fs_delete tool."""
+        """Handle linux_fs_delete tool."""
         from llmc_mcp.tools.fs import delete_file
         path = args.get("path", "")
         recursive = args.get("recursive", False)
@@ -1154,7 +1319,7 @@ class LlmcMcpServer:
         return [TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))]
 
     async def _handle_fs_edit(self, args: dict) -> list[TextContent]:
-        """Handle linux.fs_edit tool."""
+        """Handle linux_fs_edit tool."""
         from llmc_mcp.tools.fs import edit_block
         path = args.get("path", "")
         old_text = args.get("old_text", "")
