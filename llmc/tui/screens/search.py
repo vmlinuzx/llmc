@@ -33,6 +33,8 @@ def _format_result_text(result: Dict[str, Any]) -> str:
     summary = result.get("summary", "")
     metadata = result.get("metadata", result.get("meta", {})) or {}
     relations = metadata.get("relations") or result.get("relations") or []
+    
+    norm_score = float(result.get("normalized_score", 0.0) or 0.0)
 
     text_parts = []
     text_parts.append(f"[yellow bold]#{rank}[/yellow bold] [cyan bold]{path}[/cyan bold]")
@@ -44,7 +46,7 @@ def _format_result_text(result: Dict[str, Any]) -> str:
         line_range = f"{lines[0]}-{lines[1]}" if len(lines) > 1 else str(lines[0])
         text_parts.append(f"   Lines: {line_range}")
 
-    text_parts.append(f"   Score: [green]{score:.4f}[/green]")
+    text_parts.append(f"   Score: [green]{norm_score:.1f}[/green] [dim]({score:.4f})[/dim]")
 
     if summary:
         text_parts.append(f"\n   [dim]{summary}[/dim]")
@@ -386,9 +388,10 @@ class SearchScreen(Screen):
 
         # Search
         search_info = debug.get("search", {})
+        norm_score = float(result.get("normalized_score", 0.0) or 0.0)
         parts.append("[bold]Search[/bold]")
         parts.append(f"  Rank:       #{search_info.get('rank', '?')}")
-        parts.append(f"  Score:      [green]{search_info.get('score', 0.0):.4f}[/green]")
+        parts.append(f"  Score:      [green]{norm_score:.1f}[/green] ({search_info.get('score', 0.0):.4f})")
         if "embedding_similarity" in search_info:
              parts.append(f"  Embedding:  {search_info['embedding_similarity']:.4f}")
         parts.append("")

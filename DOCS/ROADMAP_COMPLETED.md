@@ -88,6 +88,19 @@ It is not an exhaustive changelog; it is a brag sheet and a memory aid.
 - Updated `llmc_mcp/server.py` to import and use the prompt from the new module.
 - Ensured no changes to the prompt's content.
 
+### 2.8 MCP Tool Expansion (Phase 1)
+
+- Added P0 navigation tools to MCP: `rag_where_used`, `rag_lineage`, `inspect`.
+- Added P1 observability tool: `rag_stats`.
+- All tools support both classic MCP mode and Code Execution mode (via stubs).
+
+### 2.9 Normalized RAG Scores
+
+- Implemented normalized scoring (0-100) alongside raw ranking scores.
+- Updated `SpanSearchResult` data model and search logic.
+- Updated CLI and TUI to display normalized scores for better human readability.
+- Documented scoring logic in User Guide.
+
 ---
 
 ## 3. Desktop Commander / Tools Surface

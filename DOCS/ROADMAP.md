@@ -70,14 +70,10 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
 
 **Goal:** Expose critical navigation and inspection tools through MCP.
 
-- Add missing RAG navigation tools (P0):
-  - `rag_where_used` - Find all usages of a symbol across the codebase.
-  - `rag_lineage` - Traverse dependency lineage (upstream/downstream).
-  - `inspect` - Fast file/symbol inspection with graph + enrichment context.
-- Add observability tools (P1):
-  - `rag_stats` - RAG index statistics and health metrics.
+- **Completed (Dec 2025):** Added `rag_where_used`, `rag_lineage`, `inspect`, and `rag_stats`.
+- Remaining observability tools (P1):
   - `rag_plan` - Heuristic retrieval planning for queries.
-- Update code execution stubs to include new tools.
+- Update code execution stubs to include new tools (Verified: automatic via `TOOLS` list).
 
 ---
 
@@ -108,16 +104,6 @@ These are things that make LLMC nicer to live with once the core system is “go
   - Entity and relation mapping that matches the existing graph model.
   - Tests against a real non‑Python sample repo.
 - Update docs to describe language support explicitly (Python: full, JS/TS: beta, others: TBD).
-
-### 2.3 Normalized RAG scores
-
-**Goal:** Make “score” fields meaningful to humans and simple scripts.
-
-- Add a normalized score (0–100) alongside raw similarity scores.
-- Ensure CLIs and TUIs prefer the normalized score in their displays.
-- Add a short doc note explaining:
-  - How normalization works.
-  - That normalized scores are comparable across queries.
 
 ### 2.4 Deterministic Repo Docgen (v2)
 

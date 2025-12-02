@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # scripts/smoke_te.sh — run TE wrapper tests inside container
 set -euo pipefail

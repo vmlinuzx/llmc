@@ -42,6 +42,531 @@ logging.basicConfig(
 )
 logger = logging.getLogger("llmc-mcp")
 
+# Tool definitions for code execution mode
+TOOLS: list[Tool] = [
+    Tool(
+        name="rag_search",
+        description="Search LLMC RAG index for relevant code/docs. Returns ranked snippets with provenance.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query or code concept to search for",
+                },
+                "scope": {
+                    "type": "string",
+                    "enum": ["repo", "docs", "both"],
+                    "description": "Search scope: repo (code), docs, or both",
+                    "default": "repo",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (1-20)",
+                    "default": 5,
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="read_file",
+        description="Read contents of a file. Returns text content with metadata.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or relative path to file",
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": "Maximum bytes to read (default 1MB)",
+                    "default": 1048576,
+                },
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="list_dir",
+        description="List contents of a directory. Returns files and subdirectories.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or relative path to directory",
+                },
+                "max_entries": {
+                    "type": "integer",
+                    "description": "Maximum entries to return (default 1000)",
+                    "default": 1000,
+                },
+                "include_hidden": {
+                    "type": "boolean",
+                    "description": "Include hidden files (starting with .)",
+                    "default": False,
+                },
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="stat",
+        description="Get file or directory metadata (size, timestamps, permissions).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Absolute or relative path",
+                },
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="run_cmd",
+        description="Execute a shell command with allowlist validation and timeout. Only approved binaries can run.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "Shell command to execute (first word must be in allowlist)",
+                },
+                "timeout": {
+                    "type": "integer",
+                    "description": "Max execution time in seconds (default 30)",
+                    "default": 30,
+                },
+            },
+            "required": ["command"],
+        },
+    ),
+    Tool(
+        name="get_metrics",
+        description="Get MCP server metrics (call counts, latencies, errors). Requires observability enabled.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    ),
+    Tool(
+        name="te_run",
+        description="Execute a shell command through the Tool Envelope (TE) wrapper. Returns structured JSON output.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Command arguments (e.g. ['grep', 'pattern', 'file'])",
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Optional working directory (must be within allowed roots)",
+                },
+                "timeout": {
+                    "type": "number",
+                    "description": "Execution timeout in seconds",
+                },
+            },
+            "required": ["args"],
+        },
+    ),
+    Tool(
+        name="repo_read",
+        description="Read a file from a repository via the Tool Envelope.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "root": {
+                    "type": "string",
+                    "description": "Root path of the repository",
+                },
+                "path": {
+                    "type": "string",
+                    "description": "Relative path to the file",
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": "Maximum bytes to read (optional)",
+                },
+            },
+            "required": ["root", "path"],
+        },
+    ),
+    Tool(
+        name="rag_query",
+        description="Query the RAG system via the Tool Envelope.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query",
+                },
+                "k": {
+                    "type": "integer",
+                    "description": "Number of results to return (default 5)",
+                },
+                "index": {
+                    "type": "string",
+                    "description": "Specific index to query (optional)",
+                },
+                "filters": {
+                    "type": "object",
+                    "description": "Metadata filters (optional)",
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="rag_search_enriched",
+        description="Advanced RAG search with graph-based relationship enrichment. Supports multiple enrichment modes for semantic + relationship-aware retrieval.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Natural language query or code concept to search for",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (1-20)",
+                    "default": 5,
+                },
+                "enrich_mode": {
+                    "type": "string",
+                    "enum": ["vector", "graph", "hybrid", "auto"],
+                    "description": "Enrichment strategy: vector (semantic only), graph (relationships), hybrid (both), auto (intelligent routing)",
+                    "default": "auto",
+                },
+                "graph_depth": {
+                    "type": "integer",
+                    "description": "Relationship traversal depth (0-3). Higher values find more distant relationships",
+                    "default": 1,
+                },
+                "include_features": {
+                    "type": "boolean",
+                    "description": "Include enrichment quality metrics in response meta",
+                    "default": False,
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="rag_where_used",
+        description="Find where a symbol is used (callers, imports) across the codebase.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "Symbol name to find usages of",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (default 50)",
+                    "default": 50,
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    Tool(
+        name="rag_lineage",
+        description="Trace symbol dependency lineage (upstream/downstream).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "symbol": {
+                    "type": "string",
+                    "description": "Symbol name to trace",
+                },
+                "direction": {
+                    "type": "string",
+                    "enum": ["upstream", "downstream", "callers", "callees"],
+                    "description": "Trace direction: upstream (what calls this) or downstream (what this calls)",
+                    "default": "downstream",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results to return (default 50)",
+                    "default": 50,
+                },
+            },
+            "required": ["symbol"],
+        },
+    ),
+    Tool(
+        name="inspect",
+        description="Deep inspection of a file or symbol: snippet, graph relationships, and enrichment data.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "File path (relative to repo root)",
+                },
+                "symbol": {
+                    "type": "string",
+                    "description": "Symbol name (e.g. 'MyClass.method')",
+                },
+                "include_full_source": {
+                    "type": "boolean",
+                    "description": "Include full file source code (use sparingly)",
+                    "default": False,
+                },
+                "max_neighbors": {
+                    "type": "integer",
+                    "description": "Max related entities to return per category",
+                    "default": 3,
+                },
+            },
+        },
+    ),
+    Tool(
+        name="rag_stats",
+        description="Get statistics about the RAG graph and enrichment coverage.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+        },
+    ),
+    # L2 LinuxOps Tools
+    Tool(
+        name="linux_proc_list",
+        description="List running processes with CPU/memory usage. Returns bounded results sorted by CPU.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "max_results": {
+                    "type": "integer",
+                    "description": "Maximum processes to return (1-5000, default 200)",
+                    "default": 200,
+                },
+                "user": {
+                    "type": "string",
+                    "description": "Optional username filter",
+                },
+            },
+        },
+    ),
+    Tool(
+        name="linux_proc_kill",
+        description="Send signal to a process. Safety guards prevent killing PID 1 or MCP server.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "pid": {
+                    "type": "integer",
+                    "description": "Process ID to signal",
+                },
+                "signal": {
+                    "type": "string",
+                    "enum": ["TERM", "KILL", "INT", "HUP", "STOP", "CONT"],
+                    "description": "Signal to send (default TERM)",
+                    "default": "TERM",
+                },
+            },
+            "required": ["pid"],
+        },
+    ),
+    Tool(
+        name="linux_sys_snapshot",
+        description="Get system resource snapshot: CPU, memory, disk usage, and load average.",
+        inputSchema={
+            "type": "object",
+            "properties": {},
+        },
+    ),
+    # L3 LinuxOps - Interactive REPLs
+    Tool(
+        name="linux_proc_start",
+        description="Start an interactive process/REPL. Returns proc_id for subsequent send/read/stop.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "description": "Command to run (e.g. 'python -i', 'bash', 'node')",
+                },
+                "cwd": {
+                    "type": "string",
+                    "description": "Working directory (optional)",
+                },
+                "initial_read_timeout_ms": {
+                    "type": "integer",
+                    "description": "Time to wait for initial output (default 1000)",
+                    "default": 1000,
+                },
+            },
+            "required": ["command"],
+        },
+    ),
+    Tool(
+        name="linux_proc_send",
+        description="Send input to a managed process. Newline appended automatically.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID from proc_start",
+                },
+                "input": {
+                    "type": "string",
+                    "description": "Text to send to the process",
+                },
+            },
+            "required": ["proc_id", "input"],
+        },
+    ),
+    Tool(
+        name="linux_proc_read",
+        description="Read output from a managed process with timeout.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID",
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "description": "Max wait time in ms (default 1000, max 10000)",
+                    "default": 1000,
+                },
+            },
+            "required": ["proc_id"],
+        },
+    ),
+    Tool(
+        name="linux_proc_stop",
+        description="Stop a managed process and clean up.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "proc_id": {
+                    "type": "string",
+                    "description": "Process ID to stop",
+                },
+                "signal": {
+                    "type": "string",
+                    "enum": ["TERM", "KILL", "INT", "HUP"],
+                    "description": "Signal to send (default TERM)",
+                    "default": "TERM",
+                },
+            },
+            "required": ["proc_id"],
+        },
+    ),
+    # L1 Phase 2 - FS Write Tools
+    Tool(
+        name="linux_fs_write",
+        description="Write or append text to a file. Supports atomic writes and SHA256 precondition checks.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File path to write"},
+                "content": {"type": "string", "description": "Text content to write"},
+                "mode": {"type": "string", "enum": ["rewrite", "append"], "default": "rewrite"},
+                "expected_sha256": {"type": "string", "description": "If set, verify file hash before write"},
+            },
+            "required": ["path", "content"],
+        },
+    ),
+    Tool(
+        name="linux_fs_mkdir",
+        description="Create a directory (and parent directories if needed).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Directory path to create"},
+                "exist_ok": {"type": "boolean", "default": True},
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="linux_fs_move",
+        description="Move or rename a file or directory.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "Source path"},
+                "dest": {"type": "string", "description": "Destination path"},
+            },
+            "required": ["source", "dest"],
+        },
+    ),
+    Tool(
+        name="linux_fs_delete",
+        description="Delete a file or directory.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Path to delete"},
+                "recursive": {"type": "boolean", "default": False, "description": "Required for directories"},
+            },
+            "required": ["path"],
+        },
+    ),
+    Tool(
+        name="linux_fs_edit",
+        description="Surgical text replacement in a file. Finds and replaces exact text matches.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "File to edit"},
+                "old_text": {"type": "string", "description": "Text to find"},
+                "new_text": {"type": "string", "description": "Replacement text"},
+                "expected_replacements": {"type": "integer", "default": 1, "description": "Expected match count"},
+            },
+            "required": ["path", "old_text", "new_text"],
+        },
+    ),
+]
+
+# Code execution mode tool (Phase 2 - Anthropic Code Mode pattern)
+EXECUTE_CODE_TOOL = Tool(
+    name="execute_code",
+    description="""Execute Python code with access to ALL LLMC tools via stubs.
+
+WORKFLOW:
+1. Use list_dir('.llmc/stubs/') to see available tools
+2. Use read_file to check any stub's function signature
+3. Write Python that imports and calls what you need
+
+EXAMPLE:
+```python
+from stubs import rag_search
+results = rag_search(query="router")
+print(results['data'][0]['path'])
+```
+
+Tools: rag_search, rag_query, linux_fs_*, linux_proc_*, run_cmd, and more.
+Only stdout is returned - filter data locally to save tokens.""",
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "code": {
+                "type": "string",
+                "description": "Python code to execute. Use 'from stubs import tool_name' to access tools.",
+            },
+        },
+        "required": ["code"],
+    },
+)
+
+
+
 
 class LlmcMcpServer:
     """LLMC MCP Server implementation."""
@@ -77,6 +602,10 @@ class LlmcMcpServer:
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
             "rag_search_enriched": self._handle_rag_search_enriched,
+            "rag_where_used": self._handle_rag_where_used,
+            "rag_lineage": self._handle_rag_lineage,
+            "inspect": self._handle_inspect,
+            "rag_stats": self._handle_rag_stats,
             # L2 LinuxOps
             "linux_proc_list": self._handle_proc_list,
             "linux_proc_kill": self._handle_proc_kill,
@@ -527,6 +1056,99 @@ class LlmcMcpServer:
 
         # Return normalized structure (data + meta)
         return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+
+
+    async def _handle_rag_where_used(self, args: dict) -> list[TextContent]:
+        import json
+        from tools.rag_nav.tool_handlers import tool_rag_where_used
+
+        symbol = args.get("symbol", "")
+        limit = args.get("limit", 50)
+
+        if not symbol:
+            return [TextContent(type="text", text='{"error": "symbol is required"}')]
+
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        try:
+            result = tool_rag_where_used(llmc_root, symbol, limit=limit)
+            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+    async def _handle_rag_lineage(self, args: dict) -> list[TextContent]:
+        import json
+        from tools.rag_nav.tool_handlers import tool_rag_lineage
+
+        symbol = args.get("symbol", "")
+        direction = args.get("direction", "downstream")
+        limit = args.get("limit", 50)
+
+        if not symbol:
+            return [TextContent(type="text", text='{"error": "symbol is required"}')]
+
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        try:
+            result = tool_rag_lineage(llmc_root, symbol, direction, max_results=limit)
+            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+    async def _handle_inspect(self, args: dict) -> list[TextContent]:
+        import json
+        from tools.rag.inspector import inspect_entity
+
+        path = args.get("path")
+        symbol = args.get("symbol")
+        include_full_source = args.get("include_full_source", False)
+        max_neighbors = args.get("max_neighbors", 3)
+
+        if not path and not symbol:
+            return [TextContent(type="text", text='{"error": "path or symbol is required"}')]
+
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        try:
+            # inspect_entity returns InspectionResult dataclass
+            result = inspect_entity(
+                llmc_root,
+                symbol=symbol,
+                path=path,
+                include_full_source=include_full_source,
+                max_neighbors=max_neighbors
+            )
+            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+    async def _handle_rag_stats(self, args: dict) -> list[TextContent]:
+        import json
+        from tools.rag_nav.tool_handlers import tool_rag_stats
+
+        llmc_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+
+        try:
+            result = tool_rag_stats(llmc_root)
+            return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        except Exception as e:
+            return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
 
     async def _handle_read_file(self, args: dict) -> list[TextContent]:

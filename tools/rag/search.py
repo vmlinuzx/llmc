@@ -105,6 +105,7 @@ class SpanSearchResult:
     end_line: int
     score: float
     summary: str | None
+    normalized_score: float = 0.0
     debug_info: Optional[Dict[str, Any]] = field(default=None)
 
 
@@ -125,6 +126,10 @@ def _score_candidates(
         if query_text:
             similarity += _filename_boost(query_text, row["file_path"])
 
+        # Normalize to 0-100 range, clamping at boundaries
+        # Raw similarity can be > 1.0 due to boosts
+        norm_score = max(0.0, min(100.0, similarity * 100.0))
+
         results.append(
             SpanSearchResult(
                 span_hash=row["span_hash"],
@@ -135,6 +140,7 @@ def _score_candidates(
                 end_line=row["end_line"],
                 score=float(similarity),
                 summary=row["summary"] or None,
+                normalized_score=float(norm_score),
             )
         )
     results.sort(key=lambda item: item.score, reverse=True)
@@ -315,6 +321,7 @@ def _enrich_debug_info(
                 end_line=res.end_line,
                 score=res.score,
                 summary=res.summary,
+                normalized_score=res.normalized_score,
                 debug_info=debug
             )
         )
@@ -477,6 +484,7 @@ def search_spans(
                     end_line=r.end_line,
                     score=r.score,
                     summary=r.summary,
+                    normalized_score=r.normalized_score,
                     debug_info={**d_info, "search": search_info}
                 )
             )

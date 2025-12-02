@@ -304,6 +304,7 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
                 "kind": result.kind,
                 "lines": [result.start_line, result.end_line],
                 "score": result.score,
+                "normalized_score": getattr(result, "normalized_score", 0.0),
                 "summary": result.summary,
                 "debug": result.debug_info,
             }
@@ -315,8 +316,10 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
         click.echo("No spans found.")
         return
     for idx, result in enumerate(results, 1):
+        # Normalized score display: [ 95.0] (0.950)
+        norm_score = getattr(result, "normalized_score", 0.0)
         click.echo(
-            f"{idx}. {result.score:.3f} • {result.path}:{result.start_line}-{result.end_line} • {result.symbol} ({result.kind})"
+            f"{idx}. [{norm_score:5.1f}] ({result.score:.3f}) • {result.path}:{result.start_line}-{result.end_line} • {result.symbol} ({result.kind})"
         )
         if result.summary:
             click.echo(f"    summary: {result.summary}")

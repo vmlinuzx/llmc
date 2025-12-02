@@ -336,6 +336,15 @@ python -m tools.rag.cli search --repo /home/you/src/your-repo "how does X call Y
 
 The exact flags may vary depending on your version, but the pattern is always: index, sync, embed, enrich, then search.
 
+### 7.1. Normalized Scoring
+
+LLMC provides two types of scores in search results:
+
+1.  **Normalized Score** (e.g., `[ 95.0]`): A 0-100 score representing the absolute similarity of the result to your query. 100 is a perfect match. This is comparable across different queries.
+2.  **Ranking Score** (e.g., `(0.945)`): The internal score used to sort results. This may include boosting, fusion weights, and relative scaling. It is useful for debugging ranking logic but is not strictly comparable across queries.
+
+CLIs and TUIs display the Normalized Score prominently as it is the best indicator of "how good is this hit?".
+
 ---
 
 ## 8. RAG Nav, Graph, and Freshness

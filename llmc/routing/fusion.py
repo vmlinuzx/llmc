@@ -33,14 +33,14 @@ def normalize_scores(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         # but it matters for relative weight against other routes.
         # If there is no variance, we can't distinguish. Let's default to 1.0 if score > 0 else 0.0.
         val = 1.0 if max_score > 0 else 0.0
-        return [{**r, 'normalized_score': val} for r in results]
+        return [{**r, '_fusion_norm_score': val} for r in results]
         
     score_range = max_score - min_score
     
     normalized = []
     for r in results:
         norm_val = (r['score'] - min_score) / score_range
-        normalized.append({**r, 'normalized_score': norm_val})
+        normalized.append({**r, '_fusion_norm_score': norm_val})
         
     return normalized
 
@@ -79,7 +79,7 @@ def fuse_scores(
         for res in results:
             slice_id = res['slice_id']
             # Calculate weighted score
-            weighted_score = res['normalized_score'] * weight
+            weighted_score = res['_fusion_norm_score'] * weight
             
             if slice_id in merged_map:
                 current_best_score, current_best_obj = merged_map[slice_id]
@@ -98,8 +98,8 @@ def fuse_scores(
     for slice_id, (fused_score, res_obj) in merged_map.items():
         # Create a copy to avoid mutating input
         final_res = res_obj.copy()
-        # Remove the temporary normalized_score
-        final_res.pop('normalized_score', None)
+        # Remove the temporary _fusion_norm_score
+        final_res.pop('_fusion_norm_score', None)
         # Update the main score to be the fused score
         final_res['score'] = fused_score
         # Add a debugging field to see where it came from/how it was calculated? 

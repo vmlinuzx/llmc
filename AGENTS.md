@@ -1,4 +1,4 @@
-## AGENTS.md — LLMC Agent Charter
+[6~## AGENTS.md — LLMC Agent Charter
 
 The user is **Dave**.
 
@@ -36,6 +36,19 @@ If you only read one doc before acting, read **this one**, then skim **CONTRACTS
   - Keep commits small and focused; prefer PR-ready patch sets.
 - Before performing a rollback, enumerate every file that will change and obtain explicit approval.
 - Prefer **patch-style changes** (diffs) over rewriting whole files.
+
+### Git Safety Rules (CRITICAL)
+This is a multi user multi agent repo.  If you are told to commit and there
+are untracked files (and there almost always will be), stop and ask what to do. 
+Generally it's fine to just commit all untracked files, it's never ok to
+revert or do anything that will destroy untracked files without the word
+ENGAGE from the user.
+
+- **NEVER** run `git reset HEAD~` or `git revert HEAD` without explicit approval.
+- **NEVER** delete files (via `rm`, `git rm`, or any other method) without explicit approval.
+- **NEVER** assume a file is "safe to delete" - always ask first.
+- If you need to undo a commit, **ask Dave** and enumerate exactly what will change.
+- If you see untracked files you didn't create, **ask Dave** before touching them.
 
 ---
 
