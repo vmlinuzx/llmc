@@ -52,6 +52,20 @@ UP015 [*] Unnecessary mode argument
     |
 help: Remove mode argument
 
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+   --> llmc/docgen/gating.py:167:9
+    |
+165 |       except ValueError:
+166 |           # relative_to() raises ValueError if doc_path_resolved is not a child of output_base
+167 | /         raise ValueError(
+168 | |             f"Path traversal detected: {relative_path} resolves outside {output_dir}. "
+169 | |             f"Attempted path: {doc_path_resolved}, allowed base: {output_base}"
+170 | |         )
+    | |_________^
+171 |       
+172 |       return doc_path_resolved
+    |
+
 I001 [*] Import block is un-sorted or un-formatted
   --> llmc/enrichment/__init__.py:1:1
    |
@@ -106,24 +120,24 @@ I001 [*] Import block is un-sorted or un-formatted
 help: Organize imports
 
 E402 Module level import not at top of file
-  --> llmc/main.py:89:1
-   |
-88 | # Docs subcommand group (Docgen v2)
-89 | from llmc.commands import docs as docs_commands
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-90 | docs_app = typer.Typer(help="Documentation generation")
-91 | docs_app.command(name="generate")(docs_commands.generate)
-   |
+   --> llmc/main.py:98:1
+    |
+ 97 | # Docs subcommand group (Docgen v2)
+ 98 | from llmc.commands import docs as docs_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 99 | docs_app = typer.Typer(
+100 |     help="Documentation generation",
+    |
 
 I001 [*] Import block is un-sorted or un-formatted
-  --> llmc/main.py:89:1
-   |
-88 | # Docs subcommand group (Docgen v2)
-89 | from llmc.commands import docs as docs_commands
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-90 | docs_app = typer.Typer(help="Documentation generation")
-91 | docs_app.command(name="generate")(docs_commands.generate)
-   |
+   --> llmc/main.py:98:1
+    |
+ 97 | # Docs subcommand group (Docgen v2)
+ 98 | from llmc.commands import docs as docs_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 99 | docs_app = typer.Typer(
+100 |     help="Documentation generation",
+    |
 help: Organize imports
 
 F841 Local variable `path_str` is assigned to but never used
@@ -1390,6 +1404,28 @@ F401 `psutil` imported but unused; consider using `importlib.util.find_spec` to 
     |
 help: Remove unused import: `psutil`
 
+F401 [*] `tools.rag.config.load_config` imported but unused
+  --> llmc_mcp/tools/rag.py:85:38
+   |
+84 |         # Config reloads automatically every time (no caching)
+85 |         from tools.rag.config import load_config
+   |                                      ^^^^^^^^^^^
+86 |
+87 |         # Direct import - module stays loaded between calls
+   |
+help: Remove unused import: `tools.rag.config.load_config`
+
+F401 [*] `tools.rag.config.load_config` imported but unused
+   --> llmc_mcp/tools/rag.py:171:38
+    |
+170 |         # Config reloads automatically every time (no caching)
+171 |         from tools.rag.config import load_config
+    |                                      ^^^^^^^^^^^
+172 |
+173 |         # For now, we'll use the existing search_spans with debug=True to get graph data
+    |
+help: Remove unused import: `tools.rag.config.load_config`
+
 I001 [*] Import block is un-sorted or un-formatted
   --> llmc_mcp/tools/rag_protected.py:8:1
    |
@@ -1690,6 +1726,46 @@ F541 [*] f-string without any placeholders
     |
 help: Remove extraneous `f` prefix
 
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:25:1
+   |
+23 | sys.path.insert(0, str(REPO_ROOT))
+24 |
+25 | from tools.rag.database import Database
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+26 | from tools.rag.config import index_path_for_read
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> scripts/migrate_fts5_no_stopwords.py:25:1
+   |
+23 |   sys.path.insert(0, str(REPO_ROOT))
+24 |
+25 | / from tools.rag.database import Database
+26 | | from tools.rag.config import index_path_for_read
+   | |________________________________________________^
+   |
+help: Organize imports
+
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:26:1
+   |
+25 | from tools.rag.database import Database
+26 | from tools.rag.config import index_path_for_read
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+F541 [*] f-string without any placeholders
+  --> scripts/migrate_fts5_no_stopwords.py:66:15
+   |
+65 |         print(f"  ✅ Migration complete! Indexed {count} enrichments")
+66 |         print(f"  🎯 Keyword 'model' is now searchable!")
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+67 |         
+68 |     except Exception as e:
+   |
+help: Remove extraneous `f` prefix
+
 E722 Do not use bare `except`
    --> scripts/rag/index_workspace.py:160:9
     |
@@ -1821,6 +1897,49 @@ F541 [*] f-string without any placeholders
    |
 help: Remove extraneous `f` prefix
 
+E402 Module level import not at top of file
+  --> scripts/test_model_search_fix.py:14:1
+   |
+12 | sys.path.insert(0, str(repo_root))
+13 |
+14 | from tools.rag.search import search_spans
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 |
+16 | # Test 1: Direct search
+   |
+
+E402 Module level import not at top of file
+  --> scripts/test_model_search_fix.py:40:1
+   |
+38 | print("="*60)
+39 |
+40 | from tools.rag.config import load_config
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+41 |
+42 | config_file = repo_root / "llmc.toml"
+   |
+
+E402 Module level import not at top of file
+  --> scripts/test_model_search_fix.py:54:1
+   |
+53 | # Load and check
+54 | import time
+   | ^^^^^^^^^^^
+55 | time.sleep(0.1)
+56 | config = load_config(repo_root)
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> scripts/test_model_search_fix.py:54:1
+   |
+53 | # Load and check
+54 | import time
+   | ^^^^^^^^^^^
+55 | time.sleep(0.1)
+56 | config = load_config(repo_root)
+   |
+help: Organize imports
+
 I001 [*] Import block is un-sorted or un-formatted
   --> scripts/verify_docgen_phase1.py:7:1
    |
@@ -1950,6 +2069,85 @@ F401 [*] `tempfile` imported but unused
 9 | from pathlib import Path
   |
 help: Remove unused import: `tempfile`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/security/test_path_traversal.py:7:1
+  |
+5 |   """
+6 |
+7 | / import pytest
+8 | | from pathlib import Path
+  | |________________________^
+  |
+help: Organize imports
+
+F401 [*] `pytest` imported but unused
+ --> tests/security/test_path_traversal.py:7:8
+  |
+5 | """
+6 |
+7 | import pytest
+  |        ^^^^^^
+8 | from pathlib import Path
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pathlib.Path` imported but unused
+ --> tests/security/test_path_traversal.py:8:21
+  |
+7 | import pytest
+8 | from pathlib import Path
+  |                     ^^^^
+  |
+help: Remove unused import: `pathlib.Path`
+
+B007 Loop control variable `malicious_path` not used within loop body
+  --> tests/security/test_path_traversal.py:23:9
+   |
+21 |     ]
+22 |     
+23 |     for malicious_path in malicious_paths:
+   |         ^^^^^^^^^^^^^^
+24 |         # TODO: Replace with actual code under test
+25 |         # with pytest.raises(ValueError, match="path.*invalid"):
+   |
+help: Rename unused `malicious_path` to `_malicious_path`
+
+B007 Loop control variable `path` not used within loop body
+  --> tests/security/test_path_traversal.py:45:9
+   |
+43 |     ]
+44 |     
+45 |     for path in tricky_paths:
+   |         ^^^^
+46 |         # TODO: Verify these are blocked after normalization
+47 |         pass
+   |
+help: Rename unused `path` to `_path`
+
+B007 Loop control variable `path` not used within loop body
+  --> tests/security/test_path_traversal.py:57:9
+   |
+55 |     ]
+56 |     
+57 |     for path in null_byte_paths:
+   |         ^^^^
+58 |         # TODO: Verify null bytes are rejected
+59 |         pass
+   |
+help: Rename unused `path` to `_path`
+
+B007 Loop control variable `path` not used within loop body
+  --> tests/security/test_path_traversal.py:70:9
+   |
+68 |     ]
+69 |     
+70 |     for path in absolute_paths:
+   |         ^^^^
+71 |         # TODO: Verify absolute paths outside repo are blocked
+72 |         pass
+   |
+help: Rename unused `path` to `_path`
 
 F401 `textual.widgets.Static` imported but unused; consider using `importlib.util.find_spec` to test for availability
   --> tests/smoke_analytics_screen.py:10:33
@@ -2206,6 +2404,18 @@ B011 Do not `assert False` (`python -O` removes these calls), raise `AssertionEr
 help: Replace `assert False`
 
 I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_path_traversal.py:2:1
+  |
+2 | / import pytest
+3 | | from pathlib import Path
+4 | | from llmc.docgen.gating import resolve_doc_path
+  | |_______________________________________________^
+5 |
+6 |   def test_resolve_doc_path_traversal_blocked(tmp_path):
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
  --> tests/test_docgen_perf_ren.py:2:1
   |
 2 | / import pytest
@@ -2303,6 +2513,219 @@ F401 [*] `llmc.docgen.backends.shell.DocgenResult` imported but unused
 10 | # Fixture to create a dummy script
    |
 help: Remove unused import: `llmc.docgen.backends.shell.DocgenResult`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_ruthless.py:1:1
+  |
+1 | / import pytest
+2 | | import time
+3 | | import os
+4 | | from pathlib import Path
+5 | | from unittest.mock import MagicMock, patch
+6 | | from llmc.docgen.orchestrator import DocgenOrchestrator, DocgenResult, DocgenBackend
+7 | | from llmc.docgen.locks import DocgenLock
+  | |________________________________________^
+8 |
+9 |   class MockBackend(DocgenBackend):
+  |
+help: Organize imports
+
+F401 [*] `time` imported but unused
+ --> tests/test_docgen_ruthless.py:2:8
+  |
+1 | import pytest
+2 | import time
+  |        ^^^^
+3 | import os
+4 | from pathlib import Path
+  |
+help: Remove unused import: `time`
+
+F401 [*] `os` imported but unused
+ --> tests/test_docgen_ruthless.py:3:8
+  |
+1 | import pytest
+2 | import time
+3 | import os
+  |        ^^
+4 | from pathlib import Path
+5 | from unittest.mock import MagicMock, patch
+  |
+help: Remove unused import: `os`
+
+F401 [*] `unittest.mock.patch` imported but unused
+ --> tests/test_docgen_ruthless.py:5:38
+  |
+3 | import os
+4 | from pathlib import Path
+5 | from unittest.mock import MagicMock, patch
+  |                                      ^^^^^
+6 | from llmc.docgen.orchestrator import DocgenOrchestrator, DocgenResult, DocgenBackend
+7 | from llmc.docgen.locks import DocgenLock
+  |
+help: Remove unused import: `unittest.mock.patch`
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/test_docgen_ruthless.py:69:1
+   |
+67 |         orch.process_file(Path("src/test.py"), force=True)
+68 |
+69 | from llmc.docgen.gating import resolve_doc_path
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_ruthless_batch.py:1:1
+  |
+1 | / import pytest
+2 | | from pathlib import Path
+3 | | from unittest.mock import MagicMock
+4 | | from llmc.docgen.orchestrator import DocgenOrchestrator, DocgenResult, DocgenBackend
+  | |____________________________________________________________________________________^
+5 |
+6 |   @pytest.fixture
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_ruthless_config.py:2:1
+  |
+2 | / import pytest
+3 | | from pathlib import Path
+4 | | from llmc.docgen.backends.shell import load_shell_backend
+  | |_________________________________________________________^
+5 |
+6 |   def test_load_shell_backend_allows_path_traversal(tmp_path):
+  |
+help: Organize imports
+
+F401 [*] `pytest` imported but unused
+ --> tests/test_docgen_ruthless_config.py:2:8
+  |
+2 | import pytest
+  |        ^^^^^^
+3 | from pathlib import Path
+4 | from llmc.docgen.backends.shell import load_shell_backend
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `pathlib.Path` imported but unused
+ --> tests/test_docgen_ruthless_config.py:3:21
+  |
+2 | import pytest
+3 | from pathlib import Path
+  |                     ^^^^
+4 | from llmc.docgen.backends.shell import load_shell_backend
+  |
+help: Remove unused import: `pathlib.Path`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_ruthless_graph.py:1:1
+  |
+1 | / import pytest
+2 | | import json
+3 | | from pathlib import Path
+4 | | from unittest.mock import MagicMock
+5 | | from llmc.docgen.graph_context import build_graph_context, load_graph_indices
+  | |_____________________________________________________________________________^
+6 |
+7 |   class StubDatabase:
+  |
+help: Organize imports
+
+F401 [*] `json` imported but unused
+ --> tests/test_docgen_ruthless_graph.py:2:8
+  |
+1 | import pytest
+2 | import json
+  |        ^^^^
+3 | from pathlib import Path
+4 | from unittest.mock import MagicMock
+  |
+help: Remove unused import: `json`
+
+F401 [*] `unittest.mock.MagicMock` imported but unused
+ --> tests/test_docgen_ruthless_graph.py:4:27
+  |
+2 | import json
+3 | from pathlib import Path
+4 | from unittest.mock import MagicMock
+  |                           ^^^^^^^^^
+5 | from llmc.docgen.graph_context import build_graph_context, load_graph_indices
+  |
+help: Remove unused import: `unittest.mock.MagicMock`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/test_docgen_ruthless_lock.py:2:1
+  |
+2 | / import pytest
+3 | | import fcntl
+4 | | import time
+5 | | from pathlib import Path
+6 | | from unittest.mock import MagicMock, patch
+7 | | from llmc.docgen.locks import DocgenLock
+  | |________________________________________^
+8 |
+9 |   def test_docgen_lock_leak_on_timeout(tmp_path):
+  |
+help: Organize imports
+
+F401 [*] `pytest` imported but unused
+ --> tests/test_docgen_ruthless_lock.py:2:8
+  |
+2 | import pytest
+  |        ^^^^^^
+3 | import fcntl
+4 | import time
+  |
+help: Remove unused import: `pytest`
+
+F401 [*] `fcntl` imported but unused
+ --> tests/test_docgen_ruthless_lock.py:3:8
+  |
+2 | import pytest
+3 | import fcntl
+  |        ^^^^^
+4 | import time
+5 | from pathlib import Path
+  |
+help: Remove unused import: `fcntl`
+
+F401 [*] `time` imported but unused
+ --> tests/test_docgen_ruthless_lock.py:4:8
+  |
+2 | import pytest
+3 | import fcntl
+4 | import time
+  |        ^^^^
+5 | from pathlib import Path
+6 | from unittest.mock import MagicMock, patch
+  |
+help: Remove unused import: `time`
+
+F401 [*] `pathlib.Path` imported but unused
+ --> tests/test_docgen_ruthless_lock.py:5:21
+  |
+3 | import fcntl
+4 | import time
+5 | from pathlib import Path
+  |                     ^^^^
+6 | from unittest.mock import MagicMock, patch
+7 | from llmc.docgen.locks import DocgenLock
+  |
+help: Remove unused import: `pathlib.Path`
+
+F401 [*] `unittest.mock.MagicMock` imported but unused
+ --> tests/test_docgen_ruthless_lock.py:6:27
+  |
+4 | import time
+5 | from pathlib import Path
+6 | from unittest.mock import MagicMock, patch
+  |                           ^^^^^^^^^
+7 | from llmc.docgen.locks import DocgenLock
+  |
+help: Remove unused import: `unittest.mock.MagicMock`
 
 PLW2901 `with` statement variable `home` overwritten by assignment target
   --> tests/test_e2e_daemon_operation.py:29:9
@@ -2968,6 +3391,32 @@ F841 Local variable `timestamp` is assigned to but never used
 252 |             f.write_text(f"# file {i}")
     |
 help: Remove assignment to unused variable `timestamp`
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> tests/test_fts5_stopwords_regression.py:11:1
+   |
+ 9 |   """
+10 |
+11 | / from pathlib import Path
+12 | | import pytest
+13 | |
+14 | | from tools.rag.database import Database
+15 | | from tools.rag.types import FileRecord, SpanRecord
+   | |__________________________________________________^
+   |
+help: Organize imports
+
+B007 Loop control variable `score` not used within loop body
+   --> tests/test_fts5_stopwords_regression.py:121:30
+    |
+119 |         # Verify result contains the keyword
+120 |         found_keyword = False
+121 |         for symbol, summary, score in results:
+    |                              ^^^^^
+122 |             if summary and keyword.lower() in summary.lower():
+123 |                 found_keyword = True
+    |
+help: Rename unused `score` to `_score`
 
 F841 Local variable `main_db` is assigned to but never used
   --> tests/test_fts_backend_edge_cases.py:97:9
@@ -6705,6 +7154,17 @@ B904 Within an `except` clause, raise exceptions with `raise ... from err` or `r
 643 |     if as_json:
     |
 
+F401 [*] `functools.lru_cache` imported but unused
+  --> tools/rag/config.py:9:23
+   |
+ 8 | import configparser
+ 9 | from functools import lru_cache
+   |                       ^^^^^^^^^
+10 | import logging
+11 | import os
+   |
+help: Remove unused import: `functools.lru_cache`
+
 PLW2901 `for` loop variable `raw` overwritten by assignment target
    --> tools/rag/config_enrichment.py:214:17
     |
@@ -7086,13 +7546,13 @@ B905 `zip()` without an explicit `strict=` parameter
 help: Add explicit value for parameter `strict=`
 
 E722 Do not use bare `except`
-   --> tools/rag/search.py:260:25
+   --> tools/rag/search.py:291:25
     |
-258 |                                 e_start = int(suffix)
-259 |                                 e_end = e_start
-260 |                         except:
+289 |                                 e_start = int(suffix)
+290 |                                 e_end = e_start
+291 |                         except:
     |                         ^^^^^^
-261 |                             continue
+292 |                             continue
     |
 
 I001 [*] Import block is un-sorted or un-formatted
@@ -7309,5 +7769,5 @@ F841 Local variable `enriched_graph` is assigned to but never used
     |
 help: Remove assignment to unused variable `enriched_graph`
 
-Found 616 errors.
-[*] 186 fixable with the `--fix` option (294 hidden fixes can be enabled with the `--unsafe-fixes` option).
+Found 656 errors.
+[*] 215 fixable with the `--fix` option (299 hidden fixes can be enabled with the `--unsafe-fixes` option).

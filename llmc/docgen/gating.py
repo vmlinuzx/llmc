@@ -146,10 +146,30 @@ def resolve_doc_path(
         
     Returns:
         Absolute path to documentation file (e.g., "repo/DOCS/REPODOCS/tools/rag/database.py.md")
+        
+    Raises:
+        ValueError: If relative_path attempts directory traversal outside output_dir
     """
-    # Construct: repo_root / output_dir / relative_path.md
-    doc_path = repo_root / output_dir / f"{relative_path}.md"
-    return doc_path
+    # Construct the intended output directory
+    output_base = (repo_root / output_dir).resolve()
+    
+    # Construct initial doc path
+    doc_path_candidate = output_base / f"{relative_path}.md"
+    
+    # Resolve to normalize and collapse any .. components
+    doc_path_resolved = doc_path_candidate.resolve()
+    
+    # Security check: ensure the resolved path is within the output directory
+    try:
+        doc_path_resolved.relative_to(output_base)
+    except ValueError:
+        # relative_to() raises ValueError if doc_path_resolved is not a child of output_base
+        raise ValueError(
+            f"Path traversal detected: {relative_path} resolves outside {output_dir}. "
+            f"Attempted path: {doc_path_resolved}, allowed base: {output_base}"
+        ) from None
+    
+    return doc_path_resolved
 
 
 def check_rag_freshness(

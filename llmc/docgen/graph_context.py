@@ -65,7 +65,15 @@ def build_graph_context(
     file_str = str(relative_path)
     entities_for_file = []
     
+    # Validate entities structure
     entities = graph_data.get("entities", {})
+    if not isinstance(entities, dict):
+        logger.warning(
+            f"Graph data has invalid 'entities' structure "
+            f"(expected dict, got {type(entities).__name__})"
+        )
+        return _format_no_graph_context(relative_path)
+    
     for entity_id, entity_data in entities.items():
         # Check if entity belongs to this file
         # Graph entities have 'file_path' field
@@ -83,8 +91,21 @@ def build_graph_context(
     entity_ids = {eid for eid, _ in entities_for_file}
     relations_for_file = []
     
+    # Validate relations structure
     relations = graph_data.get("relations", [])
+    if not isinstance(relations, list):
+        logger.warning(
+            f"Graph data has invalid 'relations' structure "
+            f"(expected list, got {type(relations).__name__})"
+        )
+        return _format_no_graph_context(relative_path)
+    
     for relation in relations:
+        # Skip malformed relation entries
+        if not isinstance(relation, dict):
+            logger.warning(f"Skipping malformed relation (expected dict, got {type(relation).__name__})")
+            continue
+            
         src = relation.get("src")
         dst = relation.get("dst")
         
