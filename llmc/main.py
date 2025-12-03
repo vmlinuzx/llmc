@@ -85,6 +85,14 @@ nav_app.command(name="lineage")(nav_lineage)
 
 app.add_typer(nav_app, name="nav")
 
+# Docs subcommand group (Docgen v2)
+from llmc.commands import docs as docs_commands
+docs_app = typer.Typer(help="Documentation generation")
+docs_app.command(name="generate")(docs_commands.generate)
+docs_app.command(name="status")(docs_commands.status)
+
+app.add_typer(docs_app, name="docs")
+
 
 def version_callback(value: bool):
     if value:

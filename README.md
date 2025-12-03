@@ -111,6 +111,15 @@ Capabilities:
     - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).
     - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.
 
+- Docgen v2: Deterministic, RAG-aware documentation generation for your codebase.
+    - SHA256 idempotence: Skip unchanged files automatically using content hashing.
+    - RAG integration: Only generate docs for indexed files, prevent stale documentation.
+    - Graph context: Include entity relationships and enrichment data in generated docs.
+    - Flexible backends: Shell scripts, LLM APIs, HTTP services, or MCP integration.
+    - CLI commands: `llmc docs generate` and `llmc docs status` for easy workflows.
+    - Atomic writes: Safe concurrent operation with file locks and atomic file updates.
+    - See [Docgen User Guide](DOCS/Docgen_User_Guide.md) for setup and usage instructions.
+
 - TUI and console UX: A second monitor experience for watching LLMC do its thing.
     - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.
     - Monitor screen: Shows repo status, graph stats, enrichment counts, and daemon health at a glance.

@@ -100,6 +100,27 @@ idle_backoff_max = 10              # Max multiplier when idle (10x = 30min at de
 idle_backoff_base = 2              # Exponential base (2^n)
 
 
+# ==============================================================================
+# DOCUMENTATION GENERATION (Docgen v2)
+# ==============================================================================
+# Deterministic, RAG-aware documentation generation for repository files.
+# Generates per-file docs in DOCS/REPODOCS/ with SHA256-based idempotence.
+
+[docs.docgen]
+enabled = false  # Set to true to enable docgen
+backend = "shell"  # "shell" | "llm" | "http" | "mcp"
+output_dir = "DOCS/REPODOCS"  # Relative to repo root
+require_rag_fresh = true  # Only generate docs for RAG-indexed files
+
+# Shell backend configuration
+[docs.docgen.shell]
+script = "scripts/docgen_stub.py"
+timeout_seconds = 60
+
+# Daemon integration (Phase 9 - not yet implemented)
+# daemon_interval_seconds = 3600  # Run every hour
+# daemon_batch_size = 10  # Process N files per tick
+
 
 # ==============================================================================
 # Enrichment
