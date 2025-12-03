@@ -37,12 +37,11 @@ try:
     from mcp.server.stdio import stdio_server
     from mcp.types import TextContent, Tool
 except ImportError as e:
-    # Critical dependency missing - likely environmental
+    # Critical dependency missing - likely environmental (wrong venv)
     raise ImportError(
         "CRITICAL: Missing 'mcp' dependency. "
-        "The 'mcp' package is required for MCP server features but is not installed. "
-        "If you are running tests unrelated to MCP, this error is safe to ignore. "
-        "To fix: pip install 'mcp>=0.9.0' or 'pip install .[mcp]'"
+        "The 'mcp' package is required. "
+        "Application must be run in .venv environment for dependency."
     ) from e
 
 # Configure logging to stderr (Claude Desktop captures it)

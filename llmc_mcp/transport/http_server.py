@@ -12,8 +12,8 @@ try:
 except ImportError as e:
     raise ImportError(
         "CRITICAL: Missing 'mcp' dependency. "
-        "The 'mcp' package is required for MCP server features. "
-        "Install with 'pip install mcp>=0.9.0' or 'pip install .[mcp]'"
+        "The 'mcp' package is required. "
+        "Application must be run in .venv environment for dependency."
     ) from e
 
 from starlette.applications import Starlette
