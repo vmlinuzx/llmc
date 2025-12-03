@@ -26,7 +26,7 @@ class Router(ABC):
 class DeterministicRouter(Router):
     """Router implementation that uses deterministic heuristics (classify_query)."""
 
-    def __init__(self, config: dict[str, Any] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}
 
     def decide_route(

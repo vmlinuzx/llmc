@@ -23,8 +23,8 @@ try:
     from llmc.te.telemetry import log_routing_event
 except ImportError:
     # No-op fallback when llmc module is not available
-    def log_routing_event(
-        mode: str, details: dict[str, Any], repo_root: Path | None = None, **kwargs
+    def log_routing_event(  # type: ignore
+        mode: str, details: dict[str, Any], repo_root: Path | None = None
     ) -> None:
         """No-op fallback for telemetry logging when llmc module is unavailable."""
         pass
@@ -35,9 +35,9 @@ try:
     from llmc.routing.fusion import fuse_scores
 except ImportError:
     # No-op fallback when llmc module is not available
-    def fuse_scores(
-        results_by_route: dict[str, list[Any]], route_weights: dict[str, float]
-    ) -> list[Any]:
+    def fuse_scores(  # type: ignore
+        route_results: dict[str, list[dict[str, Any]]], route_weights: dict[str, float]
+    ) -> list[dict[str, Any]]:
         """No-op fallback for score fusion when llmc module is unavailable."""
         return []
 
@@ -46,7 +46,7 @@ try:
     from llmc.routing.router import create_router
 except ImportError:
     # No-op fallback when llmc module is not available
-    def create_router(config: dict[str, Any]) -> Any:
+    def create_router(config: dict[str, Any]) -> Any:  # type: ignore
         """No-op fallback for router creation when llmc module is unavailable."""
         return None
 

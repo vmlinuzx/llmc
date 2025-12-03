@@ -429,12 +429,12 @@ def nav_where_used(
     json_output: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ):
     """Find where a symbol is used (callers, importers)."""
-    from tools.rag import tool_where_used
+    from tools.rag import tool_rag_where_used
 
     repo_root = find_repo_root()
 
     try:
-        result = tool_where_used(symbol, repo_root=repo_root, limit=limit)
+        result = tool_rag_where_used(symbol, repo_root=repo_root, limit=limit)
 
         if json_output:
             typer.echo(json.dumps(result, indent=2, default=str))
@@ -453,12 +453,15 @@ def nav_lineage(
     json_output: bool = typer.Option(False, "--json", help="Emit JSON output"),
 ):
     """Show symbol lineage (parents, children, dependencies)."""
-    from tools.rag import tool_lineage
+    from tools.rag import tool_rag_lineage
 
     repo_root = find_repo_root()
 
     try:
-        result = tool_lineage(symbol, repo_root=repo_root, depth=depth)
+        # Default to downstream for now, mapping depth to max_results as legacy adapter
+        result = tool_rag_lineage(
+            symbol, direction="downstream", repo_root=repo_root, max_results=depth
+        )
 
         if json_output:
             typer.echo(json.dumps(result, indent=2, default=str))

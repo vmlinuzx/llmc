@@ -110,3 +110,12 @@ docstring-code-format = true
 combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["tools", "llmcwrapper", "mcp"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+check_untyped_defs = true

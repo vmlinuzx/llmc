@@ -133,7 +133,7 @@ class LLMC_TUI(App):
         Binding("ctrl+c", "quit", "Quit"),
     ]
 
-    def __init__(self, repo_root: Path = None):
+    def __init__(self, repo_root: Path | None = None):
         super().__init__()
         self.repo_root = repo_root or Path.cwd()
 

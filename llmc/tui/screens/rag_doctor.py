@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import subprocess
 from typing import Any
@@ -224,7 +225,7 @@ class RAGDoctorScreen(Screen):
             cmd = [str(te_script)] + cmd_suffix.split()
 
             # Set environment for TE
-            env = dict(subprocess.os.environ)
+            env = dict(os.environ)
             env["TE_AGENT_ID"] = "manual-dave"
 
             proc = subprocess.Popen(
