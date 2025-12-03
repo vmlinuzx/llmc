@@ -14,7 +14,52 @@ Think of this as:
 
 These are the things that make the current LLMC stack feel solid and intentional for you and for any future users.
 
+### 1.1 Automated Repository Onboarding **P0**
 
+**Status:** Active Development (Dec 2025)
+
+**Goal:** Eliminate manual setup friction when adding new repositories. One command should handle everything: workspace creation, config generation, initial indexing, and MCP readiness.
+
+**📄 Design:** [`planning/SDD_Repo_Onboarding_Automation.md`](planning/SDD_Repo_Onboarding_Automation.md)
+
+**Problem:**
+- Current `llmc-rag-repo add` only creates workspace structure
+- Users must manually copy `llmc.toml`, update `allowed_roots`, run indexing, configure enrichment
+- 6+ manual steps → high friction, inconsistent configs, poor UX
+- **Architecture issue:** Business logic in CLI instead of service layer
+
+**Solution:**
+- Implement `RAGService.onboard_repo()` as **service-layer orchestrator**
+- CLI becomes thin wrapper delegating to service
+- Automated phases:
+  1. Workspace creation (✅ existing)
+  2. `llmc.toml` generation with path substitution 🆕
+  3. Initial indexing (leverage `process_repo()`) 🆕
+  4. Interactive enrichment prompt 🆕
+  5. MCP readiness instructions 🆕
+  6. Daemon integration 🆕
+
+**Implementation Phases:**
+- [ ] Phase 1: Core `onboard_repo()` method (4-5h)
+- [ ] Phase 2: Config template generation (3-4h)
+- [ ] Phase 3: Initial indexing integration (2-3h)
+- [ ] Phase 4: Optional enrichment (2-3h)
+- [ ] Phase 5: MCP instructions \u0026 polish (2h)
+- [ ] Phase 6: CLI wrapper integration (2h)
+- [ ] Phase 7: Testing \u0026 docs (3-4h)
+
+**Total Effort:** 18-24 hours | **Difficulty:** 🟡 Medium
+
+**Success Criteria:**
+- ✅ One command: `llmc-rag-repo add /path/to/repo` → fully ready
+- ✅ MCP queries work immediately after onboarding
+- ✅ Non-interactive mode (`--yes`) for CI/automation
+- ✅ Clear progress indicators and error messages
+- ✅ End-to-end tests with real repos
+
+**Why P0:** **Productization blocker.** This is the #1 UX friction point preventing smooth multi-repo workflows and adoption by other developers.
+
+---
 
 ### ~~1.2 Enrichment pipeline tidy-up~~ ✅ DONE
 
@@ -150,6 +195,31 @@ These are things that make LLMC nicer to live with once the core system is “go
 - Relations: imports, function calls, class inheritance
 - 14 entities extracted from 3-file test project
 
+### 2.3 CLI UX - Progressive Disclosure (Partial ✅)
+
+**Status:** Started Dec 2025
+
+**Goal:** Ensure all CLI commands provide helpful guidance on errors instead of cryptic messages like "Missing command."
+
+**📝 Progress:**
+- ✅ **Phase 1 (Dec 2025):** Fixed main CLI subcommands
+  - `llmc-cli service` now shows available commands instead of error
+  - `llmc-cli nav`, `llmc-cli docs`, `llmc-cli service repo` all show help
+  - Implementation: Added `no_args_is_help=True` to all Typer subapps
+
+**🔲 Remaining Work:**
+- [ ] Audit all CLI scripts in `scripts/` for consistent help patterns
+- [ ] Add progressive disclosure to `llmc-rag-service`
+- [ ] Create CLI UX guidelines document
+- [ ] Ensure consistent error messages across all commands
+- [ ] Add example usage to every command help text
+
+**Why:**
+- Users shouldn't have to guess what commands exist
+- Error messages should guide users to success
+- Follows modern CLI best practices (e.g., `git`, `kubectl`)
+
+**Effort:** 4-6 hours total | **Difficulty:** 🟢 Easy
 
 
 ---
