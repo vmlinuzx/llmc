@@ -30,6 +30,9 @@ Provides-Extra: tui
 Requires-Dist: typer>=0.9.0; extra == "tui"
 Requires-Dist: rich>=13.0.0; extra == "tui"
 Requires-Dist: textual>=0.41.0; extra == "tui"
+Provides-Extra: daemon
+Requires-Dist: uvicorn>=0.30.0; extra == "daemon"
+Requires-Dist: httpx>=0.27.0; extra == "daemon"
 Dynamic: license-file
 
 THE LARGE LANGUAGE MODEL COMPRESSOR
@@ -135,6 +138,15 @@ Capabilities:
     - Enrichment chains: Defines chains of models to use for enrichment, including fallback chains when one model fails or times out.
     - Latin 1 safety: Supports enforcing latin 1 safe enrichment so weird unicode or binary junk does not poison the index.
     - Cost awareness: Encourages using small, cheap models for most work and reserving bigger, slower models for special or complex chains.
+
+- Remote LLM Provider Support: Production-grade support for commercial API providers with reliability patterns.
+    - Multi-provider support: Works with Gemini, OpenAI, Anthropic Claude, Groq, and any OpenAI-compatible API.
+    - Intelligent failover: Configure tiered cascades (local → cheap cloud → premium) for maximum reliability and cost efficiency.
+    - Rate limiting: Token bucket implementation respects RPM and TPM limits automatically, preventing quota violations.
+    - Circuit breaker: Fails fast after repeated errors, with automatic recovery testing.
+    - Cost tracking: Track daily and monthly API spending with hard budget caps to prevent surprise bills.
+    - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).
+    - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.
 
 - TUI and console UX: A second monitor experience for watching LLMC do its thing.
     - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.

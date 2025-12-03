@@ -528,41 +528,62 @@ class RAGService:
             from tools.rag.enrichment_router import build_router_from_toml
             from tools.rag.database import Database
             
-            # Load configuration
-            batch_size = int((self._toml_cfg.get("enrichment", {}) or {}).get("batch_size", 50))
+            # Load configuration from target repo (preferred) or service defaults
+            repo_cfg = self._load_full_toml(repo)
+            enrichment_cfg = repo_cfg.get("enrichment") or self._toml_cfg.get("enrichment") or {}
+            
+            batch_size = int(enrichment_cfg.get("batch_size", 50))
             cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
+            
+            runner_cfg = enrichment_cfg.get("runner", {})
+            code_first = bool(runner_cfg.get("code_first_default", False))
+            starvation_high = int(runner_cfg.get("starvation_ratio_high", 5))
+            starvation_low = int(runner_cfg.get("starvation_ratio_low", 1))
             
             # Get database
             index_path = index_path_for_write(repo)
             db = Database(index_path)
             
-            # Build router from repo config
-            router = build_router_from_toml(repo)
-            
-            # Create pipeline
-            pipeline = EnrichmentPipeline(
-                db=db,
-                router=router,
-                backend_factory=OllamaBackend.from_spec,
-                prompt_builder=build_enrichment_prompt,
-                repo_root=repo,
-                max_failures_per_span=self.tracker.max_failures,
-                cooldown_seconds=cooldown,
-            )
-            
-            print(f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})")
-            result = pipeline.process_batch(limit=batch_size)
-            
-            # Report results
-            if result.attempted > 0:
-                work_done = True
-                print(f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)")
-                if result.failed > 0:
-                    print(f"     ⚠️  {result.failed} failures, {result.skipped} skipped")
-            else:
-                print("  ℹ️  No spans pending enrichment")
-            
-            db.close()
+            try:
+                # Build router from repo config
+                router = build_router_from_toml(repo)
+                
+                # Create pipeline
+                pipeline = EnrichmentPipeline(
+                    db=db,
+                    router=router,
+                    backend_factory=OllamaBackend.from_spec,
+                    prompt_builder=build_enrichment_prompt,
+                    repo_root=repo,
+                    max_failures_per_span=self.tracker.max_failures,
+                    cooldown_seconds=cooldown,
+                    code_first=code_first,
+                    starvation_ratio_high=starvation_high,
+                    starvation_ratio_low=starvation_low,
+                )
+                
+                print(f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})", flush=True)
+                
+                def progress_cb(current, total):
+                    if current % 5 == 0 or current == total:
+                        print(f"    ... processed {current}/{total} spans", flush=True)
+
+                result = pipeline.process_batch(
+                    limit=batch_size, 
+                    stop_check=lambda: not self.running,
+                    progress_callback=progress_cb
+                )
+                
+                # Report results
+                if result.attempted > 0:
+                    work_done = True
+                    print(f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)")
+                    if result.failed > 0:
+                        print(f"     ⚠️  {result.failed} failures, {result.skipped} skipped")
+                else:
+                    print("  ℹ️  No spans pending enrichment")
+            finally:
+                db.close()
         except Exception as e:
             print(f"  ⚠️  Enrichment failed: {e}")
             import traceback

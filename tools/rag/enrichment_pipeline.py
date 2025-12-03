@@ -258,8 +258,9 @@ class EnrichmentPipeline:
         # Use existing enrichment_plan helper
         from tools.rag.workers import enrichment_plan
         
-        # Fetch more items than limit if prioritizing, to have a pool to sort from
-        fetch_limit = limit * 2 if self.code_first else limit
+        # Fetch more items than limit if prioritizing, to have a pool to sort from.
+        # Use 10x multiplier to ensure diversity (database uses RANDOM() sampling).
+        fetch_limit = limit * 10 if self.code_first else limit
         
         items = enrichment_plan(
             self.db,

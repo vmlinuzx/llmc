@@ -352,7 +352,11 @@ class Database:
         }
 
     def pending_enrichments(self, limit: int = 32, cooldown_seconds: int = 0) -> list[SpanWorkItem]:
-        candidate_limit = max(limit * 5, limit)
+        # Fetch 10x the limit with random sampling to ensure diversity across file types.
+        # This allows code-first prioritization to work properly by providing a mix of
+        # code and docs files rather than sequential insertion order (which could be
+        # all markdown files if they were indexed together).
+        candidate_limit = max(limit * 10, limit)
         rows = self.conn.execute(
             """
             SELECT spans.span_hash, files.path, files.lang, spans.start_line,
@@ -362,7 +366,7 @@ class Database:
             JOIN files ON spans.file_id = files.id
             LEFT JOIN enrichments ON spans.span_hash = enrichments.span_hash
             WHERE enrichments.span_hash IS NULL
-            ORDER BY spans.id
+            ORDER BY RANDOM()
             LIMIT ?
             """,
             (candidate_limit,),

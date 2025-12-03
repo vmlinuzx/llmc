@@ -7,6 +7,10 @@ textual>=0.41.0
 [:python_version < "3.11"]
 tomli
 
+[daemon]
+uvicorn>=0.30.0
+httpx>=0.27.0
+
 [rag]
 setuptools>=68.0.0
 tree_sitter==0.20.1

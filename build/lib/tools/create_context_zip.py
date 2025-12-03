@@ -1,0 +1,218 @@
+#!/usr/bin/env python3
+"""
+Create a repository context ZIP that honors .gitignore.
+
+Output filename: <folder>.zip (in parent directory of repo root)
+ - If the file already exists, add a numeric suffix: <folder>-1.zip, -2.zip, ...
+Destination directory: parent of repo root (../ relative to repo root)
+
+Requirements:
+- Python 3.8+
+- Git available on PATH (uses `git ls-files -co --exclude-standard`).
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+import subprocess
+import sys
+import time
+import zipfile
+
+
+def _run(cmd: list[str], cwd: Path | None = None) -> tuple[int, str, str]:
+    proc = subprocess.Popen(
+        cmd,
+        cwd=str(cwd) if cwd else None,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    out, err = proc.communicate()
+    return proc.returncode, out, err
+
+
+def find_repo_root(start: Path) -> Path:
+    """Return the repository root using git, with a manual fallback."""
+    rc, out, _ = _run(["git", "rev-parse", "--show-toplevel"], cwd=start)
+    if rc == 0 and out.strip():
+        return Path(out.strip())
+    cur = start.resolve()
+    for parent in [cur] + list(cur.parents):
+        if (parent / ".git").exists():
+            return parent
+    return start
+
+
+def list_included_paths(repo_root: Path) -> list[Path]:
+    """Files that are tracked or untracked-but-not-ignored.
+
+    Uses: git ls-files -co --exclude-standard
+    -c / --cached -> tracked files
+    -o / --others -> untracked files
+    --exclude-standard -> honors .gitignore, .git/info/exclude, core.excludesFile
+    """
+    rc, out, err = _run(["git", "ls-files", "-co", "--exclude-standard"], cwd=repo_root)
+    if rc != 0:
+        print("Error: failed to list files with git:", err.strip() or rc, file=sys.stderr)
+        sys.exit(2)
+    rel_paths = [line.strip() for line in out.splitlines() if line.strip()]
+    paths: list[Path] = []
+    for rel in rel_paths:
+        # Preserve original path (do not .resolve()) to avoid collapsing hard/symlinks
+        p = repo_root / rel
+        if p.is_file():
+            paths.append(p)
+    return paths
+
+
+def list_context_allow_paths(repo_root: Path) -> list[Path]:
+    """
+    List files explicitly included via .contextallow, even if ignored by git.
+    Supports glob patterns and directory recursion.
+    """
+    allow_file = repo_root / ".contextallow"
+    if not allow_file.exists():
+        return []
+
+    included = set()
+    try:
+        with open(allow_file) as f:
+            patterns = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+    except Exception as e:
+        print(f"Warning: failed to read .contextallow: {e}", file=sys.stderr)
+        return []
+
+    for pattern in patterns:
+        try:
+            # glob() handles matches relative to the path.
+            matches = list(repo_root.glob(pattern))
+        except Exception as e:
+            print(f"Warning: invalid glob pattern '{pattern}': {e}", file=sys.stderr)
+            continue
+
+        for path in matches:
+            if path.is_file():
+                included.add(path)
+            elif path.is_dir():
+                # If a directory is matched, include all files within it recursively
+                for sub in path.rglob("*"):
+                    if sub.is_file():
+                        included.add(sub)
+
+    return list(included)
+
+
+def next_available_zip_path(dest_dir: Path, base_name: str) -> Path:
+    """Return a zip path <base_name>.zip or with -N suffix if exists."""
+    candidate = dest_dir / f"{base_name}.zip"
+    if not candidate.exists():
+        return candidate
+    n = 1
+    while True:
+        alt = dest_dir / f"{base_name}-{n}.zip"
+        if not alt.exists():
+            return alt
+        n += 1
+
+
+def print_usage() -> None:
+    print("""
+Usage: tools/create_context_zip.py [OPTIONS]
+
+Create a ZIP archive of the repository context, respecting .gitignore.
+The output file is created in the parent directory of the repo root.
+
+Options:
+  --large     Include large/ignored files listed in .contextallow.
+              (e.g., .rag/ database files)
+  -h, --help  Show this help message and exit.
+
+Behavior:
+  1. Identifies the Git repository root.
+  2. Lists all tracked and untracked-but-not-ignored files using `git ls-files`.
+  3. If --large is set, also includes files/folders matching patterns in .contextallow.
+  4. Zips them into <repo_name>-<timestamp>.zip in the parent directory.
+""")
+
+
+def main() -> int:
+    if "-h" in sys.argv or "--help" in sys.argv:
+        print_usage()
+        return 0
+
+    include_large = "--large" in sys.argv
+
+    repo_root = find_repo_root(Path.cwd())
+
+    # Destination is parent of repo root (e.g., ~/src)
+    dest_dir = repo_root.parent
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    # New base name includes repo name and timestamp
+    base_zip_name = f"{repo_root.name}-{timestamp}"
+
+    zip_path = next_available_zip_path(dest_dir, base_zip_name)
+
+    files = list_included_paths(repo_root)
+
+    # Add .contextallow files ONLY if --large is specified
+    if include_large:
+        extra_files = list_context_allow_paths(repo_root)
+        if extra_files:
+            print(f"Found {len(extra_files)} extra files from .contextallow (Large Mode Enabled)")
+            # Deduplicate (though sets would handle it, mixing sources is safer this way)
+            # We want to keep 'files' logic as primary source for tracked files
+            current_paths = set(files)
+            for p in extra_files:
+                if p not in current_paths:
+                    files.append(p)
+                    current_paths.add(p)
+    elif (repo_root / ".contextallow").exists():
+        print("Note: .contextallow found but ignored. Use --large to include those files.")
+
+    if not files:
+        print("No files to include. Is this a git repo?", file=sys.stderr)
+        return 3
+
+    # Write archive with paths relative to repo root; skip duplicate arcnames
+    try:
+        with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            seen: set[str] = set()
+            for abs_path in files:
+                try:
+                    rel = abs_path.relative_to(repo_root)
+                except ValueError:
+                    continue
+                arcname = str(rel)
+                if arcname in seen:
+                    continue
+                seen.add(arcname)
+                stat = abs_path.stat()
+                zinfo = zipfile.ZipInfo(filename=arcname)
+                # ZIP format cannot handle dates before 1980
+                zt = time.gmtime(stat.st_mtime)[:6]
+                if zt[0] < 1980:
+                    zt = (1980, 1, 1, 0, 0, 0)
+                zinfo.date_time = zt
+                with open(abs_path, "rb") as src:
+                    zf.writestr(zinfo, src.read())
+    except PermissionError as e:
+        print(f"Permission denied creating {zip_path}: {e}", file=sys.stderr)
+        print(
+            "Hint: run from a context that can write to the parent directory, or adjust destination.",
+            file=sys.stderr,
+        )
+        return 4
+
+    print(f"Created: {zip_path}")
+    print(f"Files included: {len(files)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

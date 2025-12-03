@@ -1380,6 +1380,48 @@ def eval(dataset: str, top_k: int, as_json: bool) -> None:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
+@cli.command("show-weights")
+@click.argument("path", required=False)
+def show_weights(path: str | None) -> None:
+    """Show configured path weights and priorities."""
+    repo_root = _find_repo_root()
+    try:
+        # Import lazily
+        from llmc.core import load_config as _load_llmc_config
+        from llmc.enrichment import (
+            classify_content_type,
+            compute_final_priority,
+            get_path_weight,
+            load_path_weight_map,
+        )
+        
+        cfg = _load_llmc_config(repo_root)
+        weight_map = load_path_weight_map(cfg)
+        
+        click.echo(f"Loaded path weights from {repo_root / 'llmc.toml'}:")
+        # Sort by weight (ascending = higher priority)
+        sorted_weights = sorted(weight_map.items(), key=lambda x: x[1])
+        for pattern, weight in sorted_weights:
+            click.echo(f"  {pattern:<30} : {weight}")
+            
+        if path:
+            weight, matched, winning = get_path_weight(path, weight_map)
+            click.echo(f"\nAnalysis for '{path}':")
+            click.echo(f"  Matched patterns: {matched}")
+            click.echo(f"  Winning pattern:  {winning}")
+            click.echo(f"  Path Weight:      {weight}")
+            
+            click.echo("\nPriorities:")
+            for ctype in ["code", "docs"]:
+                _, base = classify_content_type(ctype)
+                final = compute_final_priority(base, weight)
+                click.echo(f"  If {ctype:<5}: Base={base:<3} -> Final={final:.1f}")
+
+    except ImportError:
+        click.echo("Error: llmc package not available.", err=True)
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+
 
 if __name__ == "__main__":
     cli()

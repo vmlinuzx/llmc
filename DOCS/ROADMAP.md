@@ -31,11 +31,11 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 **Impact:** Clean architecture, direct function calls, foundation for remote providers (3.6)
 
-### ~~1.2.1 Enrichment Path Weights & Code-First Prioritization~~ ✅ DONE (⚠️ BUG)
+### ~~1.2.1 Enrichment Path Weights & Code-First Prioritization~~ ✅ DONE
 
 **Completed:** Dec 2025
 
-**⚠️ KNOWN BUG:** Code-first prioritization not working correctly - seeing many `.md` files being enriched before `.py` files. Need to investigate why the 5:1 high:low ratio scheduling isn't prioritizing code properly.
+**✅ BUG FIX (2025-12-03):** Fixed database query ordering bug that was causing sequential processing of markdown files instead of prioritizing code files. Changed `ORDER BY spans.id` to `ORDER BY RANDOM()` for diverse sampling. See `DOCS/planning/FIX_SUMMARY_Code_First_Prioritization.md` for details.
 
 **Goal:** Prioritize enrichment of critical code paths over test code, docs, and vendor trash.
 
@@ -67,14 +67,24 @@ These are the things that make the current LLMC stack feel solid and intentional
 - `rag_stats` shows enrichment coverage
 - Integration tests verify enrichment schema
 
-### 1.4 Clean public story and remove dead surfaces
+### 1.4 Deterministic Repo Docgen (v2)
 
-**Goal:** Reduce confusion and maintenance by cutting old interfaces.
+**Goal:** Generate accurate, per-file repository documentation automatically with RAG-based freshness gating.
 
-- Tighten the README and top‑level docs:
-  - Clearly state the supported entrypoints:
-    - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
-  - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto‑refactor).
+**Why Now:** Need this to properly document the system before doing any public-facing cleanup. The docgen will help create the clean story.
+
+**📄 Design:** [`planning/SDD_Docgen_v2_for_Codex.md`](planning/SDD_Docgen_v2_for_Codex.md)
+
+**Tasks:**
+- Implement deterministic doc generation per file:
+  - Single freshness gate: RAG must be current for exact file+hash.
+  - SHA256 gating handled only by orchestrator.
+  - Backend contract: JSON stdin → Markdown stdout (no chatter).
+- Build graph context builder with deterministic ordering and caps.
+- Create LLM backend harness with canonical prompt template.
+- Output to `DOCS/REPODOCS/<relative_path>.md` structure.
+- Add observability: counters, timers, and size metrics.
+- Implement concurrency control with file locking.
 
 ### ~~1.6 System Friendliness (Idle Loop Throttling)~~ ✅ DONE
 
@@ -140,20 +150,7 @@ These are things that make LLMC nicer to live with once the core system is “go
 - Relations: imports, function calls, class inheritance
 - 14 entities extracted from 3-file test project
 
-### 2.4 Deterministic Repo Docgen (v2)
 
-**Goal:** Generate accurate, per-file repository documentation automatically with RAG-based freshness gating.
-
-- Implement deterministic doc generation per file:
-  - Single freshness gate: RAG must be current for exact file+hash.
-  - SHA256 gating handled only by orchestrator.
-  - Backend contract: JSON stdin → Markdown stdout (no chatter).
-- Build graph context builder with deterministic ordering and caps.
-- Create LLM backend harness with canonical prompt template.
-- Output to `DOCS/REPODOCS/<relative_path>.md` structure.
-- Add observability: counters, timers, and size metrics.
-- Implement concurrency control with file locking.
-- **Reference:** [SDD_Docgen_v2_for_Codex.md](file:///home/vmlinux/src/llmc/DOCS/planning/SDD_Docgen_v2_for_Codex.md)
 
 ---
 
@@ -161,7 +158,19 @@ These are things that make LLMC nicer to live with once the core system is “go
 
 These are the “this would be awesome” items that are worth doing, but not at the cost of stability.
 
-### 3.1 Modular enrichment plugins
+### 3.1 Clean public story and remove dead surfaces
+
+**Goal:** Reduce confusion and maintenance by cutting old interfaces.
+
+**Why Later:** Premature to do this before the system is fully documented and stable. Repo docgen (1.4) will help create the clean story first.
+
+**Tasks:**
+- Tighten the README and top-level docs:
+  - Clearly state the supported entrypoints:
+    - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
+  - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto-refactor).
+
+### 3.2 Modular enrichment plugins
 
 **Goal:** Make it easy to add new backends (local or remote) without touching core code.
 
