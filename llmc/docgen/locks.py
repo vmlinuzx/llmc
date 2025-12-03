@@ -4,6 +4,7 @@ Concurrency control for docgen - prevents multiple simultaneous runs.
 
 import fcntl
 import logging
+import os
 from pathlib import Path
 from typing import IO
 
@@ -43,9 +44,24 @@ class DocgenLock:
         # Create lock directory if needed
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
         
-        # Open lock file
+        # Security check: Reject symlinks (defense in depth)
+        if self.lock_file.exists() and self.lock_file.is_symlink():
+            logger.error(
+                f"Lock file {self.lock_file} is a symlink. "
+                "This could be a security attack. Refusing to proceed."
+            )
+            return False
+        
+        # Open lock file WITHOUT truncation to prevent symlink attack
+        # Use os.open with O_RDWR|O_CREAT instead of open("w")
+        # "w" mode implies O_TRUNC which would wipe symlink targets
         try:
-            self._lock_handle = open(self.lock_file, "w")
+            fd = os.open(
+                self.lock_file, 
+                os.O_RDWR | os.O_CREAT,  # Read-write, create if missing, NO truncate
+                0o644  # Standard file permissions
+            )
+            self._lock_handle = open(fd, "r+")  # Open file object from fd
         except OSError as e:
             logger.error(f"Failed to open lock file: {e}")
             return False

@@ -165,7 +165,8 @@ enable_query_routing = false
     # Clear config cache
     from tools.rag import config
 
-    config.load_config.cache_clear()
+    # Config caching removed, no need to clear
+    # config.load_config.cache_clear()
 
     # Code query should now go to default docs index (embeddings)
     results = search_spans("def foo():", repo_root=repo_root, debug=True)
