@@ -591,7 +591,8 @@ def _attach_enrichment_to_entity(entity: Any, enrich: Any) -> None:
         if not value:
             return None
         try:
-            return json.loads(value) if isinstance(value, str) else value
+            res = json.loads(value) if isinstance(value, str) else value
+            return res if isinstance(res, list) else None
         except (json.JSONDecodeError, TypeError):
             return None
 

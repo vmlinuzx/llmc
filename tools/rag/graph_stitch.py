@@ -20,7 +20,7 @@ class GraphNotFound(FileNotFoundError):
 
 
 def _read_json(p: Path) -> dict:
-    return json.loads(p.read_text(encoding="utf-8"))
+    return dict(json.loads(p.read_text(encoding="utf-8")))
 
 
 def _normalize_path(p: str) -> str:

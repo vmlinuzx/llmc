@@ -16,8 +16,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-# tree_sitter import deferred to v2 - not needed for Python AST parsing
-# from tree_sitter import Node
+# Tree-sitter imports for polyglot schema extraction
+from tree_sitter import Node
+
+from .lang import parse_source
 
 
 # Minimal language detection without tree-sitter dependency
@@ -27,7 +29,9 @@ def language_for_path(path: Path) -> str | None:
     lang_map = {
         ".py": "python",
         ".ts": "typescript",
+        ".tsx": "tsx",
         ".js": "javascript",
+        ".jsx": "jsx",
         ".java": "java",
         ".go": "go",
     }
@@ -380,6 +384,354 @@ class PythonSchemaExtractor:
             self.relations.append(Relation(src=caller_id, edge="calls", dst=callee_id))
 
 
+# ============================================================================
+# Tree-Sitter Based Extractors (Polyglot Support)
+# ============================================================================
+
+
+class TreeSitterSchemaExtractor:
+    """Base class for tree-sitter based schema extraction.
+    
+    Subclasses implement language-specific entity and relation extraction
+    using tree-sitter parsing.
+    """
+
+    def __init__(self, file_path: Path, source: bytes, lang: str):
+        self.file_path = file_path
+        self.source = source
+        self.lang = lang
+        self.tree = parse_source(lang, source)
+        self.entities: list[Entity] = []
+        self.relations: list[Relation] = []
+        self.module_name = file_path.stem
+
+    def extract(self) -> tuple[list[Entity], list[Relation]]:
+        """Main extraction entry point. Must be implemented by subclasses."""
+        raise NotImplementedError
+
+    def _node_text(self, node: Node) -> str:
+        """Extract text content from a tree-sitter node."""
+        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+
+    def _make_entity(
+        self,
+        symbol: str,
+        kind: str,
+        node: Node,
+        metadata: dict | None = None,
+    ) -> Entity:
+        """Create an entity with consistent hashing and location tracking."""
+        span_id = f"{self.file_path}:{node.start_point[0] + 1}:{node.end_point[0] + 1}"
+        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+
+        return Entity(
+            id=f"sym:{symbol}" if kind in ("function", "method") else f"type:{symbol}",
+            kind=kind,
+            path=f"{self.file_path}:{node.start_point[0] + 1}-{node.end_point[0] + 1}",
+            metadata=metadata or {},
+            span_hash=span_hash,
+            file_path=str(self.file_path),
+            start_line=node.start_point[0] + 1,
+            end_line=node.end_point[0] + 1,
+        )
+
+
+class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
+    """Extract entities and relations from TypeScript/JavaScript code.
+    
+    Supports:
+    - Functions (regular, arrow, methods)
+    - Classes
+    - Interfaces
+    - Type aliases
+    - Imports/Exports
+    - Function calls
+    - Class inheritance
+    """
+
+    # Node types to extract
+    FUNCTION_NODES = {"function_declaration", "arrow_function", "method_definition"}
+    CLASS_NODES = {"class_declaration"}
+    INTERFACE_NODES = {"interface_declaration"}
+    TYPE_NODES = {"type_alias_declaration"}
+    EXPORT_NODES = {"export_statement"}
+    IMPORT_NODES = {"import_statement"}
+
+    def __init__(self, file_path: Path, source: bytes, lang: str):
+        super().__init__(file_path, source, lang)
+        self.import_map: dict[str, str] = {}  # local_name -> module path
+        self.exports: set[str] = set()
+
+    def extract(self) -> tuple[list[Entity], list[Relation]]:
+        """Extract entities and relations from TypeScript/JavaScript."""
+        try:
+            # Two-pass extraction: first imports, then definitions
+            self._extract_imports(self.tree)
+            self._walk(self.tree)
+        except Exception as e:
+            print(f"Parse error in {self.file_path}: {e}")
+            return [], []
+
+        return self.entities, self.relations
+
+    def _extract_imports(self, node: Node):
+        """First pass: extract import statements to build symbol resolution map."""
+        if node.type == "import_statement":
+            self._process_import(node)
+
+        for child in node.children:
+            self._extract_imports(child)
+
+    def _process_import(self, node: Node):
+        """Process an import statement and populate import_map.
+        
+        Examples:
+        - import { foo } from './bar'  -> foo: bar
+        - import { foo as baz } from './bar' -> baz: bar.foo
+        - import bar from './baz' -> bar: baz (default)
+        """
+        # Extract module path
+        module_path = None
+        for child in node.children:
+            if child.type == "string":
+                module_text = self._node_text(child).strip('"').strip("'")
+                # Strip ./ and file extension for cleaner module names
+                module_path = module_text.replace("./", "").replace("../", "").split(".")[0]
+                break
+
+        if not module_path:
+            return
+
+        # Extract imported symbols
+        for child in node.children:
+            if child.type == "import_clause":
+                for item in child.children:
+                    if item.type == "named_imports":
+                        self._process_named_imports(item, module_path)
+                    elif item.type == "identifier":
+                        # Default import
+                        local_name = self._node_text(item)
+                        self.import_map[local_name] = module_path
+
+    def _process_named_imports(self, node: Node, module_path: str):
+        """Process named imports like { foo, bar as baz }"""
+        for child in node.children:
+            if child.type == "import_specifier":
+                # { foo } or { foo as bar }
+                names = [c for c in child.children if c.type == "identifier"]
+                if len(names) == 1:
+                    # { foo }
+                    local_name = self._node_text(names[0])
+                    self.import_map[local_name] = f"{module_path}.{local_name}"
+                elif len(names) == 2:
+                    # { foo as bar }
+                    orig_name = self._node_text(names[0])
+                    local_name = self._node_text(names[1])
+                    self.import_map[local_name] = f"{module_path}.{orig_name}"
+
+    def _walk(self, node: Node, class_context: str | None = None):
+        """Second pass: walk tree and extract entities and relations."""
+        if node.type in self.FUNCTION_NODES:
+            self._extract_function(node, class_context)
+        elif node.type in self.CLASS_NODES:
+            self._extract_class(node)
+        elif node.type in self.INTERFACE_NODES:
+            self._extract_interface(node)
+        elif node.type in self.TYPE_NODES:
+            self._extract_type_alias(node)
+        elif node.type == "export_statement":
+            self._extract_export(node)
+
+        # Recurse into children
+        for child in node.children:
+            self._walk(child, class_context)
+
+    def _extract_function(self, node: Node, class_context: str | None = None):
+        """Extract function entity (function_declaration, arrow_function, method_definition)."""
+        # Find function name
+        func_name = None
+        for child in node.children:
+            if child.type in ("identifier", "property_identifier"):
+                func_name = self._node_text(child)
+                break
+
+        if not func_name:
+            return  # Anonymous function, skip for now
+
+        # Build qualified symbol
+        if class_context:
+            symbol = f"{class_context}.{func_name}"
+        else:
+            symbol = f"{self.module_name}.{func_name}"
+
+        # Extract parameters
+        params = []
+        formal_params = node.child_by_field_name("parameters")
+        if formal_params:
+            for param in formal_params.children:
+                if param.type in ("identifier", "required_parameter", "optional_parameter"):
+                    param_name = self._node_text(param).split(":")[0].strip()  # Strip type annotations
+                    if param_name and param_name not in ("(", ")", ","):
+                        params.append(param_name)
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind="method" if class_context else "function",
+            node=node,
+            metadata={"params": params},
+        )
+        self.entities.append(entity)
+
+        # Extract function calls within this function
+        self._extract_calls_from_function(node, entity.id)
+
+    def _extract_class(self, node: Node):
+        """Extract class entity and its members."""
+        # Find class name
+        class_name = None
+        for child in node.children:
+            if child.type in ("identifier", "type_identifier"):
+                class_name = self._node_text(child)
+                break
+
+        if not class_name:
+            return
+
+        symbol = f"{self.module_name}.{class_name}"
+
+        # Extract base classes (extends clause)
+        bases = []
+        # Look for class_heritage node (contains extends_clause)
+        for child in node.children:
+            if child.type == "class_heritage":
+                for heritage_item in child.children:
+                    if heritage_item.type == "extends_clause":
+                        for item in heritage_item.children:
+                            if item.type in ("identifier", "type_identifier"):
+                                base_name = self._node_text(item)
+                                bases.append(base_name)
+                                # Create extends relation
+                                base_symbol = self._resolve_symbol(base_name)
+                                self.relations.append(
+                                    Relation(
+                                        src=f"type:{symbol}",
+                                        edge="extends",
+                                        dst=f"type:{base_symbol}",
+                                    )
+                                )
+
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind="class",
+            node=node,
+            metadata={"bases": bases},
+        )
+        self.entities.append(entity)
+
+        # Extract methods (walk class body)
+        class_body = node.child_by_field_name("body")
+        if class_body:
+            for child in class_body.children:
+                if child.type == "method_definition":
+                    self._extract_function(child, class_context=symbol)
+
+    def _extract_interface(self, node: Node):
+        """Extract interface entity."""
+        # Find interface name
+        interface_name = None
+        for child in node.children:
+            if child.type in ("identifier", "type_identifier"):
+                interface_name = self._node_text(child)
+                break
+
+        if not interface_name:
+            return
+
+        symbol = f"{self.module_name}.{interface_name}"
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind="interface",
+            node=node,
+            metadata={},
+        )
+        self.entities.append(entity)
+
+    def _extract_type_alias(self, node: Node):
+        """Extract type alias entity."""
+        # Find type name
+        type_name = None
+        for child in node.children:
+            if child.type in ("identifier", "type_identifier"):
+                type_name = self._node_text(child)
+                break
+
+        if not type_name:
+            return
+
+        symbol = f"{self.module_name}.{type_name}"
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind="type",
+            node=node,
+            metadata={},
+        )
+        self.entities.append(entity)
+
+    def _extract_export(self, node: Node):
+        """Track exported symbols (for future use)."""
+        for child in node.children:
+            if child.type == "export_clause":
+                for item in child.children:
+                    if item.type == "export_specifier":
+                        for name_node in item.children:
+                            if name_node.type == "identifier":
+                                self.exports.add(self._node_text(name_node))
+
+    def _extract_calls_from_function(self, func_node: Node, caller_id: str):
+        """Extract call relations from within a function."""
+        for child in func_node.children:
+            self._find_calls(child, caller_id)
+
+    def _find_calls(self, node: Node, caller_id: str):
+        """Recursively find call_expression nodes."""
+        if node.type == "call_expression":
+            # Extract callee
+            callee = node.child_by_field_name("function")
+            if callee:
+                callee_name = None
+                if callee.type == "identifier":
+                    callee_name = self._node_text(callee)
+                elif callee.type == "member_expression":
+                    # obj.method() - extract method name
+                    property_node = callee.child_by_field_name("property")
+                    if property_node:
+                        callee_name = self._node_text(property_node)
+
+                if callee_name:
+                    target_symbol = self._resolve_symbol(callee_name)
+                    self.relations.append(
+                        Relation(
+                            src=caller_id,
+                            edge="calls",
+                            dst=f"sym:{target_symbol}",
+                        )
+                    )
+
+        # Recurse
+        for child in node.children:
+            self._find_calls(child, caller_id)
+
+    def _resolve_symbol(self, name: str) -> str:
+        """Resolve a symbol name using import map, fallback to local module."""
+        if name in self.import_map:
+            return self.import_map[name]
+        return f"{self.module_name}.{name}"
+
+
+
 def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relation]]:
     """
     Extract entities and relations from a single file.
@@ -409,7 +761,17 @@ def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relati
             print(f"Failed to decode {file_path} as UTF-8")
             return [], []
 
-    # Other languages not yet supported in v1
+    # Use tree-sitter parser for TypeScript/JavaScript
+    if lang in ("typescript", "javascript", "tsx", "jsx"):
+        try:
+            ts_extractor = TypeScriptSchemaExtractor(file_path, content, lang)
+            return ts_extractor.extract()
+        except Exception as e:
+            print(f"Tree-sitter extraction failed for {file_path}: {e}")
+            return [], []
+
+    # Other languages not yet supported
+
     return [], []
 
 
@@ -602,7 +964,8 @@ def _attach_enrichment_to_entity(entity: Entity, enrich: Any) -> None:
         if not value:
             return None
         try:
-            return json.loads(value) if isinstance(value, str) else value
+            res = json.loads(value) if isinstance(value, str) else value
+            return res if isinstance(res, list) else None
         except (json.JSONDecodeError, TypeError):
             return None
 
@@ -734,11 +1097,12 @@ def build_graph_for_repo(
 
 
 def _discover_source_files(repo_root: Path, max_files: int = 10000) -> list[Path]:
-    """Discover Python source files in a repository.
+    """Discover source files in a repository (Python, TypeScript, JavaScript).
 
     This helper is intentionally conservative:
 
-    * It walks ``repo_root`` recursively looking for ``*.py`` files.
+    * It walks ``repo_root`` recursively looking for supported source files
+      (.py, .ts, .tsx, .js, .jsx).
     * It skips common virtualenv, cache, and VCS directories.
     * It returns **absolute** paths so that downstream extractors can always
       open the files regardless of the current working directory.
@@ -752,7 +1116,7 @@ def _discover_source_files(repo_root: Path, max_files: int = 10000) -> list[Path
             Maximum number of files to return (safety limit).
 
     Returns:
-        List[Path]: Absolute paths to discovered Python source files.
+        List[Path]: Absolute paths to discovered source files.
     """
     files: list[Path] = []
     exclude_dirs = {
@@ -765,12 +1129,19 @@ def _discover_source_files(repo_root: Path, max_files: int = 10000) -> list[Path
         "patches",
     }
 
-    for path in repo_root.rglob("*.py"):
-        # Skip excluded directories anywhere in the path.
-        if any(part in exclude_dirs for part in path.parts):
-            continue
+    # Supported extensions
+    extensions = ["*.py", "*.ts", "*.tsx", "*.js", "*.jsx"]
 
-        files.append(path)
+    for ext_pattern in extensions:
+        for path in repo_root.rglob(ext_pattern):
+            # Skip excluded directories anywhere in the path.
+            if any(part in exclude_dirs for part in path.parts):
+                continue
+
+            files.append(path)
+
+            if len(files) >= max_files:
+                break
 
         if len(files) >= max_files:
             break

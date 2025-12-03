@@ -32,6 +32,13 @@ class SpanRecord:
     classifier_confidence: float = 0.0
     classifier_version: str = ""
 
+    def read_bytes(self, repo_root: Path) -> bytes:
+        data = (repo_root / self.file_path).read_bytes()
+        return data[self.byte_start : self.byte_end]
+
+    def read_source(self, repo_root: Path) -> str:
+        return self.read_bytes(repo_root).decode("utf-8", errors="replace")
+
     def to_json(self, repo_id: str, commit_sha: str) -> dict:
         return {
             "repo_id": repo_id,

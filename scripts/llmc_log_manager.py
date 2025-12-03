@@ -214,7 +214,7 @@ def main():
     if args.max_size.endswith("MB"):
         max_mb = int(args.max_size[:-2])
     elif args.max_size.endswith("KB"):
-        max_mb = int(args.max_size[:-2]) / 1024
+        max_mb = int(int(args.max_size[:-2]) / 1024)
     else:
         max_mb = int(args.max_size)
     max_mb = int(cfg.get("max_file_size_mb", max_mb))

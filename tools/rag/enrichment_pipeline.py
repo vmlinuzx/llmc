@@ -162,11 +162,13 @@ class EnrichmentPipeline:
         backend_factory: BackendFactory,
         prompt_builder: Callable[[dict[str, Any]], str] | None = None,
         *,
+        repo_root: Path | None = None,
         log_dir: Path | None = None,
         max_failures_per_span: int = 3,
         cooldown_seconds: int = 0,
     ):
         self.db = db
+        self.repo_root: Path = repo_root if repo_root else db.repo_root
         self.router = router
         self.backend_factory = backend_factory
         self.prompt_builder = prompt_builder or build_enrichment_prompt
@@ -237,7 +239,7 @@ class EnrichmentPipeline:
         
         items = enrichment_plan(
             self.db,
-            self.db.repo_root,
+            self.repo_root,
             limit=limit,
             cooldown_seconds=self.cooldown
         )
@@ -317,7 +319,7 @@ class EnrichmentPipeline:
         code_snippet = ""
         if span:
             try:
-                code_snippet = span.read_source(self.db.repo_root)
+                code_snippet = span.read_source(self.repo_root)
             except Exception as e:
                 print(f"  ⚠️  Could not read source for {slice_view.span_hash}: {e}", file=sys.stderr)
         

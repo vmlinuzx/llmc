@@ -207,7 +207,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 
 try:
-    import requests
+    import requests  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     requests = None  # type: ignore[assignment]
 

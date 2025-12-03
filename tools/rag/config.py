@@ -188,7 +188,7 @@ def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> 
             repo_root=repo_root,
         )
         return "docs"
-    return route_name
+    return str(route_name)
 
 
 @lru_cache(maxsize=128)
@@ -536,7 +536,7 @@ def embedding_model_dim() -> int:
                 return value
         except ValueError:
             pass
-    return _preset_defaults()["dim"]
+    return int(_preset_defaults()["dim"])
 
 
 def embedding_passage_prefix() -> str:
@@ -582,12 +582,12 @@ def embedding_gpu_min_free_mb(repo_root: Path | None = None) -> int:
 def is_query_routing_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
     # Default to False if the flag is omitted (backwards-compatible behavior)
-    return cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
+    return bool(cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False))
 
 
 def is_multi_route_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
-    return cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False)
+    return bool(cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False))
 
 
 def get_multi_route_config(

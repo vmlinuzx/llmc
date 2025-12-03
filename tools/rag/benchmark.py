@@ -103,10 +103,10 @@ CASES: tuple[BenchmarkCase, ...] = (
 
 def run_embedding_benchmark() -> dict[str, float]:
     backend = build_backend()
-    hit_flags = []
-    margins = []
-    positive_scores = []
-    negative_scores = []
+    hit_flags: list[int] = []
+    margins: list[float] = []
+    positive_scores: list[float] = []
+    negative_scores: list[float] = []
 
     for case in CASES:
         query_vec = backend.embed_queries([case.query])[0]

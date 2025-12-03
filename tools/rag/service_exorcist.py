@@ -135,30 +135,13 @@ class Exorcist:
         self.repo = repo
         self.stats = ExorcistStats(repo)
 
-    def print_warning(self, stats: dict):
-        """Print DC's safety ritual."""
-        total_mb = stats["total_size_bytes"] / (1024 * 1024)
-
-        print("\n🔥 EXORCIST MODE 🔥")
-        print("━" * 60)
-        print("\nHey. We need to talk about what you're about to do.")
-        print("\nYou're about to nuke the RAG database for:")
-        print(f"  📁 {self.repo}")
-        print("\nHere's what that means:")
-        print(f"  • {stats['span_count']:,} indexed code spans - gone")
-        print(
-            f"  • {stats['enrichment_count']:,} enriched summaries - months of LLM work, vaporized"
-        )
-        print(f"  • {stats['embedding_count']:,} embeddings - all that vector magic, deleted")
-        print("  • Every quality metric, every failure you've tracked - wiped")
-        print(f"  • Total: {total_mb:.1f} MB of data")
-        print("\nThis is the nuclear option. There's no undo button.")
-        print("\nI get it - sometimes you need to burn it down and start fresh.")
-        print("If there's a spider in there or something, I understand.")
-        print("Sometimes nukes from orbit are the only way to be sure.")
-        print("\nBut I care about you not shooting yourself in the foot here.")
-        print("\nYou've got 5 seconds to hit Ctrl+C and walk away.")
-        print("After that, it's gone for good.\n")
+    def print_warning(self, stats: ExorcistSummary):
+        """Display the warning banner with statistics."""
+        print("\n⚠️  WARNING: NUCLEAR OPTION INITIATED ⚠️")
+        print("=" * 50)
+        print(f"Target Repository: {self.repo}")
+        print(f"RAG Directory:     {self.stats.rag_dir}")
+        print("-" * 50)
 
     def countdown(self) -> bool:
         """5-second countdown with Ctrl+C escape."""

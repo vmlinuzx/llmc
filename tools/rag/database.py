@@ -103,6 +103,59 @@ class Database:
     def conn(self) -> sqlite3.Connection:
         return self._conn
 
+    @property
+    def repo_root(self) -> Path:
+        """
+        Infer repo root from database path.
+        Assumes standard layout: <repo_root>/.llmc/rag/<db_name>
+        """
+        # Go up 3 levels: db -> rag -> .llmc -> repo_root
+        return self.path.parent.parent.parent
+
+    def get_span_by_hash(self, span_hash: str) -> SpanRecord | None:
+        """Lookup a single span by its hash."""
+        row = self.conn.execute(
+            """
+            SELECT
+                s.span_hash,
+                s.symbol,
+                s.kind,
+                s.start_line,
+                s.end_line,
+                s.byte_start,
+                s.byte_end,
+                s.slice_type,
+                s.slice_language,
+                s.classifier_confidence,
+                s.classifier_version,
+                f.path AS file_path,
+                f.lang AS lang
+            FROM spans AS s
+            JOIN files AS f ON f.id = s.file_id
+            WHERE s.span_hash = ?
+            """,
+            (span_hash,),
+        ).fetchone()
+
+        if row is None:
+            return None
+
+        return SpanRecord(
+            file_path=Path(row["file_path"]),
+            lang=row["lang"],
+            symbol=row["symbol"],
+            kind=row["kind"],
+            start_line=row["start_line"],
+            end_line=row["end_line"],
+            byte_start=row["byte_start"],
+            byte_end=row["byte_end"],
+            span_hash=row["span_hash"],
+            slice_type=row["slice_type"] or "other",
+            slice_language=row["slice_language"],
+            classifier_confidence=row["classifier_confidence"] or 0.0,
+            classifier_version=row["classifier_version"] or "",
+        )
+
     def _run_migrations(self) -> None:
         migrations = [
             ("enrichments", "inputs", "TEXT"),

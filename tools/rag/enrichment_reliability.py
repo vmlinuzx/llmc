@@ -57,7 +57,7 @@ def calculate_backoff_delay(
         jitter = random.uniform(0, delay * jitter_pct)
         delay += jitter
 
-    return delay
+    return float(delay)
 
 
 @dataclass

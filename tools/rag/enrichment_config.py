@@ -158,7 +158,8 @@ def resolve_api_key(provider: str, config: dict[str, Any]) -> str | None:
     """
     # Check explicit key in config
     if "api_key" in config:
-        return config["api_key"]
+        val = config["api_key"]
+        return str(val) if val is not None else None
 
     # Check custom env var in config
     if "api_key_env" in config:

@@ -18,6 +18,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
+from typing import Any
 
 ALLOWED_EDGE_TYPES: set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}
 
@@ -48,22 +49,21 @@ class GraphIndices:
 def _read_graph_payload(path: Path) -> dict:
     """
     Read and normalize the raw graph JSON payload.
-
-    Returns the innermost dict that actually carries graph-like fields.
-    Raises GraphNotFound on IO/parse errors.
     """
     try:
-        raw = path.read_text(encoding="utf-8")
-        data = json.loads(raw)
-    except Exception as exc:  # pragma: no cover - defensive
-        raise GraphNotFound(str(path)) from exc
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict):
+            raise GraphNotFound(str(path))
+        data: dict[str, Any] = raw
+    except Exception as e:
+        raise GraphNotFound(f"Bad JSON in {path}: {e}")
 
     if not isinstance(data, dict):
         raise GraphNotFound(str(path))
 
     # Some artifacts may wrap the schema graph in a `schema_graph` field.
     if isinstance(data.get("schema_graph"), dict):
-        return data["schema_graph"]  # type: ignore[return-value]
+        return dict(data["schema_graph"])
 
     return data
 

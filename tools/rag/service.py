@@ -28,6 +28,7 @@ import sqlite3
 import subprocess
 import sys
 import time
+from typing import Any
 
 from tools.rag.config import get_vacuum_interval_hours, load_config
 
@@ -119,7 +120,7 @@ class ServiceState:
         self.state = self._load()
 
     def _load(self) -> dict:
-        defaults = {
+        defaults: dict[str, Any] = {
             "repos": [],
             "pid": None,
             "status": "stopped",
@@ -247,9 +248,9 @@ class FailureTracker:
             try:
                 cfg = load_config()
                 enrichment_cfg = cfg.get("enrichment") or {}
-                val = enrichment_cfg.get("max_failures_per_span")
-                if isinstance(val, int) and val > 0:
-                    max_failures = val
+                cfg_val = enrichment_cfg.get("max_failures_per_span")
+                if isinstance(cfg_val, int) and cfg_val > 0:
+                    max_failures = int(cfg_val)
             except Exception:
                 pass
         self.max_failures = max_failures
@@ -501,7 +502,7 @@ class RAGService:
 
         try:
             from tools.rag.config import index_path_for_write
-            from tools.rag.runner import detect_changes, run_embed, run_enrich, run_sync
+            from tools.rag.runner import detect_changes, run_embed, run_sync
         except ImportError as e:
             print(f"  ⚠️  Failed to import RAG runner: {e}")
             return False
@@ -520,41 +521,52 @@ class RAGService:
             print(f"  ⚠️  Sync failed: {e}")
             # Continue anyway - enrichment might still work
 
-        # Step 2: Enrich pending spans with REAL LLMs
+        # Step 2: Enrich pending spans using EnrichmentPipeline
         try:
-            backend = os.getenv("ENRICH_BACKEND", "ollama")
-            router = os.getenv("ENRICH_ROUTER", "on")
-            start_tier = os.getenv("ENRICH_START_TIER", "7b")
-            # Precedence: env > TOML > default
-            if os.getenv("ENRICH_BATCH_SIZE") is not None:
-                batch_size = int(os.getenv("ENRICH_BATCH_SIZE", "5"))
-            else:
-                batch_size = int((self._toml_cfg.get("enrichment", {}) or {}).get("batch_size", 5))
-            max_spans = int(os.getenv("ENRICH_MAX_SPANS", "50"))
+            from tools.rag.enrichment_pipeline import EnrichmentPipeline, build_enrichment_prompt
+            from tools.rag.enrichment_adapters.ollama import OllamaBackend
+            from tools.rag.enrichment_router import build_router_from_toml
+            from tools.rag.database import Database
+            
+            # Load configuration
+            batch_size = int((self._toml_cfg.get("enrichment", {}) or {}).get("batch_size", 50))
             cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
-
-            print(f"  🤖 Enriching with: backend={backend}, router={router}, tier={start_tier}")
-            enrich_result = run_enrich(
-                repo,
-                backend=backend,
+            
+            # Get database
+            index_path = index_path_for_write(repo)
+            db = Database(index_path)
+            
+            # Build router from repo config
+            router = build_router_from_toml(repo)
+            
+            # Create pipeline
+            pipeline = EnrichmentPipeline(
+                db=db,
                 router=router,
-                start_tier=start_tier,
-                batch_size=batch_size,
-                max_spans=max_spans,
-                cooldown=cooldown,
+                backend_factory=OllamaBackend.from_spec,
+                prompt_builder=build_enrichment_prompt,
+                repo_root=repo,
+                max_failures_per_span=self.tracker.max_failures,
+                cooldown_seconds=cooldown,
             )
-            # Check if enrichment actually did work (returns dict with stats)
-            if enrich_result and isinstance(enrich_result, dict):
-                enriched = enrich_result.get("enriched", 0)
-                if enriched > 0:
-                    work_done = True
-                    print(f"  ✅ Enriched {enriched} spans with real LLM summaries")
-                else:
-                    print("  ℹ️  No spans pending enrichment")
+            
+            print(f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})")
+            result = pipeline.process_batch(limit=batch_size)
+            
+            # Report results
+            if result.attempted > 0:
+                work_done = True
+                print(f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)")
+                if result.failed > 0:
+                    print(f"     ⚠️  {result.failed} failures, {result.skipped} skipped")
             else:
-                print("  ✅ Enrichment complete")
+                print("  ℹ️  No spans pending enrichment")
+            
+            db.close()
         except Exception as e:
             print(f"  ⚠️  Enrichment failed: {e}")
+            import traceback
+            traceback.print_exc()
 
         # RAG doctor: quick index/enrichment health snapshot
         try:
@@ -587,17 +599,17 @@ class RAGService:
             try:
                 from tools.rag.quality import format_quality_summary, run_quality_check
 
-                result = run_quality_check(repo)
-                print(format_quality_summary(result, repo.name))
+                quality_result = run_quality_check(repo)
+                print(format_quality_summary(quality_result, repo.name))
 
                 # Log quality issues
-                if result["status"] == "FAIL":
+                if quality_result["status"] == "FAIL":
                     self.tracker.record_repo_failure(
                         str(repo),
-                        f"Quality check failed: score {result['quality_score']:.1f}%, "
-                        f"{result.get('placeholder_count', 0)} placeholder, "
-                        f"{result.get('empty_count', 0)} empty, "
-                        f"{result.get('short_count', 0)} short",
+                        f"Quality check failed: score {quality_result['quality_score']:.1f}%, "
+                        f"{quality_result.get('placeholder_count', 0)} placeholder, "
+                        f"{quality_result.get('empty_count', 0)} empty, "
+                        f"{quality_result.get('short_count', 0)} short",
                     )
             except Exception as e:
                 print(f"  ⚠️  Quality check failed: {e}")
@@ -608,7 +620,7 @@ class RAGService:
 
             print("  📊 Rebuilding RAG Graph...")
             status = build_graph_for_repo(repo)
-            print(f"  ✅ Graph rebuilt: {status}")
+            print("  ✅ Graph rebuilt successfully")
         except Exception as e:
             print(f"  ⚠️  Graph build failed: {e}")
 
@@ -649,7 +661,7 @@ class RAGService:
                 stats = json.loads(output)
                 failure_stats = self.tracker.get_stats(repo_path)
                 stats.update(failure_stats)
-                return stats
+                return dict(stats)
             except json.JSONDecodeError:
                 pass
         return {}
@@ -740,7 +752,7 @@ class RAGService:
 
 
 
-def cmd_start(args, state: ServiceState, tracker: FailureTracker):
+def cmd_start(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Start the service via systemd."""
     from .service_daemon import SystemdManager
 
@@ -795,7 +807,7 @@ def cmd_start(args, state: ServiceState, tracker: FailureTracker):
     return 0
 
 
-def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker):
+def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Fallback: Start the service via fork() when systemd unavailable."""
     if state.is_running():
         print(f"✅ Service already running (PID {state.state['pid']})")
@@ -831,7 +843,7 @@ def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker):
     return 0
 
 
-def cmd_stop(args, state: ServiceState, tracker: FailureTracker):
+def cmd_stop(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Stop the service via systemd."""
     from .service_daemon import SystemdManager
 
@@ -856,7 +868,7 @@ def cmd_stop(args, state: ServiceState, tracker: FailureTracker):
         return 1
 
 
-def cmd_stop_fork(args, state: ServiceState, tracker: FailureTracker):
+def cmd_stop_fork(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Fallback: Stop the service via PID when systemd unavailable."""
     if not state.is_running():
         print("Service is not running")
@@ -884,7 +896,7 @@ def cmd_stop_fork(args, state: ServiceState, tracker: FailureTracker):
         return 0
 
 
-def cmd_status(args, state: ServiceState, tracker: FailureTracker):
+def cmd_status(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Show service status."""
     print("LLMC RAG Service Status")
     print("=" * 50)
@@ -919,7 +931,7 @@ def cmd_status(args, state: ServiceState, tracker: FailureTracker):
     return 0
 
 
-def cmd_register(args, state: ServiceState, tracker: FailureTracker):
+def cmd_register(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Register a repo - register + /full/path"""
     repo_path = Path(args.repo_path).resolve()
     # Basic path validation
@@ -965,7 +977,7 @@ def cmd_register(args, state: ServiceState, tracker: FailureTracker):
         return 1
 
 
-def cmd_unregister(args, state: ServiceState, tracker: FailureTracker):
+def cmd_unregister(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Unregister a repo - unregister + /full/path"""
     repo_path = Path(args.repo_path).resolve()
 
@@ -977,7 +989,7 @@ def cmd_unregister(args, state: ServiceState, tracker: FailureTracker):
         return 1
 
 
-def cmd_failures(args, state: ServiceState, tracker: FailureTracker):
+def cmd_failures(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Manage failure cache - show or clear."""
     subcommand = getattr(args, "failures_command", None)
 
@@ -1030,7 +1042,7 @@ def cmd_failures(args, state: ServiceState, tracker: FailureTracker):
         return 0
 
 
-def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker):
+def cmd_clear_failures(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Clear failure cache - backwards compat wrapper."""
     return cmd_failures(args, state, tracker)
 

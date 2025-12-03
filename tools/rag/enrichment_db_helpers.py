@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 import sqlite3
+from typing import Any
 
 from tools.rag.config import index_path_for_read, rag_dir
+from tools.rag.database import Database
 
 
 @dataclass
@@ -124,3 +126,23 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
     except sqlite3.Error as e:
         print(f"Error loading enrichment DB: {e}")
         return {}
+
+
+def write_enrichment(
+    db: Database,
+    span_hash: str,
+    summary: str,
+    key_topics: list[str] | None = None,
+    complexity: str | None = None,
+    model: str | None = None,
+) -> None:
+    """Write enrichment result to database."""
+    payload: dict[str, Any] = {
+        "summary_120w": summary,
+        "model": model,
+        "tags": key_topics or [],
+    }
+    if complexity:
+        payload["tags"].append(f"complexity:{complexity}")
+
+    db.store_enrichment(span_hash, payload)

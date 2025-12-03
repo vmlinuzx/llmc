@@ -386,7 +386,7 @@ class RemoteBackend(ABC):
         )
         if fence_match:
             try:
-                return json.loads(fence_match.group(1))
+                return dict(json.loads(fence_match.group(1)))
             except json.JSONDecodeError:
                 pass
 
@@ -394,7 +394,7 @@ class RemoteBackend(ABC):
         json_match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
         if json_match:
             try:
-                return json.loads(json_match.group())
+                return dict(json.loads(json_match.group()))
             except json.JSONDecodeError:
                 pass
 

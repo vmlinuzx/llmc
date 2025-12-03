@@ -185,7 +185,7 @@ def build_embedding_backend(
     model_override: str | None = None,
     *,
     dim: int | None = None,
-):
+) -> HashEmbeddingBackend | ManagerEmbeddingBackend:
     """Factory used by workers/search/benchmark.
 
     - If model_override (or the configured model) is one of HASH_MODELS,

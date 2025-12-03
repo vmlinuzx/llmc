@@ -352,6 +352,10 @@ def execute_enrichment(
     model: str = "local-qwen",
     cooldown_seconds: int = 0,
     enforce_latin1: bool = False,
+    *,
+    code_first: bool | None = None,
+    starvation_ratio_high: int | None = None,
+    starvation_ratio_low: int | None = None,
 ) -> tuple[int, list[str]]:
     """Run enrichment over pending spans.
 
@@ -372,11 +376,114 @@ def execute_enrichment(
     if not items:
         return 0, []
 
+    # Optional code-first scheduling using path weights.
+    effective_code_first = False
+    high_ratio = starvation_ratio_high if starvation_ratio_high is not None else 5
+    low_ratio = starvation_ratio_low if starvation_ratio_low is not None else 1
+
+    if high_ratio <= 0:
+        high_ratio = 5
+    if low_ratio <= 0:
+        low_ratio = 1
+
+    try:
+        # Import lazily to avoid hard dependency when llmc is not available.
+        from llmc.core import load_config as _load_llmc_config  # type: ignore[import]
+        from llmc.enrichment import (  # type: ignore[import]
+            FileClassifier,
+            load_path_weight_map,
+        )
+    except Exception:  # pragma: no cover - defensive for non-LLMC environments
+        _load_llmc_config = None  # type: ignore[assignment]
+        FileClassifier = None  # type: ignore
+        load_path_weight_map = None  # type: ignore[assignment]
+
+    if code_first is not None:
+        effective_code_first = bool(code_first)
+    elif _load_llmc_config is not None:
+        try:
+            cfg = _load_llmc_config(repo_root)
+            runner_cfg = (cfg.get("enrichment") or {}).get("runner") or {}
+            effective_code_first = bool(runner_cfg.get("code_first_default", False))
+            if starvation_ratio_high is None:
+                high_ratio = int(runner_cfg.get("starvation_ratio_high", high_ratio))
+            if starvation_ratio_low is None:
+                low_ratio = int(runner_cfg.get("starvation_ratio_low", low_ratio))
+        except Exception:
+            effective_code_first = False
+
+    scheduled_items = items
+    if effective_code_first and FileClassifier is not None and load_path_weight_map is not None:
+        try:
+            cfg = _load_llmc_config(repo_root) if _load_llmc_config is not None else {}
+            weight_map = load_path_weight_map(cfg)
+            classifier = FileClassifier(repo_root=repo_root, weight_config=weight_map)
+
+            decisions: list[tuple[Any, Any]] = []
+            for item in items:
+                decision = classifier.classify_span(item)
+                decisions.append((item, decision))
+
+            high_items: list[tuple[Any, Any]] = []
+            mid_items: list[tuple[Any, Any]] = []
+            low_items: list[tuple[Any, Any]] = []
+            for item, decision in decisions:
+                if decision.weight <= 3:
+                    high_items.append((item, decision))
+                elif decision.weight <= 6:
+                    mid_items.append((item, decision))
+                else:
+                    low_items.append((item, decision))
+
+            key = lambda pair: pair[1].final_priority  # type: ignore[assignment]
+            high_items.sort(key=key, reverse=True)
+            mid_items.sort(key=key, reverse=True)
+            low_items.sort(key=key, reverse=True)
+
+            # Treat mid-tier as part of the high-priority pool for scheduling.
+            high_pool = high_items + mid_items
+            scheduled: list[Any] = []
+
+            while high_pool or low_items:
+                # Drain up to high_ratio items from high_pool.
+                for _ in range(high_ratio):
+                    if not high_pool:
+                        break
+                    item_dec = high_pool.pop(0)
+                    scheduled.append(item_dec[0])
+                    if len(scheduled) >= len(items):
+                        break
+                if len(scheduled) >= len(items):
+                    break
+
+                # Insert one low-priority item to avoid starvation.
+                if low_items and low_ratio > 0:
+                    low_item = low_items.pop(0)
+                    scheduled.append(low_item[0])
+                    if len(scheduled) >= len(items):
+                        break
+
+                if not high_pool and not low_items:
+                    break
+
+            # Append any remaining items (should be rare).
+            for pool in (high_pool, low_items):
+                for item_dec in pool:
+                    scheduled.append(item_dec[0])
+
+            # Ensure we do not lose or duplicate items.
+            if len(scheduled) == len(items):
+                scheduled_items = scheduled
+        except Exception:
+            scheduled_items = items
+    else:
+        scheduled_items = items
+
     successes = 0
     errors: list[str] = []
 
     with db.transaction():
-        for item in items:
+        for item in scheduled_items:
             code = item.read_source(repo_root)
 
             # Add content type header

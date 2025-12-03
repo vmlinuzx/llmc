@@ -209,7 +209,7 @@ def _enrich_debug_info(
             # Index entities by span_hash or fuzzy location
             # For now, let's try to match by file path and line overlap
             # Optimization: Pre-index graph entities by file path
-            entities_by_file = {}
+            entities_by_file: dict[str, list[Any]] = {}
             for ent in graph.entities:
                 # entity.path is "path:lines" or just path
                 # Schema 2.0 entities have file_path attribute
@@ -225,8 +225,8 @@ def _enrich_debug_info(
                     entities_by_file.setdefault(fpath, []).append(ent)
 
             # Map relations by src/dst
-            rels_by_src = {}
-            rels_by_dst = {}
+            rels_by_src: dict[str, list[Any]] = {}
+            rels_by_dst: dict[str, list[Any]] = {}
             for rel in graph.relations:
                 rels_by_src.setdefault(rel.src, []).append(rel)
                 rels_by_dst.setdefault(rel.dst, []).append(rel)
@@ -260,6 +260,11 @@ def _enrich_debug_info(
                         except:
                             continue
 
+                    if e_start is None:
+                        continue
+                    if e_end is None:
+                        e_end = e_start
+
                     # Check overlap
                     if not (e_end < res.start_line or e_start > res.end_line):
                         matched_ent = ent
@@ -267,11 +272,11 @@ def _enrich_debug_info(
 
                 if matched_ent:
                     # Gather neighbors
-                    parents = []  # Logic to find parents (containers) is implicit in AST or naming usually
-                    children = []
-                    related_code = []
-                    related_tests = []
-                    related_docs = []
+                    parents: list[str] = []
+                    children: list[str] = []
+                    related_code: list[str] = []
+                    related_tests: list[str] = []
+                    related_docs: list[str] = []
 
                     # Outgoing edges
                     for rel in rels_by_src.get(matched_ent.id, []):
@@ -398,12 +403,12 @@ def search_spans(
         logger.debug(f"Multi-route retrieval enabled. Fan-out: {routes_to_query}")
 
     # 3. Execute Searches
-    results_by_route = {}
-    route_weights = {}
+    results_by_route: dict[str, list[dict[str, Any]]] = {}
+    route_weights: dict[str, float] = {}
 
     # Cache embeddings by profile name to avoid redundant API calls
     # Key: profile_name, Value: (query_vector, query_norm)
-    embedding_cache = {}
+    embedding_cache: dict[str, tuple[list[float], float]] = {}
 
     config = load_config(repo)
     db = Database(db_path)

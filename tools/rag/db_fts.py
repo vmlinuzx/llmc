@@ -59,12 +59,12 @@ def _detect_fts_table(conn: sqlite3.Connection) -> str:
 
     if candidates:
         candidates.sort(key=score, reverse=True)
-        return candidates[0][0]
+        return str(candidates[0][0])
 
     for name, sql in rows:
         s = (sql or "").lower()
         if "match" in s or "fts" in s:
-            return name
+            return str(name)
 
     raise RuntimeError("No FTS virtual table detected in SQLite DB")
 
