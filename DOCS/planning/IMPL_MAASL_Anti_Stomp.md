@@ -138,24 +138,24 @@ llmc_mcp/
 
 ---
 
-### Phase 5: Graph Merge Engine (3-4 hours)
-**Priority:** P1
+### Phase 5: Graph Merge Engine (3-4 hours) ✅ COMPLETE  
+**Priority:** P2
 
 **Tasks:**
-- [ ] Implement `MergeEngine`:
-  - `apply_patch()` for graph JSON
-  - LWW semantics for properties
-  - Deterministic node/edge merging
+- [x] Implement `MergeEngine`:
+  - GraphPatch dataclass
+  - Last-Write-Wins (LWW) semantics
+  - Deterministic node/edge merge
   - Conflict logging
-- [ ] Define `GraphPatch` dataclass:
-  - nodes_to_add, edges_to_add
-  - properties_to_set, properties_to_clear
-- [ ] Wrap graph update operations
-- [ ] Test concurrent graph updates
+- [x] Wrap graph update operations
+- [x] Test concurrent graph updates
 
 **Deliverables:**
-- `llmc_mcp/merge_meta.py`
-- Deterministic merge logic
+- `llmc_mcp/merge_meta.py` ✅
+- Protected graph merging ✅
+- Integration tests (10 tests, all passing) ✅
+
+**Session:** December 2, 2025 (~20 minutes)
 
 ---
 
