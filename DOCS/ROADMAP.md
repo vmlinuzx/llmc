@@ -16,36 +16,51 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 
 
-### 1.2 Enrichment pipeline tidy‑up
+### ~~1.2 Enrichment pipeline tidy-up~~ ✅ DONE
 
-**Goal:** Bring the enrichment pipeline closer to the design in the docs without over‑engineering.
+**Completed:** Dec 2025
+
+**Goal:** Bring the enrichment pipeline closer to the design in the docs without over-engineering.
 
 **📄 Design:** [`planning/SDD_Enrichment_Pipeline_Tidy.md`](planning/SDD_Enrichment_Pipeline_Tidy.md)
 
 **Summary:**
-- Extract `OllamaBackend` as proper `BackendAdapter` implementation
-- Create `EnrichmentPipeline` class to orchestrate: pending spans → router → cascade → DB writes
-- Wire `service.py` to use pipeline directly (no more subprocess to 2,271-line script)
-- Sets foundation for remote providers (3.6)
+- ✅ Phase 1: Extracted  `OllamaBackend` as proper `BackendAdapter` implementation (186 lines)
+- ✅ Phase 2: Created `EnrichmentPipeline` class orchestrator (406 lines)
+- ✅ Phase 3: Wired `service.py` to use pipeline directly (no more subprocess)
 
-**Phases:** 3 phases, ~4-6 hours total
-| Phase | Effort | Deliverable |
-|-------|--------|-------------|
-| Extract OllamaBackend | 1-2h | `enrichment_adapters/ollama.py` |
-| Create EnrichmentPipeline | 2-3h | `enrichment_pipeline.py` |
-| Wire into Service | 1-2h | Direct calls, no subprocess |
+**Impact:** Clean architecture, direct function calls, foundation for remote providers (3.6)
 
-### 1.3 Surface enriched data everywhere it matters
+### 1.2.1 Enrichment Path Weights & Code-First Prioritization
 
-Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools), but this keeps it honest:
+**Goal:** Prioritize enrichment of critical code paths over test code, docs, and vendor trash.
 
-- Verify that:
-  - `tools.rag_nav` tools (`search`, `where-used`, `lineage`) include enriched summaries where appropriate.
-  - The TUI’s inspector view can show enrichment summaries and key metadata for a span/entity.
-- Add or update tests to assert:
-  - Enriched fields are present in the JSON envelopes returned by nav tools.
-  - A missing or stale enrichment fails gracefully instead of crashing a tool.
-- **Completed (Nov 2025):** Ensured integration tests (P0 acceptance) properly reflect the enrichment schema, allowing tests to verify that enrichment data is attached correctly.
+**📄 Design:** [`planning/SDD_Enrichment_Path_Weights.md`](planning/SDD_Enrichment_Path_Weights.md)
+
+**Summary:**
+- Configurable 1-10 weight scale for path patterns (lower = higher priority)
+- "Highest weight wins" collision resolution for overlapping patterns
+- Test code detection via path patterns AND content heuristics
+- Priority formula: `final = base * (11 - weight) / 10`
+- `--show-weights` debug mode for transparency
+
+**Why:**
+- Tests in `src/tests/` shouldn't block `src/core/router.py` enrichment
+- Vendor code shouldn't compete with your actual code
+- Different projects have different priorities (configurable via `llmc.toml`)
+
+**Effort:** 3-4 hours | **Difficulty:** 🟡 Medium
+
+---
+
+### ~~1.3 Surface enriched data everywhere it matters~~ ✅ DONE
+
+**Completed:** Nov-Dec 2025
+
+- `rag_search_enriched` tool with graph enrichment modes
+- `inspect` returns enrichment data and summaries
+- `rag_stats` shows enrichment coverage
+- Integration tests verify enrichment schema
 
 ### 1.4 Clean public story and remove dead surfaces
 
@@ -56,52 +71,30 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
     - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
   - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto‑refactor).
 
-### 1.6 System Friendliness (Idle Loop Throttling)
+### ~~1.6 System Friendliness (Idle Loop Throttling)~~ ✅ DONE
 
-**Goal:** Prevent the daemon from burning CPU when there is no work to do.
+**Completed:** Dec 2025 - Implemented in `tools/rag/service.py`
 
-**📄 Design:** [`planning/SDD_Idle_Loop_Throttling.md`](planning/SDD_Idle_Loop_Throttling.md)
+- `os.nice(10)` at daemon startup
+- Exponential backoff when idle (configurable base/max in `llmc.toml`)
+- Interruptible sleep for signal handling
+- Logging: "💤 Idle x{n} → sleeping..."
 
-**Summary:**
-- Set process nice level (+10) so daemon doesn't compete with your IDE
-- Track "work done" per cycle to detect idle state  
-- Exponential backoff when idle (180s → 360s → 720s → ... → 30min cap)
-- Instant reset to normal interval when changes detected
-- Interruptible sleep for responsive signal handling
+### ~~1.7 MCP Daemon with Network Transport~~ ✅ DONE
 
-**Effort:** 2-3 hours | **Difficulty:** 🟢 Easy
+**Completed:** Dec 2025
 
-### 1.7 MCP Daemon with Network Transport
+- HTTP/SSE transport: `llmc_mcp/transport/http_server.py`
+- API key auth middleware: `llmc_mcp/transport/auth.py`  
+- Daemon manager with pidfiles/signals: `llmc_mcp/daemon.py`
+- CLI integration in `llmc_mcp/cli.py`
 
-**Goal:** Enable external systems (Codex, Gemini, custom agents) to connect to LLMC's MCP server over HTTP.
+### ~~1.8 MCP Tool Expansion~~ ✅ DONE
 
-**📄 Design:** [`planning/SDD_MCP_Daemon_Architecture.md`](planning/SDD_MCP_Daemon_Architecture.md)
+**Completed:** Dec 2025
 
-**Summary:**
-- Add HTTP/SSE and WebSocket transport modes (MCP SDK already has the plumbing)
-- API key authentication middleware for security
-- Proper daemon management with pidfiles and signal handling
-- CLI wrapper (`llmc-mcp start/stop/status/logs`)
-- Preserves existing stdio transport for Claude Desktop (no breaking changes)
-
-**Phases:** 6 phases, ~15-22 hours total
-| Phase | Difficulty |
-|-------|------------|
-| HTTP + SSE Transport | 🟡 Medium |
-| WebSocket Transport | 🟢 Easy |
-| Auth Middleware | 🟢 Easy |
-| Daemon Manager | 🟡 Medium |
-| CLI Wrapper | 🟢 Easy |
-| Testing & Docs | 🟢 Easy |
-
-### 1.8 MCP Tool Expansion
-
-**Goal:** Expose critical navigation and inspection tools through MCP.
-
-- **Completed (Dec 2025):** Added `rag_where_used`, `rag_lineage`, `inspect`, and `rag_stats`.
-- Remaining observability tools (P1):
-  - `rag_plan` - Heuristic retrieval planning for queries.
-- Update code execution stubs to include new tools (Verified: automatic via `TOOLS` list).
+- All tools implemented: `rag_where_used`, `rag_lineage`, `inspect`, `rag_stats`, `rag_plan`
+- Stubs auto-generated from TOOLS list
 
 ---
 
@@ -109,29 +102,38 @@ Most of the enrichment data plumbing exists (DB helpers, graph merge, nav tools)
 
 These are things that make LLMC nicer to live with once the core system is “good enough”.
 
-### 2.1 Productization and packaging
+### ~~2.1 Productization and packaging~~ ✅ DONE
 
-**Goal:** Turn LLMC from “a pile of scripts” into “a thing you can install and run”.
+**Completed:** Dec 2025
 
-- Move toward a single `llmc` CLI entrypoint that wraps the main flows:
-  - `llmc init` (bootstrap a repo and `.llmc` workspace).
-  - `llmc index` / `llmc enrich` / `llmc build-graph`.
-  - `llmc service start|stop|status`.
-- Reduce `bash -> python` chains where possible to cut startup overhead.
-- Make sure a new clone can do:
-  - `pip install -e .`
-  - `llmc init && llmc index && llmc-tui`
-  with minimal extra steps.
+- Unified `llmc` CLI with typer: init, index, search, enrich, graph, etc.
+- Service management: `llmc service start/stop/status/logs`
+- Repo management: `llmc service repo add/remove/list`
+- Nav tools: `llmc nav search/where-used/lineage`
+- TUI: `llmc tui` / `llmc monitor`
 
-### 2.2 Polyglot RAG support
+### ~~2.2 Polyglot RAG support~~ ✅ DONE
+
+**Completed:** Dec 2025
 
 **Goal:** Make the schema graph and RAG story work across more than just Python.
 
-- Extend `SchemaExtractor` to handle at least one non‑Python language end‑to‑end (JS/TS is a good first target):
-  - Tree‑sitter integration for parsing.
-  - Entity and relation mapping that matches the existing graph model.
-  - Tests against a real non‑Python sample repo.
-- Update docs to describe language support explicitly (Python: full, JS/TS: beta, others: TBD).
+**📄 Design:** [`planning/SDD_Polyglot_RAG_TypeScript.md`](planning/SDD_Polyglot_RAG_TypeScript.md)  
+**📄 Implementation:** [`planning/IMPL_Polyglot_RAG_TypeScript.md`](planning/IMPL_Polyglot_RAG_TypeScript.md)
+
+**Summary:**
+- ✅ `TreeSitterSchemaExtractor` base class for polyglot extraction
+- ✅ `TypeScriptSchemaExtractor` for TypeScript/JavaScript (functions, classes, interfaces, types)
+- ✅ Relation extraction: imports, calls, extends
+- ✅ Integration with existing schema graph pipeline
+- ✅ Multi-file TypeScript project support
+- ✅ 6 unit tests + end-to-end integration test
+
+**Results:**
+- TypeScript/JavaScript files now indexed alongside Python
+- Entities: functions, classes, interfaces, type aliases
+- Relations: imports, function calls, class inheritance
+- 14 entities extracted from 3-file test project
 
 ### 2.4 Deterministic Repo Docgen (v2)
 
@@ -189,30 +191,24 @@ These are the “this would be awesome” items that are worth doing, but not at
 - Implement retention policies with auto-cleanup.
 - Add `get_telemetry` MCP tool for LLM self-analysis.
 
-### 3.4 Multi-Agent Coordination & Anti-Stomp
+### 3.4 Multi-Agent Coordination & Anti-Stomp ✅ CODE COMPLETE
 
-**Goal:** Enable multiple agents to work concurrently without stomping on each other's changes.
+**Status:** Feature branch ready, pending integration testing
 
-- Research and design coordination mechanisms:
-  - File-level locking with claim/release protocol.
-  - Conflict detection (detect overlapping edits before commit).
-  - Work queue / ticketing system for task distribution.
-  - Lint-aware coordination (prevent concurrent edits that break linting).
-- Implement anti-stomp primitives:
-  - `claim_file(path, agent_id, timeout)` - Reserve file for editing.
-  - `release_file(path, agent_id)` - Release claim.
-  - `check_conflicts(path, agent_id)` - Detect if file changed since claim.
-  - Automatic release on timeout or agent disconnect.
-- Add coordination layer to MCP server:
-  - Track active claims in SQLite (`.llmc/agent_claims.db`).
-  - Expose coordination tools via MCP (`claim_file`, `release_file`, etc.).
-  - Integrate with file write operations (auto-claim before edit).
-- Testing strategy:
-  - Simulate 3+ concurrent agents editing different files.
-  - Simulate conflict scenarios (same file, overlapping lines).
-  - Verify lint passes after concurrent edits.
-- **Prior art:** Flat ticketing system (worked up to 3 agents with occasional lint issues).
-- **Success criteria:** 5+ agents working concurrently with zero stomps and clean lints.
+**Branch:** `feature/maasl-anti-stomp` (DO NOT MERGE YET)
+
+MAASL (Multi-Agent Anti-Stomp Layer) - 8 phases implemented:
+- Phase 1-3: Core lock manager, file protection, code protection
+- Phase 4: DB transaction guard with SQLite coordination
+- Phase 5: Graph merge engine for concurrent updates
+- Phase 6: Docgen coordination  
+- Phase 7: Introspection tools (MCP integration)
+- Phase 8: Production hardening
+
+**Before merge:**
+- [ ] Multi-agent stress testing (3+ concurrent agents)
+- [ ] Real-world usage validation
+- [ ] Lint clean after concurrent edits
 
 ### 3.5 Comprehensive Repo Cleanup
 

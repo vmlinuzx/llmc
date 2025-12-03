@@ -209,3 +209,17 @@ Carried from prior roadmap “Recently Completed (Highlights)”:
 - **RAG Doctor:** Implemented health monitoring and diagnostics for the RAG pipeline.
 - **Telemetry Hardening:** Switched TE telemetry to SQLite for reliability and consistency.
 - **Code Quality:** Massive linting cleanup and test suite repairs.
+
+### 8.4 Polyglot RAG Support (Dec 2025)
+
+- Extended schema extraction beyond Python to support TypeScript and JavaScript.
+- **TreeSitterSchemaExtractor** base class for language-agnostic entity/relation extraction.
+- **TypeScriptSchemaExtractor** with full support for:
+  - Functions (regular, arrow, methods)
+  - Classes with inheritance tracking
+  - Interfaces and type aliases
+  - Import/export statements with symbol resolution
+- Relation extraction: imports, function calls, class inheritance.
+- Integration: Multi-file TS/JS projects indexed alongside Python.
+- Test coverage: 6 unit tests + end-to-end integration test.
+- **Impact:** LLMC now works with TypeScript/JavaScript codebases, enabling polyglot repos.

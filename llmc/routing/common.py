@@ -4,12 +4,8 @@ from dataclasses import dataclass
 import json
 import logging
 from pathlib import Path
+import tomllib
 from typing import Any
-
-try:
-    import tomllib  # py3.11+
-except Exception:  # pragma: no cover
-    tomllib = None
 
 
 @dataclass
@@ -25,8 +21,6 @@ def load_routing_config(start_dir: Path | None = None) -> dict[str, Any]:
         "code_detection": {},
         "erp_vs_code": {},
     }
-    if tomllib is None:
-        return cfg
     base = start_dir or Path.cwd()
     for parent in [base, *base.parents]:
         cand = parent / "llmc.toml"

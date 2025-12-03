@@ -90,9 +90,10 @@ class LockManager:
     
     def _next_fencing_token(self) -> int:
         """Get next monotonic fencing token."""
-        token = self._next_token
-        self._next_token += 1
-        return token
+        with self._global_lock:
+            token = self._next_token
+            self._next_token += 1
+            return token
     
     def acquire(
         self,

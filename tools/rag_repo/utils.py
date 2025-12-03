@@ -32,8 +32,8 @@ def safe_subpath(base: Path, user_path: str | Path) -> Path:
 
     try:
         candidate.relative_to(base_resolved)
-    except ValueError:
-        raise PathTraversalError(f"Path traversal blocked: {user_path!r}")
+    except ValueError as err:
+        raise PathTraversalError(f"Path traversal blocked: {user_path!r}") from err
 
     return candidate
 

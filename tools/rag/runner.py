@@ -256,6 +256,14 @@ def run_enrich(
 
     env = os.environ.copy()
     env.update({"LLM_DISABLED": "false", "NEXT_PUBLIC_LLM_DISABLED": "false"})
+    # Optional summary JSON for enrichment runs, used by unified CLI.
+    try:
+        summary_path = repo_root / ".llmc" / "enrich_summary.json"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        env["LLMC_ENRICH_SUMMARY_JSON"] = str(summary_path)
+    except Exception:
+        # Best-effort only; failures here must not block enrichment.
+        pass
     # Ensure both the target repo and LLMC_PROD tooling are importable
     py_paths = [str(repo_root), str(PROJECT_ROOT)]
     if env.get("PYTHONPATH"):

@@ -1,11 +1,21 @@
-#!/usr/bin/env bash
-# LLMC CLI Wrapper - Run from repo root
-# This is a convenience wrapper for development. For production, use: pip install -e .
+#!/usr/bin/env python3
+"""
+LLMC CLI Entry Point - Root launcher script.
 
-# Find repo root (script is in repo root)
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+This script ensures proper module path setup before importing the main CLI.
+Can be run from anywhere: python3 llmc-cli or ./llmc-cli
+"""
 
-# Run the CLI with proper PYTHONPATH
-cd "$REPO_ROOT"
-export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
-exec python3 -m llmc.main "$@"
+import sys
+from pathlib import Path
+
+# Add repo root to Python path so 'from llmc' imports work
+repo_root = Path(__file__).parent.resolve()
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
+
+# Now import and run the CLI
+from llmc.main import app
+
+if __name__ == "__main__":
+    app()

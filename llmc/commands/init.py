@@ -1,15 +1,11 @@
 from pathlib import Path
+import tomllib
 from typing import Annotated
 
 import tomli_w
 import typer
 
 from llmc.core import find_repo_root
-
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 
 # Import Database to initialize schema
 from tools.rag.database import Database

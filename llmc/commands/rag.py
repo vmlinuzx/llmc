@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from typing import Annotated, Any, cast
 
 import typer
 
@@ -16,8 +17,10 @@ from tools.rag.search import search_spans as run_search_spans
 
 
 def index(
-    since: str | None = typer.Option(None, help="Only parse files changed since the given commit"),
-    no_export: bool = typer.Option(False, help="Skip JSONL span export"),
+    since: Annotated[
+        str | None, typer.Option(help="Only parse files changed since the given commit")
+    ] = None,
+    no_export: Annotated[bool, typer.Option(help="Skip JSONL span export")] = False,
 ):
     """Index the repository (full or incremental)."""
     try:
@@ -28,30 +31,30 @@ def index(
         )
     except Exception as e:
         typer.echo(f"Error indexing repo: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def search(
     query: str,
-    limit: int = typer.Option(10, help="Max results"),
-    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    limit: Annotated[int, typer.Option(help="Max results")] = 10,
+    json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
     """Semantic search."""
     # Input validation
     if limit <= 0:
         typer.echo("Error: --limit must be a positive integer", err=True)
         raise typer.Exit(code=1)
-    
+
     # Prevent excessively long queries that cause timeout
     MAX_QUERY_LENGTH = 5000  # Reasonable limit for semantic search
     if len(query) > MAX_QUERY_LENGTH:
         typer.echo(
             f"Error: Query too long ({len(query)} chars). Maximum allowed: {MAX_QUERY_LENGTH} chars",
-            err=True
+            err=True,
         )
         typer.echo("Consider using a shorter, more focused query", err=True)
         raise typer.Exit(code=1)
-    
+
     repo_root = find_repo_root()
     try:
         results = run_search_spans(query, limit=limit, repo_root=repo_root)
@@ -75,14 +78,14 @@ def search(
                     typer.echo(f"    {r.summary[:100]}...")
     except Exception as e:
         typer.echo(f"Error searching: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def inspect(
-    symbol: str | None = typer.Option(None, "--symbol", "-s", help="Symbol to inspect"),
-    path: str | None = typer.Option(None, "--path", "-p", help="File path"),
-    line: int | None = typer.Option(None, "--line", "-l", help="Line number"),
-    full: bool = typer.Option(False, "--full", help="Include full source code"),
+    symbol: Annotated[str | None, typer.Option("--symbol", "-s", help="Symbol to inspect")] = None,
+    path: Annotated[str | None, typer.Option("--path", "-p", help="File path")] = None,
+    line: Annotated[int | None, typer.Option("--line", "-l", help="Line number")] = None,
+    full: Annotated[bool, typer.Option("--full", help="Include full source code")] = False,
 ):
     """Deep dive into symbol/file."""
     repo_root = find_repo_root()
@@ -97,13 +100,13 @@ def inspect(
         typer.echo(result)
     except Exception as e:
         typer.echo(f"Error inspecting: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def plan(
     query: str,
-    limit: int = typer.Option(50, help="Max files/spans"),
-    min_confidence: float = typer.Option(0.6, help="Minimum confidence threshold"),
+    limit: Annotated[int, typer.Option(help="Max files/spans")] = 50,
+    min_confidence: Annotated[float, typer.Option(help="Minimum confidence threshold")] = 0.6,
 ):
     """Generate retrieval plan."""
     repo_root = find_repo_root()
@@ -114,11 +117,11 @@ def plan(
         typer.echo(result)
     except Exception as e:
         typer.echo(f"Error planning: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def stats(
-    json_output: bool = typer.Option(False, "--json", help="Emit stats as JSON."),
+    json_output: Annotated[bool, typer.Option("--json", help="Emit stats as JSON.")] = False,
 ):
     """Print summary stats for the current index."""
     repo_root = find_repo_root()
@@ -157,7 +160,7 @@ def stats(
 
 
 def doctor(
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
+    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output")] = False,
 ):
     """Diagnose RAG health."""
     repo_root = find_repo_root()
@@ -168,9 +171,13 @@ def doctor(
 
 
 def sync(
-    paths: list[str] | None = typer.Option(None, "--path", help="Specific file paths to sync"),
-    since: str | None = typer.Option(None, help="Sync files changed since commit"),
-    stdin: bool = typer.Option(False, "--stdin", help="Read paths from stdin"),
+    paths: Annotated[
+        list[str] | None, typer.Option("--path", help="Specific file paths to sync")
+    ] = None,
+    since: Annotated[
+        str | None, typer.Option(help="Sync files changed since commit")
+    ] = None,
+    stdin: Annotated[bool, typer.Option("--stdin", help="Read paths from stdin")] = False,
 ):
     """Incrementally update spans for selected files."""
     from tools.rag.indexer import sync_paths
@@ -187,8 +194,8 @@ def sync(
     elif stdin:
         import sys
 
-        for line in sys.stdin:
-            line = line.strip()
+        for raw_line in sys.stdin:
+            line = raw_line.strip()
             if line:
                 path_list.append(Path(line))
 
@@ -205,19 +212,91 @@ def sync(
         )
     except Exception as e:
         typer.echo(f"Error syncing: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def enrich(
-    limit: int = typer.Option(10, help="Max spans to enrich"),
-    dry_run: bool = typer.Option(False, help="Preview work items without running LLM"),
-    model: str = typer.Option("local-qwen", help="Model identifier"),
-    cooldown: int = typer.Option(0, help="Skip spans changed within N seconds"),
+    limit: Annotated[int, typer.Option(help="Max spans to enrich")] = 10,
+    dry_run: Annotated[
+        bool, typer.Option(help="Preview work items without running LLM")
+    ] = False,
+    model: Annotated[str, typer.Option(help="Model identifier")] = "local-qwen",
+    cooldown: Annotated[int, typer.Option(help="Skip spans changed within N seconds")] = 0,
+    code_first: Annotated[
+        bool,
+        typer.Option(
+            "--code-first",
+            help="Use code-first prioritization for enrichment (overrides config).",
+        ),
+    ] = False,
+    no_code_first: Annotated[
+        bool,
+        typer.Option(
+            "--no-code-first",
+            help="Disable code-first prioritization and use legacy ordering.",
+        ),
+    ] = False,
+    starvation_ratio: Annotated[
+        str,
+        typer.Option(
+            "--starvation-ratio",
+            help="High:Low ratio for mixing high/low priority tasks when code-first is enabled (e.g. 5:1).",
+        ),
+    ] = "5:1",
+    show_weights: Annotated[
+        bool,
+        typer.Option(
+            "--show-weights",
+            help="In dry-run mode, include path weights and priority scoring.",
+        ),
+    ] = False,
+    json_output: Annotated[
+        bool,
+        typer.Option(
+            "--json",
+            help="Emit machine-readable JSON (primarily for dry-run / --show-weights).",
+        ),
+    ] = False,
 ):
     """Preview or execute enrichment tasks (summary/tags)."""
-    from tools.rag.workers import default_enrichment_callable, enrichment_plan, execute_enrichment
+    from llmc.core import load_config
+    from llmc.enrichment import FileClassifier, load_path_weight_map
+    from tools.rag.database import Database as RagDatabase
+    from tools.rag.types import SpanWorkItem
+    from tools.rag.workers import (
+        default_enrichment_callable,
+        enrichment_plan,
+        execute_enrichment,
+    )
 
     repo_root = find_repo_root()
+
+    # Resolve code-first override and starvation ratio.
+    if code_first and no_code_first:
+        typer.echo("Error: cannot pass both --code-first and --no-code-first.", err=True)
+        raise typer.Exit(code=1)
+
+    code_first_override: bool | None
+    if code_first:
+        code_first_override = True
+    elif no_code_first:
+        code_first_override = False
+    else:
+        code_first_override = None
+
+    sr_high: int | None = None
+    sr_low: int | None = None
+    if code_first_override is True:
+        try:
+            high_str, low_str = starvation_ratio.split(":", 1)
+            sr_high = max(1, int(high_str))
+            sr_low = max(1, int(low_str))
+        except Exception as e:
+            typer.echo(
+                "Error: invalid --starvation-ratio value. Expected format HIGH:LOW (e.g. 5:1).",
+                err=True,
+            )
+            raise typer.Exit(code=1) from e
     db_file = index_path_for_read(repo_root)
     if not db_file.exists():
         typer.echo("No index database found. Run `llmc index` first.")
@@ -230,13 +309,59 @@ def enrich(
             if not plan:
                 typer.echo("No spans pending enrichment.")
                 return
+
+            if show_weights:
+                cfg = load_config(repo_root)
+                weight_map = load_path_weight_map(cfg)
+
+                rag_db = RagDatabase(db_file)
+                try:
+                    pending: list[SpanWorkItem] = rag_db.pending_enrichments(
+                        limit=limit, cooldown_seconds=cooldown
+                    )
+                finally:
+                    rag_db.close()
+
+                pending_by_hash: dict[str, SpanWorkItem] = {
+                    item.span_hash: item for item in pending
+                }
+                classifier = FileClassifier(repo_root=repo_root, weight_config=weight_map)
+
+                enriched_plan: list[dict] = []
+                for entry in plan:
+                    span_hash = cast(str, entry.get("span_hash"))
+                    work_item = pending_by_hash.get(span_hash)
+                    if work_item is None:
+                        enriched_plan.append(entry)
+                        continue
+                    decision = classifier.classify_span(work_item)
+                    enriched_entry = {
+                        **entry,
+                        "weight": decision.weight,
+                        "matched_patterns": list(decision.matched_patterns),
+                        "winning_pattern": decision.winning_pattern,
+                        "base_priority": decision.base_priority,
+                        "final_priority": decision.final_priority,
+                    }
+                    enriched_plan.append(enriched_entry)
+
+                plan = enriched_plan
+
             typer.echo(json.dumps(plan, indent=2, ensure_ascii=False))
             typer.echo("\n(Dry run only. Remove --dry-run to persist enrichment results.)")
             return
 
         llm = default_enrichment_callable(model)
         successes, errors = execute_enrichment(
-            db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown
+            db,
+            repo_root,
+            llm,
+            limit=limit,
+            model=model,
+            cooldown_seconds=cooldown,
+            code_first=code_first_override,
+            starvation_ratio_high=sr_high,
+            starvation_ratio_low=sr_low,
         )
     finally:
         db.close()
@@ -253,10 +378,14 @@ def enrich(
 
 
 def embed(
-    limit: int = typer.Option(10, help="Max spans to embed"),
-    dry_run: bool = typer.Option(False, help="Preview work items without generating embeddings"),
-    model: str = typer.Option("auto", help="Embedding model (auto uses configured default)"),
-    dim: int = typer.Option(0, help="Embedding dimension (0 uses model default)"),
+    limit: Annotated[int, typer.Option(help="Max spans to embed")] = 10,
+    dry_run: Annotated[
+        bool, typer.Option(help="Preview work items without generating embeddings")
+    ] = False,
+    model: Annotated[
+        str, typer.Option(help="Embedding model (auto uses configured default)")
+    ] = "auto",
+    dim: Annotated[int, typer.Option(help="Embedding dimension (0 uses model default)")] = 0,
 ):
     """Preview or execute embedding jobs for spans."""
     from tools.rag.workers import embedding_plan, execute_embeddings
@@ -296,8 +425,12 @@ def embed(
 
 
 def graph(
-    require_enrichment: bool = typer.Option(True, help="Require enrichment data in index"),
-    output: Path | None = typer.Option(None, help="Output path (default: .llmc/rag_graph.json)"),
+    require_enrichment: Annotated[
+        bool, typer.Option(help="Require enrichment data in index")
+    ] = True,
+    output: Annotated[
+        Path | None, typer.Option(help="Output path (default: .llmc/rag_graph.json)")
+    ] = None,
 ):
     """Build a schema graph for the current repository."""
     from tools.rag.schema import build_graph_for_repo as schema_build_graph_for_repo
@@ -317,17 +450,145 @@ def graph(
         )
     except RuntimeError as err:
         typer.echo(str(err), err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from err
     except FileNotFoundError as err:
         typer.echo(str(err), err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from err
 
     graph_obj.save(output)
     typer.echo(f"✅ Wrote graph JSON to {output}")
 
 
+def enrich_status(
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit enrichment runner metrics as JSON.")
+    ] = False,
+):
+    """Show enrichment runner metrics and code-first status for this repo."""
+    repo_root = find_repo_root()
+
+    summary_path = repo_root / ".llmc" / "enrich_summary.json"
+    metrics_path = repo_root / "logs" / "enrichment_metrics.jsonl"
+
+    summary: dict[str, Any] | None = None
+    if summary_path.exists():
+        try:
+            with summary_path.open("r", encoding="utf-8") as fh:
+                summary = json.load(fh)
+        except Exception:
+            summary = None
+
+    if summary is None and not metrics_path.exists():
+        typer.echo(
+            "No enrichment metrics found for this repo. "
+            "Run the RAG service or `llmc service start` to generate enrichment data."
+        )
+        raise typer.Exit(code=1)
+
+    if summary is None:
+        # Fallback: derive a minimal summary from metrics JSONL.
+        files_by_weight: dict[int, int] = {}
+        runner_modes: set[str] = set()
+        high_timestamps: list[str] = []
+        first_timestamp: str | None = None
+
+        try:
+            with metrics_path.open("r", encoding="utf-8") as fh:
+                for raw_line in fh:
+                    line = raw_line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except Exception:
+                        continue
+
+                    if str(rec.get("repo_root")) != str(repo_root):
+                        continue
+
+                    ts = rec.get("timestamp")
+                    if isinstance(ts, str) and not first_timestamp:
+                        first_timestamp = ts
+
+                    mode = rec.get("runner_mode")
+                    if isinstance(mode, str):
+                        runner_modes.add(mode)
+
+                    if not rec.get("schema_ok", False):
+                        continue
+
+                    weight = rec.get("path_weight")
+                    if isinstance(weight, int) and 1 <= weight <= 10:
+                        files_by_weight[weight] = files_by_weight.get(weight, 0) + 1
+
+                    if rec.get("weight_tier") == "high" and isinstance(ts, str):
+                        high_timestamps.append(ts)
+        except Exception:
+            files_by_weight = {}
+
+        # Compute simple timing metrics if timestamps are available.
+        time_to_first_high: float | None = None
+        if first_timestamp and high_timestamps:
+            try:
+                from datetime import datetime
+
+                base = datetime.fromisoformat(first_timestamp)
+                first_high = min(datetime.fromisoformat(t) for t in high_timestamps)
+                time_to_first_high = (first_high - base).total_seconds()
+            except Exception:
+                time_to_first_high = None
+
+        summary = {
+            "repo_root": str(repo_root),
+            "runner_mode": next(iter(runner_modes)) if runner_modes else "unknown",
+            "files_enriched_by_weight": files_by_weight,
+        }
+        if time_to_first_high is not None:
+            summary["time_to_first_high_priority"] = time_to_first_high
+
+    if json_output:
+        typer.echo(json.dumps(summary, indent=2, ensure_ascii=False))
+        return
+
+    # Human-readable output
+    repo_name = Path(str(summary.get("repo_root", repo_root))).name
+    runner_mode = summary.get("runner_mode", "unknown")
+    files_by_weight = cast(
+        dict[int, int], summary.get("files_enriched_by_weight", {}) or {}
+    )
+    queue_by_tier = cast(
+        dict[str, int], summary.get("queue_depth_by_weight_tier", {}) or {}
+    )
+    t_first = summary.get("time_to_first_high_priority")
+    t_all = summary.get("time_to_all_high_priority")
+
+    typer.echo(f"Repo: {repo_name}")
+    typer.echo(f"Runner mode: {runner_mode}")
+
+    if files_by_weight:
+        typer.echo("Files enriched by weight:")
+        for w in sorted(int(k) for k in files_by_weight.keys()):
+            count = files_by_weight.get(w, 0)
+            typer.echo(f"  weight {w}: {count}")
+    else:
+        typer.echo("Files enriched by weight: (no data)")
+
+    if queue_by_tier:
+        typer.echo("Queue depth by tier (approximate):")
+        for tier in ("high", "medium", "low"):
+            val = queue_by_tier.get(tier, 0)
+            typer.echo(f"  {tier}: {val}")
+
+    if isinstance(t_first, (int, float)):
+        typer.echo(f"Time to first high-priority enrichment: {t_first:.2f}s")
+    if isinstance(t_all, (int, float)):
+        typer.echo(f"Time to all high-priority enrichments: {t_all:.2f}s")
+
+
 def export(
-    output: str | None = typer.Option(None, "-o", "--output", help="Output archive path"),
+    output: Annotated[
+        str | None, typer.Option("-o", "--output", help="Output archive path")
+    ] = None,
 ):
     """Export all RAG data to tar.gz archive."""
     from tools.rag.export_data import run_export
@@ -338,9 +599,13 @@ def export(
 
 
 def benchmark(
-    json_output: bool = typer.Option(False, "--json", help="Emit metrics as JSON"),
-    top1_threshold: float = typer.Option(0.75, help="Minimum top-1 accuracy required"),
-    margin_threshold: float = typer.Option(0.1, help="Minimum avg positive-minus-negative margin"),
+    json_output: Annotated[bool, typer.Option("--json", help="Emit metrics as JSON")] = False,
+    top1_threshold: Annotated[
+        float, typer.Option(help="Minimum top-1 accuracy required")
+    ] = 0.75,
+    margin_threshold: Annotated[
+        float, typer.Option(help="Minimum avg positive-minus-negative margin")
+    ] = 0.1,
 ):
     """Run a lightweight embedding quality benchmark."""
     from tools.rag.benchmark import run_embedding_benchmark
@@ -379,8 +644,8 @@ def benchmark(
 # Nav subcommand group
 def nav_search(
     query: str,
-    limit: int = typer.Option(10, "-n", "--limit", help="Max results"),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON output"),
+    limit: Annotated[int, typer.Option("-n", "--limit", help="Max results")] = 10,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Semantic/structural search using graph when fresh, else local fallback."""
     from tools.rag import tool_rag_search
@@ -420,13 +685,13 @@ def nav_search(
                 typer.echo(f"   {it.snippet.text[:100]}...")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def nav_where_used(
     symbol: str,
-    limit: int = typer.Option(10, help="Max results"),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON output"),
+    limit: Annotated[int, typer.Option(help="Max results")] = 10,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Find where a symbol is used (callers, importers)."""
     from tools.rag import tool_rag_where_used
@@ -444,13 +709,13 @@ def nav_where_used(
                 typer.echo(f"{i}. {item}")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e
 
 
 def nav_lineage(
     symbol: str,
-    depth: int = typer.Option(2, help="Max depth to traverse"),
-    json_output: bool = typer.Option(False, "--json", help="Emit JSON output"),
+    depth: Annotated[int, typer.Option(help="Max depth to traverse")] = 2,
+    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Show symbol lineage (parents, children, dependencies)."""
     from tools.rag import tool_rag_lineage
@@ -471,4 +736,4 @@ def nav_lineage(
                 typer.echo(f"{i}. {item}")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from e

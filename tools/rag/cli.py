@@ -252,13 +252,65 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
     type=int,
     help="Skip spans whose files changed within the last N seconds.",
 )
-def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
+@click.option(
+    "--code-first",
+    is_flag=True,
+    default=False,
+    help="Use code-first prioritization for enrichment (overrides config).",
+)
+@click.option(
+    "--no-code-first",
+    is_flag=True,
+    default=False,
+    help="Disable code-first prioritization and use legacy ordering.",
+)
+@click.option(
+    "--starvation-ratio",
+    default="5:1",
+    show_default=True,
+    help="High:Low ratio for mixing high/low priority tasks when code-first is enabled (e.g. 5:1).",
+)
+def enrich(
+    limit: int,
+    dry_run: bool,
+    model: str,
+    cooldown: int,
+    code_first: bool,
+    no_code_first: bool,
+    starvation_ratio: str,
+) -> None:
     """Preview or execute enrichment tasks (summary/tags) for spans."""
     if limit < 1:
         click.echo("Limit must be at least 1.", err=True)
         raise SystemExit(1)
 
     repo_root = _find_repo_root()
+
+    if code_first and no_code_first:
+        click.echo("Error: cannot pass both --code-first and --no-code-first.", err=True)
+        raise SystemExit(1)
+
+    code_first_override: bool | None
+    if code_first:
+        code_first_override = True
+    elif no_code_first:
+        code_first_override = False
+    else:
+        code_first_override = None
+
+    sr_high: int | None = None
+    sr_low: int | None = None
+    if code_first_override is True:
+        try:
+            high_str, low_str = starvation_ratio.split(":", 1)
+            sr_high = max(1, int(high_str))
+            sr_low = max(1, int(low_str))
+        except Exception:
+            click.echo(
+                "Error: invalid --starvation-ratio value. Expected format HIGH:LOW (e.g. 5:1).",
+                err=True,
+            )
+            raise SystemExit(1)
     db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
@@ -276,7 +328,15 @@ def enrich(limit: int, dry_run: bool, model: str, cooldown: int) -> None:
 
         llm = default_enrichment_callable(model)
         successes, errors = execute_enrichment(
-            db, repo_root, llm, limit=limit, model=model, cooldown_seconds=cooldown
+            db,
+            repo_root,
+            llm,
+            limit=limit,
+            model=model,
+            cooldown_seconds=cooldown,
+            code_first=code_first_override,
+            starvation_ratio_high=sr_high,
+            starvation_ratio_low=sr_low,
         )
     finally:
         db.close()

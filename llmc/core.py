@@ -1,10 +1,6 @@
 from pathlib import Path
+import tomllib
 from typing import Any
-
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib
 
 LLMC_VERSION = "0.5.5"  # TODO: Sync with pyproject.toml
 

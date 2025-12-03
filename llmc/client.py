@@ -2,7 +2,7 @@
 """LLMC RAG Client - Unified facade for RAG operations."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from tools.rag_nav.metadata import load_status
 from tools.rag_nav.models import LineageResult, SearchResult, WhereUsedResult
@@ -50,7 +50,7 @@ class RAGClient:
         else:
             stats["freshness"] = "UNKNOWN"
             stats["last_indexed"] = None
-        return stats
+        return cast(dict[str, Any], stats)
 
     def rebuild_graph(self) -> Any:
         """Triggers a graph rebuild (synchronous)."""

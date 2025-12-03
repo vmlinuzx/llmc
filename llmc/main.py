@@ -12,6 +12,7 @@ from llmc.commands.rag import (
     enrich,
     export,
     graph,
+    enrich_status,
     index,
     inspect,
     nav_lineage,
@@ -51,6 +52,7 @@ app.command()(embed)
 app.command()(graph)
 app.command()(export)
 app.command()(benchmark)
+app.command(name="enrich-status")(enrich_status)
 
 # TUI commands (Phase 3)
 app.command()(tui)

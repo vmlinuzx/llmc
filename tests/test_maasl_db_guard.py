@@ -74,37 +74,52 @@ def test_read_transaction(db_manager):
 
 
 @pytest.mark.allow_sleep
-def test_concurrent_writes_different_dbs(temp_db):
+def test_concurrent_writes_different_dbs():
     """Test concurrent writes to different logical databases succeed."""
     barrier = threading.Barrier(2)
     results: List[bool] = []
     lock = threading.Lock()
     
-    def write_agent(agent_id: str, db_name: str):
-        """Agent writes to its own logical DB."""
-        barrier.wait()
+    # Use separate DB files to avoid SQLite file locking
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db1_path = Path(tmpdir) / "db1.db"
+        db2_path = Path(tmpdir) / "db2.db"
         
-        mgr = get_db_transaction_manager(temp_db, db_name=db_name)
-        try:
-            with mgr.write_transaction(agent_id=agent_id, session_id=f"session_{agent_id}") as conn:
-                conn.execute("INSERT INTO test_data (agent_id, value) VALUES (?, ?)", (agent_id, 1))
+        # Initialize DBs
+        for p in [db1_path, db2_path]:
+            conn = sqlite3.connect(str(p))
+            conn.execute("CREATE TABLE test_data (id INTEGER, val INTEGER)")
+            conn.commit()
+            conn.close()
+
+        def write_agent(agent_id: str, db_path: Path, db_name: str):
+            """Agent writes to its own logical DB."""
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            barrier.wait()
             
-            with lock:
-                results.append(True)
-        except Exception:
-            with lock:
-                results.append(False)
-    
-    # Two agents, different logical DBs (no contention)
-    threads = [
-        threading.Thread(target=write_agent, args=("agent1", "db1")),
-        threading.Thread(target=write_agent, args=("agent2", "db2")),
-    ]
-    
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join()
+            mgr = get_db_transaction_manager(conn, db_name=db_name)
+            try:
+                with mgr.write_transaction(agent_id=agent_id, session_id=f"session_{agent_id}") as c:
+                    c.execute("INSERT INTO test_data VALUES (1, 1)")
+                
+                with lock:
+                    results.append(True)
+            except Exception:
+                with lock:
+                    results.append(False)
+            finally:
+                conn.close()
+        
+        # Two agents, different logical DBs (no contention)
+        threads = [
+            threading.Thread(target=write_agent, args=("agent1", db1_path, "db1")),
+            threading.Thread(target=write_agent, args=("agent2", db2_path, "db2")),
+        ]
+        
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
     
     # Both should succeed (different MAASL locks)
     assert all(results)

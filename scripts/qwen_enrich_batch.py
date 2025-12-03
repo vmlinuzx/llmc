@@ -88,6 +88,17 @@ enrichment_plan = _workers_mod.enrichment_plan
 validate_enrichment = _workers_mod.validate_enrichment
 
 try:
+    _llmc_core_mod = importlib.import_module("llmc.core")
+    load_llmc_config = _llmc_core_mod.load_config
+    _llmc_enrichment_mod = importlib.import_module("llmc.enrichment")
+    FileClassifier = _llmc_enrichment_mod.FileClassifier
+    load_path_weight_map = _llmc_enrichment_mod.load_path_weight_map
+except Exception:  # pragma: no cover - llmc integration is optional for non-LLMC repos
+    load_llmc_config = None  # type: ignore[assignment]
+    FileClassifier = None  # type: ignore[assignment]
+    load_path_weight_map = None  # type: ignore[assignment]
+
+try:
     _service_mod = importlib.import_module("tools.rag.service")
     FailureTracker = getattr(_service_mod, "FailureTracker", None)
 except Exception:  # pragma: no cover - failure cache optional
@@ -224,7 +235,7 @@ def _detect_physical_cores() -> int:
 
         cores = psutil.cpu_count(logical=False)
         if cores:
-            return cores
+            return int(cores)
     except Exception:
         pass
 
@@ -249,7 +260,7 @@ def _detect_physical_cores() -> int:
     except OSError:
         pass
     cores = len(physical_map) or os.cpu_count() or 1
-    return max(1, cores)
+    return max(1, int(cores))
 
 
 def _resolve_int(value: Any, *, default: int | None = None) -> int | None:
@@ -415,7 +426,10 @@ def _load_router_policy() -> dict[str, Any]:
         }
     try:
         with ROUTER_POLICY_PATH.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+            data = json.load(handle)
+            if isinstance(data, dict):
+                return data
+            return {}
     except (OSError, json.JSONDecodeError) as exc:
         raise RuntimeError(f"Failed to load router policy {ROUTER_POLICY_PATH}: {exc}") from exc
 
@@ -524,6 +538,21 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Skip spans whose source file changed within the last N seconds (default: 0).",
+    )
+    parser.add_argument(
+        "--code-first",
+        action="store_true",
+        help="Use code-first prioritization for enrichment (overrides config).",
+    )
+    parser.add_argument(
+        "--no-code-first",
+        action="store_true",
+        help="Disable code-first prioritization and use legacy ordering.",
+    )
+    parser.add_argument(
+        "--starvation-ratio",
+        default="5:1",
+        help="High:Low ratio for mixing high/low priority tasks when code-first is enabled (e.g. 5:1).",
     )
     parser.add_argument(
         "--retries",
@@ -1183,7 +1212,11 @@ def extract_json(text: str) -> dict:
     if start == -1 or end == -1 or end <= start:
         raise ValueError("Could not locate JSON object in LLM output.")
     payload = text[start : end + 1]
-    return json.loads(payload)
+    data = json.loads(payload)
+    if isinstance(data, dict):
+        return data
+    # Fallback for non-dict JSON (e.g. list)
+    raise ValueError(f"Expected JSON object, got {type(data)}")
 
 
 ALLOWED_FIELDS = {
@@ -1495,6 +1528,84 @@ def main() -> int:
     args = parse_args()
     repo_root = ensure_repo(args.repo)
 
+    # ------------------------------------------------------------------
+    # Code-first scheduling configuration (optional)
+    # ------------------------------------------------------------------
+    if getattr(args, "code_first", False) and getattr(args, "no_code_first", False):
+        print("Error: cannot pass both --code-first and --no-code-first.", file=sys.stderr)
+        return 2
+
+    effective_code_first = False
+    high_ratio = 5
+    low_ratio = 1
+
+    def _parse_ratio(raw: str) -> tuple[int, int] | None:
+        try:
+            high_str, low_str = raw.split(":", 1)
+            high_val = max(1, int(high_str))
+            low_val = max(1, int(low_str))
+            return high_val, low_val
+        except Exception:
+            return None
+
+    # CLI overrides take precedence.
+    if getattr(args, "code_first", False):
+        ratio = _parse_ratio(getattr(args, "starvation_ratio", "5:1"))
+        if ratio is None:
+            print(
+                "Error: invalid --starvation-ratio value. Expected format HIGH:LOW (e.g. 5:1).",
+                file=sys.stderr,
+            )
+            return 2
+        high_ratio, low_ratio = ratio
+        effective_code_first = True
+    elif getattr(args, "no_code_first", False):
+        effective_code_first = False
+    elif load_llmc_config is not None:
+        # Optional default via [enrichment.runner] in repo llmc.toml
+        try:
+            cfg = load_llmc_config(repo_root)
+            runner_cfg = (cfg.get("enrichment") or {}).get("runner") or {}
+            if runner_cfg.get("code_first_default"):
+                effective_code_first = True
+            cfg_high = runner_cfg.get("starvation_ratio_high")
+            cfg_low = runner_cfg.get("starvation_ratio_low")
+            if isinstance(cfg_high, int) and cfg_high > 0:
+                high_ratio = cfg_high
+            if isinstance(cfg_low, int) and cfg_low > 0:
+                low_ratio = cfg_low
+        except Exception:
+            effective_code_first = False
+
+    if high_ratio <= 0:
+        high_ratio = 5
+    if low_ratio <= 0:
+        low_ratio = 1
+
+    classifier = None
+    if (
+        FileClassifier is not None
+        and load_path_weight_map is not None
+        and load_llmc_config is not None
+    ):
+        try:
+            cfg = load_llmc_config(repo_root)
+            weight_map = load_path_weight_map(cfg)
+            classifier = FileClassifier(repo_root=repo_root, weight_config=weight_map)
+        except Exception:
+            classifier = None
+
+    runner_mode = "code_first" if effective_code_first and classifier is not None else "legacy"
+
+    # Telemetry accumulators (per run)
+    files_by_weight: dict[int, int] = {i: 0 for i in range(1, 11)}
+    queue_depth_by_tier: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+    total_high_candidates = 0
+    high_enriched_count = 0
+    time_to_first_high: float | None = None
+    time_to_all_high: float | None = None
+    run_start = time.monotonic()
+
     force_legacy = env_flag("LLMC_ENRICH_FORCE_LEGACY")
     strict_config = env_flag("LLMC_ENRICH_STRICT_CONFIG")
     summary_json_path = os.environ.get("LLMC_ENRICH_SUMMARY_JSON")
@@ -1743,6 +1854,94 @@ def main() -> int:
                         "[enrichment] all spans in this batch skipped due to failure limits.",
                         file=sys.stderr,
                     )
+            if plan and classifier is not None:
+                # Optional code-first ordering and queue depth telemetry.
+                pending_items = db.pending_enrichments(
+                    limit=this_batch, cooldown_seconds=args.cooldown
+                )
+                pending_by_hash = {item.span_hash: item for item in pending_items}
+
+                high_in_batch = 0
+                medium_in_batch = 0
+                low_in_batch = 0
+                classified_plan: list[dict[str, Any]] = []
+
+                for entry in plan:
+                    work_item = pending_by_hash.get(entry["span_hash"])
+                    if work_item is None:
+                        classified_plan.append(entry)
+                        continue
+                    decision = classifier.classify_span(work_item)
+                    weight = decision.weight
+                    entry["path_weight"] = weight
+                    entry["matched_patterns"] = list(decision.matched_patterns)
+                    entry["winning_pattern"] = decision.winning_pattern
+                    entry["final_priority"] = decision.final_priority
+
+                    if weight <= 3:
+                        tier = "high"
+                        high_in_batch += 1
+                    elif weight <= 6:
+                        tier = "medium"
+                        medium_in_batch += 1
+                    else:
+                        tier = "low"
+                        low_in_batch += 1
+                    entry["weight_tier"] = tier
+                    classified_plan.append(entry)
+
+                queue_depth_by_tier["high"] += high_in_batch
+                queue_depth_by_tier["medium"] += medium_in_batch
+                queue_depth_by_tier["low"] += low_in_batch
+                total_high_candidates += high_in_batch
+
+                if effective_code_first:
+                    # Reorder plan so that low-weight (high-priority) items are processed first.
+                    high_items = [e for e in classified_plan if e.get("weight_tier") == "high"]
+                    medium_items = [e for e in classified_plan if e.get("weight_tier") == "medium"]
+                    low_items = [e for e in classified_plan if e.get("weight_tier") == "low"]
+
+                    def _priority(entry: dict[str, Any]) -> float:
+                        val = entry.get("final_priority")
+                        if val is None:
+                            return 0.0
+                        try:
+                            return float(val)
+                        except (TypeError, ValueError):
+                            return 0.0
+
+                    high_items.sort(key=_priority, reverse=True)
+                    medium_items.sort(key=_priority, reverse=True)
+                    low_items.sort(key=_priority, reverse=True)
+
+                    high_pool = high_items + medium_items
+                    scheduled: list[dict[str, Any]] = []
+
+                    while high_pool or low_items:
+                        for _ in range(high_ratio):
+                            if not high_pool:
+                                break
+                            scheduled.append(high_pool.pop(0))
+                            if len(scheduled) >= len(classified_plan):
+                                break
+                        if len(scheduled) >= len(classified_plan):
+                            break
+
+                        if low_items and low_ratio > 0:
+                            scheduled.append(low_items.pop(0))
+                            if len(scheduled) >= len(classified_plan):
+                                break
+
+                        if not high_pool and not low_items:
+                            break
+
+                    for leftover in high_pool + low_items:
+                        scheduled.append(leftover)
+
+                    plan = scheduled[: len(classified_plan)]
+                else:
+                    plan = classified_plan
+
             if not plan:
                 print("No more spans pending enrichment.")
                 break
@@ -2124,7 +2323,12 @@ def main() -> int:
                     "num_gpu": num_gpu_value,
                     "attempts": len(attempt_records) or attempt_idx,
                     "estimated_tokens_per_span": get_est_tokens_per_span(REPO_ROOT),
+                    "runner_mode": runner_mode,
                 }
+                weight_value = item.get("path_weight")
+                if isinstance(weight_value, int):
+                    metrics_summary["path_weight"] = weight_value
+                    metrics_summary["weight_tier"] = item.get("weight_tier")
                 for field in policy_log_fields:
                     metrics_summary.setdefault(field, metrics_summary.get(field))
 
@@ -2165,6 +2369,21 @@ def main() -> int:
                     final_result.setdefault("schema_version", args.schema_version)
                     db.store_enrichment(item["span_hash"], final_result)
                     db.conn.commit()
+
+                    # Telemetry: per-weight counters and high-priority timing.
+                    weight_value = item.get("path_weight")
+                    if isinstance(weight_value, int) and 1 <= weight_value <= 10:
+                        files_by_weight[weight_value] = files_by_weight.get(weight_value, 0) + 1
+                        if weight_value <= 3:
+                            high_enriched_count += 1
+                            if time_to_first_high is None:
+                                time_to_first_high = time.monotonic() - run_start
+                            if (
+                                total_high_candidates
+                                and high_enriched_count >= total_high_candidates
+                                and time_to_all_high is None
+                            ):
+                                time_to_all_high = time.monotonic() - run_start
 
                     stats = db.stats()
                     metrics_summary["spans_total"] = stats["spans"]
@@ -2244,7 +2463,14 @@ def main() -> int:
         "chain": effective_chain,
         "backend": backend,
         "repo_root": str(repo_root),
+        "runner_mode": runner_mode,
+        "files_enriched_by_weight": files_by_weight,
+        "queue_depth_by_weight_tier": queue_depth_by_tier,
     }
+    if time_to_first_high is not None:
+        summary["time_to_first_high_priority"] = time_to_first_high
+    if time_to_all_high is not None:
+        summary["time_to_all_high_priority"] = time_to_all_high
     print(
         f"[enrichment] run summary: attempted={summary['attempted']} "
         f"succeeded={summary['succeeded']} failed={summary['failed']} "

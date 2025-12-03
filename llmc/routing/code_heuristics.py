@@ -106,14 +106,16 @@ def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | Non
     # 3. Keywords
     # Use word boundaries to avoid substring false positives (e.g. "shift" -> "if")
     words = set(re.findall(r"\b\w+\b", text))
-    found = words.intersection(CODE_KEYWORDS)
+    found_keywords = words.intersection(CODE_KEYWORDS)
 
-    if len(found) >= 1:
+    if len(found_keywords) >= 1:
         # Score: 0.8 for 2+ keywords, 0.6 for 1 (beats single ERP keyword at 0.55)
         # This ensures code keywords like 'return', 'def', etc. take priority
-        score = 0.8 if len(found) >= 2 else 0.6
+        score = 0.8 if len(found_keywords) >= 2 else 0.6
         return RouteSignal(
-            route="code", score=score, reason=f"code-keywords={','.join(list(found)[:3])}"
+            route="code",
+            score=score,
+            reason=f"code-keywords={','.join(list(found_keywords)[:3])}",
         )
 
     return None

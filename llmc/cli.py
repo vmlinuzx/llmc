@@ -61,7 +61,7 @@ def get_repo_stats(repo_root: Path) -> dict[str, Any]:
         # Get index status
         index_status = load_status(repo_root)
         if index_status:
-            stats["freshness_state"] = index_status.freshness_state
+            stats["freshness_state"] = index_status.index_state
             stats["last_indexed_at"] = (
                 index_status.last_indexed_at if index_status.last_indexed_at else "Never"
             )

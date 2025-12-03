@@ -350,3 +350,40 @@ temperature = 0.2
 
 [profiles.yolo.rag]
 enabled = true
+
+
+
+
+[enrichment.path_weights]
+# Weight 1-10: lower = higher priority, 10 = back of the line
+# Patterns are globs, matched against repo-relative paths
+
+# Defaults (ship with these)
+"src/**"        = 1
+"lib/**"        = 1
+"app/**"        = 1
+"core/**"       = 1
+"pkg/**"        = 2
+"internal/**"   = 2
+"cmd/**"        = 2
+
+# Test code - deprioritized but not banished
+"**/tests/**"   = 6
+"**/test/**"    = 6
+"**/__tests__/**" = 6
+"*_test.py"     = 6
+"test_*.py"     = 6
+"*.test.ts"     = 6
+"*.spec.js"     = 6
+
+# Docs and config - the fatties
+"docs/**"       = 8
+"*.md"          = 7
+".github/**"    = 9
+"examples/**"   = 7
+
+# Vendor trash - absolute back of the line
+"vendor/**"     = 10
+"node_modules/**" = 10  # shouldn't even be scanned but just in case
+"third_party/**" = 10
+

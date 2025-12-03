@@ -19,22 +19,27 @@ This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomo
   - Based on SDD: `DOCS/planning/SDD_Idle_Loop_Throttling.md`
   - Implementation: `DOCS/planning/IMPL_Idle_Loop_Throttling.md`
 
-- **Enrichment Pipeline Architecture Refactor (Phases 1 & 2):**
+- **Enrichment Pipeline Architecture Refactor (All 3 Phases Complete):**
   - Extracted clean, testable architecture from 2,271-line monolithic script
-  - **OllamaBackend adapter** (186 lines) implementing `BackendAdapter` protocol
+  - **Phase 1 - OllamaBackend adapter** (186 lines) implementing `BackendAdapter` protocol
     - HTTP client with proper timeout handling
     - JSON response parsing with markdown fence support
     - Error handling for timeout, HTTP, and backend failures
     - Context manager support for resource cleanup
-  - **EnrichmentPipeline orchestrator** (406 lines) for batch enrichment
+  - **Phase 2 - EnrichmentPipeline orchestrator** (406 lines) for batch enrichment
     - Clean separation: span selection → routing → backend execution → DB writes
     - Integrates with existing `enrichment_plan()` helper
     - Uses `EnrichmentRouter` for chain selection
     - `BackendCascade` for multi-tier LLM generation
     - Failure tracking and cooldown support
+  - **Phase 3 - Service integration** (wired `service.py` to use pipeline directly)
+    - Replaced subprocess call to 2,271-line script with direct function calls
+    - `RAGService.process_repo()` now uses `EnrichmentPipeline` API
+    - Clean error handling and progress reporting
+    - No more shell-out overhead
   - Full typing throughout with protocols (`BackendFactory`, `BackendAdapter`)
   - Foundation for remote LLM providers (Roadmap 3.6)
-  - **Impact:** From monolith → clean typed modules, easy to test and extend
+  - **Impact:** From monolith + subprocess → clean typed modules with direct calls
   - Based on SDD: `DOCS/planning/SDD_Enrichment_Pipeline_Tidy.md`
   - Implementation: `DOCS/planning/IMPL_Enrichment_Pipeline_Tidy.md`
 
@@ -67,6 +72,26 @@ This release completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomo
   - Based on SDD: `DOCS/planning/SDD_Remote_LLM_Providers.md`
   - Implementation: `DOCS/planning/IMPL_Remote_LLM_Providers.md`
   - Usage Guide: `DOCS/Remote_LLM_Providers_Usage.md`
+
+- **Polyglot RAG Support (TypeScript/JavaScript):**
+  - Extended schema extraction beyond Python to support TypeScript and JavaScript
+  - **TreeSitterSchemaExtractor base class** for language-agnostic entity/relation extraction
+  - **TypeScriptSchemaExtractor** for TS/JS files
+    - Functions (regular, arrow, methods)
+    - Classes with inheritance tracking
+    - Interfaces and type aliases
+    - Imports and exports
+  - **Relation Extraction:**
+    - Import statements → symbol resolution map
+    - Function calls → `calls` relation
+    - Class inheritance → `extends` relation
+  - **Integration:**
+    - `_discover_source_files()` now finds `.ts`, `.tsx`, `.js`, `.jsx` files
+    - Schema graph builder processes polyglot repos
+    - Test coverage: 6 unit tests + end-to-end integration test
+  - **Impact:** RAG system now works with TypeScript/JavaScript codebases, enabling cross-language navigation and search
+  - Based on SDD: `DOCS/planning/SDD_Polyglot_RAG_TypeScript.md`
+  - Implementation: `DOCS/planning/IMPL_Polyglot_RAG_TypeScript.md`
 
 ### Fixed
 - **P0 Bug Fix:** Search command AttributeError crash

@@ -6,11 +6,13 @@ Provides:
 - ResourceClass definitions for different resource types
 - PolicyRegistry for resource class configuration
 - call_with_stomp_guard() wrapper for protected operations
+- stomp_guard() context manager for long-running protected sections
 """
 
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional
 import logging
 
 from llmc_mcp.locks import get_lock_manager, LockHandle, ResourceBusyError
@@ -367,6 +369,129 @@ class MAASL:
                     logger.error(
                         f"Failed to release lock {lock_handle.resource_key}: {e}"
                     )
+
+    @contextmanager
+    def stomp_guard(
+        self,
+        resources: List[ResourceDescriptor],
+        intent: str,
+        mode: str,
+        agent_id: str,
+        session_id: str,
+    ) -> Iterator[List[LockHandle]]:
+        """
+        Context manager for long-running protected sections.
+        
+        Unlike call_with_stomp_guard(), this holds locks for the entire
+        duration of the context block. Use for operations that need to
+        yield control (e.g., database transactions with context managers).
+        
+        Args:
+            resources: List of resources to lock
+            intent: Human-readable label (e.g., "db_write", "file_update")
+            mode: "interactive" or "batch"
+            agent_id: ID of calling agent
+            session_id: ID of calling session
+        
+        Yields:
+            List of acquired lock handles
+        
+        Raises:
+            ResourceBusyError: Lock acquisition timeout
+            MaaslInternalError: Unexpected error during lock acquisition
+        
+        Example:
+            >>> with maasl.stomp_guard(resources, "db_write", "interactive", ...) as locks:
+            ...     # Lock is held for entire block
+            ...     conn.execute("BEGIN IMMEDIATE")
+            ...     conn.execute("INSERT INTO ...")
+            ...     conn.commit()
+        """
+        start_time = time.time()
+        acquired_locks: List[LockHandle] = []
+        success = False
+        error_type: Optional[str] = None
+        
+        try:
+            # Step 1: Resolve descriptors to resource classes and keys
+            lock_specs = []
+            for desc in resources:
+                resource_class = self.policy.get_resource_class(desc.resource_class)
+                resource_key = self.policy.compute_resource_key(desc)
+                max_wait_ms = self.policy.get_max_wait_ms(resource_class, mode)
+                
+                lock_specs.append({
+                    "descriptor": desc,
+                    "resource_class": resource_class,
+                    "resource_key": resource_key,
+                    "max_wait_ms": max_wait_ms,
+                })
+            
+            # Step 2: Sort by resource_key for deadlock prevention
+            lock_specs.sort(key=lambda x: x["resource_key"])
+            
+            # Step 3: Acquire locks in sorted order
+            for spec in lock_specs:
+                lock_handle = self.lock_manager.acquire(
+                    resource_key=spec["resource_key"],
+                    agent_id=agent_id,
+                    session_id=session_id,
+                    lease_ttl_sec=spec["resource_class"].lease_ttl_sec,
+                    max_wait_ms=spec["max_wait_ms"],
+                    mode=mode,
+                )
+                acquired_locks.append(lock_handle)
+            
+            # Step 4: Yield with locks held
+            yield acquired_locks
+            success = True
+            
+        except ResourceBusyError:
+            error_type = "ResourceBusyError"
+            raise
+        
+        except (DbBusyError, DocgenStaleError, StaleVersionError) as e:
+            error_type = type(e).__name__
+            raise
+        
+        except MaaslInternalError:
+            # Don't double-wrap MAASL errors
+            error_type = "MaaslInternalError"
+            raise
+        
+        except Exception:
+            # User exceptions should propagate unchanged
+            # Only set error flag for telemetry, don't wrap
+            error_type = "UserException"
+            raise
+        
+        finally:
+            # Step 5: Release all acquired locks (in reverse order)
+            for lock_handle in reversed(acquired_locks):
+                try:
+                    self.lock_manager.release(
+                        resource_key=lock_handle.resource_key,
+                        agent_id=lock_handle.agent_id,
+                        session_id=lock_handle.session_id,
+                        fencing_token=lock_handle.fencing_token,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Failed to release lock {lock_handle.resource_key}: {e}"
+                    )
+            
+            # Step 6: Log telemetry
+            duration_ms = (time.time() - start_time) * 1000
+            self.telemetry.log_stomp_guard_call(
+                intent=intent,
+                mode=mode,
+                agent_id=agent_id,
+                session_id=session_id,
+                resource_count=len(resources),
+                duration_ms=duration_ms,
+                success=success,
+                error_type=error_type,
+            )
 
 
 # Global singleton instance

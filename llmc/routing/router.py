@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, cast
 
 from llmc.routing.query_type import classify_query
 
@@ -32,7 +32,7 @@ class DeterministicRouter(Router):
     def decide_route(
         self, query_text: str, tool_context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        return classify_query(query_text, tool_context)
+        return cast(dict[str, Any], classify_query(query_text, tool_context))
 
 
 def create_router(config: dict[str, Any]) -> Router:
