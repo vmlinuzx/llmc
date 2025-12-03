@@ -31,7 +31,11 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 **Impact:** Clean architecture, direct function calls, foundation for remote providers (3.6)
 
-### 1.2.1 Enrichment Path Weights & Code-First Prioritization
+### ~~1.2.1 Enrichment Path Weights & Code-First Prioritization~~ ✅ DONE (⚠️ BUG)
+
+**Completed:** Dec 2025
+
+**⚠️ KNOWN BUG:** Code-first prioritization not working correctly - seeing many `.md` files being enriched before `.py` files. Need to investigate why the 5:1 high:low ratio scheduling isn't prioritizing code properly.
 
 **Goal:** Prioritize enrichment of critical code paths over test code, docs, and vendor trash.
 
@@ -50,6 +54,7 @@ These are the things that make the current LLMC stack feel solid and intentional
 - Different projects have different priorities (configurable via `llmc.toml`)
 
 **Effort:** 3-4 hours | **Difficulty:** 🟡 Medium
+
 
 ---
 
