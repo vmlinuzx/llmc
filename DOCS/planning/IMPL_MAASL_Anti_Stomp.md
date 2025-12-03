@@ -2,8 +2,8 @@
 
 **Feature Branch:** `feature/maasl-anti-stomp`  
 **Based on:** SDD in `DOCS/planning/HLD_agentic_anti_stomp/SDD - MCP Multi-Agent Anti-Stomp Layer MAASL.md`  
-**Status:** ✅ Phases 1-4 Complete - Ready for Phase 5  
-**Effort:** 15-22 hours (phased) | ~8.5 hours completed
+**Status:** ✅ Phases 1-6 Complete - Ready for Phase 7  
+**Effort:** 15-22 hours (phased) | ~9 hours completed
 
 
 
@@ -159,21 +159,24 @@ llmc_mcp/
 
 ---
 
-### Phase 6: Docgen Coordination (2-3 hours)
+### Phase 6: Docgen Coordination (2-3 hours) ✅ COMPLETE
 **Priority:** P1
 
 **Tasks:**
-- [ ] Implement `DocgenCoordinator`:
+- [x] Implement `DocgenCoordinator`:
   - SHA256 gating (check header before regen)
   - Repo-level mutex (docgen:repo)
   - Atomic doc writes
   - NO-OP when hash matches
-- [ ] Wrap `docgen_file` tool
-- [ ] Test concurrent docgen calls
+- [x] Wrap `docgen_file` tool
+- [x] Test concurrent docgen calls
 
 **Deliverables:**
-- `llmc_mcp/docgen_guard.py`
-- SHA-gated documentation
+- `llmc_mcp/docgen_guard.py` ✅
+- SHA-gated documentation ✅
+- Integration tests (18 tests, all passing) ✅
+
+**Session:** December 2, 2025 (~30 minutes)
 
 ---
 
