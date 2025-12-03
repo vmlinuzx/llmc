@@ -100,3 +100,4 @@ patches/
 # Local backup artefacts for personal tools
 llmc_backups/
 llmc/.llmc/
+llmc/.venv_new/
