@@ -166,13 +166,43 @@ class OllamaBackend:
             except json.JSONDecodeError:
                 pass
         
-        # Second try: find bare JSON object
-        json_match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
-        if json_match:
-            try:
-                return dict(json.loads(json_match.group()))
-            except json.JSONDecodeError:
-                pass
+        # Second try: find the full JSON object (handles nesting)
+        # Find the first '{' and then match braces to find the complete object
+        start_idx = text.find('{')
+        if start_idx != -1:
+            brace_count = 0
+            in_string = False
+            escape_next = False
+            
+            for i in range(start_idx, len(text)):
+                char = text[i]
+                
+                # Handle string escaping
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\':
+                    escape_next = True
+                    continue
+                    
+                # Track if we're inside a string
+                if char == '"':
+                    in_string = not in_string
+                    continue
+                    
+                # Only count braces outside of strings
+                if not in_string:
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            # Found the complete JSON object
+                            json_str = text[start_idx:i+1]
+                            try:
+                                return dict(json.loads(json_str))
+                            except json.JSONDecodeError:
+                                break
         
         # Fallback: return raw text as summary
         summary = text.strip()

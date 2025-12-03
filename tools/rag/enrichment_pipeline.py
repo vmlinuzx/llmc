@@ -166,6 +166,9 @@ class EnrichmentPipeline:
         log_dir: Path | None = None,
         max_failures_per_span: int = 3,
         cooldown_seconds: int = 0,
+        code_first: bool = False,
+        starvation_ratio_high: int = 5,
+        starvation_ratio_low: int = 1,
     ):
         self.db = db
         self.repo_root: Path = repo_root if repo_root else db.repo_root
@@ -175,15 +178,25 @@ class EnrichmentPipeline:
         self.log_dir = log_dir
         self.max_failures = max_failures_per_span
         self.cooldown = cooldown_seconds
+        self.code_first = code_first
+        self.starvation_ratio_high = starvation_ratio_high
+        self.starvation_ratio_low = starvation_ratio_low
         
         self._failure_counts: dict[str, int] = {}
     
-    def process_batch(self, limit: int = 50) -> EnrichmentBatchResult:
+    def process_batch(
+        self,
+        limit: int = 50,
+        stop_check: Callable[[], bool] | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> EnrichmentBatchResult:
         """
         Process a batch of pending spans.
         
         Args:
             limit: Maximum spans to process in this batch.
+            stop_check: Optional callback to check if processing should stop early.
+            progress_callback: Optional callback (processed, total) for progress updates.
         
         Returns:
             EnrichmentBatchResult with success/failure counts and details.
@@ -200,14 +213,22 @@ class EnrichmentPipeline:
         skipped = 0
         
         # 2. Process each span
-        for slice_view in pending:
+        for i, slice_view in enumerate(pending):
+            # Check stop condition
+            if stop_check and stop_check():
+                break
+
+            # Report progress
+            if progress_callback:
+                progress_callback(i + 1, total_pending)
+
             # Check failure threshold
             if self._is_failed(slice_view.span_hash):
                 skipped += 1
                 continue
             
             # Process span
-            result = self._process_span(slice_view)
+            result = self._process_span(slice_view, span_number=i + 1)
             results.append(result)
             
             if result.success:
@@ -237,12 +258,99 @@ class EnrichmentPipeline:
         # Use existing enrichment_plan helper
         from tools.rag.workers import enrichment_plan
         
+        # Fetch more items than limit if prioritizing, to have a pool to sort from
+        fetch_limit = limit * 2 if self.code_first else limit
+        
         items = enrichment_plan(
             self.db,
             self.repo_root,
-            limit=limit,
+            limit=fetch_limit,
             cooldown_seconds=self.cooldown
         )
+        
+        # Apply code-first prioritization if enabled
+        if self.code_first and items:
+            try:
+                from llmc.core import load_config as _load_llmc_config
+                from llmc.enrichment import FileClassifier, load_path_weight_map
+                
+                cfg = _load_llmc_config(self.repo_root)
+                weight_map = load_path_weight_map(cfg)
+                classifier = FileClassifier(repo_root=self.repo_root, weight_config=weight_map)
+                
+                # Classify all items
+                decisions = []
+                
+                # Helper wrapper to satisfy FileClassifier interface
+                @dataclass
+                class ItemWrapper:
+                    file_path: str
+                    slice_type: str
+                
+                for item in items:
+                    wrapper = ItemWrapper(
+                        file_path=item["path"],
+                        slice_type=item.get("content_type", "code")
+                    )
+                    decision = classifier.classify_span(wrapper)
+                    decisions.append((item, decision))
+                
+                # Bucketing
+                high_items = []
+                mid_items = []
+                low_items = []
+                
+                for item, decision in decisions:
+                    if decision.weight <= 3:
+                        high_items.append((item, decision))
+                    elif decision.weight <= 6:
+                        mid_items.append((item, decision))
+                    else:
+                        low_items.append((item, decision))
+                
+                key = lambda pair: pair[1].final_priority
+                high_items.sort(key=key, reverse=True)
+                mid_items.sort(key=key, reverse=True)
+                low_items.sort(key=key, reverse=True)
+                
+                # Scheduling
+                high_pool = high_items + mid_items
+                scheduled = []
+                
+                high_ratio = self.starvation_ratio_high
+                low_ratio = self.starvation_ratio_low
+                
+                while high_pool or low_items:
+                    # Drain high pool
+                    for _ in range(high_ratio):
+                        if not high_pool:
+                            break
+                        scheduled.append(high_pool.pop(0)[0])
+                        if len(scheduled) >= limit:
+                            break
+                    if len(scheduled) >= limit:
+                        break
+                        
+                    # Drain low pool
+                    if low_items and low_ratio > 0:
+                        scheduled.append(low_items.pop(0)[0])
+                        if len(scheduled) >= limit:
+                            break
+                            
+                    if not high_pool and not low_items:
+                        break
+                
+                items = scheduled
+                
+            except ImportError:
+                # Fallback if llmc package not available
+                pass
+            except Exception as e:
+                print(f"  ⚠️  Prioritization failed: {e}", file=sys.stderr)
+                # Fallback to original order
+        
+        # Truncate to original limit if we fetched more
+        items = items[:limit]
         
         views = []
         for item in items:
@@ -263,7 +371,7 @@ class EnrichmentPipeline:
         
         return views
     
-    def _process_span(self, slice_view: EnrichmentSliceView) -> EnrichmentResult:
+    def _process_span(self, slice_view: EnrichmentSliceView, span_number: int = 0) -> EnrichmentResult:
         """Process a single span through the pipeline."""
         start_time = time.monotonic()
         
@@ -286,6 +394,19 @@ class EnrichmentPipeline:
             self._write_enrichment(slice_view.span_hash, result, meta)
             
             duration = time.monotonic() - start_time
+            
+            # 6. Log detailed enrichment info (restored from qwen_enrich_batch.py)
+            self._log_enrichment_success(
+                span_number=span_number,
+                file_path=slice_view.file_path,
+                start_line=slice_view.start_line,
+                end_line=slice_view.end_line,
+                duration=duration,
+                meta=meta,
+                decision=decision,
+                attempts=attempts,
+            )
+            
             return EnrichmentResult(
                 span_hash=slice_view.span_hash,
                 success=True,
@@ -297,6 +418,18 @@ class EnrichmentPipeline:
             
         except BackendError as e:
             duration = time.monotonic() - start_time
+            
+            # Log failure details
+            self._log_enrichment_failure(
+                span_number=span_number,
+                file_path=slice_view.file_path,
+                start_line=slice_view.start_line,
+                end_line=slice_view.end_line,
+                duration=duration,
+                error=str(e),
+                attempts=getattr(e, 'attempts', []),
+            )
+            
             return EnrichmentResult(
                 span_hash=slice_view.span_hash,
                 success=False,
@@ -343,22 +476,21 @@ class EnrichmentPipeline:
         meta: dict[str, Any],
     ) -> None:
         """Write enrichment result to database."""
-        from tools.rag.enrichment_db_helpers import write_enrichment
+        # Build the full payload with all enrichment fields
+        # The result dict comes from the LLM and should have the full schema
+        payload: dict[str, Any] = {
+            **result,  # Include all LLM response fields
+            "model": meta.get("model", "unknown"),
+            "schema_version": result.get("schema_version", "enrichment.v1"),
+        }
         
-        # Extract fields from result
-        summary = result.get("summary", result.get("summary_120w", ""))
-        key_topics = result.get("key_topics", result.get("inputs", []))
-        complexity = result.get("complexity", "unknown")
-        model = meta.get("model", "unknown")
+        # Store the full enrichment directly
+        self.db.store_enrichment(span_hash, payload)
         
-        write_enrichment(
-            self.db,
-            span_hash=span_hash,
-            summary=summary,
-            key_topics=key_topics,
-            complexity=complexity,
-            model=model,
-        )
+        # CRITICAL: Commit the transaction so data is actually saved!
+        # Without this, all enrichments are lost when the process ends.
+        self.db.conn.commit()
+
     
     def _is_failed(self, span_hash: str) -> bool:
         """Check if span has exceeded failure threshold."""
@@ -367,3 +499,72 @@ class EnrichmentPipeline:
     def _record_failure(self, span_hash: str) -> None:
         """Increment failure count for span."""
         self._failure_counts[span_hash] = self._failure_counts.get(span_hash, 0) + 1
+    
+    def _log_enrichment_success(
+        self,
+        span_number: int,
+        file_path: Path,
+        start_line: int,
+        end_line: int,
+        duration: float,
+        meta: dict[str, Any],
+        decision: EnrichmentRouteDecision,
+        attempts: list[Any],
+    ) -> None:
+        """Log detailed enrichment success info (restored from qwen_enrich_batch.py)."""
+        # Extract metadata
+        model = meta.get("model", "unknown")
+        backend = meta.get("backend", "unknown")
+        chain_name = decision.chain_name or "default"
+        
+        # Build model note
+        model_note = f" ({model})" if model and model != "unknown" else ""
+        
+        # Build backend/chain note
+        config_parts = []
+        if chain_name and chain_name != "default":
+            config_parts.append(f"chain={chain_name}")
+        if backend and backend != "unknown":
+            config_parts.append(f"backend={backend}")
+        
+        # Add host/URL if available
+        host = meta.get("host") or meta.get("host_url") or meta.get("base_url")
+        if host:
+            config_parts.append(f"url={host}")
+        
+        config_note = f" [{', '.join(config_parts)}]" if config_parts else ""
+        
+        # Build attempts note
+        attempt_count = len(attempts)
+        attempts_note = f" [{attempt_count} attempt{'s' if attempt_count != 1 else ''}]" if attempt_count > 1 else ""
+        
+        # Print detailed log line (matching old format)
+        print(
+            f"✓ Enriched span {span_number}: {file_path}:{start_line}-{end_line} "
+            f"({duration:.2f}s){model_note}{config_note}{attempts_note}",
+            flush=True,
+        )
+    
+    def _log_enrichment_failure(
+        self,
+        span_number: int,
+        file_path: Path,
+        start_line: int,
+        end_line: int,
+        duration: float,
+        error: str,
+        attempts: list[Any],
+    ) -> None:
+        """Log detailed enrichment failure info."""
+        attempt_count = len(attempts)
+        attempts_note = f" [{attempt_count} attempt{'s' if attempt_count != 1 else ''}]" if attempts else ""
+        
+        # Truncate error message if too long
+        error_msg = error[:100] + "..." if len(error) > 100 else error
+        
+        print(
+            f"✗ Failed span {span_number}: {file_path}:{start_line}-{end_line} "
+            f"({duration:.2f}s){attempts_note} - {error_msg}",
+            file=sys.stderr,
+            flush=True,
+        )
