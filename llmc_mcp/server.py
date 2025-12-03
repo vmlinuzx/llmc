@@ -1716,10 +1716,11 @@ class LlmcMcpServer:
         except LinuxOpsError as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
 
-    # L1 Phase 2 - FS Write handlers
+    # L1 Phase 2 - FS Write handlers (MAASL-protected)
     async def _handle_fs_write(self, args: dict) -> list[TextContent]:
-        """Handle linux_fs_write tool."""
-        from llmc_mcp.tools.fs import write_file
+        """Handle linux_fs_write tool with MAASL protection."""
+        from llmc_mcp.context import McpSessionContext
+        from llmc_mcp.tools.fs_protected import write_file_protected
 
         path = args.get("path", "")
         content = args.get("content", "")
@@ -1727,7 +1728,20 @@ class LlmcMcpServer:
         expected_sha256 = args.get("expected_sha256")
         if not path or content is None:
             return [TextContent(type="text", text='{"error": "path and content required"}')]
-        result = write_file(path, self.config.tools.allowed_roots, content, mode, expected_sha256)
+        
+        # Extract agent/session context for lock tracking
+        ctx = McpSessionContext.from_env()
+        
+        result = write_file_protected(
+            path=path,
+            allowed_roots=self.config.tools.allowed_roots,
+            content=content,
+            mode=mode,
+            expected_sha256=expected_sha256,
+            agent_id=ctx.agent_id,
+            session_id=ctx.session_id,
+            operation_mode="interactive",
+        )
         if result.success:
             return [
                 TextContent(
@@ -1758,14 +1772,25 @@ class LlmcMcpServer:
         ]
 
     async def _handle_fs_move(self, args: dict) -> list[TextContent]:
-        """Handle linux_fs_move tool."""
-        from llmc_mcp.tools.fs import move_file
+        """Handle linux_fs_move tool with MAASL protection."""
+        from llmc_mcp.context import McpSessionContext
+        from llmc_mcp.tools.fs_protected import move_file_protected
 
         source = args.get("source", "")
         dest = args.get("dest", "")
         if not source or not dest:
             return [TextContent(type="text", text='{"error": "source and dest required"}')]
-        result = move_file(source, dest, self.config.tools.allowed_roots)
+        
+        ctx = McpSessionContext.from_env()
+        
+        result = move_file_protected(
+            source=source,
+            dest=dest,
+            allowed_roots=self.config.tools.allowed_roots,
+            agent_id=ctx.agent_id,
+            session_id=ctx.session_id,
+            operation_mode="interactive",
+        )
         if result.success:
             return [
                 TextContent(
@@ -1777,14 +1802,25 @@ class LlmcMcpServer:
         ]
 
     async def _handle_fs_delete(self, args: dict) -> list[TextContent]:
-        """Handle linux_fs_delete tool."""
-        from llmc_mcp.tools.fs import delete_file
+        """Handle linux_fs_delete tool with MAASL protection."""
+        from llmc_mcp.context import McpSessionContext
+        from llmc_mcp.tools.fs_protected import delete_file_protected
 
         path = args.get("path", "")
         recursive = args.get("recursive", False)
         if not path:
             return [TextContent(type="text", text='{"error": "path required"}')]
-        result = delete_file(path, self.config.tools.allowed_roots, recursive)
+        
+        ctx = McpSessionContext.from_env()
+        
+        result = delete_file_protected(
+            path=path,
+            allowed_roots=self.config.tools.allowed_roots,
+            recursive=recursive,
+            agent_id=ctx.agent_id,
+            session_id=ctx.session_id,
+            operation_mode="interactive",
+        )
         if result.success:
             return [
                 TextContent(
@@ -1796,8 +1832,9 @@ class LlmcMcpServer:
         ]
 
     async def _handle_fs_edit(self, args: dict) -> list[TextContent]:
-        """Handle linux_fs_edit tool."""
-        from llmc_mcp.tools.fs import edit_block
+        """Handle linux_fs_edit tool with MAASL protection."""
+        from llmc_mcp.context import McpSessionContext
+        from llmc_mcp.tools.fs_protected import edit_block_protected
 
         path = args.get("path", "")
         old_text = args.get("old_text", "")
@@ -1805,7 +1842,19 @@ class LlmcMcpServer:
         expected = args.get("expected_replacements", 1)
         if not path or not old_text:
             return [TextContent(type="text", text='{"error": "path and old_text required"}')]
-        result = edit_block(path, self.config.tools.allowed_roots, old_text, new_text, expected)
+        
+        ctx = McpSessionContext.from_env()
+        
+        result = edit_block_protected(
+            path=path,
+            allowed_roots=self.config.tools.allowed_roots,
+            old_text=old_text,
+            new_text=new_text,
+            expected_replacements=expected,
+            agent_id=ctx.agent_id,
+            session_id=ctx.session_id,
+            operation_mode="interactive",
+        )
         if result.success:
             return [
                 TextContent(

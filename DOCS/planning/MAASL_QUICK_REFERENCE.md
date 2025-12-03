@@ -121,21 +121,23 @@ def test_my_feature():
 
 ## Current Status
 
-✅ **Implemented (Phase 1):**
+✅ **Implemented (Phases 1-3):**
 - Core locking mechanism
 - Resource policies
 - Exception hierarchy
 - Telemetry
+- **MCP tool wrappers**
+- **File write protection**
 
-🚧 **Next (Phase 3):**
-- MCP tool wrappers
-- File write protection
+📋 **Next (Phase 4):**
+- DB transaction guards
+- RAG write protection
 
 📋 **Future:**
-- DB transaction guards
 - Graph merge engine
 - Docgen coordination
 - Admin tools
+
 
 ## Key Design Principles
 
