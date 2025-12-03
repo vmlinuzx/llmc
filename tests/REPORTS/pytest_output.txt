@@ -1,0 +1,20 @@
+
+==================================== ERRORS ====================================
+_______________ ERROR collecting tests/test_cli_p2_regression.py _______________
+ImportError while importing test module '/home/vmlinux/src/llmc/tests/test_cli_p2_regression.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_cli_p2_regression.py:7: in <module>
+    from llmc.main import app
+llmc/main.py:89: in <module>
+    from llmc.commands import docs as docs_commands
+llmc/commands/docs.py:8: in <module>
+    import toml
+E   ModuleNotFoundError: No module named 'toml'
+=========================== short test summary info ============================
+ERROR tests/test_cli_p2_regression.py
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 error in 0.19s

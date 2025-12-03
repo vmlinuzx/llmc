@@ -108,7 +108,8 @@ def get_output_dir(toml_data: dict[str, Any]) -> str:
     
     docgen_config = docs_config["docgen"]
     
-    return docgen_config.get("output_dir", default_output_dir)
+    output_dir = docgen_config.get("output_dir", default_output_dir)
+    return str(output_dir) if output_dir else default_output_dir
 
 
 def get_require_rag_fresh(toml_data: dict[str, Any]) -> bool:
@@ -132,4 +133,5 @@ def get_require_rag_fresh(toml_data: dict[str, Any]) -> bool:
     
     docgen_config = docs_config["docgen"]
     
-    return docgen_config.get("require_rag_fresh", default_require_rag_fresh)
+    value = docgen_config.get("require_rag_fresh", default_require_rag_fresh)
+    return bool(value) if value is not None else default_require_rag_fresh

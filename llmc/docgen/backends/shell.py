@@ -2,11 +2,11 @@
 Shell backend for docgen - invokes external scripts for documentation generation.
 """
 
+from dataclasses import dataclass
 import json
 import logging
-import subprocess
-from dataclasses import dataclass
 from pathlib import Path
+import subprocess
 from typing import Any
 
 from llmc.docgen.types import DocgenResult
@@ -63,9 +63,13 @@ class ShellDocgenBackend:
         cmd = [str(self.script)] + self.args
         
         # Execute script
+        # NOTE: check=False is INTENTIONAL. We want explicit exit code handling (line 90)
+        # so we can log stderr on failure. Using check=True would raise CalledProcessError
+        # and prevent our detailed logging. See: design_decisions.md
         try:
             result = subprocess.run(
                 cmd,
+                check=False,  # Explicit: we handle exit codes manually below
                 input=input_json,
                 capture_output=True,
                 text=True,

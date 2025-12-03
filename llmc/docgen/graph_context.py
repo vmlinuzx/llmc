@@ -14,6 +14,7 @@ def build_graph_context(
     repo_root: Path,
     relative_path: Path,
     db: Any,  # Database type from tools.rag.database
+    cached_graph: dict | None = None,
 ) -> str:
     """Build deterministic graph context for a file.
     
@@ -24,6 +25,7 @@ def build_graph_context(
         repo_root: Absolute path to repository root
         relative_path: Path relative to repo root
         db: RAG database instance
+        cached_graph: Optional pre-loaded graph data (for batch processing performance)
         
     Returns:
         Formatted graph context string
@@ -33,19 +35,23 @@ def build_graph_context(
     if not isinstance(db, Database):
         raise TypeError(f"Expected Database instance, got {type(db)}")
     
-    # Check if graph indices exist
-    graph_index_path = repo_root / ".llmc" / "rag_graph.json"
-    if not graph_index_path.exists():
-        logger.debug(f"No graph index found at {graph_index_path}")
-        return _format_no_graph_context(relative_path)
-    
-    # Load graph indices
-    try:
-        with open(graph_index_path, "r", encoding="utf-8") as f:
-            graph_data = json.load(f)
-    except Exception as e:
-        logger.warning(f"Failed to load graph index: {e}")
-        return _format_no_graph_context(relative_path)
+    # Use cached graph if provided, otherwise load from disk
+    if cached_graph is not None:
+        graph_data = cached_graph
+    else:
+        # Check if graph indices exist
+        graph_index_path = repo_root / ".llmc" / "rag_graph.json"
+        if not graph_index_path.exists():
+            logger.debug(f"No graph index found at {graph_index_path}")
+            return _format_no_graph_context(relative_path)
+        
+        # Load graph indices
+        try:
+            with open(graph_index_path, encoding="utf-8") as f:
+                graph_data = json.load(f)
+        except Exception as e:
+            logger.warning(f"Failed to load graph index: {e}")
+            return _format_no_graph_context(relative_path)
     
     # Find entities for this file
     file_str = str(relative_path)
@@ -195,8 +201,9 @@ def load_graph_indices(repo_root: Path) -> dict | None:
         return None
     
     try:
-        with open(graph_index_path, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(graph_index_path, encoding="utf-8") as f:
+            data = json.load(f)
+            return dict(data) if isinstance(data, dict) else None
     except Exception as e:
         logger.error(f"Failed to load graph index from {graph_index_path}: {e}")
         return None

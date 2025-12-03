@@ -1,0 +1,8 @@
+[32m== llmc-doctor ==[0m
+Profile: daily
+Provider: minimax
+Model: m2-lite
+RAG enabled: True
+RAG server: http://127.0.0.1:8077 → [33mWARN (<urlopen error [Errno 111] Connection refused>)[0m
+Tools enabled: False
+Env key: MINIMAX_API_KEY → [32mOK[0m

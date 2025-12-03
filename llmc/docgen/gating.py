@@ -49,7 +49,7 @@ def read_doc_sha256(doc_path: Path) -> str | None:
         return None
     
     try:
-        with open(doc_path, "r", encoding="utf-8") as f:
+        with open(doc_path, encoding="utf-8") as f:
             first_line = f.readline().strip()
             
         # Check for "SHA256: <hash>" format
@@ -80,7 +80,7 @@ def read_doc_sha256(doc_path: Path) -> str | None:
         
         return sha_part
         
-    except (IOError, UnicodeDecodeError) as e:
+    except (OSError, UnicodeDecodeError) as e:
         logger.warning(f"Failed to read doc {doc_path}: {e}")
         return None
 

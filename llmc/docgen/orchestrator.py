@@ -6,14 +6,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from llmc.docgen.types import DocgenBackend, DocgenResult
 from llmc.docgen.gating import (
-    compute_file_sha256,
-    should_skip_sha_gate,
-    resolve_doc_path,
     check_rag_freshness,
+    compute_file_sha256,
+    resolve_doc_path,
+    should_skip_sha_gate,
 )
 from llmc.docgen.graph_context import build_graph_context
+from llmc.docgen.types import DocgenBackend, DocgenResult
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +52,14 @@ class DocgenOrchestrator:
         self,
         relative_path: Path,
         force: bool = False,
+        cached_graph: dict | None = None,
     ) -> DocgenResult:
         """Process a single file for documentation generation.
         
         Args:
             relative_path: Path relative to repo root
             force: Skip SHA gate if True
+            cached_graph: Optional pre-loaded graph data (for batch processing)
             
         Returns:
             DocgenResult with status and outcome
@@ -119,7 +121,7 @@ class DocgenOrchestrator:
         
         # Read source contents
         try:
-            with open(source_path, "r", encoding="utf-8") as f:
+            with open(source_path, encoding="utf-8") as f:
                 source_contents = f.read()
         except Exception as e:
             logger.error(f"Failed to read {source_path}: {e}")
@@ -134,7 +136,7 @@ class DocgenOrchestrator:
         existing_doc_contents = None
         if doc_path.exists():
             try:
-                with open(doc_path, "r", encoding="utf-8") as f:
+                with open(doc_path, encoding="utf-8") as f:
                     existing_doc_contents = f.read()
             except Exception as e:
                 logger.warning(f"Failed to read existing doc {doc_path}: {e}")
@@ -144,7 +146,8 @@ class DocgenOrchestrator:
             graph_context = build_graph_context(
                 self.repo_root,
                 relative_path,
-                self.db
+                self.db,
+                cached_graph=cached_graph,
             )
         except Exception as e:
             logger.warning(f"Failed to build graph context: {e}")
@@ -207,10 +210,23 @@ class DocgenOrchestrator:
         force: bool = False,
     ) -> dict[str, DocgenResult]:
         """Internal implementation of batch processing."""
+        # Load graph indices ONCE for the entire batch (performance optimization)
+        from llmc.docgen.graph_context import load_graph_indices
+        
+        logger.info(f"Loading graph indices for batch of {len(file_paths)} files...")
+        cached_graph = load_graph_indices(self.repo_root)
+        if cached_graph:
+            entity_count = len(cached_graph.get("entities", {}))
+            relation_count = len(cached_graph.get("relations", []))
+            logger.info(f"Loaded graph: {entity_count} entities, {relation_count} relations")
+        else:
+            logger.info("No graph indices found, proceeding without graph context")
+        
         results = {}
         
         for rel_path in file_paths:
-            result = self.process_file(rel_path, force=force)
+            # Pass cached graph to avoid repeated loading
+            result = self.process_file(rel_path, force=force, cached_graph=cached_graph)
             results[str(rel_path)] = result
         
         # Log summary

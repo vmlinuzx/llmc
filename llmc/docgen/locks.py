@@ -41,7 +41,7 @@ class DocgenLock:
         # Open lock file
         try:
             self._lock_handle = open(self.lock_file, "w")
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to open lock file: {e}")
             return False
         
