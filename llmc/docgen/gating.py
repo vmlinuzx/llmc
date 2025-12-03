@@ -160,7 +160,7 @@ def check_rag_freshness(
     """Check if file is indexed in RAG and up-to-date.
     
     Args:
-        db: RAG database instance
+        db: RAG database instance (or duck-typed mock with 'conn' attribute)
         relative_path: Path relative to repo root
         file_sha256: Expected SHA256 hash of file
         
@@ -169,10 +169,9 @@ def check_rag_freshness(
         - is_fresh: True if file is indexed and hash matches
         - reason: Human-readable reason for decision
     """
-    from tools.rag.database import Database
-    
-    if not isinstance(db, Database):
-        raise TypeError(f"Expected Database instance, got {type(db)}")
+    # Duck-typing: check for conn attribute instead of strict type check
+    if not hasattr(db, 'conn'):
+        raise TypeError(f"Expected database instance with 'conn' attribute, got {type(db)}")
     
     # Convert relative path to string for DB query
     path_str = str(relative_path)

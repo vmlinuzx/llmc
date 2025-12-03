@@ -56,7 +56,7 @@ index = "embeddings"
 
 [embeddings.routes.erp]
 profile = "docs"
-index = "emb_erp"
+index = "embeddings"  # Fixed: was emb_erp (doesn't exist)
 
 [routing.slice_type_to_route]
 code = "code"

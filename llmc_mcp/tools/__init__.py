@@ -1,7 +1,7 @@
 """LLMC MCP Tools - filesystem, exec, and RAG adapters."""
 
 from llmc_mcp.tools.cmd import (  # noqa: F401
-    DEFAULT_ALLOWLIST,
+    DEFAULT_BLACKLIST,
     CommandSecurityError,
     ExecResult,
     run_cmd,

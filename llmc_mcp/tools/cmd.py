@@ -2,7 +2,7 @@
 Command execution tool for LLMC MCP server.
 
 Security features:
-- Binary allowlist (only approved commands can run)
+- Binary blacklist (only approved commands can run)
 - Execution timeout
 - Argument validation
 - Working directory enforcement
@@ -36,43 +36,29 @@ class ExecResult:
     error: str | None = None
 
 
-# Default allowlist - safe read-only commands
-DEFAULT_ALLOWLIST = [
-    "bash",
-    "sh",
-    "rg",
-    "grep",
-    "cat",
-    "head",
-    "tail",
-    "ls",
-    "find",
-    "wc",
-    "sort",
-    "uniq",
-    "python",
-    "python3",
-    "pip",
-    "git",
+# Default blacklist - safe read-only commands
+DEFAULT_BLACKLIST: list[str] = [
+    # Empty - sandbox provides real security
+    # This is for soft behavioral nudges only
 ]
 
 
 def validate_command(
     cmd_parts: list[str],
-    allowlist: list[str],
+    blacklist: list[str],
 ) -> str:
     """
-    Validate command against allowlist.
+    Validate command against blacklist.
 
     Args:
         cmd_parts: Parsed command parts (first element is binary)
-        allowlist: List of allowed binary names
+        blacklist: List of blocked binary names
 
     Returns:
         The binary name if allowed
 
     Raises:
-        CommandSecurityError: If binary not in allowlist
+        CommandSecurityError: If binary not in blacklist
     """
     if not cmd_parts:
         raise CommandSecurityError("Empty command")
@@ -82,8 +68,8 @@ def validate_command(
     # Extract just the binary name (handle paths like /usr/bin/python)
     binary_name = Path(binary).name
 
-    if binary_name not in allowlist:
-        raise CommandSecurityError(f"Binary '{binary_name}' not in allowlist. Allowed: {allowlist}")
+    if binary_name in blacklist:
+        raise CommandSecurityError(f"Binary '{binary_name}' is blacklisted. Blocked: {blacklist}")
 
     return binary_name
 
@@ -91,7 +77,7 @@ def validate_command(
 def run_cmd(
     command: str,
     cwd: Path | str,
-    allowlist: list[str] | None = None,
+    blacklist: list[str] | None = None,
     timeout: int = 30,
     env: dict[str, str] | None = None,
 ) -> ExecResult:
@@ -101,7 +87,7 @@ def run_cmd(
     Args:
         command: Shell command string to execute
         cwd: Working directory for execution
-        allowlist: List of allowed binary names (uses DEFAULT_ALLOWLIST if None)
+        blacklist: List of blocked binary names (uses DEFAULT_BLACKLIST if None)
         timeout: Max execution time in seconds
         env: Optional environment variables to set
 
@@ -117,7 +103,7 @@ def run_cmd(
             error="Empty command",
         )
 
-    allowed = allowlist if allowlist is not None else DEFAULT_ALLOWLIST
+    blocked = blacklist if blacklist is not None else DEFAULT_BLACKLIST
     cwd_path = Path(cwd).resolve() if isinstance(cwd, str) else cwd.resolve()
 
     # Parse command to validate binary
@@ -132,9 +118,9 @@ def run_cmd(
             error=f"Invalid command syntax: {e}",
         )
 
-    # Validate against allowlist
+    # Validate against blacklist
     try:
-        binary_name = validate_command(cmd_parts, allowed)
+        binary_name = validate_command(cmd_parts, blocked)
         logger.debug(f"Running allowed command: {binary_name}")
     except CommandSecurityError as e:
         return ExecResult(

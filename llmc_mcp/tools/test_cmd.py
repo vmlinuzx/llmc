@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for exec module (M3)."""
+"""Unit tests for cmd module (M3) - blacklist mode."""
 
 from pathlib import Path
 import sys
@@ -7,37 +7,45 @@ import sys
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from llmc_mcp.tools.cmd import DEFAULT_ALLOWLIST, CommandSecurityError, run_cmd, validate_command
+from llmc_mcp.tools.cmd import DEFAULT_BLACKLIST, CommandSecurityError, run_cmd, validate_command
 
 
-def test_allowlist_validation():
-    """Test command allowlist validation."""
-    print("Testing allowlist validation...")
+def test_blacklist_validation():
+    """Test command blacklist validation."""
+    print("Testing blacklist validation...")
 
-    # Allowed commands
-    assert validate_command(["ls", "-la"], DEFAULT_ALLOWLIST) == "ls"
-    assert validate_command(["rg", "pattern"], DEFAULT_ALLOWLIST) == "rg"
-    assert validate_command(["/usr/bin/python", "-c", "print(1)"], DEFAULT_ALLOWLIST) == "python"
-
-    # Blocked commands
+    # With empty blacklist, everything should be allowed
+    assert validate_command(["ls", "-la"], DEFAULT_BLACKLIST) == "ls"
+    assert validate_command(["rg", "pattern"], DEFAULT_BLACKLIST) == "rg"
+    assert validate_command(["/usr/bin/python", "-c", "print(1)"], DEFAULT_BLACKLIST) == "python"
+    assert validate_command(["curl", "http://example.com"], DEFAULT_BLACKLIST) == "curl"
+    assert validate_command(["sed", "-i", "s/foo/bar/"], DEFAULT_BLACKLIST) == "sed"
+    
+    # With explicit blacklist, blocked commands should raise
+    test_blacklist = ["rm", "chmod", "chown"]
+    
     try:
-        validate_command(["rm", "-rf", "/"], DEFAULT_ALLOWLIST)
-        raise AssertionError("Should have raised")
+        validate_command(["rm", "-rf", "/"], test_blacklist)
+        raise AssertionError("Should have raised for rm")
     except CommandSecurityError as e:
-        assert "not in allowlist" in str(e)
+        assert "blacklisted" in str(e)
 
     try:
-        validate_command(["curl", "http://evil.com"], DEFAULT_ALLOWLIST)
-        raise AssertionError("Should have raised")
+        validate_command(["chmod", "777", "file"], test_blacklist)
+        raise AssertionError("Should have raised for chmod")
     except CommandSecurityError as e:
-        assert "not in allowlist" in str(e)
+        assert "blacklisted" in str(e)
+    
+    # Non-blacklisted commands should still work
+    assert validate_command(["ls", "-la"], test_blacklist) == "ls"
+    assert validate_command(["curl", "http://example.com"], test_blacklist) == "curl"
 
-    print("  ✓ Allowlist validation working")
+    print("  ✓ Blacklist validation working")
 
 
 def test_run_cmd_allowed():
-    """Test running allowed commands."""
-    print("Testing allowed command execution...")
+    """Test running commands (all allowed with empty blacklist)."""
+    print("Testing command execution...")
 
     cwd = Path(__file__).parent.parent.parent
 
@@ -50,27 +58,37 @@ def test_run_cmd_allowed():
     result = run_cmd("python3 -c 'print(42)'", cwd)
     assert result.success, f"Failed: {result.error}"
     assert "42" in result.stdout
+    
+    # sed should work now (was blocked by allowlist before)
+    result = run_cmd("echo 'hello' | sed 's/hello/world/'", cwd)
+    # Note: This runs through bash, so it should work
+    assert result.success or "sed" not in result.error, f"Unexpected error: {result.error}"
 
-    print("  ✓ Allowed commands execute successfully")
+    print("  ✓ Commands execute successfully")
 
 
-def test_run_cmd_blocked():
-    """Test that blocked commands are rejected."""
-    print("Testing blocked command rejection...")
+def test_run_cmd_with_blacklist():
+    """Test that blacklisted commands are rejected."""
+    print("Testing blacklist enforcement...")
 
     cwd = Path(__file__).parent.parent.parent
+    test_blacklist = ["curl", "wget"]
 
-    # curl not in allowlist
-    result = run_cmd("curl http://example.com", cwd)
+    # curl is blacklisted
+    result = run_cmd("curl http://example.com", cwd, blacklist=test_blacklist)
     assert not result.success
-    assert "not in allowlist" in result.error
+    assert "blacklisted" in result.error
 
-    # rm not in allowlist
-    result = run_cmd("rm -rf /tmp/test", cwd)
+    # wget is blacklisted
+    result = run_cmd("wget http://example.com", cwd, blacklist=test_blacklist)
     assert not result.success
-    assert "not in allowlist" in result.error
+    assert "blacklisted" in result.error
+    
+    # ls is not blacklisted
+    result = run_cmd("ls -la", cwd, blacklist=test_blacklist)
+    assert result.success, f"ls should work: {result.error}"
 
-    print("  ✓ Blocked commands rejected correctly")
+    print("  ✓ Blacklist enforcement working")
 
 
 def test_timeout():
@@ -105,15 +123,15 @@ def test_empty_command():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("Exec Module Unit Tests (M3)")
+    print("Cmd Module Unit Tests (M3) - Blacklist Mode")
     print("=" * 60)
 
-    test_allowlist_validation()
+    test_blacklist_validation()
     test_run_cmd_allowed()
-    test_run_cmd_blocked()
+    test_run_cmd_with_blacklist()
     test_timeout()
     test_empty_command()
 
     print("=" * 60)
-    print("✓ All exec unit tests passed!")
+    print("✓ All cmd unit tests passed!")
     print("=" * 60)

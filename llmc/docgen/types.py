@@ -11,14 +11,14 @@ from typing import Protocol
 class DocgenResult:
     """Result of a documentation generation operation."""
     
-    status: str  # "noop" | "generated" | "skipped"
+    status: str  # "noop" | "generated" | "skipped" | "error"
     sha256: str
     output_markdown: str | None
     reason: str | None = None
     
     def __post_init__(self):
         """Validate status field."""
-        valid_statuses = {"noop", "generated", "skipped"}
+        valid_statuses = {"noop", "generated", "skipped", "error"}
         if self.status not in valid_statuses:
             raise ValueError(
                 f"Invalid status '{self.status}'. "

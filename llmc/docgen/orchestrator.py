@@ -225,19 +225,30 @@ class DocgenOrchestrator:
         results = {}
         
         for rel_path in file_paths:
-            # Pass cached graph to avoid repeated loading
-            result = self.process_file(rel_path, force=force, cached_graph=cached_graph)
-            results[str(rel_path)] = result
+            try:
+                # Pass cached graph to avoid repeated loading
+                result = self.process_file(rel_path, force=force, cached_graph=cached_graph)
+                results[str(rel_path)] = result
+            except Exception as e:
+                # Log error but continue processing other files
+                logger.error(f"❌ Failed to process {rel_path}: {e}", exc_info=True)
+                results[str(rel_path)] = DocgenResult(
+                    status="error",
+                    sha256="",
+                    output_markdown=None,
+                    reason=f"Unhandled exception during processing: {e}"
+                )
         
         # Log summary
         total = len(results)
         generated = sum(1 for r in results.values() if r.status == "generated")
         noop = sum(1 for r in results.values() if r.status == "noop")
         skipped = sum(1 for r in results.values() if r.status == "skipped")
+        errors = sum(1 for r in results.values() if r.status == "error")
         
         logger.info(
             f"Batch complete: {total} files - "
-            f"{generated} generated, {noop} noop, {skipped} skipped"
+            f"{generated} generated, {noop} noop, {skipped} skipped, {errors} errors"
         )
         
         return results

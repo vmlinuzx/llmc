@@ -83,7 +83,6 @@ def find_repo_root(start: Path | None = None) -> Path:
     return _find_repo_root(start)
 
 
-@lru_cache
 def load_config(repo_root: Path | None = None) -> dict:
     root = repo_root or _find_repo_root()
     path = root / "llmc.toml"
@@ -162,7 +161,6 @@ def get_vacuum_interval_hours(repo_root: Path | None = None) -> int:
     return 24
 
 
-@lru_cache(maxsize=128)  # Cache to avoid log spam for repeated missing slice types
 def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> str:
     """
     Determines the route_name for a given slice_type.
@@ -191,7 +189,6 @@ def get_route_for_slice_type(slice_type: str, repo_root: Path | None = None) -> 
     return str(route_name)
 
 
-@lru_cache(maxsize=128)
 def resolve_route(
     route_name: str, operation_type: str, repo_root: Path | None = None
 ) -> tuple[str, str]:

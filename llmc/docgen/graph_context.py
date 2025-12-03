@@ -30,10 +30,11 @@ def build_graph_context(
     Returns:
         Formatted graph context string
     """
-    from tools.rag.database import Database
-    
-    if not isinstance(db, Database):
-        raise TypeError(f"Expected Database instance, got {type(db)}")
+    # Duck-typing: check for required attributes instead of strict type check
+    if not hasattr(db, 'fetch_enrichment_by_span_hash'):
+        raise TypeError(
+            f"Expected database instance with 'fetch_enrichment_by_span_hash' method, got {type(db)}"
+        )
     
     # Use cached graph if provided, otherwise load from disk
     if cached_graph is not None:
@@ -48,7 +49,14 @@ def build_graph_context(
         # Load graph indices
         try:
             with open(graph_index_path, encoding="utf-8") as f:
-                graph_data = json.load(f)
+                loaded_data = json.load(f)
+                # Validate structure - must be a dict
+                if not isinstance(loaded_data, dict):
+                    logger.warning(
+                        f"Graph index has invalid structure (expected dict, got {type(loaded_data).__name__})"
+                    )
+                    return _format_no_graph_context(relative_path)
+                graph_data = loaded_data
         except Exception as e:
             logger.warning(f"Failed to load graph index: {e}")
             return _format_no_graph_context(relative_path)

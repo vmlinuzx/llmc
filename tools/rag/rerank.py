@@ -19,6 +19,28 @@ class RerankHit:
 
 _WORD = re.compile(r"[A-Za-z0-9_]+")
 
+# Extension-based scoring
+# TODO: Needs proper research - see ROADMAP
+CODE_EXTENSIONS = {'.py', '.ts', '.js', '.rs', '.go', '.c', '.cpp', '.h', '.tsx', '.jsx', '.vue', '.rb', '.java', '.kt', '.swift'}
+DOC_EXTENSIONS = {'.md', '.rst', '.txt'}
+
+
+def _extension_boost(path_str: str) -> float:
+    """Return score modifier based on file extension and path."""
+    from pathlib import Path
+    path_lower = path_str.lower()
+    ext = Path(path_str).suffix.lower()
+    
+    # Penalize tests - zombie army suppression
+    if 'test' in path_lower or '/tests/' in path_lower:
+        return 0.2  # Heavy penalty for tests
+    
+    if ext in CODE_EXTENSIONS:
+        return 1.0  # Full weight for code
+    if ext in DOC_EXTENSIONS:
+        return 0.3  # Reduce doc weight
+    return 0.7  # Default for other files
+
 
 def _tokens(s: str) -> list[str]:
     return [t.lower() for t in _WORD.findall(s or "") if len(t) > 1]
@@ -55,11 +77,12 @@ def _normalize_bm25(raw: float) -> float:
 
 
 DEFAULT_WEIGHTS: dict[str, float] = {
-    "bm25": 0.60,
-    "uni": 0.20,
-    "bi": 0.15,
-    "path": 0.08,
+    "bm25": 0.55,
+    "uni": 0.18,
+    "bi": 0.12,
+    "path": 0.07,
     "lit": 0.02,
+    "ext": 0.06,  # Extension-based boost (code > docs)
 }
 
 
@@ -106,6 +129,7 @@ def rerank_hits(
         s_bi = _jaccard(q_bigrams, h_bigrams)
         s_lit = _presence(joined, t)
         s_path = _jaccard(q_tokens, _tokens(h.file))
+        s_ext = _extension_boost(h.file)
 
         score = (
             (w["bm25"] * s_bm25)
@@ -113,6 +137,7 @@ def rerank_hits(
             + (w["bi"] * s_bi)
             + (w["path"] * s_path)
             + (w["lit"] * s_lit)
+            + (w["ext"] * s_ext)
         )
         rescored.append((score, h))
 

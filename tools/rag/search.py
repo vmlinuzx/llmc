@@ -104,6 +104,34 @@ def _filename_boost(query: str, path_str: str) -> float:
     return 0.0
 
 
+
+# Extension-based scoring adjustments
+# TODO: This is a stopgap - needs proper research (see ROADMAP)
+CODE_EXTENSIONS = {'.py', '.ts', '.js', '.rs', '.go', '.c', '.cpp', '.h', '.tsx', '.jsx', '.vue', '.rb', '.java', '.kt', '.swift'}
+DOC_EXTENSIONS = {'.md', '.rst', '.txt'}
+
+
+def _extension_boost(path_str: str) -> float:
+    """Boost code files, penalize verbose docs and tests in search results.
+    
+    Rationale: Docs are keyword-rich and dominate BM25/semantic search,
+    but users searching for 'mcp bootstrap' usually want the implementation.
+    Tests are a zombie army that should not outrank actual code.
+    """
+    import os
+    path_lower = path_str.lower()
+    ext = os.path.splitext(path_str)[1].lower()
+    
+    # Penalize tests first (they are often .py so check before extension boost)
+    if 'test' in path_lower or '/tests/' in path_lower:
+        return -0.08  # Penalize test files
+    
+    if ext in CODE_EXTENSIONS:
+        return 0.08  # Boost code files
+    if ext in DOC_EXTENSIONS:
+        return -0.06  # Penalize markdown/docs
+    return 0.0
+
 @dataclass(frozen=True)
 class SpanSearchResult:
     span_hash: str
@@ -134,6 +162,9 @@ def _score_candidates(
 
         if query_text:
             similarity += _filename_boost(query_text, row["file_path"])
+        
+        # Apply extension-based boost (code files up, docs down)
+        similarity += _extension_boost(row["file_path"])
 
         # Normalize to 0-100 range, clamping at boundaries
         # Raw similarity can be > 1.0 due to boosts

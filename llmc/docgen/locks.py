@@ -16,25 +16,30 @@ class DocgenLock:
     Ensures only one docgen process runs per repository at a time.
     """
     
-    def __init__(self, repo_root: Path):
+    def __init__(self, repo_root: Path, timeout: float = 0):
         """Initialize lock.
         
         Args:
             repo_root: Absolute path to repository root
+            timeout: Max seconds to wait for lock acquisition (0 = fail immediately)
         """
         self.repo_root = repo_root
         self.lock_file = repo_root / ".llmc" / "docgen.lock"
         self._lock_handle: IO | None = None
+        self.timeout = timeout
     
-    def acquire(self, timeout: float = 0) -> bool:
+    def acquire(self, timeout: float | None = None) -> bool:
         """Acquire the lock.
         
         Args:
-            timeout: Max seconds to wait (0 = fail immediately)
+            timeout: Max seconds to wait (None = use instance timeout, 0 = fail immediately)
             
         Returns:
             True if lock acquired, False otherwise
         """
+        if timeout is None:
+            timeout = self.timeout
+            
         # Create lock directory if needed
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
         

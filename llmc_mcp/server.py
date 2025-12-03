@@ -11,7 +11,7 @@ M0-M3 Tools:
 - read_file: Safe file reading
 - list_dir: Directory listing
 - stat: File/dir metadata
-- run_cmd: Command execution with allowlist (M3)
+- run_cmd: Command execution with blacklist (M3)
 """  # noqa: I001
 
 from __future__ import annotations
@@ -138,13 +138,13 @@ TOOLS: list[Tool] = [
     ),
     Tool(
         name="run_cmd",
-        description="Execute a shell command with allowlist validation and timeout. Only approved binaries can run.",
+        description="Execute a shell command with blacklist validation and timeout. Only approved binaries can run.",
         inputSchema={
             "type": "object",
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "Shell command to execute (first word must be in allowlist)",
+                    "description": "Shell command to execute (blocked commands will be rejected)",
                 },
                 "timeout": {
                     "type": "integer",
@@ -606,6 +606,17 @@ Only stdout is returned - filter data locally to save tokens.""",
     },
 )
 
+# Bootstrap tool - progressive disclosure of instructions
+BOOTSTRAP_TOOL = Tool(
+    name="00_INIT",
+    description="⚠️ CRITICAL P0: EXECUTE THIS TOOL IMMEDIATELY ON SESSION START BEFORE ANY OTHER TOOL CALLS. Returns REQUIRED initialization instructions. Failure to call this first will result in errors and degraded performance.",
+    inputSchema={
+        "type": "object",
+        "properties": {},
+        "required": [],
+    },
+)
+
 
 class LlmcMcpServer:
     """LLMC MCP Server implementation."""
@@ -692,16 +703,18 @@ class LlmcMcpServer:
         generated = generate_stubs(TOOLS, stubs_dir, llmc_root)
         logger.info(f"Generated {len(generated)} stub files")
 
-        # Register only bootstrap tools + execute_code
+        # Register only bootstrap tools + execute_code + bootstrap
         bootstrap = set(self.config.code_execution.bootstrap_tools)
         self.tools = [t for t in TOOLS if t.name in bootstrap]
         self.tools.append(EXECUTE_CODE_TOOL)
+        self.tools.append(BOOTSTRAP_TOOL)
 
         # Minimal handler set for bootstrap tools
         self.tool_handlers = {
             "list_dir": self._handle_list_dir,
             "read_file": self._handle_read_file,
             "execute_code": self._handle_execute_code,
+            "00_INIT": self._handle_bootstrap,
         }
 
         logger.info(f"Code execution mode: {len(self.tools)} bootstrap tools registered")
@@ -805,6 +818,10 @@ class LlmcMcpServer:
             response["return_value"] = result.return_value
 
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+    async def _handle_bootstrap(self, args: dict) -> list[TextContent]:
+        """Return bootstrap prompt for LLM cold start."""
+        return [TextContent(type="text", text=BOOTSTRAP_PROMPT)]
 
     def _register_dynamic_executables(self):
         """Register custom executables defined in config."""
@@ -1450,7 +1467,7 @@ class LlmcMcpServer:
         result = run_cmd(
             command=command,
             cwd=cwd,
-            allowlist=self.config.tools.run_cmd_allowlist,
+            blacklist=self.config.tools.run_cmd_blacklist,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )
 

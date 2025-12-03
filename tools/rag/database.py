@@ -524,12 +524,19 @@ class Database:
         """
         self._fts_available = False
         try:
+            # CRITICAL: Use unicode61 tokenizer to avoid stopwords!
+            # FTS5's default 'porter' tokenizer includes English stopwords like
+            # "model", "system", "data" which are fundamental to ML/AI codebases.
+            # The 'unicode61' tokenizer has NO stopword list, making it suitable
+            # for technical documentation and code search.
+            # See: https://www.sqlite.org/fts5.html#unicode61_tokenizer
             self._conn.execute(
                 """
                 CREATE VIRTUAL TABLE IF NOT EXISTS enrichments_fts
                 USING fts5(
                     symbol,
-                    summary
+                    summary,
+                    tokenize='unicode61'
                 )
                 """
             )

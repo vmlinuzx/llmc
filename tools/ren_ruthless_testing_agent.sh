@@ -441,9 +441,12 @@ main() {
   local full_prompt
   full_prompt="$(build_preamble)"
   
-  # Add user request if provided
+  # Add user request if provided, otherwise use default
   if [ -n "$user_prompt" ]; then
     full_prompt="$full_prompt"$'\n\n'"[USER REQUEST]"$'\n'"$user_prompt"
+  else
+    # Default: comprehensive testing of recent changes
+    full_prompt="$full_prompt"$'\n\n'"[USER REQUEST]"$'\n'"Perform ruthless testing of recent changes in this repository. Focus on functional correctness, performance, edge cases, and code quality. Review the latest commits and test anything new or modified."
   fi
 
   # Execute with -y -p flags

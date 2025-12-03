@@ -61,6 +61,78 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ---
 
+### ~~1.1.5 FTS5 Stopwords Filtering Critical Keywords~~ ✅ FIXED
+
+**Completed:** Dec 2025-12-03
+
+**Severity:** P0 CRITICAL - RAG search completely broken for core ML/AI queries
+
+**Problem:**
+- Single keyword "model" returned **0 results** (expected: thousands)
+- ANY multi-word query containing "model" returned 0 results
+- Identical queries with "model" removed returned 6000+ results
+- **Root Cause:** SQLite FTS5 default `porter` tokenizer includes English stopwords list
+- Default stopwords include: "model", "system", "data", etc. - **fundamental ML/AI terms**
+- LLMC is an ML/AI codebase - these terms are CRITICAL, not noise!
+
+**Impact Assessment:**
+- Makes RAG essentially unusable for core functionality searches
+- Affected queries: "embedding model", "LLM model", "model routing", "model selection"
+- Affects: `embeddings.profiles`, model selection, routing configuration
+- **Broke searches for the literal thing the system is designed to work with**
+
+**Fix (2025-12-03):**
+- ✅ **PRIMARY BUG:** Fixed routing config - `erp` route pointed to non-existent `emb_erp` table
+  - Changed `[embeddings.routes.erp]` index from `emb_erp` → `embeddings` in `llmc.toml`
+  - This was the actual cause of "model" returning 0 results (query routed to missing table)
+- ✅ **SECONDARY BUG (FTS):** Changed FTS5 tokenizer from `porter` to `unicode61` (no stopwords)
+  - Updated `tools/rag/database.py::_ensure_fts()` table creation
+  - Fixes FTS-based search (used by navigation tools)
+- ✅ **CACHING BUG:** Removed `@lru_cache` from config functions (config.py)
+  - Removed caching from `load_config()`, `resolve_route()`, `get_route_for_slice_type()`
+  - Config changes now immediately visible without daemon restart
+  - Performance impact: 0.9ms per request = 0.2% overhead (negligible)
+- ✅ Created migration script: `scripts/migrate_fts5_no_stopwords.py`
+- ✅ Migrated LLMC database: 5,776 enrichments reindexed
+- ✅ Regression tests: `tests/test_fts5_stopwords_regression.py`
+- ✅ Verified fix: "model" now returns 5 results with 0.915-1.000 scores (was 0)
+
+**Files Modified:**
+- `llmc.toml` - Fixed erp route: `index = "embeddings"` (was `emb_erp`)
+- `tools/rag/config.py` - Removed `@lru_cache` from config functions
+- `tools/rag/database.py` - FTS5 table creation with unicode61 tokenizer
+- `scripts/migrate_fts5_no_stopwords.py` - Migration script for existing DBs
+- `tests/test_fts5_stopwords_regression.py` - Regression tests for critical keywords
+
+**Testing:**
+```bash
+# Verify migration worked
+python3 scripts/migrate_fts5_no_stopwords.py /path/to/repo
+
+# Run regression tests
+pytest tests/test_fts5_stopwords_regression.py -v
+
+# Manual validation
+llmc-cli rag search "model"  # Should return results, not 0
+```
+
+**Prevention:**
+- Added regression tests for critical ML/AI domain keywords
+- Documented in code comments why unicode61 is required for technical search
+- Test verifies FTS table uses unicode61 tokenizer
+
+**Lessons Learned:**
+- Never use generic NLP preprocessing defaults for domain-specific technical search
+- SQLite FTS5 defaults are optimized for English prose, not code/technical docs
+- Critical domain vocabulary must be tested in regression suite
+- Search zero-result rate should be monitored in CI/CD
+- **`@lru_cache` on config loading is an anti-pattern for long-running daemons**
+  - Config edits weren't picked up without manual `.cache_clear()` calls AND daemon restart
+  - The "fix config, reload" workflow was completely broken
+  - Simple is better: reload on every request (0.2% overhead is negligible)
+
+---
+
 ### ~~1.2 Enrichment pipeline tidy-up~~ ✅ DONE
 
 **Completed:** Dec 2025
@@ -294,6 +366,40 @@ MAASL (Multi-Agent Anti-Stomp Layer) - 8 phases implemented:
 - [ ] Real-world usage validation
 - [ ] Lint clean after concurrent edits
 
+
+### 3.5 RAG Scoring & Ranking Research (R&D)
+
+**Goal:** Systematically tune RAG scoring weights to surface code over docs for implementation queries.
+
+**Problem (2025-12-03):**
+- Semantic search for "mcp bootstrap tools server" returns 20 markdown files before any `.py`
+- Docs are verbose and keyword-rich → dominate BM25 and embedding similarity
+- Users searching for implementation want code, not documentation about code
+
+**Current Stopgap (search.py, rerank.py):**
+- Added `_extension_boost()` to boost `.py` (+0.08) and penalize `.md` (-0.06)
+- Updated `rerank.py` weights: bm25=55%, uni=18%, bi=12%, path=7%, lit=2%, ext=6%
+- **This is a hack.** Needs proper research.
+
+**Research Questions:**
+1. What's the optimal weight distribution for code-focused queries vs doc-focused queries?
+2. Should we route queries differently based on intent detection?
+3. How do enrichment summaries affect semantic similarity? (docs have verbose summaries)
+4. Should we embed code and docs in separate vector spaces?
+5. What metrics define "good" search results? (MRR, NDCG, user satisfaction proxy?)
+
+**Proposed Approach:**
+- Build a test corpus of queries with known "correct" answers
+- Implement A/B scoring framework to compare weight configurations
+- Add query intent classification (code vs docs vs mixed)
+- Consider separate indices for code vs documentation
+- Evaluate cross-encoder reranking (expensive but accurate)
+
+**Why R&D:** This is a proper machine learning / information retrieval research problem. The current hack works for obvious cases but will fail on nuanced queries. Need systematic experimentation.
+
+**Effort:** 20-40 hours research + implementation | **Difficulty:** 🔴 Hard (research)
+
+
 ### 3.5 Comprehensive Repo Cleanup
 
 **Goal:** Clean up build artifacts, cache files, and cruft throughout the entire repository.
@@ -342,6 +448,70 @@ MAASL (Multi-Agent Anti-Stomp Layer) - 8 phases implemented:
 | Testing | 🟡 Medium |
 
 **Why Later:** Local Ollama works fine for now. This becomes important when you want to use cheaper/better remote models as fallback or for quality tiers.
+
+### 3.7 RUTA - Ruthless User Testing Agent (P3)
+
+**Goal:** Automated end-to-end user flow testing through multi-agent simulation, property-based testing, and metamorphic relations.
+
+**📄 Design:** [`planning/SDD_RUTA_Ruthless_User_Testing_Agent.md`](planning/SDD_RUTA_Ruthless_User_Testing_Agent.md)
+
+**Problem:**
+- Manual testing catches obvious bugs, but subtle issues slip through (example: "model" search bug)
+- Need automated detection of:
+  - Tool usage correctness and capability mismatches
+  - Semantically weird failures (queries that should work but silently fail)
+  - Environment lies (claiming tools are available when they're broken/blocked)
+  - User flow regressions across releases
+
+**Solution:**
+RUTA uses simulated end users to exercise LLMC through **real public interfaces** (CLI, MCP, TUI, HTTP) and then judges the results:
+
+1. **User Executor Agent** - simulated user completing realistic tasks
+2. **Trace Recorder** - captures all tool calls, prompts, responses, metrics
+3. **Judge Agent** - evaluates runs against properties and metamorphic relations
+4. **Property/Metamorphic Relation Engine (PMRE)** - defines expectations like:
+   - "Adding word 'model' to search must not reduce results to zero"
+   - "Word order swap should give similar results (Jaccard >= 0.5)"
+   - "Tool X must be used for scenario Y"
+5. **Incident Reports** - structured P0-P3 findings with evidence from traces
+
+**Architecture:**
+- Scenario definitions in YAML (`tests/usertests/*.yaml`)
+- JSONL trace logs with tool calls, latencies, errors
+- JSON + Markdown reports for CI and human review
+- CLI: `llmc usertest run --suite <name>`
+
+**Phased Implementation:**
+
+| Phase | Description | Difficulty | Effort |
+|-------|-------------|------------|--------|
+| 0 | Trace recorder + artifact plumbing | 🟢 Easy (3/10) | 4-8h |
+| 1 | Scenario schema + manual runner | 🟡 Medium (4/10) | 6-10h |
+| 2 | User Executor Agent | 🟡 Medium (6/10) | 12-16h |
+| 3 | Judge Agent + basic properties | 🟡 Medium (7/10) | 14-20h |
+| 4 | Metamorphic testing (PMRE) | 🟡 Medium (7/10) | 14-20h |
+| 5 | CI integration + gates | 🟡 Medium (5/10) | 8-12h |
+| 6 | Advanced scenario generation | 🔴 Hard (8/10) | 20-30h |
+
+**Total Effort:** 78-116 hours (10-14 days)
+
+**Success Criteria:**
+- ✅ Automated detection of "model search" class bugs before production
+- ✅ CI fails on P0 incidents (configurable thresholds)
+- ✅ Rich incident reports with trace evidence
+- ✅ Metamorphic relations for search, enrichment, tool usage
+- ✅ No internal API dependencies (tests use same paths as users)
+
+**Why P3:** 
+- Powerful for regression prevention and quality gates
+- Requires significant upfront investment in agent infrastructure
+- Current manual testing + existing test suite provides baseline coverage
+- Best value when system stabilizes and user flows are well-established
+
+**Complements:**
+- **Ruthless Security Agent** - security posture and sandbox boundaries
+- **Ruthless System Testing Agent** - core functional tests and internal APIs
+- **RUTA** - end-to-end user flows and semantic correctness
 
 ---
 

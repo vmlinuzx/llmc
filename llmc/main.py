@@ -59,7 +59,10 @@ app.command()(tui)
 app.command()(monitor)
 
 # Service management subcommand group
-service_app = typer.Typer(help="Manage RAG service daemon")
+service_app = typer.Typer(
+    help="Manage RAG service daemon",
+    no_args_is_help=True,  # Show help instead of "Missing command" error
+)
 service_app.command()(service_commands.start)
 service_app.command()(service_commands.stop)
 service_app.command()(service_commands.restart)
@@ -69,7 +72,10 @@ service_app.command()(service_commands.enable)
 service_app.command()(service_commands.disable)
 
 # Nested repo management under service
-repo_app = typer.Typer(help="Manage registered repositories")
+repo_app = typer.Typer(
+    help="Manage registered repositories",
+    no_args_is_help=True,  # Show help instead of "Missing command" error
+)
 repo_app.command(name="add")(service_commands.repo_add)
 repo_app.command(name="remove")(service_commands.repo_remove)
 repo_app.command(name="list")(service_commands.repo_list)
@@ -78,7 +84,10 @@ service_app.add_typer(repo_app, name="repo")
 app.add_typer(service_app, name="service")
 
 # Nav subcommand group (Phase 5)
-nav_app = typer.Typer(help="Navigate code using RAG graph")
+nav_app = typer.Typer(
+    help="Navigate code using RAG graph",
+    no_args_is_help=True,  # Show help instead of "Missing command" error
+)
 nav_app.command(name="search")(nav_search)
 nav_app.command(name="where-used")(nav_where_used)
 nav_app.command(name="lineage")(nav_lineage)
@@ -87,7 +96,10 @@ app.add_typer(nav_app, name="nav")
 
 # Docs subcommand group (Docgen v2)
 from llmc.commands import docs as docs_commands
-docs_app = typer.Typer(help="Documentation generation")
+docs_app = typer.Typer(
+    help="Documentation generation",
+    no_args_is_help=True,  # Show help instead of "Missing command" error
+)
 docs_app.command(name="generate")(docs_commands.generate)
 docs_app.command(name="status")(docs_commands.status)
 
