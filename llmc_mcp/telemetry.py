@@ -23,6 +23,30 @@ class TelemetrySink:
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
         self._start_time = time.time()
+        
+        # Stats collection for introspection
+        self._stats = {
+            "lock_acquired": 0,
+            "lock_timeout": 0,
+            "lock_released": 0,
+            "db_write_success": 0,
+            "db_write_failed": 0,
+            "graph_merge": 0,
+            "docgen_generated": 0,
+            "docgen_noop": 0,
+            "docgen_error": 0,
+            "stomp_guard_success": 0,
+            "stomp_guard_failed": 0,
+        }
+    
+    def _get_uptime(self) -> float:
+        """Get telemetry uptime in seconds."""
+        return time.time() - self._start_time
+    
+    def _increment_stat(self, key: str):
+        """Increment a stat counter."""
+        if key in self._stats:
+            self._stats[key] += 1
 
     def log_lock_acquired(
         self,
@@ -37,6 +61,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("lock_acquired")
         logger.info(
             "Lock acquired",
             extra={
@@ -63,6 +88,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("lock_timeout")
         logger.warning(
             "Lock timeout",
             extra={
@@ -88,6 +114,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("lock_released")
         logger.info(
             "Lock released",
             extra={
@@ -113,6 +140,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("db_write_success" if success else "db_write_failed")
         level = logging.INFO if success else logging.ERROR
         logger.log(
             level,
@@ -141,6 +169,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("graph_merge")
         logger.info(
             "Graph merge completed",
             extra={
@@ -167,6 +196,14 @@ class TelemetrySink:
         """Log documentation generation event."""
         if not self.enabled:
             return
+        
+        # Track by status: generated, noop, error
+        if status == "generated":
+            self._increment_stat("docgen_generated")
+        elif status == "noop":
+            self._increment_stat("docgen_noop")
+        elif error:
+            self._increment_stat("docgen_error")
         
         level = logging.INFO if not error else logging.ERROR
         logger.log(
@@ -199,6 +236,7 @@ class TelemetrySink:
         if not self.enabled:
             return
         
+        self._increment_stat("stomp_guard_success" if success else "stomp_guard_failed")
         level = logging.INFO if success else logging.WARNING
         logger.log(
             level,

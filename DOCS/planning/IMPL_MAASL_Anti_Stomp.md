@@ -2,8 +2,8 @@
 
 **Feature Branch:** `feature/maasl-anti-stomp`  
 **Based on:** SDD in `DOCS/planning/HLD_agentic_anti_stomp/SDD - MCP Multi-Agent Anti-Stomp Layer MAASL.md`  
-**Status:** ✅ Phases 1-6 Complete - Ready for Phase 7  
-**Effort:** 15-22 hours (phased) | ~9 hours completed
+**Status:** ✅ Phases 1-7 Complete - Ready for Phase 8  
+**Effort:** 15-22 hours (phased) | ~9.5 hours completed
 
 
 
@@ -180,18 +180,23 @@ llmc_mcp/
 
 ---
 
-### Phase 7: Introspection Tools (1-2 hours)
+### Phase 7: Introspection Tools (1-2 hours) ✅ COMPLETE
 **Priority:** P2
 
 **Tasks:**
-- [ ] Add MCP tools:
+- [x] Add MCP tools:
   - `llmc.locks` - List active locks
   - `llmc.stomp_stats` - Contention metrics
   - `llmc.docgen_status` - Recent docgen runs
-- [ ] Expose via MCP server
+- [x] Expose via MCP server
+- [x] Enhanced TelemetrySink with stats collection
 
 **Deliverables:**
-- Admin/debug tools for operators
+- `llmc_mcp/admin_tools.py` (145 lines) ✅
+- Enhanced telemetry with stats tracking ✅
+- Integration tests (14 tests, all passing) ✅
+
+**Session:** December 2, 2025 (~25 minutes)
 
 ---
 
