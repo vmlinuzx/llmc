@@ -6,7 +6,16 @@ import logging
 from typing import TYPE_CHECKING
 
 from llmc_mcp.transport.auth import APIKeyMiddleware
-from mcp.server.sse import SseServerTransport
+
+try:
+    from mcp.server.sse import SseServerTransport
+except ImportError as e:
+    raise ImportError(
+        "CRITICAL: Missing 'mcp' dependency. "
+        "The 'mcp' package is required for MCP server features. "
+        "Install with 'pip install mcp>=0.9.0' or 'pip install .[mcp]'"
+    ) from e
+
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Mount, Route

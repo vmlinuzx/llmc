@@ -31,9 +31,19 @@ from typing import Any, cast
 from llmc_mcp.config import McpConfig, load_config
 from llmc_mcp.observability import ObservabilityContext, setup_logging
 from llmc_mcp.prompts import BOOTSTRAP_PROMPT
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+
+try:
+    from mcp.server import Server
+    from mcp.server.stdio import stdio_server
+    from mcp.types import TextContent, Tool
+except ImportError as e:
+    # Critical dependency missing - likely environmental
+    raise ImportError(
+        "CRITICAL: Missing 'mcp' dependency. "
+        "The 'mcp' package is required for MCP server features but is not installed. "
+        "If you are running tests unrelated to MCP, this error is safe to ignore. "
+        "To fix: pip install 'mcp>=0.9.0' or 'pip install .[mcp]'"
+    ) from e
 
 # Configure logging to stderr (Claude Desktop captures it)
 logging.basicConfig(
