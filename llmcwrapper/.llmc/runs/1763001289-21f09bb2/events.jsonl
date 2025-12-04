@@ -1,2 +1,0 @@
-{"ts": 1763001289, "corr_id": "1763001289-21f09bb2", "event": "start", "mode": "rag", "profile": "daily", "snapshot": "/home/vmlinux/src/llmc/llmcwrapper/.llmc/runs/1763001289-21f09bb2/resolved-config.json"}
-{"ts": 1763001289, "corr_id": "1763001289-21f09bb2", "event": "dry_run", "provider": "anthropic", "model": "claude-3-5-sonnet-latest"}
