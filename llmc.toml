@@ -142,12 +142,24 @@ max_failures_per_span = 4 #Stop retrying after this many failures.  Especially i
 name = "athena"
 chain = "athena"
 provider = "ollama"
-model = "qwen2.5:7b-instruct"
+model = "hf.co/bartowski/Ministral-8B-Instruct-2410-GGUF:F16"
 url = "http://192.168.5.20:11434"
-routing_tier = "7b"
+routing_tier = "8b"
 timeout_seconds = 120
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2 }
+
+
+#[[enrichment.chain]]
+#name = "athena"
+#chain = "athena"
+#provider = "ollama"
+#model = "qwen2.5:7b-instruct"
+#url = "http://192.168.5.20:11434"
+#routing_tier = "7b"
+#timeout_seconds = 120
+#enabled = true
+#options = { num_ctx = 8192, temperature = 0.2 }
 
 [[enrichment.chain]]
 name = "athena-14b"

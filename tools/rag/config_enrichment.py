@@ -21,7 +21,8 @@ except Exception:  # pragma: no cover - fallback for older runtimes
 
 
 _ALLOWED_PROVIDERS = {"ollama", "gateway", "gemini"}
-_ALLOWED_TIERS = {"7b", "14b", "nano"}
+# Common tier labels for reference - NOT enforced, just suggestions
+_COMMON_TIERS = {"nano", "1b", "3b", "7b", "8b", "14b", "20b", "30b", "70b", "405b"}
 
 
 @dataclass
@@ -112,11 +113,8 @@ def _parse_backend_spec(
     routing_tier = raw.get("routing_tier")
     if routing_tier is not None:
         routing_tier = str(routing_tier)
-        if routing_tier not in _ALLOWED_TIERS:
-            raise EnrichmentConfigError(
-                f"Invalid routing_tier {routing_tier!r} for backend {name!r}; "
-                f"expected one of {_ALLOWED_TIERS!r}."
-            )
+        # Tier is just a label - accept any string, but warn if unusual
+        # (helps catch typos without being needlessly restrictive)
 
     timeout_seconds_raw = raw.get("timeout_seconds")
     timeout_seconds: int | None
@@ -337,10 +335,7 @@ def load_enrichment_config(
     max_tier: str | None = None
     if max_tier_raw is not None:
         max_tier = str(max_tier_raw)
-        if max_tier not in _ALLOWED_TIERS:
-            raise EnrichmentConfigError(
-                f"Invalid max_tier {max_tier!r}; expected one of {_ALLOWED_TIERS!r}."
-            )
+        # max_tier is just a label for filtering - accept any string
 
     on_failure_raw = root_enrichment.get("on_failure", "error")
     on_failure = str(on_failure_raw)
@@ -405,8 +400,7 @@ def filter_chain_for_tier(
     - Include entries whose ``routing_tier`` exactly matches ``routing_tier``.
     - Additionally, for routing_tier == "7b", include entries with routing_tier is None.
     """
-    if routing_tier not in _ALLOWED_TIERS:
-        raise EnrichmentConfigError(f"Unknown routing_tier {routing_tier!r}.")
+    # Accept any tier label - it's just a string for matching
 
     filtered: list[EnrichmentBackendSpec] = []
     for spec in chain:
