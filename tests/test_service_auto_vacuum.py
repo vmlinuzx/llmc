@@ -48,14 +48,15 @@ def test_process_repo_runs_vacuum(service_mod, tmp_path):
     # Mock modules to avoid real work
     with (
         patch("tools.rag.service.get_vacuum_interval_hours", return_value=1),
-        patch("tools.rag.database.Database") as MockDB,
-        patch("tools.rag.config.index_path_for_write", return_value=repo / "index.db"),
+        patch("tools.rag.service.Database") as MockDB,
+        patch("tools.rag.service.index_path_for_write", return_value=repo / "index.db"),
         patch("tools.rag.runner.detect_changes", return_value=[]),
         patch("tools.rag.runner.run_enrich"),
         patch("tools.rag.runner.run_embed"),
         patch("tools.rag.doctor.run_rag_doctor"),
         patch("tools.rag.quality.run_quality_check"),
         patch("tools.rag_nav.tool_handlers.build_graph_for_repo"),
+        patch("time.sleep"),
     ):
         # Case 1: Never run -> Should run
         service.process_repo(str(repo))

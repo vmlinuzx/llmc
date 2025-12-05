@@ -370,6 +370,7 @@ Difficulty is 1-10, where:
 
 ### Phase 0 - Minimal Trace and Artifact Plumbing
 **Difficulty: 3 / 10**
+**Status:** ✅ Complete (Dec 2025)
 
 **Objectives:**
 - Add a Trace Recorder that can be attached to LLMC tool calls and agent runs.

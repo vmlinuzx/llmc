@@ -14,7 +14,7 @@ def build_backend():
 
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    paired = list(zip(a, b))
+    paired = list(zip(a, b, strict=False))
     if not paired:
         return 0.0
     dot = sum(x * y for x, y in paired)
@@ -26,7 +26,7 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 @dataclass(frozen=True)
@@ -119,14 +119,14 @@ def run_embedding_benchmark() -> dict[str, float]:
         hit_flags.append(1 if candidate_labels[best_index] == 1 else 0)
 
         best_positive = max(
-            (s for s, label in zip(scores, candidate_labels) if label == 1), default=0.0
+            (s for s, label in zip(scores, candidate_labels, strict=False) if label == 1), default=0.0
         )
         best_negative = max(
-            (s for s, label in zip(scores, candidate_labels) if label == 0), default=0.0
+            (s for s, label in zip(scores, candidate_labels, strict=False) if label == 0), default=0.0
         )
         margins.append(best_positive - best_negative)
-        positive_scores.extend(s for s, label in zip(scores, candidate_labels) if label == 1)
-        negative_scores.extend(s for s, label in zip(scores, candidate_labels) if label == 0)
+        positive_scores.extend(s for s, label in zip(scores, candidate_labels, strict=False) if label == 1)
+        negative_scores.extend(s for s, label in zip(scores, candidate_labels, strict=False) if label == 0)
 
     top1_accuracy = sum(hit_flags) / len(hit_flags) if hit_flags else 0.0
     avg_margin = mean(margins) if margins else 0.0

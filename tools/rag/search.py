@@ -67,7 +67,7 @@ def _norm(vector: Sequence[float]) -> float:
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b))
+    return sum(x * y for x, y in zip(a, b, strict=False))
 
 
 def _unpack_vector(blob: bytes) -> list[float]:

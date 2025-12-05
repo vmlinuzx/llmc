@@ -223,3 +223,74 @@ Carried from prior roadmap “Recently Completed (Highlights)”:
 - Integration: Multi-file TS/JS projects indexed alongside Python.
 - Test coverage: 6 unit tests + end-to-end integration test.
 - **Impact:** LLMC now works with TypeScript/JavaScript codebases, enabling polyglot repos.
+
+### 8.5 Multi-Agent Coordination & Anti-Stomp (Dec 2025)
+
+- **Goal:** Prevent agents from stomping on each other's work (files, DB, graph) during concurrent execution.
+- **Summary:**
+  - ✅ Implemented `LockManager` with lease-based mutexes and fencing tokens
+  - ✅ Created `MAASL` facade for `call_with_stomp_guard`
+  - ✅ Protected critical resources: `CRIT_CODE` (files), `CRIT_DB` (sqlite), `MERGE_META` (graph), `IDEMP_DOCS` (docgen)
+  - ✅ Validated with multi-agent stress tests (3-5 concurrent agents)
+  - ✅ Verified zero data loss and clean linting under load
+- **Validation:** [`planning/MAASL_VALIDATION_CHECKLIST.md`](planning/MAASL_VALIDATION_CHECKLIST.md)
+
+### 3.1 Clean Public Story & Dead Surface Removal (Dec 2025)
+
+- **Goal:** Reduce confusion by consolidating around the unified `llmc` CLI.
+- **Summary:**
+  - ✅ Updated `pyproject.toml` to remove legacy entrypoints (`llmc-rag`, `llmc-yolo`, `llmc-doctor`, `llmc-profile`).
+  - ✅ Updated `README.md` to focus exclusively on `llmc` and `llmc service`.
+  - ✅ Removed "Development Mode" instructions that encouraged using raw wrapper scripts.
+  - ✅ Clarified capabilities section to refer to `llmc service` instead of legacy script names.
+
+### 3.2 Modular Enrichment Plugins (Dec 2025)
+
+- **Goal:** Make it easy to add new backends (local or remote) without touching core code.
+- **Summary:**
+  - ✅ Implemented `BackendAdapter` protocol and `BackendCascade`.
+  - ✅ Created `enrichment_factory.py` for dynamic backend instantiation.
+  - ✅ Refactored `OllamaBackend` to use the new adapter interface.
+  - ✅ Added support for `llmc.toml` based backend configuration.
+
+### 3.6 Remote LLM Provider Support (Dec 2025)
+
+- **Goal:** Enable remote API providers (Gemini, OpenAI, Anthropic, Groq) in the enrichment pipeline.
+- **Summary:**
+  - ✅ Implemented `RemoteBackend` base class.
+  - ✅ Added adapters for Gemini, OpenAI (and compatible), Anthropic.
+  - ✅ Implemented reliability middleware: `CircuitBreaker`, `RateLimiter`, `CostTracker`.
+  - ✅ Added tiered failover configuration in `llmc.toml`.
+  - ✅ Documented usage in `DOCS/Remote_LLM_Providers_Usage.md`.
+
+### 3.2 Symbol Importance Ranking (Dec 2025)
+
+- **Goal:** Reduce token bloat by prioritizing important symbols in `inspect`.
+- **Summary:**
+  - ✅ Implemented `_calculate_entity_score` heuristic (Kind, Name, Size, Connectivity).
+  - ✅ Updated `inspect_entity` to sort defined symbols by importance score.
+  - ✅ Verified ranking: Classes > Functions > Variables; Public > Private.
+
+### 3.3 MCP Telemetry & Observability (Dec 2025)
+
+- **Goal:** Gain visibility into how agents use the tools.
+- **Summary:**
+  - ✅ Implemented `SQLiteMetricsCollector` in `llmc_mcp`.
+  - ✅ Added `sqlite_enabled` and `sqlite_path` to `McpObservabilityConfig`.
+  - ✅ Integrated metrics collection into `ObservabilityContext`.
+  - ✅ Updated `llmc stats` to display tool usage stats from `telemetry.db`.
+
+### 3.5 Repo Cleanup & Dead Code Removal (Dec 2025)
+
+- **Goal:** Remove unused code, consolidate duplicate logic, and reduce technical debt.
+- **Summary:**
+  - ✅ Removed legacy scripts (`llmc-rag`, `llmc-rag-daemon`, etc.) in favor of unified CLI.
+  - ✅ Consolidated `find_repo_root` and `load_config` into `llmc.core`.
+  - ✅ Refactored `tools.rag.config` and `tools.rag.utils` to use core utilities.
+  - ✅ Removed deprecated CLI entry points from `pyproject.toml`.
+
+
+
+
+
+

@@ -29,6 +29,15 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Coverage and lint reports
+.coverage
+*.coverage
+coverage.xml
+htmlcov/
+ruff_report*.json
+ruff_report*.txt
+mypy_output*.txt
+
 # Contracts sidecar artifacts
 contracts.min.json
 contracts.sidecar.sha256
@@ -101,3 +110,4 @@ patches/
 llmc_backups/
 llmc/.llmc/
 llmc/.venv_new/
+llmcwrapper/.llmc/

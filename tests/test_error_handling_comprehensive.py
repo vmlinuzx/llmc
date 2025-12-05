@@ -254,7 +254,7 @@ class TestNetworkFailureHandling:
         """Test enrichment handles connection timeout."""
         mock_post.side_effect = Exception("Connection timeout")
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             # Should handle timeout gracefully
             try:
                 # This would normally make a network call
@@ -321,7 +321,7 @@ class TestFileSystemErrorHandling:
 
     def test_handles_nonexistent_directory(self):
         """Test handling of non-existent directories."""
-        nonexistent_path = Path("/nonexistent/path/to/nowhere")
+        Path("/nonexistent/path/to/nowhere")
 
         # Attempting to create something in non-existent path should fail
         # or create parent directories
@@ -563,7 +563,7 @@ class TestInputValidationHandling:
         """Test handling of oversized inputs."""
         with tempfile.TemporaryDirectory():
             # Create very large input
-            large_input = "x" * (1024 * 1024 * 10)  # 10MB
+            "x" * (1024 * 1024 * 10)  # 10MB
 
             try:
                 # Should handle large input or reject it
@@ -576,7 +576,7 @@ class TestInputValidationHandling:
         """Test handling of binary data in text inputs."""
         with tempfile.TemporaryDirectory():
             # Create binary data
-            binary_data = bytes(range(256))
+            bytes(range(256))
 
             try:
                 # Should handle or reject binary data in text fields
@@ -722,7 +722,7 @@ class TestInputValidationHandling:
             # Malicious path - should be blocked
             try:
                 result = safe_resolve("../../../etc/passwd", base)
-                assert False, "Path traversal should have been blocked!"
+                raise AssertionError("Path traversal should have been blocked!")
             except ValueError as e:
                 assert "Path traversal blocked" in str(e)
 
@@ -739,7 +739,7 @@ class TestCommandInjectionHandling:
         import subprocess
         import tempfile
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory():
             # Test that subprocess calls don't use shell=True with user input
             # The safe pattern is: subprocess.run(['cmd', 'arg'], shell=False)
             # The dangerous pattern is: subprocess.run(f'cmd {user_input}', shell=True)
@@ -827,7 +827,6 @@ class TestCommandInjectionHandling:
         """Test handling of Unicode-based attacks."""
         with tempfile.TemporaryDirectory():
             # Unicode null, control characters, etc.
-            unicode_attack = "test\u0000\u200b\u2060\ufeff"
 
             try:
                 # Should handle or reject Unicode attacks
@@ -856,7 +855,7 @@ class TestConcurrencyErrorHandling:
                 conn2 = sqlite3.connect(str(db_path), timeout=0.1)
                 try:
                     conn2.execute("CREATE TABLE test2 (id INTEGER)")
-                    assert False, "Should have raised OperationalError (locked)"
+                    raise AssertionError("Should have raised OperationalError (locked)")
                 except sqlite3.OperationalError as e:
                     assert "locked" in str(e).lower()
                 finally:

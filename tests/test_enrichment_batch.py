@@ -74,7 +74,7 @@ def test_batch_enrich_multiple_spans_respects_limit_and_progresses(tmp_path) -> 
 
     span_hashes = ["span_f1", "span_f2", "span_f3"]
     symbols = ["f1", "f2", "f3"]
-    for span_hash, sym in zip(span_hashes, symbols):
+    for span_hash, sym in zip(span_hashes, symbols, strict=False):
         _insert_file_and_span(db, repo_root, "mod.py", sym, span_hash)
 
     calls: list[str] = []

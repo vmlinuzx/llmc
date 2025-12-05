@@ -31,7 +31,7 @@ def _mock_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
 
     Returns a valid enrichment payload based on the prompt content.
     """
-    span_hash = prompt.get("span_hash", "unknown")
+    prompt.get("span_hash", "unknown")
     path = prompt.get("path", "unknown")
     lines = prompt.get("lines", [1, 10])
 

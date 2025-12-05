@@ -10,12 +10,12 @@ default_profile = "docs"
 
 [embeddings.profiles.docs]
 provider = "ollama"
-model = "nomic-embed-text"
+model = "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M"
 dimension = 768
 
 [embeddings.profiles.docs.ollama]
 api_base = "http://192.168.5.20:11434"
-timeout = 60
+timeout = 120
 
 [embeddings.profiles.code]
 provider = "ollama"
@@ -41,10 +41,14 @@ dimension = 64
 
 [embeddings.profiles.code_jina]
 provider = "ollama"
-model = "jina-embeddings-v2-base-code-Q5_K_M.gguf"
-dim = 768
+model = "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M"
+dimension = 768
 cost_class = "low"
 capabilities = ["code"]
+
+[embeddings.profiles.code_jina.ollama]
+api_base = "http://192.168.5.20:11434"
+timeout = 120
 
 [embeddings.routes.code]
 profile = "code_jina"
@@ -82,7 +86,7 @@ secondary = [
 primary = "docs"
 secondary = [
   { route = "code", weight = 0.3 }
-]
+] 
 
 gpu_min_free_mb = 1536
 
@@ -132,38 +136,50 @@ timeout_seconds = 60
 
 [enrichment]
 #enabled = true
-default_chain = "athena" #Athena is the name of my local LLM.  You MUST have a default_chain defined and at least one llm URL for this to work!
+default_chain = "code_enrichment_models" # The default chain for enrichment when routing doesn't match. Must match a [[enrichment.chain]] entry's "chain" value.
 batch_size = 50 #Number of spans to enrich before doing full enrichment loop.  50 is pretty good on a strix halo using 7b/14b.  If you have slower inference considering lowering this.
 est_tokens_per_span = 350
 enforce_latin1_enrichment = true
 max_failures_per_span = 4 #Stop retrying after this many failures.  Especially important if you are using a paid provider.
+enable_routing = true  # Enable content-type based routing
 
-[[enrichment.chain]]
-name = "athena"
-chain = "athena"
-provider = "ollama"
-model = "hf.co/bartowski/Ministral-8B-Instruct-2410-GGUF:F16"
-url = "http://192.168.5.20:11434"
-routing_tier = "8b"
-timeout_seconds = 120
-enabled = true
-options = { num_ctx = 8192, temperature = 0.2 }
+# ==============================================================================
+# Content-Type Routing - Route different content types to different chains
+# ==============================================================================
+# slice_type values: code, docs, erp_product, config, data, other
+[enrichment.routes]
+docs = "document_routes"  # 
+code = "code_enrichment_models"        # Route code to your local models
 
 
+# Fallback to 8B for better quality if 3B fails
 #[[enrichment.chain]]
-#name = "athena"
-#chain = "athena"
+#name = "athena-8b"
+#chain = "code_enrichment_models"
 #provider = "ollama"
-#model = "qwen2.5:7b-instruct"
+#model = "hf.co/bartowski/Ministral-8B-Instruct-2410-GGUF:F16"
 #url = "http://192.168.5.20:11434"
-#routing_tier = "7b"
+#routing_tier = "8b"
 #timeout_seconds = 120
 #enabled = true
 #options = { num_ctx = 8192, temperature = 0.2 }
 
+
 [[enrichment.chain]]
-name = "athena-14b"
-chain = "athena"
+name = "qwen2.5 7b instruct"
+chain = "code_enrichment_models"
+provider = "ollama"
+model = "qwen2.5:7b-instruct"
+url = "http://192.168.5.20:11434"
+routing_tier = "7b"
+timeout_seconds = 120
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+# Final fallback - 14B Qwen for hard cases
+[[enrichment.chain]]
+name = "qwen2.5 14b instruct"
+chain = "code_enrichment_models"
 provider = "ollama"
 model = "qwen2.5:14b-instruct-q4_K_M"
 url = "http://192.168.5.20:11434"
@@ -174,7 +190,7 @@ options = { num_ctx = 12288, temperature = 0.2 }
 
 # [[enrichment.chain]]
 # name = "groq-70b"
-# chain = "groqathena"
+# chain = "code_enrichment_models"
 # provider = "gateway"
 # model = "groq/llama3-70b-8192"
 # routing_tier = "14b"
@@ -182,11 +198,52 @@ options = { num_ctx = 12288, temperature = 0.2 }
 
 # [[enrichment.chain]]
 # name = "google-flash"
-# chain = "google"
+# chain = "code_enrichment_models"
 # provider = "gemini"
 # model = "gemini-1.5-flash"
 # routing_tier = "nano"
 # enabled = true
+
+# ==============================================================================
+# DOCUMENT Chain - For documentation enrichment
+# ==============================================================================
+# 
+# 
+
+
+# Fallback 1: Local Qwen 7B (if Minimax fails)
+[[enrichment.chain]]
+name = "Qwen 2.5 7b Instruct"
+chain = "document_routes"
+provider = "ollama"
+model = "qwen2.5:7b-instruct"
+url = "http://192.168.5.20:11434"
+routing_tier = "7b"
+timeout_seconds = 120
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+# Fallback 2: Local Qwen 14B (if 7B also fails)
+[[enrichment.chain]]
+name = "qwen2.5 14b Instruct"
+chain = "document_routes"
+provider = "ollama"
+model = "qwen2.5:14b-instruct-q4_K_M"
+url = "http://192.168.5.20:11434"
+routing_tier = "14b"
+timeout_seconds = 180
+enabled = true
+options = { num_ctx = 12288, temperature = 0.2 }
+
+[[enrichment.chain]]
+name = "MiniMax M2"
+chain = "document_routes"
+provider = "minimax"
+model = "MiniMax-M2"
+url = "https://api.minimax.io/anthropic/v1"  # Anthropic-compatible endpoint (needs /v1 for /messages path)
+routing_tier = "7b"
+timeout_seconds = 60
+enabled = true
 
 
 # ==============================================================================
@@ -241,7 +298,7 @@ auto_rotation_interval = 0
 # Philosophy: LLMs are alien intelligences that already know Unix.
 
 [tool_envelope]
-enabled = true
+enabled = false  # Disabled: causing friction with duplicate searches + grep
 
 [tool_envelope.workspace]
 root = "/home/vmlinux/src/llmc"

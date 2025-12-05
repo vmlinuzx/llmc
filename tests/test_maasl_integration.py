@@ -6,23 +6,21 @@ Tests concurrent file access scenarios with multiple agents.
 """
 
 import concurrent.futures
-import os
 from pathlib import Path
-import pytest
+import tempfile
 import threading
 import time
-import tempfile
-from typing import List
 
-from llmc_mcp.context import McpSessionContext
-from llmc_mcp.maasl import get_maasl, ResourceBusyError
+import pytest
+
+from llmc_mcp.maasl import get_maasl
+from llmc_mcp.tools.fs import FsResult
 from llmc_mcp.tools.fs_protected import (
-    write_file_protected,
+    delete_file_protected,
     edit_block_protected,
     move_file_protected,
-    delete_file_protected,
+    write_file_protected,
 )
-from llmc_mcp.tools.fs import FsResult
 
 
 @pytest.fixture
@@ -107,7 +105,7 @@ def test_concurrent_writes_same_file_contention(test_file, allowed_roots):
     This is the core anti-stomp test.
     """
     barrier = threading.Barrier(3)  # Synchronize 3 agents
-    results: List[FsResult] = []
+    results: list[FsResult] = []
     lock = threading.Lock()
     start_event = threading.Event()
     
@@ -127,7 +125,7 @@ def test_concurrent_writes_same_file_contention(test_file, allowed_roots):
             test_file.write_text(f"Content from {agent_id}\n")
             return True
         
-        from llmc_mcp.maasl import get_maasl, ResourceDescriptor
+        from llmc_mcp.maasl import ResourceDescriptor
         
         resource = ResourceDescriptor(
             resource_class="CRIT_CODE",
@@ -218,7 +216,7 @@ def test_concurrent_writes_same_file_contention(test_file, allowed_roots):
 def test_concurrent_edits_same_file(test_file, allowed_roots):
     """Test concurrent edits to same file - protected by MAASL."""
     barrier = threading.Barrier(2)
-    results: List[FsResult] = []
+    results: list[FsResult] = []
     lock = threading.Lock()
     
     def edit_agent(agent_id: str):
@@ -269,7 +267,7 @@ def test_move_file_protection(temp_dir, allowed_roots):
     src.write_text("movable content")
     
     barrier = threading.Barrier(2)
-    results: List[FsResult] = []
+    results: list[FsResult] = []
     lock = threading.Lock()
     
     def move_agent(agent_id: str):
@@ -317,7 +315,7 @@ def test_delete_file_protection(temp_dir, allowed_roots):
     target.write_text("to be deleted")
     
     barrier = threading.Barrier(2)
-    results: List[FsResult] = []
+    results: list[FsResult] = []
     lock = threading.Lock()
     
     def delete_agent(agent_id: str):
@@ -457,7 +455,7 @@ def test_high_contention_stress(temp_dir, allowed_roots):
     target.write_text("initial\n")
     
     barrier = threading.Barrier(5)
-    results: List[FsResult] = []
+    results: list[FsResult] = []
     lock = threading.Lock()
     
     def aggressive_writer(agent_id: str):

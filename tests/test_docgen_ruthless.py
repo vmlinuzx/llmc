@@ -1,10 +1,11 @@
-import pytest
-import time
-import os
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-from llmc.docgen.orchestrator import DocgenOrchestrator, DocgenResult, DocgenBackend
+from unittest.mock import MagicMock
+
+import pytest
+
 from llmc.docgen.locks import DocgenLock
+from llmc.docgen.orchestrator import DocgenBackend, DocgenOrchestrator, DocgenResult
+
 
 class MockBackend(DocgenBackend):
     def generate_for_file(self, **kwargs):
@@ -67,7 +68,6 @@ def test_orchestrator_handles_backend_crash(temp_repo):
         orch.process_file(Path("src/test.py"), force=True)
 
 from llmc.docgen.gating import resolve_doc_path
-
 
 
 def test_write_doc_to_directory_path(temp_repo):

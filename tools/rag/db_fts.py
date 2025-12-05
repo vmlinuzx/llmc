@@ -86,7 +86,7 @@ def _column_map(conn: sqlite3.Connection, table: str) -> dict[str, str]:
     path_col = pick("path", "file", "filepath", "relpath")
     start_col = pick("start_line", "start", "line_start", "lineno", default=None) or "start_line"
     end_col = pick("end_line", "end", "line_end", "lineno_end", default=None) or "end_line"
-    text_col = pick("text", "content", "body", "span_text")
+    text_col = pick("text", "content", "body", "span_text", "summary")
     return {"path": path_col, "start": start_col, "end": end_col, "text": text_col}
 
 
@@ -126,6 +126,7 @@ def fts_search(
             """
             cur.execute(sql, (query, int(limit)))
             rows = [(*r, 0.0) for r in cur.fetchall()]
+
 
         hits: list[FtsHit] = []
         for p, s, e, t, sc in rows:

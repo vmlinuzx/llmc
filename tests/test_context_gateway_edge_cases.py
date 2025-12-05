@@ -345,7 +345,7 @@ class TestComputeRouteEdgeCases:
         # No status file -> UNKNOWN
         route = mock_compute_route(repo_root, status=None)
         assert route.freshness_state == "UNKNOWN"
-        assert route.use_rag == False
+        assert not route.use_rag
 
     def test_compute_route_no_status_module(self, tmp_path: Path):
         """Test compute_route when module import fails."""
@@ -361,7 +361,7 @@ class TestComputeRouteEdgeCases:
 
         route = mock_compute_route(Path("/tmp"), status)
         assert route.freshness_state == "STALE"
-        assert route.use_rag == False
+        assert not route.use_rag
 
     def test_compute_route_fresh_matching_head(self, tmp_path: Path):
         """Test FRESH route with matching HEAD."""
@@ -374,7 +374,7 @@ class TestComputeRouteEdgeCases:
 
             route = mock_compute_route(Path("/tmp"), status)
             assert route.freshness_state == "FRESH"
-            assert route.use_rag == True
+            assert route.use_rag
 
     def test_compute_route_fresh_mismatched_head_is_stale(self, tmp_path: Path):
         """Test that mismatched HEAD makes route STALE."""
@@ -387,7 +387,7 @@ class TestComputeRouteEdgeCases:
 
             route = mock_compute_route(Path("/tmp"), status)
             assert route.freshness_state == "STALE"
-            assert route.use_rag == False
+            assert not route.use_rag
 
     def test_compute_route_missing_git_head(self, tmp_path: Path):
         """Test route when git HEAD cannot be detected."""
@@ -400,7 +400,7 @@ class TestComputeRouteEdgeCases:
 
             route = mock_compute_route(Path("/tmp"), status)
             assert route.freshness_state == "UNKNOWN"
-            assert route.use_rag == False
+            assert not route.use_rag
 
     def test_compute_route_missing_last_indexed_commit(self, tmp_path: Path):
         """Test route when last_indexed_commit is missing."""
@@ -413,7 +413,7 @@ class TestComputeRouteEdgeCases:
 
             route = mock_compute_route(Path("/tmp"), status)
             assert route.freshness_state == "UNKNOWN"
-            assert route.use_rag == False
+            assert not route.use_rag
 
     def test_compute_route_case_insensitive_fresh(self, tmp_path: Path):
         """Test that index_state comparison is case-insensitive."""
@@ -437,7 +437,7 @@ class TestComputeRouteEdgeCases:
 
         route = mock_compute_route(Path("/tmp"), status)
         assert route.freshness_state == "STALE"
-        assert route.use_rag == False
+        assert not route.use_rag
 
     def test_compute_route_non_fresh_variations(self, tmp_path: Path):
         """Test various non-fresh index_state values."""
@@ -449,7 +449,7 @@ class TestComputeRouteEdgeCases:
             status.last_indexed_commit = "abc123"
 
             route = mock_compute_route(Path("/tmp"), status)
-            assert route.use_rag == False
+            assert not route.use_rag
 
     def test_compute_route_returns_route_decision(self, tmp_path: Path):
         """Test that compute_route returns RouteDecision."""
@@ -478,7 +478,7 @@ class TestComputeRouteEdgeCases:
         with patch("tools.rag_nav.metadata.load_status", side_effect=Exception("Load failed")):
             route = compute_route(repo_root)
             assert route.freshness_state == "UNKNOWN"
-            assert route.use_rag == False
+            assert not route.use_rag
 
     def test_compute_route_partial_status_data(self, tmp_path: Path):
         """Test compute_route with partial/incomplete status."""
@@ -495,7 +495,7 @@ class TestComputeRouteEdgeCases:
             status.index_state = "fresh"
             status.last_indexed_commit = "abc123"
 
-            route = mock_compute_route(Path("/tmp"), status)
+            mock_compute_route(Path("/tmp"), status)
             # Should handle git errors gracefully
 
     def test_compute_route_race_condition(self, tmp_path: Path):
@@ -508,7 +508,7 @@ class TestComputeRouteEdgeCases:
         import time
 
         start = time.time()
-        route = mock_compute_route(Path("/tmp"), None)
+        mock_compute_route(Path("/tmp"), None)
         elapsed = time.time() - start
 
         # Should complete quickly (< 100ms)
@@ -571,7 +571,7 @@ class TestMissingGraphWhenUseRagTrue:
         try:
             with open(graph_file) as f:
                 json.load(f)
-            assert False, "Should fail to parse malformed JSON"
+            raise AssertionError("Should fail to parse malformed JSON")
         except json.JSONDecodeError:
             pass  # Expected
 
@@ -714,8 +714,8 @@ class TestMissingGraphWhenUseRagTrue:
         # Should handle permission error
         try:
             with open(graph_file) as f:
-                data = json.load(f)
-            assert False, "Should fail to read"
+                json.load(f)
+            raise AssertionError("Should fail to read")
         except PermissionError:
             pass  # Expected
 
@@ -746,7 +746,7 @@ class TestGatewayPerformance:
             mock_load.return_value = None
 
             start = time.time()
-            route = compute_route(repo_root)
+            compute_route(repo_root)
             elapsed = time.time() - start
 
             # Should be very fast (< 10ms)
@@ -773,7 +773,7 @@ class TestGatewayPerformance:
         with patch("tools.rag_nav.metadata.load_status") as mock_load:
             mock_load.return_value = None
 
-            route = compute_route(repo_root)
+            compute_route(repo_root)
             # Should work with git
 
     def test_concurrent_compute_route_calls(self, tmp_path: Path):
@@ -832,7 +832,7 @@ class TestGatewayErrorRecovery:
             status.index_state = "fresh"
             status.last_indexed_commit = "abc123"
 
-            route = mock_compute_route(Path("/tmp"), status)
+            mock_compute_route(Path("/tmp"), status)
             # Should handle git error gracefully
 
     def test_recover_from_partial_status(self, tmp_path: Path):

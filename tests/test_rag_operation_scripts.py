@@ -96,7 +96,7 @@ class TestRagPlanHelper:
     def test_handles_query_from_stdin(self):
         """Test that query from stdin is read correctly."""
         script_path = scripts_dir / "rag_plan_helper.sh"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path)], check=False, capture_output=True, text=True, input="test query"
         )
         # May fail without proper setup, but should process the query
@@ -189,7 +189,7 @@ class TestRagPlanSnippet:
     def test_accepts_query_args(self):
         """Test that script accepts query as command line args."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "test", "query", "string"],
             check=False,
             capture_output=True,
@@ -201,7 +201,7 @@ class TestRagPlanSnippet:
     def test_accepts_query_from_stdin(self):
         """Test that script reads query from stdin."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path)],
             check=False,
             capture_output=True,
@@ -214,7 +214,7 @@ class TestRagPlanSnippet:
         """Test --repo flag."""
         script_path = scripts_dir / "rag_plan_snippet.py"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), "--repo", tmpdir, "test query"],
                 check=False,
                 capture_output=True,
@@ -225,7 +225,7 @@ class TestRagPlanSnippet:
     def test_limit_flag(self):
         """Test --limit flag."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--limit", "10", "test query"],
             check=False,
             capture_output=True,
@@ -236,7 +236,7 @@ class TestRagPlanSnippet:
     def test_min_score_flag(self):
         """Test --min-score flag."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--min-score", "0.5", "test query"],
             check=False,
             capture_output=True,
@@ -247,7 +247,7 @@ class TestRagPlanSnippet:
     def test_min_confidence_flag(self):
         """Test --min-confidence flag."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--min-confidence", "0.7", "test query"],
             check=False,
             capture_output=True,
@@ -258,7 +258,7 @@ class TestRagPlanSnippet:
     def test_no_log_flag(self):
         """Test --no-log flag."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--no-log", "test query"],
             check=False,
             capture_output=True,
@@ -269,7 +269,7 @@ class TestRagPlanSnippet:
     def test_handles_missing_repo(self):
         """Test behavior with missing repo."""
         script_path = scripts_dir / "rag_plan_snippet.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--repo", "/nonexistent/path", "test query"],
             check=False,
             capture_output=True,
@@ -318,7 +318,7 @@ class TestIndexWorkspace:
     def test_help_flag(self):
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag" / "index_workspace.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         # May fail on import, but let's check if help is defined
@@ -329,7 +329,7 @@ class TestIndexWorkspace:
         script_path = scripts_dir / "rag" / "index_workspace.py"
         with tempfile.TemporaryDirectory() as tmpdir:
             # May fail due to missing dependencies, but should accept args
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), tmpdir], check=False, capture_output=True, text=True
             )
             # Test documents that args are parsed
@@ -353,7 +353,7 @@ class TestQueryContext:
     def test_help_flag(self):
         """Test --help flag displays usage."""
         script_path = scripts_dir / "rag" / "query_context.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--help"], check=False, capture_output=True, text=True
         )
         # Should display help
@@ -362,7 +362,7 @@ class TestQueryContext:
         """Test that script accepts query and repo path."""
         script_path = scripts_dir / "rag" / "query_context.py"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), "--repo", tmpdir, "test query"],
                 check=False,
                 capture_output=True,
@@ -373,7 +373,7 @@ class TestQueryContext:
     def test_handles_invalid_repo_path(self):
         """Test behavior with invalid repo path."""
         script_path = scripts_dir / "rag" / "query_context.py"
-        result = subprocess.run(
+        subprocess.run(
             [str(script_path), "--repo", "/nonexistent", "test query"],
             check=False,
             capture_output=True,
@@ -385,7 +385,7 @@ class TestQueryContext:
         """Test behavior with empty query."""
         script_path = scripts_dir / "rag" / "query_context.py"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), "--repo", tmpdir],
                 check=False,
                 capture_output=True,
@@ -397,6 +397,6 @@ class TestQueryContext:
     def test_validates_required_args(self):
         """Test that required args are validated."""
         script_path = scripts_dir / "rag" / "query_context.py"
-        result = subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
+        subprocess.run([str(script_path)], check=False, capture_output=True, text=True)
         # Should require query/repo args
         # Exit code may vary

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import logging
 import os
-import secrets
 from pathlib import Path
+import secrets
 from typing import TYPE_CHECKING
 
 from starlette.middleware.base import BaseHTTPMiddleware

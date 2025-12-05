@@ -44,7 +44,7 @@ def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
         )
 
         # Run add command
-        result = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Verify workspace was created
         workspace_path = repo_root / ".llmc" / "rag"
@@ -103,14 +103,14 @@ def test_add_existing_repo_is_idempotent(tmp_path: Path) -> None:
         )
 
         # First add
-        result1 = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Read the configs after first add
         rag_config_1 = (config_path / "rag.yml").read_text()
         version_config_1 = (config_path / "version.yml").read_text()
 
         # Second add (should be idempotent)
-        result2 = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Read configs after second add
         rag_config_2 = (config_path / "rag.yml").read_text()
@@ -175,7 +175,7 @@ def test_add_repo_preserves_existing_configs(tmp_path: Path) -> None:
         )
 
         # Add repo
-        result = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Verify custom configs are preserved
         saved_rag_config = yaml.safe_load((config_path / "rag.yml").read_text())
@@ -214,7 +214,7 @@ def test_add_repo_multiple_times_same_registry(tmp_path: Path) -> None:
         )
 
         # Add repo 3 times
-        for i in range(3):
+        for _i in range(3):
             result = _cmd_add(args, tool_config, None)
             assert result == 0
 
@@ -256,7 +256,7 @@ def test_add_repo_different_paths_same_repo(tmp_path: Path) -> None:
             json=False,
             config=None,
         )
-        result1 = _cmd_add(args1, tool_config, None)
+        _cmd_add(args1, tool_config, None)
 
         # Add via symlink
         args2 = Mock(
@@ -265,7 +265,7 @@ def test_add_repo_different_paths_same_repo(tmp_path: Path) -> None:
             json=False,
             config=None,
         )
-        result2 = _cmd_add(args2, tool_config, None)
+        _cmd_add(args2, tool_config, None)
 
         # Should still have only 1 entry (canonicalized to same repo)
         registry = RegistryAdapter(tool_config)
@@ -303,7 +303,7 @@ def test_add_repo_workspace_initialization(tmp_path: Path) -> None:
             config=None,
         )
 
-        result = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Verify workspace structure
         workspace_path = repo_root / ".llmc" / "rag"
@@ -357,7 +357,7 @@ def test_add_repo_creates_registry_entry(tmp_path: Path) -> None:
             config=None,
         )
 
-        result = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         # Verify registry entry
         registry = RegistryAdapter(tool_config)
@@ -406,7 +406,7 @@ def test_add_with_custom_profile(tmp_path: Path) -> None:
             json=False,
             config=None,
         )
-        result1 = _cmd_add(args1, tool_config, None)
+        _cmd_add(args1, tool_config, None)
 
         registry = RegistryAdapter(tool_config)
         entries1 = registry.load_all()
@@ -447,7 +447,7 @@ def test_add_repo_json_output(tmp_path: Path) -> None:
 
         output = io.StringIO()
         with redirect_stdout(output):
-            result = _cmd_add(args, tool_config, None)
+            _cmd_add(args, tool_config, None)
 
         # Verify JSON output
         json_output = output.getvalue()
@@ -525,7 +525,7 @@ def test_add_creates_directory_structure(tmp_path: Path) -> None:
             config=None,
         )
 
-        result = _cmd_add(args, tool_config, None)
+        _cmd_add(args, tool_config, None)
 
         workspace_path = repo_root / ".llmc" / "rag"
 

@@ -4,8 +4,6 @@ Security tests for path traversal vulnerabilities.
 These tests verify that malicious path inputs are properly blocked.
 """
 
-import pytest
-from pathlib import Path
 
 
 def test_path_traversal_basic():
@@ -20,7 +18,7 @@ def test_path_traversal_basic():
         "/proc/self/mem",
     ]
     
-    for malicious_path in malicious_paths:
+    for _malicious_path in malicious_paths:
         # TODO: Replace with actual code under test
         # with pytest.raises(ValueError, match="path.*invalid"):
         #     process_file(Path(malicious_path))
@@ -42,7 +40,7 @@ def test_relative_path_normalization():
         "valid/./../../etc/passwd",
     ]
     
-    for path in tricky_paths:
+    for _path in tricky_paths:
         # TODO: Verify these are blocked after normalization
         pass
 
@@ -54,7 +52,7 @@ def test_null_byte_injection():
         "file.py\x00.txt",
     ]
     
-    for path in null_byte_paths:
+    for _path in null_byte_paths:
         # TODO: Verify null bytes are rejected
         pass
 
@@ -67,7 +65,7 @@ def test_absolute_path_outside_repo():
         "/tmp/evil",
     ]
     
-    for path in absolute_paths:
+    for _path in absolute_paths:
         # TODO: Verify absolute paths outside repo are blocked
         pass
 

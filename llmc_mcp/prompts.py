@@ -25,7 +25,7 @@ result = tool_name(arg=value)
 print(result)                                                                                          
 ```                                                                                                    
                                                                                                        
-### Stubs:                                                                                             
+### Stubs (in <repo_root>/.llmc/stubs/):                                                                                             
 rag_search, rag_query, read_file, list_dir, stat, run_cmd,                                             
 linux_fs_write, linux_fs_mkdir, linux_fs_move, linux_fs_delete, linux_fs_edit,                         
 linux_proc_list, linux_proc_kill, linux_proc_start, linux_proc_send, linux_proc_read, linux_proc_stop, 

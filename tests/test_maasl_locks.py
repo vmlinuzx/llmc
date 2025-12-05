@@ -10,13 +10,14 @@ Tests:
 - Snapshot introspection
 """
 
-import pytest
-import time
 import threading
+import time
+
+import pytest
+
 from llmc_mcp.locks import (
     LockManager,
     LockState,
-    LockHandle,
     ResourceBusyError,
 )
 
@@ -257,7 +258,6 @@ class TestLockManager:
             max_wait_ms=500,
         )
         
-        initial_expiry = handle.lease_expiry_ts
         
         # Renew lease
         time.sleep(0.1)

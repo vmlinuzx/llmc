@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Search Screen - Interactive RAG code search
+
+Maps to: llmc search <query>
 """
 
 import json
@@ -12,8 +14,9 @@ from textual import events
 from textual.app import ComposeResult
 from textual.containers import Container, Grid, ScrollableContainer
 from textual.message import Message
-from textual.screen import Screen
 from textual.widgets import Button, Input, Static
+
+from llmc.tui.base import LLMCScreen
 
 
 class ResultSelected(Message):
@@ -72,8 +75,10 @@ class ResultWidget(Static):
         self.post_message(ResultSelected(self, self.result))
 
 
-class SearchScreen(Screen):
-    """Interactive code search using RAG"""
+class SearchScreen(LLMCScreen):
+    """Interactive code search using RAG - maps to 'llmc search'"""
+
+    SCREEN_TITLE = "Search"
 
     def _format_entity_id(self, entity_id: str) -> str:
         """Formats internal entity ID to human-readable string, handling prefixes like 'Extends: '."""

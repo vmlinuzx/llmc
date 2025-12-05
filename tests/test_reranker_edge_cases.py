@@ -60,7 +60,7 @@ class TestRerankerWeightsConfiguration:
         }
 
         # Should have sensible defaults
-        for factor, weight in default_weights.items():
+        for _factor, weight in default_weights.items():
             assert weight >= 0
 
     def test_load_weights_from_config(self, tmp_path: Path):
@@ -165,7 +165,7 @@ class TestRerankerWeightsConfiguration:
         config_path = self.create_weights_config(tmp_path, weights)
 
         with open(config_path) as f:
-            loaded = json.load(f)
+            json.load(f)
 
         # Should handle small values
         # May underflow to 0
@@ -181,7 +181,7 @@ class TestRerankerWeightsConfiguration:
         config_path = self.create_weights_config(tmp_path, weights)
 
         with open(config_path) as f:
-            loaded = json.load(f)
+            json.load(f)
 
         # Missing factors should use defaults
         # Or be treated as 0
@@ -198,14 +198,14 @@ class TestRerankerWeightsConfiguration:
         config_path = self.create_weights_config(tmp_path, weights)
 
         with open(config_path) as f:
-            loaded = json.load(f)
+            json.load(f)
 
         # Should preserve custom factors
         # May use or ignore them
 
     def test_weights_config_not_found(self, tmp_path: Path):
         """Test behavior when config file is missing."""
-        non_existent = tmp_path / "nonexistent.json"
+        tmp_path / "nonexistent.json"
 
         # Should handle missing config
         # Use defaults or error
@@ -245,7 +245,7 @@ class TestRerankerWeightsConfiguration:
             # This confirms the setup works
             with open(config_path) as f:
                 json.load(f)
-            assert False, "Should have raised PermissionError"
+            raise AssertionError("Should have raised PermissionError")
         except PermissionError:
             # Expected behavior
             pass
@@ -271,7 +271,7 @@ class TestRerankerWeightsConfiguration:
             },
         }
 
-        config_path = self.create_weights_config(tmp_path, weights)
+        self.create_weights_config(tmp_path, weights)
 
         # May flatten or use nested
 
@@ -323,7 +323,7 @@ class TestRerankerFailureHandling:
 
     def test_reranker_query_too_long(self, tmp_path: Path):
         """Test handling of very long queries."""
-        long_query = " ".join(["word"] * 10000)
+        " ".join(["word"] * 10000)
 
         # Should truncate or reject
         # Fall back if needed
@@ -354,7 +354,7 @@ class TestRerankerFailureHandling:
 
     def test_reranker_inconsistent_data(self, tmp_path: Path):
         """Test reranking with inconsistent hit data."""
-        hits = [
+        [
             Mock(file="file1.py", text="valid text", score=0.5),
             Mock(file=None, text=None, score=None),  # Invalid
             Mock(file="file3.py", text="", score=0.0),  # Empty text
@@ -442,17 +442,15 @@ class TestLightweightReranker:
         # - Token overlap
         # - Position
 
-        hits = create_test_hits(tmp_path)
-        query = "function_a"
+        create_test_hits(tmp_path)
 
         # Exact match should score highest
         # Should work without heavy dependencies
 
     def test_lightweight_token_overlap(self, tmp_path: Path):
         """Test token overlap scoring."""
-        query = "def function return"
 
-        hits = [
+        [
             Mock(file="file1.py", text="def function_a(): return 42"),  # All tokens
             Mock(file="file2.py", text="def function_b(): return 1"),  # Partial
             Mock(file="file3.py", text="class Test: pass"),  # None
@@ -463,9 +461,8 @@ class TestLightweightReranker:
 
     def test_lightweight_exact_match_boost(self, tmp_path: Path):
         """Test exact match boosting."""
-        query = "function_a"
 
-        hits = [
+        [
             Mock(file="file1.py", text="def function_a(): ..."),  # Exact
             Mock(file="file2.py", text="function_a is called"),  # Contains
             Mock(file="file3.py", text="function_b"),  # Different
@@ -475,9 +472,8 @@ class TestLightweightReranker:
 
     def test_lightweight_prefix_match(self, tmp_path: Path):
         """Test prefix match scoring."""
-        query = "func"
 
-        hits = [
+        [
             Mock(file="file1.py", text="function_a"),  # Starts with
             Mock(file="file2.py", text="my_function"),  # Contains
             Mock(file="file3.py", text="diff"),  # No match
@@ -487,9 +483,8 @@ class TestLightweightReranker:
 
     def test_lightweight_case_sensitivity(self, tmp_path: Path):
         """Test case sensitivity in lightweight reranker."""
-        query = "Function"
 
-        hits = [
+        [
             Mock(file="file1.py", text="Function"),  # Exact case
             Mock(file="file2.py", text="function"),  # Different case
         ]
@@ -499,9 +494,8 @@ class TestLightweightReranker:
 
     def test_lightweight_position_bias(self, tmp_path: Path):
         """Test position-based scoring."""
-        query = "test"
 
-        hits = [
+        [
             Mock(file="file1.py", text="test at start"),  # Early
             Mock(file="file2.py", text="middle test word"),  # Middle
             Mock(file="file3.py", text="at end test"),  # Late
@@ -511,9 +505,8 @@ class TestLightweightReranker:
 
     def test_lightweight_frequency_bias(self, tmp_path: Path):
         """Test frequency-based scoring."""
-        query = "def"
 
-        hits = [
+        [
             Mock(file="file1.py", text="def def def"),  # Frequent
             Mock(file="file2.py", text="def once"),  # Less frequent
         ]
@@ -522,9 +515,8 @@ class TestLightweightReranker:
 
     def test_lightweight_file_type_bias(self, tmp_path: Path):
         """Test file type-based scoring."""
-        query = "class"
 
-        hits = [
+        [
             Mock(file="file1.py", text="class Test"),  # Match + .py
             Mock(file="file2.md", text="class Test"),  # Match + .md
         ]
@@ -534,9 +526,8 @@ class TestLightweightReranker:
 
     def test_lightweight_path_match(self, tmp_path: Path):
         """Test path-based scoring."""
-        query = "test"
 
-        hits = [
+        [
             Mock(file="test_file.py", text="func"),  # In filename
             Mock(file="other.py", text="test"),  # In content
         ]
@@ -552,8 +543,7 @@ class TestLightweightReranker:
         """Test lightweight reranker performance."""
         import time
 
-        hits = create_test_hits(tmp_path)
-        query = "function"
+        create_test_hits(tmp_path)
 
         start = time.time()
         # Run lightweight reranker
@@ -564,8 +554,7 @@ class TestLightweightReranker:
 
     def test_lightweight_deterministic(self, tmp_path: Path):
         """Test that lightweight reranker is deterministic."""
-        hits = create_test_hits(tmp_path)
-        query = "test"
+        create_test_hits(tmp_path)
 
         # Run twice, should get same results
         # No randomness
@@ -602,28 +591,28 @@ class TestRerankingAlgorithm:
     def test_rerank_preserves_all_hits(self, tmp_path: Path):
         """Test that reranking preserves all hits."""
         hits = create_test_hits(tmp_path)
-        original_count = len(hits)
+        len(hits)
 
         # Rerank
         # Should return same count
 
     def test_rerank_changes_order(self, tmp_path: Path):
         """Test that reranking can change order."""
-        hits = create_test_hits(tmp_path)
+        create_test_hits(tmp_path)
 
         # Original order: file1, file2, file3
         # After rerank: may be different
 
     def test_rerank_zero_weights(self, tmp_path: Path):
         """Test reranking with all zero weights."""
-        weights = {factor: 0.0 for factor in ["exact_match", "token_overlap"]}
+        {factor: 0.0 for factor in ["exact_match", "token_overlap"]}
 
         # Should return in original order
         # Or by original scores
 
     def test_rerank_equal_weights(self, tmp_path: Path):
         """Test reranking with all equal weights."""
-        weights = {factor: 1.0 for factor in ["exact_match", "token_overlap"]}
+        {factor: 1.0 for factor in ["exact_match", "token_overlap"]}
 
         # Tied scores, may use original order
         # Or stable sort
@@ -647,15 +636,14 @@ class TestRerankingAlgorithm:
 
     def test_rerank_top_k_selection(self, tmp_path: Path):
         """Test selection of top K results."""
-        hits = create_test_hits(tmp_path)
-        top_k = 2
+        create_test_hits(tmp_path)
 
         # Should return top 2 by score
         # If fewer than K, return all
 
     def test_rerank_with_scores(self, tmp_path: Path):
         """Test reranking preserves and uses original scores."""
-        hits = create_test_hits(tmp_path)
+        create_test_hits(tmp_path)
 
         # Each hit has original score
         # Reranker uses and updates
@@ -667,52 +655,45 @@ class TestRerankingAlgorithm:
 
     def test_rerank_reduces_count(self, tmp_path: Path):
         """Test that reranking doesn't duplicate hits."""
-        hits = create_test_hits(tmp_path)
+        create_test_hits(tmp_path)
 
         # Each hit appears once
         # No duplicates
 
     def test_rerank_empty_query(self, tmp_path: Path):
         """Test reranking with empty query."""
-        query = ""
 
         # Should handle gracefully
         # Return original order
 
     def test_rerank_special_characters(self, tmp_path: Path):
         """Test reranking with special characters in query."""
-        queries = [
-            "def test():",
-            "class MyClass:",
-            "import os.path",
-        ]
 
         # Should handle special chars
         # Escape properly
 
     def test_rerank_unicode(self, tmp_path: Path):
         """Test reranking with unicode in query."""
-        query = "функция"
 
         # Should handle unicode
         # Normalize if needed
 
     def test_rerank_long_query(self, tmp_path: Path):
         """Test reranking with very long query."""
-        query = " ".join(["word"] * 1000)
+        " ".join(["word"] * 1000)
 
         # Should handle or truncate
 
     def test_rerank_many_hits(self, tmp_path: Path):
         """Test reranking with many hits."""
-        hits = [Mock(file=f"file{i}.py", text="content") for i in range(1000)]
+        [Mock(file=f"file{i}.py", text="content") for i in range(1000)]
 
         # Should handle large hit sets
         # Efficiently
 
     def test_rerank_nan_scores(self, tmp_path: Path):
         """Test handling of NaN scores."""
-        hits = [
+        [
             Mock(file="file1.py", text="test", score=float("nan")),
             Mock(file="file2.py", text="test", score=0.5),
         ]
@@ -722,7 +703,7 @@ class TestRerankingAlgorithm:
 
     def test_rerank_inf_scores(self, tmp_path: Path):
         """Test handling of infinite scores."""
-        hits = [
+        [
             Mock(file="file1.py", text="test", score=float("inf")),
             Mock(file="file2.py", text="test", score=0.5),
         ]
@@ -732,7 +713,7 @@ class TestRerankingAlgorithm:
 
     def test_rerank_negative_scores(self, tmp_path: Path):
         """Test handling of negative scores."""
-        hits = [
+        [
             Mock(file="file1.py", text="test", score=-0.5),
             Mock(file="file2.py", text="test", score=0.5),
         ]
@@ -751,8 +732,7 @@ class TestRerankerIntegration:
 
     def test_rerank_with_limit(self, tmp_path: Path):
         """Test reranking respects limit parameter."""
-        hits = create_test_hits(tmp_path)
-        limit = 2
+        create_test_hits(tmp_path)
 
         # Rerank all, then limit to 2
         # Or rerank only top K

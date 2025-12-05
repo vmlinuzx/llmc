@@ -343,7 +343,7 @@ def complex_usage():
 
                 # Try to parse
                 try:
-                    data = json.loads(status_file.read_text())
+                    json.loads(status_file.read_text())
                     self.add_result(
                         "index_status_corrupt_file",
                         "Task 1: Index Status",
@@ -1341,7 +1341,7 @@ def complex_usage():
 
                 # Should find callers
                 if result.items:
-                    files = [getattr(item, "file", str(item)) for item in result.items]
+                    [getattr(item, "file", str(item)) for item in result.items]
                     self.add_result(
                         "e2e_simple_where_used",
                         "Task 7: End-to-End Scenarios",

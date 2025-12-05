@@ -30,7 +30,15 @@ import sys
 import time
 from typing import Any
 
-from tools.rag.config import get_vacuum_interval_hours, load_config
+from tools.rag.config import get_vacuum_interval_hours, index_path_for_write, load_config
+from tools.rag.database import Database
+from tools.rag.doctor import format_rag_doctor_summary, run_rag_doctor
+from tools.rag.enrichment_factory import create_backend_from_spec
+from tools.rag.enrichment_pipeline import EnrichmentPipeline, build_enrichment_prompt
+from tools.rag.enrichment_router import build_router_from_toml
+from tools.rag.quality import format_quality_summary, run_quality_check
+from tools.rag.runner import detect_changes, run_embed, run_sync
+from tools.rag_nav.tool_handlers import build_graph_for_repo
 
 try:  # Python 3.11+
     import tomllib  # type: ignore
@@ -500,12 +508,7 @@ class RAGService:
         if str(repo) not in sys.path:
             sys.path.insert(0, str(repo))
 
-        try:
-            from tools.rag.config import index_path_for_write
-            from tools.rag.runner import detect_changes, run_embed, run_sync
-        except ImportError as e:
-            print(f"  ⚠️  Failed to import RAG runner: {e}")
-            return False
+
 
         # Step 1: Detect and sync changed files
         try:
@@ -522,11 +525,6 @@ class RAGService:
             # Continue anyway - enrichment might still work
 
         # Step 2: Enrich pending spans using EnrichmentPipeline
-        try:
-            from tools.rag.enrichment_pipeline import EnrichmentPipeline, build_enrichment_prompt
-            from tools.rag.enrichment_adapters.ollama import OllamaBackend
-            from tools.rag.enrichment_router import build_router_from_toml
-            from tools.rag.database import Database
             
             # Load configuration from target repo (preferred) or service defaults
             repo_cfg = self._load_full_toml(repo)
@@ -548,11 +546,11 @@ class RAGService:
                 # Build router from repo config
                 router = build_router_from_toml(repo)
                 
-                # Create pipeline
+                # Create pipeline with new backend factory that supports all providers
                 pipeline = EnrichmentPipeline(
                     db=db,
                     router=router,
-                    backend_factory=OllamaBackend.from_spec,
+                    backend_factory=create_backend_from_spec,
                     prompt_builder=build_enrichment_prompt,
                     repo_root=repo,
                     max_failures_per_span=self.tracker.max_failures,
@@ -584,19 +582,18 @@ class RAGService:
                     print("  ℹ️  No spans pending enrichment")
             finally:
                 db.close()
-        except Exception as e:
-            print(f"  ⚠️  Enrichment failed: {e}")
-            import traceback
-            traceback.print_exc()
 
         # RAG doctor: quick index/enrichment health snapshot
-        try:
-            from tools.rag.doctor import format_rag_doctor_summary, run_rag_doctor
+        doctor_result = run_rag_doctor(repo)
+        print(format_rag_doctor_summary(doctor_result, repo.name))
 
-            doctor_result = run_rag_doctor(repo)
-            print(format_rag_doctor_summary(doctor_result, repo.name))
-        except Exception as e:
-            print(f"  ⚠️  RAG doctor failed: {e}")
+
+        # GPU Cooldown: Give Ollama time to unload enrichment LLM before loading embedding model
+        # This prevents model runner crashes when both use the same Ollama server
+        gpu_cooldown = float(os.getenv("OLLAMA_GPU_COOLDOWN_SEC", "3.0"))
+        if gpu_cooldown > 0:
+            print(f"  ⏳ GPU cooldown ({gpu_cooldown}s)...")
+            time.sleep(gpu_cooldown)
 
         # Step 3: Generate embeddings for enriched spans
         try:
@@ -617,44 +614,32 @@ class RAGService:
 
         # Step 4: Quality check (if enabled)
         if os.getenv("ENRICH_QUALITY_CHECK", "on").lower() == "on":
-            try:
-                from tools.rag.quality import format_quality_summary, run_quality_check
+            quality_result = run_quality_check(repo)
+            print(format_quality_summary(quality_result, repo.name))
 
-                quality_result = run_quality_check(repo)
-                print(format_quality_summary(quality_result, repo.name))
-
-                # Log quality issues
-                if quality_result["status"] == "FAIL":
-                    self.tracker.record_repo_failure(
-                        str(repo),
-                        f"Quality check failed: score {quality_result['quality_score']:.1f}%, "
-                        f"{quality_result.get('placeholder_count', 0)} placeholder, "
-                        f"{quality_result.get('empty_count', 0)} empty, "
-                        f"{quality_result.get('short_count', 0)} short",
-                    )
-            except Exception as e:
-                print(f"  ⚠️  Quality check failed: {e}")
+            # Log quality issues
+            if quality_result["status"] == "FAIL":
+                self.tracker.record_repo_failure(
+                    str(repo),
+                    f"Quality check failed: score {quality_result['quality_score']:.1f}%, "
+                    f"{quality_result.get('placeholder_count', 0)} placeholder, "
+                    f"{quality_result.get('empty_count', 0)} empty, "
+                    f"{quality_result.get('short_count', 0)} short",
+                )
 
         # Step 5: Rebuild RAG Graph (Unified CLI support)
-        try:
-            from tools.rag_nav.tool_handlers import build_graph_for_repo
-
-            print("  📊 Rebuilding RAG Graph...")
-            status = build_graph_for_repo(repo)
-            print("  ✅ Graph rebuilt successfully")
-        except Exception as e:
-            print(f"  ⚠️  Graph build failed: {e}")
+        print("  📊 Rebuilding RAG Graph...")
+        build_graph_for_repo(repo)
+        print("  ✅ Graph rebuilt successfully")
 
         # Step 6: Database Maintenance (Vacuum)
         try:
             vacuum_interval_hours = get_vacuum_interval_hours(repo)
             last_vacuum = self.state.get_last_vacuum(str(repo))
             now = time.time()
+            print(f"DEBUG: Vacuum check: now={now}, last_vacuum={last_vacuum}, interval={vacuum_interval_hours*3600}, condition={now - last_vacuum > vacuum_interval_hours * 3600}")
             if now - last_vacuum > vacuum_interval_hours * 3600:
                 print("  🧹 Running database vacuum...")
-                from tools.rag.config import index_path_for_write
-                from tools.rag.database import Database
-
                 db_path = index_path_for_write(repo)
                 db = Database(db_path)
                 db.vacuum()
@@ -1264,6 +1249,21 @@ def cmd_force_cycle(args, state: ServiceState, tracker: FailureTracker) -> int:
     return 1
 
 
+def print_repo_help():
+    """Print help for repo command."""
+    print("""
+Usage: llmc-rag repo <command> [options]
+
+Commands:
+  add <path>      Register a repository for enrichment
+  remove <path>   Unregister a repository
+  list            List all registered repositories
+
+Examples:
+  llmc-rag repo add /path/to/repo
+  llmc-rag repo list
+""")
+
 def cmd_repo(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Handle repo subcommands."""
     if args.repo_command == "add":
@@ -1278,7 +1278,10 @@ def cmd_repo(args, state: ServiceState, tracker: FailureTracker) -> int:
         for repo in state.state["repos"]:
             print(f"  📁 {repo}")
         return 0
-    return 1
+    
+    # No subcommand provided
+    print_repo_help()
+    return 0
 
 
 def cmd_enable(args, state: ServiceState, tracker: FailureTracker) -> int:
@@ -1347,9 +1350,9 @@ def main(argv: list[str] | None | None = None):
         "--daemon", action="store_true", help="Run in background (deprecated, uses systemd)"
     )
 
-    stop_p = subparsers.add_parser("stop", help="Stop the service")
-    restart_p = subparsers.add_parser("restart", help="Restart the service")
-    status_p = subparsers.add_parser("status", help="Show service status")
+    subparsers.add_parser("stop", help="Stop the service")
+    subparsers.add_parser("restart", help="Restart the service")
+    subparsers.add_parser("status", help="Show service status")
 
     logs_p = subparsers.add_parser("logs", help="View service logs")
     logs_p.add_argument("-f", "--follow", action="store_true", help="Follow log output")
@@ -1357,7 +1360,7 @@ def main(argv: list[str] | None | None = None):
 
     # Repo management (NEW: subcommand style)
     repo_p = subparsers.add_parser("repo", help="Manage repositories")
-    repo_sub = repo_p.add_subparsers(dest="repo_command", required=True)
+    repo_sub = repo_p.add_subparsers(dest="repo_command", required=False)
 
     add_p = repo_sub.add_parser("add", help="Add a repository")
     add_p.add_argument("repo_path", help="Path to repository")
@@ -1365,7 +1368,7 @@ def main(argv: list[str] | None | None = None):
     remove_p = repo_sub.add_parser("remove", help="Remove a repository")
     remove_p.add_argument("repo_path", help="Path to repository")
 
-    list_p = repo_sub.add_parser("list", help="List registered repositories")
+    repo_sub.add_parser("list", help="List registered repositories")
 
     # Backwards compatibility - keep old commands
     reg_p = subparsers.add_parser("register", help="Register a repo (deprecated, use 'repo add')")
@@ -1377,12 +1380,12 @@ def main(argv: list[str] | None | None = None):
     unreg_p.add_argument("repo_path", help="Path to repository")
 
     # Health & diagnostics
-    health_p = subparsers.add_parser("health", help="Check Ollama endpoint health")
-    config_p = subparsers.add_parser("config", help="Show current configuration")
+    subparsers.add_parser("health", help="Check Ollama endpoint health")
+    subparsers.add_parser("config", help="Show current configuration")
 
     failures_p = subparsers.add_parser("failures", help="Manage failure cache")
     failures_sub = failures_p.add_subparsers(dest="failures_command")
-    failures_show_p = failures_sub.add_parser("show", help="Show failures (default)")
+    failures_sub.add_parser("show", help="Show failures (default)")
     clear_fail_p = failures_sub.add_parser("clear", help="Clear failures")
     clear_fail_p.add_argument("--repo", help="Clear failures for specific repo only")
 
@@ -1394,14 +1397,14 @@ def main(argv: list[str] | None | None = None):
     interval_p = subparsers.add_parser("interval", help="Change enrichment cycle interval")
     interval_p.add_argument("seconds", type=int, help="Interval in seconds")
 
-    force_p = subparsers.add_parser("force-cycle", help="Trigger immediate enrichment cycle")
+    subparsers.add_parser("force-cycle", help="Trigger immediate enrichment cycle")
 
     exorcist_p = subparsers.add_parser("exorcist", help="Nuclear option: rebuild RAG database")
     exorcist_p.add_argument("path", help="Path to repository")
     exorcist_p.add_argument("--dry-run", action="store_true", help="Show what would be deleted")
 
-    enable_p = subparsers.add_parser("enable", help="Enable service to start on boot")
-    disable_p = subparsers.add_parser("disable", help="Disable service from starting on boot")
+    subparsers.add_parser("enable", help="Enable service to start on boot")
+    subparsers.add_parser("disable", help="Disable service from starting on boot")
 
     # Hidden internal command for systemd
     daemon_p = subparsers.add_parser("_daemon_loop", help=argparse.SUPPRESS)

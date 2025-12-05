@@ -1,7 +1,10 @@
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from llmc.docgen.gating import resolve_doc_path
+
 
 def test_resolve_doc_path_traversal():
     repo_root = Path("/tmp/fake_repo")

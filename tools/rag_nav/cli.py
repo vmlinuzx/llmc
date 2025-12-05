@@ -35,10 +35,34 @@ def _wrap_in_envelope(res: Any) -> dict:
     envelope = RagResult(meta=meta, items=items)
     return envelope.to_dict()
 
+def _print_top_level_help() -> None:
+    """Print a tree-style help overview for llmc-rag-nav."""
+    print(
+        "LLMC RAG Navigation Tool\n\n"
+        "Explore code using the RAG knowledge graph.\n\n"
+        "Usage:\n"
+        "  llmc-rag-nav <command> [options]\n\n"
+        "Commands:\n"
+        "  search       Search code using RAG/Nav\n"
+        "  where-used   Find usages of a symbol\n"
+        "  lineage      Find upstream/downstream lineage\n"
+        "  build-graph  Build schema graph + index status\n"
+        "  status       Show RAG index status\n"
+        "  stats        Show graph enrichment statistics\n\n"
+        "Examples:\n"
+        "  llmc-rag-nav search --repo . \"auth middleware\"\n"
+        "  llmc-rag-nav where-used --repo . \"User\"\n"
+        "  llmc-rag-nav lineage --repo . \"User.save\" --direction downstream\n"
+    )
+
 
 def main(argv: list[str] | None = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
+
+    if not argv or argv[0] in ("-h", "--help"):
+        _print_top_level_help()
+        return 0
 
     parser = argparse.ArgumentParser(description="LLMC RAG Navigation CLI")
     sub = parser.add_subparsers(dest="command", required=True)

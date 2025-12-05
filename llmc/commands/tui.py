@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from llmc.core import find_repo_root
 from llmc.tui.app import LLMC_TUI
 

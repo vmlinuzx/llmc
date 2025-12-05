@@ -54,7 +54,7 @@ class TestFlagExclusivity:
     def test_nav_search_jsonl_and_jsonl_compact_together(self, runner):
         """Test that --jsonl and --jsonl-compact cannot be used together."""
         # Both jsonl flags together might be invalid
-        result = runner.invoke(cli, ["nav", "search", "--jsonl", "--jsonl-compact", "test query"])
+        runner.invoke(cli, ["nav", "search", "--jsonl", "--jsonl-compact", "test query"])
 
         # May or may not error, but both compact flags should be handled
         # Click might handle this as the flags can be used together
@@ -88,7 +88,7 @@ class TestFlagExclusivity:
                 mock_result.freshness_state = "FRESH"
                 mock_search.return_value = mock_result
 
-                result = runner.invoke(
+                runner.invoke(
                     cli, ["nav", "search", "test query", "--repo", str(repo_root)]
                 )
 

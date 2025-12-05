@@ -163,7 +163,6 @@ enable_query_routing = false
 """)
 
     # Clear config cache
-    from tools.rag import config
 
     # Config caching removed, no need to clear
     # config.load_config.cache_clear()

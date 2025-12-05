@@ -262,30 +262,30 @@ erp_product = "default"
     assert config.routes.get("erp_product") == "default"
 
 
-def test_load_config_invalid_max_tier_raises(tmp_path: Path) -> None:
-    """Verify invalid max_tier raises EnrichmentConfigError."""
-    import pytest
+    def test_load_config_arbitrary_max_tier_accepted(tmp_path: Path) -> None:
+        """Verify arbitrary max_tier is accepted (Routing Tier Freedom)."""
+        from tools.rag.config_enrichment import load_enrichment_config
 
-    from tools.rag.config_enrichment import EnrichmentConfigError
+        repo_root = tmp_path
+        llmc = repo_root / "llmc.toml"
+        _write_toml(
+            llmc,
+            """
+    [enrichment]
+    default_chain = "default"
+    max_tier = "999b"
 
-    repo_root = tmp_path
-    llmc = repo_root / "llmc.toml"
-    _write_toml(
-        llmc,
-        """
-[enrichment]
-default_chain = "default"
-max_tier = "999b"
-
-[[enrichment.chain]]
-name = "default-backend"
-chain = "default"
-provider = "ollama"
-enabled = true
-""",
-    )
-    with pytest.raises(EnrichmentConfigError, match="Invalid max_tier"):
-        load_enrichment_config(repo_root, env={})
+    [[enrichment.chain]]
+    name = "default-backend"
+    chain = "default"
+    provider = "ollama"
+    enabled = true
+    """,
+        )
+        
+        # Should NOT raise
+        cfg = load_enrichment_config(repo_root)
+        assert cfg.max_tier == "999b"
 
 
 def test_load_config_invalid_on_failure_raises(tmp_path: Path) -> None:

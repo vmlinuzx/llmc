@@ -67,6 +67,7 @@ sys.exit(0)
             yes=True,
             json=False,
             config=None,
+            template=None,
         )
 
         _cmd_add(args, tool_config, None)
@@ -86,7 +87,7 @@ sys.exit(0)
         )
 
         # Create daemon components
-        registry = (
+        (
             RegistryAdapter(cfg.registry_path) if hasattr(RegistryAdapter, "__init__") else None
         )
         from tools.rag_daemon.registry import RegistryClient
@@ -158,6 +159,7 @@ exit 0
                 yes=True,
                 json=False,
                 config=None,
+                template=None,
             )
             _cmd_add(args, tool_config, None)
 
@@ -235,6 +237,7 @@ exit 1
             yes=True,
             json=False,
             config=None,
+            template=None,
         )
         _cmd_add(args, tool_config, None)
 
@@ -312,6 +315,7 @@ exit 0
             yes=True,
             json=False,
             config=None,
+            template=None,
         )
         _cmd_add(args, tool_config, None)
 
@@ -400,6 +404,7 @@ exit 0
             yes=True,
             json=False,
             config=None,
+            template=None,
         )
         _cmd_add(args, tool_config, None)
 
@@ -437,7 +442,7 @@ exit 0
 
         # Create second daemon instance (simulates restart)
         workers2 = WorkerPool(cfg, state_store)
-        scheduler2 = Scheduler(cfg, registry_client, state_store, workers2)
+        Scheduler(cfg, registry_client, state_store, workers2)
 
         # Verify state persisted
         state2 = state_store.get(repo_id)
@@ -484,6 +489,7 @@ exit 0
                 yes=True,
                 json=False,
                 config=None,
+                template=None,
             )
             _cmd_add(args, tool_config, None)
 
@@ -568,6 +574,7 @@ exit 0
                 yes=True,
                 json=False,
                 config=None,
+                template=None,
             )
             _cmd_add(args, tool_config, None)
 
@@ -652,6 +659,7 @@ exit 0
             yes=True,
             json=False,
             config=None,
+            template=None,
         )
 
         result = _cmd_add(args, tool_config, None)

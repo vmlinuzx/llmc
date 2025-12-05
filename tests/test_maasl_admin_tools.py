@@ -4,17 +4,16 @@ Tests for MAASL Phase 7: Introspection Tools
 Tests admin/debugging tools: llmc.locks, llmc.stomp_stats, llmc.docgen_status
 """
 
-import tempfile
-import threading
 from pathlib import Path
+import tempfile
 
 import pytest
 
-from llmc_mcp.admin_tools import maasl_locks, maasl_stomp_stats, maasl_docgen_status
+from llmc_mcp.admin_tools import maasl_docgen_status, maasl_locks, maasl_stomp_stats
 from llmc_mcp.docgen_guard import DocgenCoordinator
 from llmc_mcp.locks import get_lock_manager
 from llmc_mcp.maasl import MAASL
-from llmc_mcp.telemetry import get_telemetry_sink, configure_telemetry
+from llmc_mcp.telemetry import get_telemetry_sink
 
 
 @pytest.fixture(autouse=True)
@@ -72,7 +71,7 @@ class TestMaaslLocks:
             assert lock["fencing_token"] > 0
             assert lock["held_duration_ms"] >= 0
             assert lock["ttl_remaining_sec"] > 0
-            assert lock["is_expired"] == False
+            assert not lock["is_expired"]
         finally:
             lock_manager.release(
                 resource_key=handle.resource_key,

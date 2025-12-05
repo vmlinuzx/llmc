@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from pathlib import Path
+import subprocess
 
-import typer
 from rich.console import Console
 from rich.table import Table
+import typer
 
 app = typer.Typer(
     name="llmc-mcp",
@@ -129,9 +128,9 @@ def logs(
         raise typer.Exit(1)
 
     if follow:
-        subprocess.run(["tail", "-f", str(logfile)])
+        subprocess.run(["tail", "-f", str(logfile)], check=False)
     else:
-        subprocess.run(["tail", "-n", str(lines), str(logfile)])
+        subprocess.run(["tail", "-n", str(lines), str(logfile)], check=False)
 
 
 @app.command(name="show-key")

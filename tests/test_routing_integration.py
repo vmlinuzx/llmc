@@ -6,14 +6,20 @@ import pytest
 from llmc.routing import router as routing_router
 from tools.rag.config import (
     ConfigError,
+    ConfigWarningFilter,
     get_route_for_slice_type,
-    load_config,
     resolve_route,
 )
 from tools.rag.database import Database
 from tools.rag.indexer import index_repo
 from tools.rag.workers import execute_embeddings, execute_enrichment
 
+
+def clear_config_warning_filter():
+    logger = logging.getLogger("tools.rag.config")
+    for f in logger.filters:
+        if isinstance(f, ConfigWarningFilter):
+            f.seen.clear()
 
 @pytest.fixture
 def create_llmc_toml(tmp_path):
@@ -137,8 +143,7 @@ def test_get_route_for_slice_type_missing_entry(create_llmc_toml, caplog):
 code = "code"
 # "docs" is intentionally missing for "weird_type"
 """)
-    # Clear cache to ensure fresh config load
-    get_route_for_slice_type.cache_clear()
+    clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
         route = get_route_for_slice_type("weird_type", repo_root)
@@ -164,8 +169,7 @@ index = "emb_docs"
 
 # embeddings.routes.code is intentionally missing
 """)
-    # Clear cache to ensure fresh config load
-    resolve_route.cache_clear()
+    clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
         profile, index = resolve_route("code", "query", repo_root)
@@ -184,8 +188,7 @@ def test_resolve_route_critical_missing_docs_route(create_llmc_toml):
     repo_root, _ = create_llmc_toml("""
 # embeddings.routes.docs is intentionally missing
 """)
-    # Clear cache to ensure fresh config load
-    resolve_route.cache_clear()
+    clear_config_warning_filter()
 
     with pytest.raises(ConfigError) as excinfo:
         resolve_route("docs", "query", repo_root)
@@ -205,8 +208,7 @@ index = "emb_docs"
 [embeddings.routes.code]
 profile = "code_jina" # Index is missing
 """)
-    # Clear cache to ensure fresh config load
-    resolve_route.cache_clear()
+    clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
         profile, index = resolve_route("code", "query", repo_root)
@@ -235,8 +237,7 @@ index = "emb_docs"
 profile = "missing_profile" # This profile does not exist
 index = "emb_code"
 """)
-    # Clear cache to ensure fresh config load
-    resolve_route.cache_clear()
+    clear_config_warning_filter()
 
     with pytest.raises(ConfigError) as excinfo:
         resolve_route("code", "ingest", repo_root)
@@ -288,7 +289,7 @@ weird_type = "non_existent_profile_route"
     monkeypatch.setenv("TE_AGENT_ID", "test-agent")
 
     # Enable telemetry by explicitly clearing the cache of get_te_config
-    load_config.cache_clear()
+    clear_config_warning_filter()
 
     # Ensure log_routing_event is properly imported and functional during execution
     # index_repo triggers slice classification and hence get_route_for_slice_type
@@ -332,9 +333,7 @@ enable_query_routing = true
 """)
     monkeypatch.chdir(repo_root)
     monkeypatch.setenv("TE_AGENT_ID", "test-agent")
-    load_config.cache_clear()  # Clear TE config cache
-    get_route_for_slice_type.cache_clear()  # Clear rag config cache
-    resolve_route.cache_clear()  # Clear rag config cache
+    clear_config_warning_filter()
 
     # Setup dummy database with 'emb_docs' and 'embeddings' tables
     db_path = repo_root / ".rag" / "index_v2.db"
@@ -400,7 +399,7 @@ enable_query_routing = true
         # [embeddings.routes.code] and [embeddings.profiles.code_jina] are missing.
         from tools.rag.search import search_spans
 
-        results = search_spans(query, limit=1, repo_root=repo_root)
+        search_spans(query, limit=1, repo_root=repo_root)
 
         # We don't assert len(results) because the vector search itself might fail in this
         # test environment (missing sqlite-vec), but we confirmed the routing logic above.

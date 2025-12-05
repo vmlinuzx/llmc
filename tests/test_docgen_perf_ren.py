@@ -1,9 +1,10 @@
 
-import pytest
 import json
-import time
-import sys
 from pathlib import Path
+import sys
+import time
+
+import pytest
 
 # Try to import Database, if fails, skip tests
 try:
@@ -14,6 +15,7 @@ except ImportError:
     HAS_DATABASE = False
 
 from llmc.docgen.graph_context import build_graph_context
+
 
 class StubDatabase(Database):
     def __init__(self):

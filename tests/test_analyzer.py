@@ -39,7 +39,6 @@ def run_test_batch(test_pattern, output_file):
     failures = []
     passed = 0
     failed = 0
-    errored = 0
 
     for line in lines:
         if "FAILED" in line and "::" in line:

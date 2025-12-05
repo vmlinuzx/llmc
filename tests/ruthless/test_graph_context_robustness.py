@@ -1,9 +1,10 @@
 
-import pytest
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
+
 from llmc.docgen.graph_context import build_graph_context
+
 
 def test_graph_context_malformed_json(tmp_path):
     repo_root = tmp_path / "repo"

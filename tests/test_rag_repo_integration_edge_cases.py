@@ -63,7 +63,7 @@ setup(name='test')
 """)
 
         # Test workspace detection/creation
-        expected_workspace = repo_root / ".llmc" / "rag"
+        repo_root / ".llmc" / "rag"
 
         # The workspace should be auto-detected or created
         # Test the path resolution logic
@@ -122,7 +122,7 @@ setup(name='test')
         # Register each repo
         # (Actual CLI invocation would be tested here)
         for i, repo_path in enumerate(repos):
-            entry = {
+            {
                 "repo_id": f"test_repo_{i}",
                 "repo_path": str(repo_path),
                 "rag_workspace_path": str(repo_path / ".llmc" / "rag"),
@@ -355,7 +355,7 @@ class TestWorkspaceCleanup:
         try:
             validate_repo_paths(repo_root, malicious_path)
             # Should raise PathTraversalError
-            assert False, "Should have raised PathTraversalError"
+            raise AssertionError("Should have raised PathTraversalError")
         except PathTraversalError:
             pass  # Expected
 
@@ -528,7 +528,7 @@ class TestRegistryUpdates:
         try:
             with open(registry_file) as f:
                 yaml.safe_load(f)
-            assert False, "Should fail to parse corrupted YAML"
+            raise AssertionError("Should fail to parse corrupted YAML")
         except yaml.YAMLError:
             pass  # Expected
 
@@ -603,7 +603,7 @@ class TestPathSafety:
         for path in malicious_paths:
             try:
                 validate_repo_paths(Path("/home/user/repo"), Path(path))
-                assert False, f"Should have rejected: {path}"
+                raise AssertionError(f"Should have rejected: {path}")
             except PathTraversalError:
                 pass  # Expected
 
@@ -618,7 +618,7 @@ class TestPathSafety:
         for path in dangerous_paths:
             try:
                 validate_repo_paths(Path("/home/user/repo"), Path(path))
-                assert False, f"Should have rejected absolute path: {path}"
+                raise AssertionError(f"Should have rejected absolute path: {path}")
             except PathTraversalError:
                 pass  # Expected
 
@@ -651,7 +651,7 @@ class TestPathSafety:
         """Test handling of extremely long paths."""
         # Create very long but valid path
         long_name = "a" * 255  # Many filesystems limit to 255 chars
-        long_path = Path(long_name)
+        Path(long_name)
 
         # Should handle or reject appropriately
         assert len(long_name) == 255
@@ -700,8 +700,8 @@ class TestPathSafety:
             (Path("/base"), "dir/../file.py", Path("/base/file.py")),
         ]
 
-        for base, sub, expected in test_cases:
-            result = safe_subpath(base, sub)
+        for base, sub, _expected in test_cases:
+            safe_subpath(base, sub)
             # Should resolve to expected path
 
 
@@ -813,7 +813,6 @@ class TestRepoConfiguration:
         """Test that negative refresh intervals are rejected or handled."""
         # Negative intervals don't make sense
         # Should either reject or convert to 0
-        interval = -100
         # Implementation should handle this
 
     def test_unknown_repo_fields(self, tmp_path: Path):

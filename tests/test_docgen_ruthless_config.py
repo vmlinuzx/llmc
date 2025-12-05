@@ -1,7 +1,6 @@
 
-import pytest
-from pathlib import Path
 from llmc.docgen.backends.shell import load_shell_backend
+
 
 def test_load_shell_backend_allows_path_traversal(tmp_path):
     """Verify that load_shell_backend allows executing scripts outside the repo."""

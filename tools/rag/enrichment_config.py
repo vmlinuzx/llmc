@@ -6,12 +6,11 @@ and handles loading provider configurations from llmc.toml.
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
+import os
 from typing import Any
 
 from tools.rag.enrichment_reliability import PricingInfo, RateLimitConfig
-
 
 # =============================================================================
 # Provider Metadata
@@ -94,6 +93,19 @@ PROVIDERS: dict[str, ProviderMetadata] = {
             output_per_million=0.08,
         ),
     ),
+    "minimax": ProviderMetadata(
+        adapter_type="anthropic",  # Minimax uses Anthropic-compatible API
+        auth_env_var="MINIMAX_API_KEY",
+        base_url="https://api.minimax.io/anthropic",
+        rate_limit=RateLimitConfig(
+            requests_per_minute=60,
+            tokens_per_minute=100_000,
+        ),
+        pricing=PricingInfo(
+            input_per_million=0.10,  # Approximate pricing
+            output_per_million=0.20,
+        ),
+    ),
     "azure": ProviderMetadata(
         adapter_type="azure-openai",
         auth_env_var="AZURE_OPENAI_API_KEY",
@@ -133,7 +145,7 @@ def get_provider_metadata(provider: str) -> ProviderMetadata | None:
     """Get provider metadata from registry.
 
     Args:
-        provider: Provider name (e.g., "gemini")
+        provider: _ALLOWED_PROVIDERS = {"ollama", "gateway", "gemini", "minimax", "openai", "anthropic", "groq", "azure"})
 
     Returns:
         ProviderMetadata or None if not found

@@ -5,19 +5,15 @@ Comprehensive integration, load, and performance tests.
 Final validation of all success criteria.
 """
 
-import tempfile
 import threading
 import time
-from pathlib import Path
-from typing import List
 
 import pytest
 
 from llmc_mcp.admin_tools import maasl_locks, maasl_stomp_stats
 from llmc_mcp.docgen_guard import DocgenCoordinator
 from llmc_mcp.maasl import MAASL, ResourceDescriptor
-from llmc_mcp.tools.fs_protected import write_file_protected
-from llmc_mcp.merge_meta import MergeEngine, GraphPatch
+from llmc_mcp.merge_meta import GraphPatch, MergeEngine
 
 
 @pytest.mark.allow_sleep
@@ -40,7 +36,7 @@ class TestCrossComponentIntegration:
             time.sleep(0.01)
             
             # 3. Graph update (MERGE_META)
-            patch = GraphPatch(
+            GraphPatch(
                 nodes_to_add=[{"id": "test_node", "kind": "file"}],
                 edges_to_add=[],
                 properties_to_set={"test": "value"},
@@ -387,7 +383,7 @@ class TestSuccessCriteria:
         assert all(r == "success" for r in results)
         
         # SUCCESS: All files have correct content (no stomps)
-        for i, file in enumerate(files):
+        for _i, file in enumerate(files):
             content = file.read_text()
             assert "initial" in content
             assert "iter-0" in content
@@ -405,7 +401,6 @@ class TestSuccessCriteria:
         # - Concurrent merges
         
         # Verify the engine exists and is importable
-        from llmc_mcp.merge_meta import MergeEngine, GraphPatch
         
         engine = MergeEngine()
         assert engine is not None

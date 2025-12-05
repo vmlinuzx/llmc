@@ -27,7 +27,7 @@ def test_build_graph_creates_graph_and_status(tmp_path: Path) -> None:
     )
 
     # Act: build graph.
-    status = build_graph_for_repo(repo_root)
+    build_graph_for_repo(repo_root)
 
     # Assert: status persisted and marked fresh.
     loaded = load_status(repo_root)

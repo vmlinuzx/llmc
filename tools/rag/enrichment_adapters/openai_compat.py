@@ -12,7 +12,6 @@ import logging
 from typing import Any
 
 from tools.rag.enrichment_adapters.base import RemoteBackend
-from tools.rag.enrichment_config import EnrichmentProviderConfig
 
 logger = logging.getLogger(__name__)
 

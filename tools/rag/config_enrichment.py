@@ -20,7 +20,7 @@ except Exception:  # pragma: no cover - fallback for older runtimes
         _toml = None  # type: ignore[assignment]
 
 
-_ALLOWED_PROVIDERS = {"ollama", "gateway", "gemini"}
+_ALLOWED_PROVIDERS = {"ollama", "gateway", "gemini", "minimax", "openai", "anthropic", "groq", "azure"}
 # Common tier labels for reference - NOT enforced, just suggestions
 _COMMON_TIERS = {"nano", "1b", "3b", "7b", "8b", "14b", "20b", "30b", "70b", "405b"}
 
@@ -209,9 +209,9 @@ def _parse_chain_from_json(
             for raw in entries:
                 if not isinstance(raw, Mapping):
                     continue
-                raw = dict(raw)
-                raw.setdefault("chain", chain_name)
-                spec = _parse_backend_spec(raw, default_chain=default_chain)
+                backend_data = dict(raw)
+                backend_data.setdefault("chain", chain_name)
+                spec = _parse_backend_spec(backend_data, default_chain=default_chain)
                 chains.setdefault(spec.chain, []).append(spec)
         return chains
 

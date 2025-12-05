@@ -28,7 +28,7 @@ def test_score_normalization_basic():
         {
             "vec": _pack_vector([1.0, 0.0]),
             "span_hash": "h1",
-            "file_path": "test1.py",
+            "file_path": "data1.dat",
             "symbol": "s1",
             "kind": "def",
             "start_line": 1,
@@ -38,7 +38,7 @@ def test_score_normalization_basic():
         {
             "vec": _pack_vector([0.0, 1.0]),
             "span_hash": "h2",
-            "file_path": "test2.py",
+            "file_path": "data2.dat",
             "symbol": "s2",
             "kind": "def",
             "start_line": 1,
@@ -48,7 +48,7 @@ def test_score_normalization_basic():
         {
             "vec": _pack_vector([0.70710678, 0.70710678]),
             "span_hash": "h3",
-            "file_path": "test3.py",
+            "file_path": "data3.dat",
             "symbol": "s3",
             "kind": "def",
             "start_line": 1,
@@ -113,7 +113,8 @@ def test_score_normalization_clamping():
 
     # Raw score should include boost
     assert r.score > 1.0
-    assert r.score == pytest.approx(1.15, 0.001)
-
+    # 1.0 (cosine) + 0.15 (stem match) - 0.08 (test penalty) = 1.07
+    assert r.score == pytest.approx(1.07, 0.001)
+    
     # Normalized score should be clamped
     assert r.normalized_score == 100.0

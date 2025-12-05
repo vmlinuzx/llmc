@@ -1,83 +1,85 @@
-
-import pytest
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+
+import pytest
+
 from llmc.docgen.graph_context import build_graph_context
 
-class TestGraphCrashRen:
-    """Ruthless testing for graph context stability."""
 
-    @pytest.fixture
-    def repo_root(self, tmp_path):
-        (tmp_path / ".llmc").mkdir()
-        return tmp_path
+class MockDB:
+    def fetch_enrichment_by_span_hash(self, span_hash):
+        return None
 
-    @pytest.fixture
-    def mock_db(self):
-        db = MagicMock()
-        db.fetch_enrichment_by_span_hash.return_value = None
-        return db
+def test_graph_invalid_root_structure(tmp_path):
+    """Test that a non-dict root object is handled gracefully."""
+    repo_root = tmp_path
+    llmc_dir = repo_root / ".llmc"
+    llmc_dir.mkdir()
+    graph_path = llmc_dir / "rag_graph.json"
+    
+    # Write a list instead of dict
+    graph_path.write_text("[]")
+    
+    context = build_graph_context(repo_root, Path("foo.py"), MockDB())
+    assert "status: no_graph_data" in context
 
-    def test_invalid_json_file(self, repo_root, mock_db):
-        """Test with a corrupted JSON file."""
-        graph_file = repo_root / ".llmc" / "rag_graph.json"
-        graph_file.write_text("{ not valid json }")
-        
-        # Should not raise exception
-        result = build_graph_context(repo_root, Path("test.py"), mock_db)
-        assert "status: no_graph_data" in result
+def test_graph_invalid_entities_type(tmp_path):
+    """Test that non-dict 'entities' field is handled."""
+    repo_root = tmp_path
+    llmc_dir = repo_root / ".llmc"
+    llmc_dir.mkdir()
+    graph_path = llmc_dir / "rag_graph.json"
+    
+    # entities is a list
+    graph_path.write_text(json.dumps({"entities": [], "relations": []}))
+    
+    context = build_graph_context(repo_root, Path("foo.py"), MockDB())
+    assert "status: no_graph_data" in context
 
-    def test_root_list_instead_of_dict(self, repo_root, mock_db):
-        """Test with a list at root instead of dict."""
-        graph_file = repo_root / ".llmc" / "rag_graph.json"
-        graph_file.write_text("[]")
-        
-        result = build_graph_context(repo_root, Path("test.py"), mock_db)
-        assert "status: no_graph_data" in result
+def test_graph_invalid_relations_type(tmp_path):
+    """Test that non-list 'relations' field is handled."""
+    repo_root = tmp_path
+    llmc_dir = repo_root / ".llmc"
+    llmc_dir.mkdir()
+    graph_path = llmc_dir / "rag_graph.json"
+    
+    # relations is a dict
+    graph_path.write_text(json.dumps({
+        "entities": {
+            "e1": {"file_path": "foo.py", "kind": "func", "name": "foo"}
+        },
+        "relations": {} # Should be list
+    }))
+    
+    context = build_graph_context(repo_root, Path("foo.py"), MockDB())
+    # Should fall back to no graph context because it returns early on validation failure
+    assert "status: no_graph_data" in context
 
-    def test_entities_list_instead_of_dict(self, repo_root, mock_db):
-        """Test with entities as list."""
-        data = {"entities": [], "relations": []}
-        graph_file = repo_root / ".llmc" / "rag_graph.json"
-        graph_file.write_text(json.dumps(data))
-        
-        result = build_graph_context(repo_root, Path("test.py"), mock_db)
-        assert "status: no_graph_data" in result
+def test_graph_malformed_relation_item(tmp_path):
+    """Test that individual malformed relations are skipped but process continues."""
+    repo_root = tmp_path
+    llmc_dir = repo_root / ".llmc"
+    llmc_dir.mkdir()
+    graph_path = llmc_dir / "rag_graph.json"
+    
+    graph_path.write_text(json.dumps({
+        "entities": {
+            "e1": {"file_path": "foo.py", "kind": "func", "name": "foo"}
+        },
+        "relations": [
+            "not-a-dict", # Garbage
+            {"src": "e1", "edge": "calls", "dst": "e2"} # Valid
+        ]
+    }))
+    
+    context = build_graph_context(repo_root, Path("foo.py"), MockDB())
+    
+    # Should NOT be "no_graph_data" because it survived partial corruption
+    assert "status: no_graph_data" not in context
+    assert "entity_count: 1" in context
+    assert "relation_count: 1" in context # The valid one survived
 
-    def test_relations_dict_instead_of_list(self, repo_root, mock_db):
-        """Test with relations as dict."""
-        data = {
-            "entities": {"e1": {"file_path": "test.py"}},
-            "relations": {}
-        }
-        graph_file = repo_root / ".llmc" / "rag_graph.json"
-        graph_file.write_text(json.dumps(data))
-        
-        result = build_graph_context(repo_root, Path("test.py"), mock_db)
-        assert "status: no_graph_data" in result
-
-    def test_malformed_relation_entry(self, repo_root, mock_db):
-        """Test with a relation that isn't a dict."""
-        data = {
-            "entities": {"e1": {"file_path": "test.py"}},
-            "relations": ["not a dict", {"src": "e1", "dst": "e2"}]
-        }
-        graph_file = repo_root / ".llmc" / "rag_graph.json"
-        graph_file.write_text(json.dumps(data))
-        
-        # Should skip the string relation and process the valid one
-        result = build_graph_context(repo_root, Path("test.py"), mock_db)
-        assert "entity_count: 1" in result
-        # If "dst": "e2" isn't in entities, it might not be included depending on logic.
-        # The logic says: "Include relation if either endpoint is in our file"
-        # e1 is in our file. So the valid relation should be included.
-        assert "relation_count: 1" in result
-
-    def test_db_missing_method(self, repo_root):
-        """Test passing a DB without the required method."""
-        bad_db = MagicMock()
-        del bad_db.fetch_enrichment_by_span_hash
-        
-        with pytest.raises(TypeError, match="Expected database instance"):
-            build_graph_context(repo_root, Path("test.py"), bad_db)
+def test_graph_db_duck_typing():
+    """Test that passing a non-compliant DB raises TypeError."""
+    with pytest.raises(TypeError, match="Expected database instance"):
+        build_graph_context(Path("/tmp"), Path("foo.py"), object())

@@ -779,7 +779,7 @@ class TestRouteQueryConvenienceFunction:
         with patch("tools.rag_router.Path.cwd") as mock_cwd:
             mock_cwd.return_value = Path("/tmp/repo")
 
-            decision = route_query("test query", Path("/tmp/custom"))
+            route_query("test query", Path("/tmp/custom"))
 
             mock_router_class.assert_called_once_with(Path("/tmp/custom"))
             mock_router.route.assert_called_once_with("test query", Path("/tmp/custom"))
@@ -812,7 +812,7 @@ class TestRouteQueryConvenienceFunction:
 
             with patch.object(cwd_instance, "parent", parent):
                 with patch.object(parent, "__truediv__", lambda self, x: Path(f"/tmp/{x}")):
-                    decision = route_query("test query")
+                    route_query("test query")
 
                     # Should auto-detect repo root
                     mock_router_class.assert_called_once()

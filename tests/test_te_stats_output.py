@@ -251,7 +251,7 @@ class TestTeStatsOutput:
         # Compare line by line for clearer diffs
         assert len(actual_output_lines) == len(expected_output_lines)
         for i, (actual_line, expected_line) in enumerate(
-            zip(actual_output_lines, expected_output_lines)
+            zip(actual_output_lines, expected_output_lines, strict=False)
         ):
             assert actual_line == expected_line, (
                 f"Line {i + 1} differs: Actual='{actual_line}', Expected='{expected_line}'"

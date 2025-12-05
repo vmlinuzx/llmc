@@ -297,7 +297,7 @@ def test_worker_max_backoff_cap(tmp_path: Path) -> None:
     )
 
     # Run enough failures to exceed max backoff
-    for i in range(10):
+    for _i in range(10):
         job = Job(job_id=make_job_id(), repo=repo, force=True)
         workers.submit_jobs([job])
 
@@ -481,7 +481,7 @@ exit 0
     time.sleep(2)
 
     # Check that output is captured in state
-    state = state_store.get(repo.repo_id)
+    state_store.get(repo.repo_id)
     # Note: The current implementation doesn't store stdout/stderr in state,
     # but they're captured in the JobResult. This is a design limitation.
 
@@ -530,7 +530,7 @@ def test_worker_state_persistence(tmp_path: Path) -> None:
     assert state1.consecutive_failures == 0
 
     # Create new worker (simulates daemon restart)
-    workers2 = WorkerPool(cfg, state_store)
+    WorkerPool(cfg, state_store)
 
     # Verify state persisted
     state2 = state_store.get(repo.repo_id)

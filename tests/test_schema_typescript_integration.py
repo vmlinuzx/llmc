@@ -8,10 +8,9 @@ This test creates a small TypeScript project and verifies that:
 4. All expected symbols appear in the graph
 """
 
+import json
 from pathlib import Path
 import tempfile
-import json
-import shutil
 
 from tools.rag.schema import build_schema_graph
 
@@ -118,7 +117,7 @@ export function createRouter(): Router {
         assert handler_class.end_line is not None
         
         # ===== Verify relations =====
-        relation_triples = [(r.src, r.edge, r.dst) for r in graph.relations]
+        [(r.src, r.edge, r.dst) for r in graph.relations]
         
         # Check for call relations
         # Router.route should call Handler.process and Handler.logRequest

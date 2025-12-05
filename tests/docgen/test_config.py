@@ -2,6 +2,8 @@
 Tests for docgen configuration loading.
 """
 
+from pathlib import Path
+
 import pytest
 
 from llmc.docgen.config import (
@@ -10,7 +12,6 @@ from llmc.docgen.config import (
     get_require_rag_fresh,
     load_docgen_backend,
 )
-from pathlib import Path
 
 
 def test_load_docgen_backend_no_docs_section():

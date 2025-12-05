@@ -132,9 +132,9 @@
    - Atomic file writing
 
 7. **Phase 7: CLI Integration** (2-3h, 🟢 Easy)
-   - `llmc docs generate [PATH]`
-   - `llmc docs generate --all`
-   - `llmc docs status`
+   - `llmc debug autodoc generate [PATH]`
+   - `llmc debug autodoc generate --all`
+   - `llmc debug autodoc status`
 
 8. **Phase 8: Concurrency Control** (2-3h, 🟡 Medium)
    - Per-repo file lock

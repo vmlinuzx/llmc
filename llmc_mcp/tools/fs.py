@@ -17,6 +17,33 @@ from pathlib import Path
 import stat as stat_module
 from typing import Any
 
+# Human-readable formatting (optional - graceful fallback)
+try:
+    import humanize
+    HUMANIZE_AVAILABLE = True
+except ImportError:
+    HUMANIZE_AVAILABLE = False
+
+
+def _human_size(size_bytes: int) -> str:
+    """Return human-readable file size."""
+    if HUMANIZE_AVAILABLE:
+        return humanize.naturalsize(size_bytes, binary=True)
+    # Fallback
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if abs(size_bytes) < 1024.0:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024.0
+    return f"{size_bytes:.1f} PB"
+
+
+def _human_time(dt: datetime) -> str:
+    """Return human-readable relative time."""
+    if HUMANIZE_AVAILABLE:
+        return humanize.naturaltime(dt)
+    # Fallback
+    return dt.isoformat()
+
 
 class PathSecurityError(Exception):
     """Raised when path access is denied for security reasons."""
@@ -201,6 +228,7 @@ def read_file(
             meta={
                 "path": str(resolved),
                 "size": file_size,
+                "size_human": _human_size(file_size),
                 "truncated": truncated,
                 "encoding": encoding,
             },
@@ -277,13 +305,27 @@ def list_dir(
             if entry.is_symlink():
                 entry_type = "symlink"
 
-            entries.append(
-                {
-                    "name": entry.name,
-                    "type": entry_type,
-                    "path": str(entry),
-                }
-            )
+            # Get size for files
+            try:
+                entry_stat = entry.stat()
+                size = entry_stat.st_size if entry_type == "file" else None
+                mtime = datetime.fromtimestamp(entry_stat.st_mtime, tz=UTC)
+            except OSError:
+                size = None
+                mtime = None
+
+            entry_data = {
+                "name": entry.name,
+                "type": entry_type,
+                "path": str(entry),
+            }
+            if size is not None:
+                entry_data["size"] = size
+                entry_data["size_human"] = _human_size(size)
+            if mtime is not None:
+                entry_data["modified"] = _human_time(mtime)
+
+            entries.append(entry_data)
 
         return FsResult(
             success=True,
@@ -361,13 +403,20 @@ def stat_path(
         ctime = datetime.fromtimestamp(st.st_ctime, tz=UTC).isoformat()
         atime = datetime.fromtimestamp(st.st_atime, tz=UTC).isoformat()
 
+        # Create datetime objects for human-readable output
+        mtime_dt = datetime.fromtimestamp(st.st_mtime, tz=UTC)
+        datetime.fromtimestamp(st.st_ctime, tz=UTC)
+        datetime.fromtimestamp(st.st_atime, tz=UTC)
+
         return FsResult(
             success=True,
             data={
                 "size": st.st_size,
+                "size_human": _human_size(st.st_size),
                 "type": file_type,
                 "mode": oct(st.st_mode)[-4:],  # e.g., "0644"
                 "mtime": mtime,
+                "mtime_human": _human_time(mtime_dt),
                 "ctime": ctime,
                 "atime": atime,
                 "uid": st.st_uid,

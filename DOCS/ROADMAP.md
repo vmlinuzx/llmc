@@ -14,50 +14,168 @@ Think of this as:
 
 These are the things that make the current LLMC stack feel solid and intentional for you and for any future users.
 
+### 1.0 Ruthless MCP Testing Agent (RMTA) **P0**
+
+**Status:** 🚧 In Progress (Dec 2025)
+
+**Goal:** Systematically validate the MCP server through agent-based testing to catch UX issues, broken tools, and documentation drift that traditional unit tests miss.
+
+**📄 Design:** [`planning/HLD_Ruthless_MCP_Testing_Agent.md`](planning/HLD_Ruthless_MCP_Testing_Agent.md)  
+**📄 AAR:** [`planning/AAR_MCP_Live_Testing_2025-12-04.md`](planning/AAR_MCP_Live_Testing_2025-12-04.md)
+
+**Problem:**
+- **2025-12-04 AAR:** Live agent testing revealed 35% of advertised MCP tools are non-functional
+- Bootstrap instructions contained incorrect paths (confusing agents)
+- Tools advertised in docs but missing handlers (`rag_where_used`, `rag_lineage`, etc.)
+- Response format bugs (`linux_fs_edit` reports 0 replacements but edit succeeds)
+- Traditional tests verify code *can* be called, not that agent *experience* matches promises
+
+**Solution:**
+Multi-phase testing harness where an LLM agent:
+1. Connects to MCP server using only advertised tools
+2. Systematically tests all stubs/tools with realistic inputs
+3. Analyzes its own experience (confusing errors, broken paths, missing features)
+4. Generates structured reports (markdown + JSON) with categorized incidents (P0-P3)
+
+**Architecture:**
+- **Tool Discovery Agent** - Lists all tools, compares advertised vs registered
+- **Tool Executor Agent** - Invokes each tool, logs results
+- **Experience Analyzer** - Reviews logs, identifies UX/functionality issues
+- **Report Generator** - Outputs markdown + JSON for CI integration
+
+**Implementation Phases:**
+- [x] Phase 1: Minimal harness (shell wrapper + prompts) ✅ **COMPLETE**
+  - `tools/ruthless_mcp_tester.sh` - Shell wrapper following Roswaal pattern
+  - Comprehensive testing methodology and severity guidelines
+  - Structured markdown report template with P0-P3 classification
+  - Bootstrap validation, tool discovery, systematic testing workflow
+  - Reports output to `tests/REPORTS/mcp/`
+- [ ] Phase 2: Automated orchestrator (`llmc test-mcp --mode ruthless`)
+- [ ] Phase 3: CI integration with quality gates
+- [ ] Phase 4: Historical tracking and regression detection
+
+**Expected Findings (from AAR):**
+- Missing handlers: `rag_where_used`, `rag_lineage`, `rag_stats`, `inspect`
+- Non-functional: `linux_proc_*`, `linux_sys_snapshot`
+- Response bugs: `linux_fs_edit` incorrect metadata
+- Path issues: Bootstrap prompt assumes incorrect CWD
+
+**Success Criteria:**
+- Agent can run unattended, generate report
+- Finds all known issues from 2025-12-04 AAR
+- Zero false positives (tools marked broken that work)
+- CI integration blocks PRs with P0 incidents
+
+**Total Effort:** ~1 week (Phase 1-3) | **Difficulty:** 🟡 Medium (6/10)
+
+**Why P0:** 
+- **MCP is the primary agent interface** - broken MCP = broken Claude Desktop integration
+- **Agent UX issues are invisible to traditional tests** - only detectable through agent use
+- **Prevents capability drift** - ensures docs/prompts stay aligned with implementation
+- **Blocks productization** - can't ship agent-facing features if agent experience is broken
+
+---
+
+### 1.0.1 MCP Tool Alignment and Implementation **P1**
+
+**Status:** 🚧 Blocked by RMTA (P0)
+
+**Goal:** Fix all MCP tool discrepancies identified in 2025-12-04 AAR - remove false advertising, implement missing handlers, fix response bugs.
+
+**📄 AAR:** [`planning/AAR_MCP_Live_Testing_2025-12-04.md`](planning/AAR_MCP_Live_Testing_2025-12-04.md)
+
+**Problem:**
+Live agent testing (2025-12-04) revealed critical gaps between advertised and actual MCP capabilities:
+
+**Category 1: Missing Handlers (Advertised but Non-Functional)**
+- `rag_where_used` - Listed in stubs/docs, returns "Unknown tool"
+- `rag_lineage` - Listed in stubs/docs, returns "Unknown tool"  
+- `rag_stats` - Listed in stubs/docs, returns "Unknown tool"
+- `inspect` - Listed in stubs/docs, returns "Unknown tool"
+- **Impact:** Agents try to use these tools and fail, wastes tokens, erodes trust
+
+**Category 2: Stub Implementations (Return Empty Data)**
+- `linux_proc_list` - Returns `{"data": []}` (0 processes on running system)
+- `linux_sys_snapshot` - Returns `{"data": {"cpu_percent": "N/A", ...}}`
+- `linux_proc_start/send/read/stop` - All return empty responses
+- **Impact:** Process management features completely non-functional
+
+**Category 3: Response Format Bugs**
+- `linux_fs_edit` - Successfully edits file but reports `replacements_made: 0`
+- `rag_query` - Some results have `summary: None` (causes null pointer errors)
+- `stat` - Returns minimal metadata (no size, timestamps)
+- **Impact:** Agents cannot programmatically verify success, must add defensive null checks
+
+**Category 4: Documentation Drift**
+- ✅ **FIXED:** Bootstrap prompt path (`.llmc/stubs/` → `<repo_root>/.llmc/stubs/`)
+- **Impact:** Agents cannot discover tools, confusing onboarding experience
+
+**Tasks:**
+
+**Immediate (CRITICAL):**
+- [ ] **Remove false advertising** - Update `BOOTSTRAP_PROMPT` to only list implemented tools
+  - OR add clear markers: `rag_where_used (not implemented)`, `linux_proc_list (experimental)`
+- [ ] **Implement missing graph tool handlers** - `rag_where_used`, `rag_lineage`, `rag_stats`, `inspect`
+  - OR remove from `TOOLS` array if intentionally unimplemented
+- [ ] **Fix response metadata bugs:**
+  - `linux_fs_edit` - Return correct `replacements_made` count
+  - `rag_query` - Guarantee non-null `summary` fields (use placeholder if needed)
+
+**Near-Term:**
+- [ ] **Implement OR document LinuxOps tools:**
+  - Either implement `linux_proc_*` tools properly
+  - OR mark as "planned/experimental" in docs and remove from bootstrap
+- [ ] **Add MCP server health check:**
+  - `health()` tool verifies all advertised tools have handlers
+  - Logs warning on startup if orphaned tool definitions exist
+  - Validates stubs directory is accessible
+
+**Testing:**
+- [ ] Run RMTA (when Phase 1 complete) to verify fixes
+- [ ] Add unit tests for each fixed tool
+- [ ] Update integration tests to cover response format contracts
+
+**Acceptance Criteria:**
+- RMTA reports 0 P0 incidents (no broken core features)
+- RMTA reports 0 P1 incidents (no advertised tools missing handlers)
+- All tools in `BOOTSTRAP_PROMPT` have working handlers
+- All response formats documented and consistent
+
+**Total Effort:** ~3-5 days | **Difficulty:** 🟡 Medium (5/10)
+
+**Why P1:**
+- **Agent trust and productivity** - Current state wastes tokens on failed tool calls
+- **Developer onboarding** - New users discover system is "broken" within minutes
+- **Productization blocker** - Can't ship to external users with 35% tool failure rate
+- **Dependencies:** Must fix before external MCP client integration (Claude Desktop, etc.)
+
+---
+
 ### 1.1 Automated Repository Onboarding **P0**
 
-**Status:** Active Development (Dec 2025)
+**Status:** ✅ Complete (Dec 2025)
 
 **Goal:** Eliminate manual setup friction when adding new repositories. One command should handle everything: workspace creation, config generation, initial indexing, and MCP readiness.
 
-**📄 Design:** [`planning/SDD_Repo_Onboarding_Automation.md`](planning/SDD_Repo_Onboarding_Automation.md)
+**📄 Design:** [`planning/SDD_Repo_Configurator.md`](planning/SDD_Repo_Configurator.md)
 
-**Problem:**
-- Current `llmc-rag-repo add` only creates workspace structure
-- Users must manually copy `llmc.toml`, update `allowed_roots`, run indexing, configure enrichment
-- 6+ manual steps → high friction, inconsistent configs, poor UX
-- **Architecture issue:** Business logic in CLI instead of service layer
-
-**Solution:**
-- Implement `RAGService.onboard_repo()` as **service-layer orchestrator**
-- CLI becomes thin wrapper delegating to service
-- Automated phases:
-  1. Workspace creation (✅ existing)
-  2. `llmc.toml` generation with path substitution 🆕
-  3. Initial indexing (leverage `process_repo()`) 🆕
-  4. Interactive enrichment prompt 🆕
-  5. MCP readiness instructions 🆕
-  6. Daemon integration 🆕
+**Current State:**
+- Repo Configurator implemented and integrated into CLI.
+- `llmc-rag-repo add` now generates `llmc.toml` automatically.
+- Supports interactive customization and non-interactive CI mode.
 
 **Implementation Phases:**
-- [ ] Phase 1: Core `onboard_repo()` method (4-5h)
-- [ ] Phase 2: Config template generation (3-4h)
-- [ ] Phase 3: Initial indexing integration (2-3h)
-- [ ] Phase 4: Optional enrichment (2-3h)
-- [ ] Phase 5: MCP instructions \u0026 polish (2h)
-- [ ] Phase 6: CLI wrapper integration (2h)
-- [ ] Phase 7: Testing \u0026 docs (3-4h)
+- [x] Phase 1: CLI Integration & Skeleton
+- [x] Phase 2: Template Discovery & Loading
+- [x] Phase 3: Existing File Handling
+- [x] Phase 4: Option Collection
+- [x] Phase 5: Config Transformation
+- [x] Phase 6: Config Writing
+- [x] Phase 7: Integration & Testing
 
-**Total Effort:** 18-24 hours | **Difficulty:** 🟡 Medium
+**Total Effort:** ~10 hours | **Difficulty:** 🟡 Medium
 
-**Success Criteria:**
-- ✅ One command: `llmc-rag-repo add /path/to/repo` → fully ready
-- ✅ MCP queries work immediately after onboarding
-- ✅ Non-interactive mode (`--yes`) for CI/automation
-- ✅ Clear progress indicators and error messages
-- ✅ End-to-end tests with real repos
-
-**Why P0:** **Productization blocker.** This is the #1 UX friction point preventing smooth multi-repo workflows and adoption by other developers.
+**Why P0:** **Productization blocker.** This is the #1 UX friction point preventing smooth multi-repo workflows.
 
 ---
 
@@ -184,24 +302,22 @@ llmc-cli rag search "model"  # Should return results, not 0
 - `rag_stats` shows enrichment coverage
 - Integration tests verify enrichment schema
 
-### 1.4 Deterministic Repo Docgen (v2)
+### ~~1.4 Deterministic Repo Docgen (v2)~~ ✅ DONE
+**Completed:** Dec 2025
 
 **Goal:** Generate accurate, per-file repository documentation automatically with RAG-based freshness gating.
 
-**Why Now:** Need this to properly document the system before doing any public-facing cleanup. The docgen will help create the clean story.
-
 **📄 Design:** [`planning/SDD_Docgen_v2_for_Codex.md`](planning/SDD_Docgen_v2_for_Codex.md)
+**📄 Completion Report:** [`planning/Docgen_v2_Final_Summary.md`](planning/Docgen_v2_Final_Summary.md)
 
-**Tasks:**
-- Implement deterministic doc generation per file:
-  - Single freshness gate: RAG must be current for exact file+hash.
-  - SHA256 gating handled only by orchestrator.
-  - Backend contract: JSON stdin → Markdown stdout (no chatter).
-- Build graph context builder with deterministic ordering and caps.
-- Create LLM backend harness with canonical prompt template.
-- Output to `DOCS/REPODOCS/<relative_path>.md` structure.
-- Add observability: counters, timers, and size metrics.
-- Implement concurrency control with file locking.
+**Summary:**
+- ✅ Implemented SHA256-based idempotence
+- ✅ RAG-aware freshness gating
+- ✅ Graph context integration
+- ✅ Shell backend with JSON protocol
+- ✅ Concurrency control with file locks
+- ✅ CLI: `llmc debug autodoc generate` and `llmc debug autodoc status`
+- ✅ 100% test pass rate (33 tests)
 
 ### ~~1.6 System Friendliness (Idle Loop Throttling)~~ ✅ DONE
 
@@ -267,31 +383,17 @@ These are things that make LLMC nicer to live with once the core system is “go
 - Relations: imports, function calls, class inheritance
 - 14 entities extracted from 3-file test project
 
-### 2.3 CLI UX - Progressive Disclosure (Partial ✅)
-
-**Status:** Started Dec 2025
+### ~~2.3 CLI UX - Progressive Disclosure~~ ✅ DONE
+**Completed:** Dec 2025
 
 **Goal:** Ensure all CLI commands provide helpful guidance on errors instead of cryptic messages like "Missing command."
 
-**📝 Progress:**
-- ✅ **Phase 1 (Dec 2025):** Fixed main CLI subcommands
-  - `llmc-cli service` now shows available commands instead of error
-  - `llmc-cli nav`, `llmc-cli docs`, `llmc-cli service repo` all show help
-  - Implementation: Added `no_args_is_help=True` to all Typer subapps
-
-**🔲 Remaining Work:**
-- [ ] Audit all CLI scripts in `scripts/` for consistent help patterns
-- [ ] Add progressive disclosure to `llmc-rag-service`
-- [ ] Create CLI UX guidelines document
-- [ ] Ensure consistent error messages across all commands
-- [ ] Add example usage to every command help text
-
-**Why:**
-- Users shouldn't have to guess what commands exist
-- Error messages should guide users to success
-- Follows modern CLI best practices (e.g., `git`, `kubectl`)
-
-**Effort:** 4-6 hours total | **Difficulty:** 🟢 Easy
+**Summary:**
+- ✅ `llmc-rag-service` (daemon) shows help on no args
+- ✅ `llmc-rag-nav` shows help on no args
+- ✅ `llmc-tui` shows help on --help
+- ✅ Added examples to all top-level help screens
+- ✅ Consistent "tree-style" help overview for all tools
 
 
 ---
@@ -300,71 +402,41 @@ These are things that make LLMC nicer to live with once the core system is “go
 
 These are the “this would be awesome” items that are worth doing, but not at the cost of stability.
 
-### 3.1 Clean public story and remove dead surfaces
+### ~~3.1 Clean public story and remove dead surfaces~~ ✅ DONE
+
+**Completed:** Dec 2025
 
 **Goal:** Reduce confusion and maintenance by cutting old interfaces.
 
-**Why Later:** Premature to do this before the system is fully documented and stable. Repo docgen (1.4) will help create the clean story first.
+**Summary:** Consolidated entrypoints around `llmc` and `llmc-mcp`. Removed legacy scripts from `pyproject.toml`. Updated README.
 
-**Tasks:**
-- Tighten the README and top-level docs:
-  - Clearly state the supported entrypoints:
-    - `llmc-rag`, `llmc-rag-nav`, `llmc-rag-repo`, `llmc-rag-daemon/service`, `llmc-tui`.
-  - Call out what LLMC does *not* try to be (no hosted SaaS, no magic auto-refactor).
 
-### 3.2 Modular enrichment plugins
-
+### ~~3.2 Modular enrichment plugins~~ ✅ DONE
+**Completed:** Dec 2025
 **Goal:** Make it easy to add new backends (local or remote) without touching core code.
+**Summary:** Implemented `BackendAdapter`, `enrichment_factory`, and plugin registry.
 
-- Turn the enrichment backend definitions into a plugin‑style registry:
-  - Configurable via `llmc.toml`.
-  - Pluggable Python modules for custom backends.
-- Document a “write your own backend” path for power users.
 
-### 3.2 Symbol importance ranking for `rag inspect`
-
+### ~~3.2 Symbol importance ranking for `rag inspect`~~ ✅ DONE
+**Completed:** Dec 2025
 **Goal:** Reduce token bloat and make `inspect` more LLM‑friendly.
+**Summary:** Implemented heuristic ranking (Kind, Name, Size, Connectivity) to prioritize important symbols.
 
-- Add a ranking scheme for symbols in a file:
-  - Heuristics like "public API functions", "classes", and "callers with many edges" score higher.
-- Update `rag inspect` / `inspect_entity` to:
-  - Return a compact, ranked subset for LLMs by default.
-  - Expose the full symbol list only on explicit request.
 
-### 3.3 MCP Telemetry & Observability
+### ~~3.3 MCP Telemetry & Observability~~ ✅ DONE
+**Completed:** Dec 2025
+**Goal:** Gain visibility into how agents use the tools.
+**Summary:** Implemented SQLite-backed tool usage tracking and exposed via `llmc stats`.
 
-**Goal:** Enable deep-dive analysis and monitoring while respecting user privacy.
 
-- Implement privacy-aware telemetry system:
-  - Configurable privacy tiers (none/metrics/metadata/arguments/full).
-  - SQLite storage for queryable telemetry (`.llmc/mcp_telemetry.db`).
-  - Automatic redaction of sensitive data (credentials, paths).
-  - **Default: OFF** for public distribution (security-first).
-- Add TUI dashboard integration:
-  - Real-time metrics display (call counts, latencies, error rates).
-  - Top tools and recent errors tracking.
-  - Code execution trace viewer (privacy-gated).
-- Implement retention policies with auto-cleanup.
-- Add `get_telemetry` MCP tool for LLM self-analysis.
+### ~~3.4 Multi-Agent Coordination & Anti-Stomp~~ ✅ DONE
 
-### 3.4 Multi-Agent Coordination & Anti-Stomp ✅ CODE COMPLETE
+**Completed:** Dec 2025
 
-**Status:** Feature branch ready, pending integration testing
+**Goal:** Prevent agents from stomping on each other's work (files, DB, graph) during concurrent execution.
 
-**Branch:** `feature/maasl-anti-stomp` (DO NOT MERGE YET)
+**Validation:** [`planning/MAASL_VALIDATION_CHECKLIST.md`](planning/MAASL_VALIDATION_CHECKLIST.md)
 
-MAASL (Multi-Agent Anti-Stomp Layer) - 8 phases implemented:
-- Phase 1-3: Core lock manager, file protection, code protection
-- Phase 4: DB transaction guard with SQLite coordination
-- Phase 5: Graph merge engine for concurrent updates
-- Phase 6: Docgen coordination  
-- Phase 7: Introspection tools (MCP integration)
-- Phase 8: Production hardening
-
-**Before merge:**
-- [ ] Multi-agent stress testing (3+ concurrent agents)
-- [ ] Real-world usage validation
-- [ ] Lint clean after concurrent edits
 
 
 ### 3.5 RAG Scoring & Ranking Research (R&D)
@@ -400,54 +472,17 @@ MAASL (Multi-Agent Anti-Stomp Layer) - 8 phases implemented:
 **Effort:** 20-40 hours research + implementation | **Difficulty:** 🔴 Hard (research)
 
 
-### 3.5 Comprehensive Repo Cleanup
+### ~~3.5 Repo Cleanup & Dead Code Removal~~ ✅ DONE
+**Completed:** Dec 2025
+**Goal:** Remove unused code, consolidate duplicate logic, and reduce technical debt.
+**Summary:** Removed legacy scripts, consolidated core utilities, and cleaned up CLI entry points.
 
-**Goal:** Clean up build artifacts, cache files, and cruft throughout the entire repository.
 
-**Prerequisites:**
-- Documentation agent complete (for pre-cleanup docs sweep)
-
-**Tasks:**
-- Full documentation sweep of every file (via documentation agent)
-- Identify and remove/move build artifacts:
-  - `__pycache__/` directories
-  - `.egg-info/` directories
-  - Orphaned cache files
-  - Temporary test outputs
-  - Old backup files (`*~`, `*.bak`)
-- Update `.gitignore` to prevent future artifact commits
-- Create cleanup script for regular maintenance
-- Document artifact management policy in `CONTRIBUTING.md`
-
-**Priority:** Low (blocked on documentation agent completion)
-
-**Estimated Effort:** 4-6 hours
-
-### 3.6 Remote LLM Provider Support for Enrichment
-
+### ~~3.6 Remote LLM Provider Support for Enrichment~~ ✅ DONE
+**Completed:** Dec 2025
 **Goal:** Enable remote API providers (Gemini, OpenAI, Anthropic, Groq) in the enrichment cascade with production-grade reliability.
+**Summary:** Implemented `RemoteBackend`, adapters for major providers, circuit breakers, rate limiting, and cost tracking.
 
-**📄 Design:** [`planning/SDD_Remote_LLM_Providers.md`](planning/SDD_Remote_LLM_Providers.md)
-
-**Summary:**
-- Add `RemoteBackend` adapter supporting multiple providers
-- Implement reliability middleware: exponential backoff, rate limiting, circuit breaker
-- Cost tracking with configurable daily/monthly caps
-- Provider registry with auth, endpoints, and rate limits per provider
-
-**Phases:** 8 phases, ~17-25 hours total
-| Phase | Difficulty |
-|-------|------------|
-| RemoteBackend base class | 🟡 Medium |
-| Gemini adapter | 🟢 Easy |
-| Retry middleware (backoff) | 🟢 Easy |
-| Rate limiter (token bucket) | 🟡 Medium |
-| Circuit breaker | 🟢 Easy |
-| Cost tracking + caps | 🟢 Easy |
-| More providers (OpenAI, Anthropic, Groq) | 🟢 Easy |
-| Testing | 🟡 Medium |
-
-**Why Later:** Local Ollama works fine for now. This becomes important when you want to use cheaper/better remote models as fallback or for quality tiers.
 
 ### 3.7 RUTA - Ruthless User Testing Agent (P3)
 
@@ -483,15 +518,15 @@ RUTA uses simulated end users to exercise LLMC through **real public interfaces*
 
 **Phased Implementation:**
 
-| Phase | Description | Difficulty | Effort |
-|-------|-------------|------------|--------|
-| 0 | Trace recorder + artifact plumbing | 🟢 Easy (3/10) | 4-8h |
-| 1 | Scenario schema + manual runner | 🟡 Medium (4/10) | 6-10h |
-| 2 | User Executor Agent | 🟡 Medium (6/10) | 12-16h |
-| 3 | Judge Agent + basic properties | 🟡 Medium (7/10) | 14-20h |
-| 4 | Metamorphic testing (PMRE) | 🟡 Medium (7/10) | 14-20h |
-| 5 | CI integration + gates | 🟡 Medium (5/10) | 8-12h |
-| 6 | Advanced scenario generation | 🔴 Hard (8/10) | 20-30h |
+| Phase | Description | Difficulty | Effort | Status |
+|-------|-------------|------------|--------|--------|
+| 0 | Trace recorder + artifact plumbing | 🟢 Easy (3/10) | 4-8h | ✅ Done |
+| 1 | Scenario schema + manual runner | 🟡 Medium (4/10) | 6-10h | ✅ Done |
+| 2 | User Executor Agent | 🟡 Medium (6/10) | 12-16h | ✅ Done |
+| 3 | Judge Agent + basic properties | 🟡 Medium (7/10) | 14-20h | ✅ Done |
+| 4 | Metamorphic testing (PMRE) | 🟡 Medium (7/10) | 14-20h | ✅ Done |
+| 5 | CI integration + gates | 🟡 Medium (5/10) | 8-12h | |
+| 6 | Advanced scenario generation | 🔴 Hard (8/10) | 20-30h | |
 
 **Total Effort:** 78-116 hours (10-14 days)
 

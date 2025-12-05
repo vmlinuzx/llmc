@@ -113,7 +113,7 @@ class Scheduler:
             cutoff_time = now - (cleanup_days * 86400)
             deleted_count = 0
 
-            for root, dirs, files in os.walk(pycache_dir):
+            for root, _dirs, files in os.walk(pycache_dir):
                 for filename in files:
                     filepath = Path(root) / filename
                     try:

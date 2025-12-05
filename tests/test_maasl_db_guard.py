@@ -5,17 +5,16 @@ Integration tests for MAASL Phase 4: DB Transaction Guard.
 Tests concurrent database access scenarios with multiple agents.
 """
 
-import concurrent.futures
 from pathlib import Path
-import pytest
 import sqlite3
 import tempfile
 import threading
 import time
-from typing import List
 
-from llmc_mcp.db_guard import DbTransactionManager, get_db_transaction_manager
-from llmc_mcp.maasl import DbBusyError, get_maasl, ResourceDescriptor
+import pytest
+
+from llmc_mcp.db_guard import get_db_transaction_manager
+from llmc_mcp.maasl import ResourceDescriptor
 
 
 @pytest.fixture
@@ -77,7 +76,7 @@ def test_read_transaction(db_manager):
 def test_concurrent_writes_different_dbs():
     """Test concurrent writes to different logical databases succeed."""
     barrier = threading.Barrier(2)
-    results: List[bool] = []
+    results: list[bool] = []
     lock = threading.Lock()
     
     # Use separate DB files to avoid SQLite file locking
@@ -135,8 +134,8 @@ def test_concurrent_writes_same_db_contention(db_manager):
     """
     barrier = threading.Barrier(3)
     start_event = threading.Event()
-    results: List[bool] = []
-    errors: List[Exception] = []
+    results: list[bool] = []
+    errors: list[Exception] = []
     lock = threading.Lock()
     
     def write_agent(agent_id: str):
@@ -178,7 +177,7 @@ def test_concurrent_writes_same_db_contention(db_manager):
     
     # Results may vary based on timing, but these properties must hold:
     successes = [r for r in results if r is True]
-    failures = [r for r in results if r is False]
+    [r for r in results if r is False]
     
     # 1. At least one agent succeeded (liveness)
     assert len(successes) >= 1, f"Expected at least 1 success, got {len(successes)}"
@@ -304,7 +303,7 @@ def test_stress_concurrent_writers(db_manager):
     Verifies no database corruption under high contention.
     """
     barrier = threading.Barrier(5)
-    results: List[bool] = []
+    results: list[bool] = []
     lock = threading.Lock()
     
     def aggressive_writer(agent_id: str):

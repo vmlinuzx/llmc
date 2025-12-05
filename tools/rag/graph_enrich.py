@@ -167,7 +167,7 @@ class GraphEnrichmentDB:
 def _row_to_dict(row: tuple) -> dict[str, Any]:
     keys = ["summary", "inputs", "outputs", "pitfalls", "evidence"]
     out: dict[str, Any] = {}
-    for key, value in zip(keys, row):
+    for key, value in zip(keys, row, strict=False):
         if value is not None:
             out[key] = value
     return out

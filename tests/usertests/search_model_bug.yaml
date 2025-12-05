@@ -1,0 +1,51 @@
+id: search_model_selection
+version: 1
+suite: search-core
+description: >
+  Ensure that queries involving the word "model" do not cause catastrophic result loss.
+goal: |
+  As a user, I want to search the LLMC RAG index for documentation related to model selection,
+  routing strategies, and tiering.
+
+interfaces:
+  - mcp_search
+  - cli_search
+
+preconditions:
+  rag_index_built: true
+  min_docs: 5000
+
+queries:
+  base: "routing"
+  variants:
+    - "strategy"
+    - "tier"
+    - "model"
+    - "routing model"
+    - "routing strategy tier model"
+    - "model selection"
+    - "selection model"
+
+expectations:
+  must_use_tools:
+    - rag_search
+  must_not_use_tools: []
+  properties:
+    - name: no_catastrophic_result_drop_on_model
+      type: metamorphic
+      relation: result_count("routing") >> result_count("routing model")
+      constraint: >
+        result_count("routing") >= 50 AND
+        result_count("routing model") > 0
+    - name: symmetric_word_order
+      type: metamorphic
+      relation: jaccard(results("model selection"), results("selection model"))
+      constraint: jaccard >= 0.5
+    - name: search_success
+      type: assertion
+      constraint: result.success == true
+
+severity_policy:
+  property_failures:
+    no_catastrophic_result_drop_on_model: P0
+    symmetric_word_order: P2

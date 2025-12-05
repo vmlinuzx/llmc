@@ -6,13 +6,11 @@ Validates polyglot RAG support (Roadmap 2.2).
 
 from pathlib import Path
 import tempfile
+
 import pytest
 
 from tools.rag.schema import (
     extract_schema_from_file,
-    TypeScriptSchemaExtractor,
-    Entity,
-    Relation,
 )
 
 

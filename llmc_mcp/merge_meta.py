@@ -14,9 +14,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
-from llmc_mcp.maasl import get_maasl, ResourceDescriptor
+from llmc_mcp.maasl import ResourceDescriptor, get_maasl
 
 logger = logging.getLogger("llmc-mcp.maasl.merge")
 
@@ -28,10 +28,10 @@ class GraphPatch:
     
     Used to batch multiple graph updates into a single atomic operation.
     """
-    nodes_to_add: List[Dict[str, Any]] = field(default_factory=list)
-    edges_to_add: List[Dict[str, Any]] = field(default_factory=list)
-    properties_to_set: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # {node_id: {key: value}}
-    properties_to_clear: Dict[str, List[str]] = field(default_factory=dict)  # {node_id: [keys]}
+    nodes_to_add: list[dict[str, Any]] = field(default_factory=list)
+    edges_to_add: list[dict[str, Any]] = field(default_factory=list)
+    properties_to_set: dict[str, dict[str, Any]] = field(default_factory=dict)  # {node_id: {key: value}}
+    properties_to_clear: dict[str, list[str]] = field(default_factory=dict)  # {node_id: [keys]}
     
     def __post_init__(self):
         """Validate patch structure."""
@@ -60,8 +60,8 @@ class MergeResult:
     edges_added: int = 0
     properties_updated: int = 0
     properties_cleared: int = 0
-    conflicts: List[str] = field(default_factory=list)
-    error: Optional[str] = None
+    conflicts: list[str] = field(default_factory=list)
+    error: str | None = None
     merge_timestamp: float = field(default_factory=time.time)
 
 
@@ -152,7 +152,7 @@ class MergeEngine:
         edges_added = 0
         properties_updated = 0
         properties_cleared = 0
-        conflicts: List[str] = []
+        conflicts: list[str] = []
         
         try:
             # Step 1: Add nodes (deterministic order by ID)

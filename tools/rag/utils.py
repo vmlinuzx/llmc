@@ -7,17 +7,11 @@ import os
 from pathlib import Path
 import subprocess
 
+# Re-export from llmc.core for backward compatibility
+from llmc.core import find_repo_root
+
 from .config import get_exclude_dirs
 from .lang import is_supported, language_for_path
-
-
-def find_repo_root(start: Path | None = None) -> Path:
-    start = start or Path.cwd()
-    current = start.resolve()
-    for ancestor in [current, *current.parents]:
-        if (ancestor / ".git").exists():
-            return ancestor
-    return start
 
 
 def iter_source_files(

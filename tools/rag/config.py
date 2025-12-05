@@ -6,12 +6,12 @@ and reranker weights for RAG Nav search.
 from __future__ import annotations
 
 import configparser
-from functools import lru_cache
 import logging
 import os
 from pathlib import Path
-import tomllib
 from typing import Any
+
+from llmc.core import load_config
 
 # Conditional import for telemetry - allows the module to work without llmc dependency
 try:
@@ -52,8 +52,7 @@ class ConfigWarningFilter(logging.Filter):
 
 
 # Apply the filter to prevent log spam from config warnings
-for handler in logging.root.handlers:
-    handler.addFilter(ConfigWarningFilter())
+log.addFilter(ConfigWarningFilter())
 
 
 RAG_DIR_NAME = ".rag"
@@ -63,36 +62,9 @@ DEFAULT_SPANS_NAME = "spans.jsonl"
 DEFAULT_EST_TOKENS_PER_SPAN = 350
 
 
-def _find_repo_root(start: Path | None = None) -> Path:
-    start = start or Path.cwd()
-    current = start.resolve()
-    for ancestor in [current, *current.parents]:
-        if (ancestor / ".git").exists():
-            return ancestor
-    return start
 
+# _find_repo_root and load_config removed - imported from llmc.core
 
-def find_repo_root(start: Path | None = None) -> Path:
-    """
-    Public wrapper for repository root detection.
-
-    This keeps compatibility with older call sites that imported
-    find_repo_root from this module while centralizing the logic in
-    _find_repo_root.
-    """
-    return _find_repo_root(start)
-
-
-def load_config(repo_root: Path | None = None) -> dict:
-    root = repo_root or _find_repo_root()
-    path = root / "llmc.toml"
-    if not path.exists():
-        return {}
-    try:
-        with open(path, "rb") as f:
-            return tomllib.load(f)
-    except Exception:
-        return {}
 
 
 def get_est_tokens_per_span(repo_root: Path | None = None) -> int:

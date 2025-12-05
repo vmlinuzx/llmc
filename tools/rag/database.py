@@ -507,8 +507,7 @@ class Database:
             LEFT JOIN enrichments ON enrichments.span_hash = spans.span_hash
             """
         )
-        for row in cursor:
-            yield row
+        yield from cursor
 
     # ------------------------------------------------------------------
     # Enrichment-aware helpers (Phase 1 – DB / FTS integration)
@@ -536,6 +535,9 @@ class Database:
                 USING fts5(
                     symbol,
                     summary,
+                    path,
+                    start_line,
+                    end_line,
                     tokenize='unicode61'
                 )
                 """
@@ -713,10 +715,11 @@ class Database:
             conn.execute("DELETE FROM enrichments_fts")
             conn.execute(
                 """
-                INSERT INTO enrichments_fts(rowid, symbol, summary)
-                SELECT e.rowid, s.symbol, e.summary
+                INSERT INTO enrichments_fts(rowid, symbol, summary, path, start_line, end_line)
+                SELECT e.rowid, s.symbol, e.summary, f.path, s.start_line, s.end_line
                 FROM enrichments AS e
                 JOIN spans AS s ON s.span_hash = e.span_hash
+                JOIN files AS f ON f.id = s.file_id
                 """
             )
             row = conn.execute("SELECT COUNT(*) AS n FROM enrichments_fts").fetchone()

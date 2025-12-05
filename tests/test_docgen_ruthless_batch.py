@@ -1,7 +1,10 @@
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock
-from llmc.docgen.orchestrator import DocgenOrchestrator, DocgenResult, DocgenBackend
+
+import pytest
+
+from llmc.docgen.orchestrator import DocgenBackend, DocgenOrchestrator, DocgenResult
+
 
 @pytest.fixture
 def temp_repo(tmp_path):

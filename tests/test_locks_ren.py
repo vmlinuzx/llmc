@@ -1,9 +1,11 @@
 
-import pytest
-import time
 import multiprocessing
-from pathlib import Path
+import time
+
+import pytest
+
 from llmc.docgen.locks import DocgenLock
+
 
 def hold_lock(repo_root, duration):
     # Hack: Restore time.sleep in child process if it's patched
@@ -62,7 +64,7 @@ def test_lock_contention_succeed(tmp_path):
     
     lock = DocgenLock(tmp_path)
     # Try to acquire with 2s timeout -> succeed
-    start = time.time()
+    time.time()
     assert lock.acquire(timeout=2.0)
     lock.release()
     

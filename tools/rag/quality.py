@@ -132,7 +132,7 @@ def format_quality_summary(result: dict, repo_name: str) -> str:
     placeholder = result["placeholder_count"]
     empty = result["empty_count"]
     short = result["short_count"]
-    ok = result["ok_count"]
+    result["ok_count"]
 
     if result["status"] == "PASS":
         emoji = "✅"

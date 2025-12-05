@@ -1,11 +1,11 @@
 
-import pytest
-import json
-import sys
-import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-from llmc.docgen.backends.shell import ShellDocgenBackend, DocgenResult
+import sys
+
+import pytest
+
+from llmc.docgen.backends.shell import ShellDocgenBackend
+
 
 # Fixture to create a dummy script
 @pytest.fixture

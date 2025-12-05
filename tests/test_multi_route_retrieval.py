@@ -19,7 +19,7 @@ def mock_dependencies():
         patch("tools.rag.search.get_multi_route_config") as mock_get_multi,
         patch(
             "tools.rag.search.is_query_routing_enabled", return_value=True
-        ) as mock_routing_enabled,
+        ),
     ):
         # Setup basic mocks
         mock_root.return_value = Path("/tmp/mock_repo")

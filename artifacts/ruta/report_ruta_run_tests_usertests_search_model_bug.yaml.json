@@ -1,0 +1,10 @@
+{
+  "run_id": "ruta_run_tests/usertests/search_model_bug.yaml",
+  "scenario_id": "search_model_selection",
+  "status": "PASS",
+  "incidents": [],
+  "metrics": {
+    "total_steps": 28,
+    "total_tool_calls": 8
+  }
+}

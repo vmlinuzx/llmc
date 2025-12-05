@@ -115,7 +115,7 @@ class TestEnrichedTools:
 
         with (
             patch("tools.rag_nav.tool_handlers._compute_route", return_value=mock_route),
-            patch("tools.rag_nav.tool_handlers.load_graph_indices") as mock_load_idx,
+            patch("tools.rag_nav.tool_handlers.load_graph_indices"),
             patch(
                 "tools.rag_nav.tool_handlers.where_used_files_from_index",
                 return_value=["src/main.py"],

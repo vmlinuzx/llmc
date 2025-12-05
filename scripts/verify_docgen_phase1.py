@@ -4,9 +4,11 @@ Quick verification script for Phase 1 implementation.
 Demonstrates config loading and type validation.
 """
 
-import toml
 from pathlib import Path
-from llmc.docgen import load_docgen_backend, DocgenResult
+
+import toml
+
+from llmc.docgen import DocgenResult, load_docgen_backend
 from llmc.docgen.config import get_output_dir, get_require_rag_fresh
 
 
@@ -20,14 +22,14 @@ def main():
     toml_path = repo_root / "llmc.toml"
     
     print(f"\n📄 Loading config from: {toml_path}")
-    with open(toml_path, "r") as f:
+    with open(toml_path) as f:
         toml_data = toml.load(f)
     
     # Test config loading
     print("\n🔧 Testing config loading...")
     backend = load_docgen_backend(repo_root, toml_data)
     print(f"   Backend loaded: {backend}")
-    print(f"   (None is expected since enabled=false)")
+    print("   (None is expected since enabled=false)")
     
     # Test helper functions
     print("\n📁 Testing helper functions...")

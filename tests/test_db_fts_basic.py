@@ -59,4 +59,4 @@ def test_fts_search_raises_when_db_missing(tmp_path: Path) -> None:
         _ = fts_search(repo_root, "foo", limit=5)
     except RagDbNotFound:
         return
-    assert False, "Expected RagDbNotFound when no RAG DB exists"
+    raise AssertionError("Expected RagDbNotFound when no RAG DB exists")

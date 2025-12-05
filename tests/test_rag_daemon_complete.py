@@ -101,9 +101,9 @@ def test_directories_created_on_first_run(tmp_path: Path) -> None:
     config_file = tmp_path / "rag-daemon.yml"
     config_file.write_text(yaml.dump({}))
 
-    state_store_dir = tmp_path / "state"
-    log_dir = tmp_path / "logs"
-    control_dir = tmp_path / "control"
+    tmp_path / "state"
+    tmp_path / "logs"
+    tmp_path / "control"
 
     with patch("os.environ.get") as mock_env:
         mock_env.return_value = str(config_file)

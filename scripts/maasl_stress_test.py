@@ -11,20 +11,18 @@ Usage:
 """
 
 import argparse
-import multiprocessing as mp
-import random
-import tempfile
-import time
 from pathlib import Path
-from typing import List
+import queue
+import random
 import sys
+import tempfile
+import threading
+import time
 
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from llmc_mcp.maasl import call_with_stomp_guard
-from llmc_mcp.locks import LockManager
-from llmc_mcp.telemetry import TelemetrySink
+from llmc_mcp.maasl import ResourceDescriptor, get_maasl
 
 
 class AgentSimulator:
@@ -65,10 +63,13 @@ class AgentSimulator:
                     target_file.write_text('\n'.join(lines))
                     return True
                 
-                result = call_with_stomp_guard(
-                    operation=edit_file,
-                    resources=[('CRIT_CODE', str(target_file))],
-                    agent_context={'agent_id': self.agent_id}
+                result = get_maasl().call_with_stomp_guard(
+                    op=edit_file,
+                    resources=[ResourceDescriptor('CRIT_CODE', str(target_file))],
+                    intent="edit_file",
+                    mode="interactive",
+                    agent_id=str(self.agent_id),
+                    session_id=f"session_{self.agent_id}"
                 )
                 
                 wait_time = time.time() - start
@@ -98,10 +99,13 @@ class AgentSimulator:
                         f.write(f"Agent {self.agent_id}: {time.time()}\n")
                     return True
                 
-                result = call_with_stomp_guard(
-                    operation=db_write,
-                    resources=[('CRIT_DB', str(self.work_dir / "test.db"))],
-                    agent_context={'agent_id': self.agent_id}
+                result = get_maasl().call_with_stomp_guard(
+                    op=db_write,
+                    resources=[ResourceDescriptor('CRIT_DB', str(self.work_dir / "test.db"))],
+                    intent="db_write",
+                    mode="interactive",
+                    agent_id=str(self.agent_id),
+                    session_id=f"session_{self.agent_id}"
                 )
                 
                 wait_time = time.time() - start
@@ -127,8 +131,74 @@ class AgentSimulator:
                 # DB write (short duration)
                 self.run_db_write_workload(1)
 
+    def run_docgen_workload(self, duration_sec: int):
+        """Simulate concurrent docgen."""
+        end_time = time.time() + duration_sec
+        
+        while time.time() < end_time:
+            try:
+                start = time.time()
+                
+                def generate_docs():
+                    # Simulate docgen work
+                    time.sleep(0.05)
+                    return True
+                
+                result = get_maasl().call_with_stomp_guard(
+                    op=generate_docs,
+                    resources=[ResourceDescriptor('IDEMP_DOCS', str(self.work_dir))],
+                    intent="docgen",
+                    mode="batch",  # Docgen is usually batch
+                    agent_id=str(self.agent_id),
+                    session_id=f"session_{self.agent_id}"
+                )
+                
+                wait_time = time.time() - start
+                self.lock_waits.append(wait_time * 1000)
+                
+                if result:
+                    self.operations_completed += 1
+                    
+            except Exception as e:
+                self.errors.append(f"Docgen error: {e}")
+            
+            time.sleep(random.uniform(0.01, 0.05))
 
-def run_agent_process(agent_id: int, work_dir: Path, scenario: str, duration: int, queue: mp.Queue):
+    def run_graph_workload(self, duration_sec: int):
+        """Simulate concurrent graph updates."""
+        end_time = time.time() + duration_sec
+        
+        while time.time() < end_time:
+            try:
+                start = time.time()
+                
+                def update_graph():
+                    # Simulate graph update
+                    time.sleep(0.01)
+                    return True
+                
+                result = get_maasl().call_with_stomp_guard(
+                    op=update_graph,
+                    resources=[ResourceDescriptor('MERGE_META', "main")],
+                    intent="graph_update",
+                    mode="interactive",
+                    agent_id=str(self.agent_id),
+                    session_id=f"session_{self.agent_id}"
+                )
+                
+                wait_time = time.time() - start
+                self.lock_waits.append(wait_time * 1000)
+                
+                if result:
+                    self.operations_completed += 1
+                    
+            except Exception as e:
+                self.errors.append(f"Graph update error: {e}")
+            
+            time.sleep(random.uniform(0.01, 0.05))
+
+
+def run_agent_process(agent_id: int, work_dir: Path, scenario: str, duration: int, result_queue: queue.Queue):
     """Entry point for agent subprocess."""
     agent = AgentSimulator(agent_id, work_dir)
     
@@ -139,9 +209,13 @@ def run_agent_process(agent_id: int, work_dir: Path, scenario: str, duration: in
             agent.run_db_write_workload(duration)
         elif scenario == "mixed":
             agent.run_mixed_workload(duration)
+        elif scenario == "concurrent_docs":
+            agent.run_docgen_workload(duration)
+        elif scenario == "concurrent_graph":
+            agent.run_graph_workload(duration)
         
         # Report results
-        queue.put({
+        result_queue.put({
             'agent_id': agent_id,
             'operations': agent.operations_completed,
             'errors': agent.errors,
@@ -149,7 +223,7 @@ def run_agent_process(agent_id: int, work_dir: Path, scenario: str, duration: in
         })
         
     except Exception as e:
-        queue.put({
+        result_queue.put({
             'agent_id': agent_id,
             'error': str(e),
             'operations': 0,
@@ -158,7 +232,7 @@ def run_agent_process(agent_id: int, work_dir: Path, scenario: str, duration: in
         })
 
 
-def analyze_results(results: List[dict]):
+def analyze_results(results: list[dict]):
     """Analyze and report test results."""
     print("\n" + "=" * 70)
     print("MAASL STRESS TEST RESULTS")
@@ -170,7 +244,7 @@ def analyze_results(results: List[dict]):
     for r in results:
         all_waits.extend(r['lock_waits'])
     
-    print(f"\n📊 Operations Summary:")
+    print("\n📊 Operations Summary:")
     print(f"  Total operations:     {total_ops}")
     print(f"  Total errors:         {total_errors}")
     print(f"  Success rate:         {(total_ops / (total_ops + total_errors) * 100):.1f}%" 
@@ -182,14 +256,14 @@ def analyze_results(results: List[dict]):
         p95 = all_waits[int(len(all_waits) * 0.95)]
         p99 = all_waits[int(len(all_waits) * 0.99)]
         
-        print(f"\n⏱️  Lock Wait Times:")
+        print("\n⏱️  Lock Wait Times:")
         print(f"  Min:    {min(all_waits):.2f}ms")
         print(f"  P50:    {p50:.2f}ms")
         print(f"  P95:    {p95:.2f}ms")
         print(f"  P99:    {p99:.2f}ms")
         print(f"  Max:    {max(all_waits):.2f}ms")
     
-    print(f"\n🤖 Per-Agent Breakdown:")
+    print("\n🤖 Per-Agent Breakdown:")
     for r in results:
         print(f"  Agent {r['agent_id']}: {r['operations']} ops, "
               f"{len(r['errors'])} errors")
@@ -198,7 +272,7 @@ def analyze_results(results: List[dict]):
                 print(f"    ⚠️  {err}")
     
     # Success criteria check
-    print(f"\n✅ Success Criteria:")
+    print("\n✅ Success Criteria:")
     success = True
     
     if all_waits:
@@ -209,15 +283,15 @@ def analyze_results(results: List[dict]):
             success = False
     
     if total_errors == 0:
-        print(f"  ✅ Zero errors")
+        print("  ✅ Zero errors")
     else:
         print(f"  ❌ {total_errors} errors occurred")
         success = False
     
     if total_ops > 0:
-        print(f"  ✅ Operations completed successfully")
+        print("  ✅ Operations completed successfully")
     else:
-        print(f"  ❌ No operations completed")
+        print("  ❌ No operations completed")
         success = False
     
     print("\n" + "=" * 70)
@@ -237,13 +311,16 @@ def main():
     parser.add_argument("--duration", type=int, default=30,
                         help="Test duration in seconds (default: 30)")
     parser.add_argument("--scenario", 
-                        choices=["concurrent_files", "concurrent_db", "mixed"],
+                        choices=["concurrent_files", "concurrent_db", "mixed", "concurrent_docs", "concurrent_graph"],
                         default="mixed",
                         help="Test scenario (default: mixed)")
     
+    parser.add_argument("--lint", action="store_true",
+                        help="Run ruff lint check on generated files")
+    
     args = parser.parse_args()
     
-    print(f"\n🚀 Starting MAASL Stress Test")
+    print("\n🚀 Starting MAASL Stress Test")
     print(f"   Agents:   {args.agents}")
     print(f"   Duration: {args.duration}s")
     print(f"   Scenario: {args.scenario}")
@@ -253,35 +330,64 @@ def main():
     with tempfile.TemporaryDirectory() as tmpdir:
         work_dir = Path(tmpdir)
         
-        # Start agent processes
-        queue = mp.Queue()
-        processes = []
+        # Start agent threads
+        result_queue = queue.Queue()
+        threads = []
         
         start_time = time.time()
         
         for i in range(args.agents):
-            p = mp.Process(
+            t = threading.Thread(
                 target=run_agent_process,
-                args=(i, work_dir, args.scenario, args.duration, queue)
+                args=(i, work_dir, args.scenario, args.duration, result_queue)
             )
-            p.start()
-            processes.append(p)
+            t.start()
+            threads.append(t)
         
         # Wait for all agents to complete
-        for p in processes:
-            p.join()
+        for t in threads:
+            t.join()
         
         elapsed = time.time() - start_time
         
         # Collect results
         results = []
-        while not queue.empty():
-            results.append(queue.get())
+        while not result_queue.empty():
+            results.append(result_queue.get())
         
         print(f"\n✅ Test completed in {elapsed:.1f}s\n")
         
+        # Run lint check if requested
+        lint_success = True
+        if args.lint:
+            print("🔍 Running lint check...")
+            import subprocess
+            try:
+                # Create a dummy pyproject.toml to satisfy ruff if needed, or just run on files
+                # We'll just run ruff check on the directory
+                # We assume ruff is installed and in path
+                cmd = ["ruff", "check", str(work_dir), "--select", "E,F", "--ignore", "F821"] 
+                # F821 undefined name 'value' might happen if we just have 'value = ...' without usage? 
+                # Actually our file content is valid: "value = 0" is a global assignment.
+                
+                result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+                if result.returncode == 0:
+                    print("  ✅ Lint check passed")
+                else:
+                    print("  ❌ Lint check FAILED")
+                    print(result.stdout)
+                    print(result.stderr)
+                    lint_success = False
+            except Exception as e:
+                print(f"  ❌ Lint check failed to run: {e}")
+                lint_success = False
+        
         # Analyze and report
         success = analyze_results(results)
+        
+        if args.lint and not lint_success:
+            success = False
+            print("\n❌ LINT CHECK FAILED")
         
         sys.exit(0 if success else 1)
 

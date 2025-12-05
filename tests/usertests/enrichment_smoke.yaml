@@ -1,0 +1,27 @@
+id: enrichment_smoke
+version: 1
+suite: enrichment
+description: >
+  Trigger enrichment for a file and verify it completes.
+goal: |
+  As a user, I want to enrich a specific file to ensure the pipeline is working.
+
+interfaces:
+  - mcp_enrichment
+  - cli_enrichment
+
+preconditions:
+  rag_index_built: true
+
+queries:
+  targets:
+    - "llmc/main.py"
+
+expectations:
+  must_use_tools:
+    - rag_enrich
+  must_not_use_tools: []
+  properties:
+    - name: enrichment_success
+      type: assertion
+      constraint: result.success == true

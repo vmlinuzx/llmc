@@ -59,7 +59,7 @@ class TestExponentialBackoff:
         )
 
         # Simulate many failures
-        state = RepoState(
+        RepoState(
             repo_id="test_repo",
             last_run_status="error",
             consecutive_failures=10,
@@ -96,7 +96,6 @@ class TestExponentialBackoff:
     )
     def test_exponential_backoff_multiplier_progression(self, failure_count, expected_multiplier):
         """Test backoff multiplier increases as 2^(n-1)."""
-        base = 60
         multiplier = 2 ** (failure_count - 1)
         assert multiplier == expected_multiplier
 
@@ -160,7 +159,7 @@ class TestConcurrentJobLimits:
         }
         mock_state_store.load_all.return_value = {}
 
-        scheduler = Scheduler(config, mock_registry, mock_state_store, mock_workers)
+        Scheduler(config, mock_registry, mock_state_store, mock_workers)
 
         # The scheduler should handle this situation
         # (Implementation-specific behavior to verify)

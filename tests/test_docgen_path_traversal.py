@@ -1,7 +1,10 @@
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from llmc.docgen.gating import resolve_doc_path
+
 
 def test_resolve_doc_path_traversal_blocked(tmp_path):
     """Test that resolve_doc_path BLOCKS path traversal attacks (Security Fix)."""

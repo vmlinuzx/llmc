@@ -63,3 +63,10 @@ enabled = true
 "vendor/**"       = 10
 "node_modules/**" = 10  # shouldn't even be scanned but just in case
 "third_party/**"  = 10
+
+# Be careful enabling this, it's a great way to get a lot of data fast, but also eat up your disk space.
+[mcp.observability]
+enabled = true
+log_format = "json"
+csv_token_audit_enabled = true
+csv_path = "./artifacts/mcp_token_audit.csv"

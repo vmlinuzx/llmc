@@ -121,7 +121,6 @@ echo '{"status": "success", "spans": 42}' > /tmp/job_summary_$$.json
             {
                 "tick_interval_seconds": 60,
                 "max_concurrent_jobs": 2,
-                "max_concurrent_jobs": 2,
                 "max_consecutive_failures": 3,
                 "base_backoff_seconds": 60,
                 "max_backoff_seconds": 3600,
@@ -210,7 +209,6 @@ echo '{"status": "success", "spans": 42}' > /tmp/job_summary_$$.json
     assert not refresh_flag.exists()
 
     # Test 9: Verify idempotent behavior - running again should work
-    initial_status = final_state.last_run_status
     scheduler.run_once()
 
     # Wait for completion
@@ -280,7 +278,7 @@ def test_e2e_multiple_repos(tmp_path: Path) -> None:
     registry_adapter = RegistryAdapter(tool_config)
     from tools.rag_repo.utils import generate_repo_id
 
-    for repo_path, expected_id_prefix in repos:
+    for repo_path, _expected_id_prefix in repos:
         inspection = inspect_repo(repo_path, tool_config)
         plan = plan_workspace(repo_path, tool_config, inspection)
         init_workspace(plan, inspection, tool_config, non_interactive=True)

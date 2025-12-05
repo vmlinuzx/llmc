@@ -94,8 +94,8 @@ class TestFTSFallback:
 
     def test_fts_search_with_fresh_db(self, tmp_path: Path):
         """Test FTS search when both DBs are available."""
-        main_db = create_test_db(tmp_path)
-        fts_db = create_fts_db(tmp_path)
+        create_test_db(tmp_path)
+        create_fts_db(tmp_path)
 
         # Both databases exist
         # Should prefer FTS for search
@@ -103,7 +103,7 @@ class TestFTSFallback:
 
     def test_fallback_to_traditional_when_fts_missing(self, tmp_path: Path):
         """Test fallback when FTS table doesn't exist."""
-        main_db = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Create FTS DB but drop the FTS table
         fts_db_path = tmp_path / "rag_fts.db"
@@ -177,23 +177,11 @@ class TestFTSFallback:
 
     def test_fallback_with_special_characters(self, tmp_path: Path):
         """Test fallback handles special characters in query."""
-        queries = [
-            "def test():",
-            "class MyClass:",
-            "import os.path",
-            "# TODO: fix",
-        ]
 
         # Should handle all in both FTS and fallback
 
     def test_fallback_with_unicode_query(self, tmp_path: Path):
         """Test fallback with unicode characters."""
-        queries = [
-            "функция",
-            "関数",
-            "函数",
-            "🔍 search",
-        ]
 
         # FTS should handle if configured
         # Fallback should also handle
@@ -330,46 +318,31 @@ class TestFTSSearchEdgeCases:
 
     def test_fts_search_empty_query(self, tmp_path: Path):
         """Test FTS search with empty query."""
-        fts_db = create_fts_db(tmp_path)
+        create_fts_db(tmp_path)
 
         # Empty query should return all results or none
         # Implementation-specific
 
     def test_fts_search_very_long_query(self, tmp_path: Path):
         """Test FTS search with very long query."""
-        long_query = " ".join(["word"] * 10000)
+        " ".join(["word"] * 10000)
 
         # Should handle or reject long queries
         # May truncate or error
 
     def test_fts_search_wildcard_patterns(self, tmp_path: Path):
         """Test FTS search with wildcards."""
-        patterns = [
-            "func*",  # Prefix match
-            "*_test",  # Suffix match
-            "*test*",  # Contains
-        ]
 
         # FTS should handle wildcards if configured
 
     def test_fts_search_regex_patterns(self, tmp_path: Path):
         """Test FTS search with regex patterns."""
-        patterns = [
-            r"def \w+",  # Function definitions
-            r"class \w+:",  # Class definitions
-            r"import \w+",  # Imports
-        ]
 
         # FTS may or may not support regex
         # Fallback should handle
 
     def test_fts_search_special_characters(self, tmp_path: Path):
         """Test FTS search with special SQL characters."""
-        dangerous_queries = [
-            "'; DROP TABLE files; --",
-            "100 OR 1=1",
-            "func_a UNION SELECT * FROM files",
-        ]
 
         # Should escape properly to prevent injection
         # FTS should escape these
@@ -408,17 +381,12 @@ class TestFTSSearchEdgeCases:
 
     def test_fts_search_boolean_operators(self, tmp_path: Path):
         """Test FTS search with AND/OR/NOT."""
-        queries = [
-            "function AND test",
-            "class OR struct",
-            "import NOT os",
-        ]
 
         # FTS5 boolean operators
 
     def test_fts_search_limit_parameter(self, tmp_path: Path):
         """Test FTS search with limit parameter."""
-        fts_db = create_fts_db(tmp_path)
+        create_fts_db(tmp_path)
 
         # Test various limits: 1, 10, 100, 1000
         # Should respect limit
@@ -470,7 +438,7 @@ class TestDatabaseMigration:
     def test_migrate_to_fts(self, tmp_path: Path):
         """Test migration from traditional to FTS."""
         # Create traditional DB
-        main_db = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Migrate to FTS
         # Build FTS index from traditional data

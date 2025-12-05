@@ -581,7 +581,7 @@ EXECUTE_CODE_TOOL = Tool(
     description="""Execute Python code with access to ALL LLMC tools via stubs.
 
 WORKFLOW:
-1. Use list_dir('.llmc/stubs/') to see available tools
+1. Use list_dir('<repo_root>/.llmc/stubs/') to see available tools
 2. Use read_file to check any stub's function signature
 3. Write Python that imports and calls what you need
 
@@ -609,7 +609,7 @@ Only stdout is returned - filter data locally to save tokens.""",
 # Bootstrap tool - progressive disclosure of instructions
 BOOTSTRAP_TOOL = Tool(
     name="00_INIT",
-    description="⚠️ CRITICAL P0: EXECUTE THIS TOOL IMMEDIATELY ON SESSION START BEFORE ANY OTHER TOOL CALLS. Returns REQUIRED initialization instructions. Failure to call this first will result in errors and degraded performance.",
+    description="⚠️ P0 CRITICAL: IF YOU HAVE NOT BEEN GIVEN MCP INSTRUCTIONS, USE THIS TOOL ON STARTUP TO GET CONTEXT. Returns initialization instructions for effective tool usage. Skip if you already received server instructions during handshake.",
     inputSchema={
         "type": "object",
         "properties": {},
@@ -756,6 +756,13 @@ class LlmcMcpServer:
                     "te_run": self._handle_te_run,
                     "repo_read": self._handle_repo_read,
                     "rag_query": self._handle_rag_query,
+                    # RAG Navigation tools
+                    "rag_where_used": self._handle_rag_where_used,
+                    "rag_lineage": self._handle_rag_lineage,
+                    "inspect": self._handle_inspect,
+                    "rag_stats": self._handle_rag_stats,
+                    "rag_plan": self._handle_rag_plan,
+                    # LinuxOps tools
                     "linux_proc_list": self._handle_proc_list,
                     "linux_proc_kill": self._handle_proc_kill,
                     "linux_sys_snapshot": self._handle_sys_snapshot,
@@ -763,6 +770,7 @@ class LlmcMcpServer:
                     "linux_proc_send": self._handle_proc_send,
                     "linux_proc_read": self._handle_proc_read,
                     "linux_proc_stop": self._handle_proc_stop,
+                    # FS write tools
                     "linux_fs_write": self._handle_fs_write,
                     "linux_fs_mkdir": self._handle_fs_mkdir,
                     "linux_fs_move": self._handle_fs_move,
@@ -1243,29 +1251,40 @@ class LlmcMcpServer:
 
         try:
             # Use routing logic to analyze query
-            from tools.rag.enrichment_router import EnrichmentRouter
+            from tools.rag.enrichment_router import build_router_from_toml
 
-            router = EnrichmentRouter(llmc_root)
-            decision = router.route_query(query)
+            router = build_router_from_toml(llmc_root)
+            # Use choose_chain with a dummy slice view to get routing decision
+            from tools.rag.enrichment_router import EnrichmentSliceView
+            
+            dummy_slice = EnrichmentSliceView(
+                span_hash="query_plan",
+                file_path=llmc_root / "query",
+                start_line=1,
+                end_line=1,
+                content_type="docs",  # Treat query planning as docs
+                classifier_confidence=1.0,
+                approx_token_count=len(query.split()),
+            )
+            decision = router.choose_chain(dummy_slice)
 
-            # Build plan response
+            # Build plan response using EnrichmentRouteDecision fields
             plan = {
                 "query": query,
-                "route_type": decision.route_type,
-                "routing_confidence": getattr(decision, "confidence", 0.8),
+                "slice_type": decision.slice_type,
+                "chain_name": decision.chain_name,
+                "routing_tier": decision.routing_tier,
                 "search_strategy": "hybrid",  # Default strategy
                 "estimated_chunks": self.config.rag.top_k,
-                "filters": {
-                    "scope": decision.scope if hasattr(decision, "scope") else "repo",
-                },
-                "explanation": f"Query classified as '{decision.route_type}' based on content analysis",
+                "reasons": decision.reasons,
+                "explanation": f"Query routed to chain '{decision.chain_name}' (type: {decision.slice_type})",
             }
 
             if detail_level == "full":
                 plan["heuristics_used"] = [
-                    "pattern_matching",
-                    "keyword_analysis",
-                    "query_structure",
+                    "content_type_classification",
+                    "route_mapping",
+                    "tier_filtering",
                 ]
                 plan["backend_chain"] = [spec.name for spec in decision.backend_specs]
 

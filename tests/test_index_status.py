@@ -103,7 +103,7 @@ def test_index_status_missing_file():
     print("Test 2: Missing file handling")
 
     try:
-        status = IndexStatus.load("/nonexistent/path/status.json")
+        IndexStatus.load("/nonexistent/path/status.json")
         print("  ✗ Should have raised FileNotFoundError")
     except FileNotFoundError:
         print("  ✓ Correctly raised FileNotFoundError\n")
@@ -121,7 +121,7 @@ def test_index_status_corrupt_json():
 
     try:
         try:
-            status = IndexStatus.load(corrupt_path)
+            IndexStatus.load(corrupt_path)
             print("  ✗ Should have raised JSONDecodeError")
         except json.JSONDecodeError:
             print("  ✓ Correctly raised JSONDecodeError\n")

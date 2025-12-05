@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from tools.rag.enrichment_adapters.base import RemoteBackend
-from tools.rag.enrichment_config import EnrichmentProviderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -117,16 +116,29 @@ class AnthropicBackend(RemoteBackend):
                 logger.warning("Anthropic response has no content")
                 return self._fallback_enrichment(item)
 
-            # Extract text from first content block
-            first_block = content_blocks[0]
-            if first_block.get("type") != "text":
-                logger.warning(f"Unexpected content type: {first_block.get('type')}")
-                return self._fallback_enrichment(item)
-
-            text = first_block.get("text", "")
+            # Extract text from content blocks
+            # Minimax returns both "thinking" (reasoning) and "text" (answer) blocks
+            # Prioritize "text" blocks, fall back to "thinking" only if no text found
+            text = None
+            thinking_fallback = None
+            
+            for block in content_blocks:
+                block_type = block.get("type", "")
+                if block_type == "text":
+                    text = block.get("text", "")
+                    if text:  # Found a non-empty text block, use it
+                        break
+                elif block_type == "thinking" and thinking_fallback is None:
+                    # Store first thinking block as fallback
+                    thinking_fallback = block.get("thinking", "")
+            
+            # Use text if found, otherwise fall back to thinking
+            if not text and thinking_fallback:
+                text = thinking_fallback
+                logger.debug("Using 'thinking' block as fallback (no 'text' block found)")
 
             if not text:
-                logger.warning("Anthropic response text is empty")
+                logger.warning(f"No usable content in response blocks: {[b.get('type') for b in content_blocks]}")
                 return self._fallback_enrichment(item)
 
             # Parse the text as enrichment JSON

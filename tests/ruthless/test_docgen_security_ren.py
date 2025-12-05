@@ -1,8 +1,11 @@
 
-import pytest
-from pathlib import Path
 import os
+from pathlib import Path
+
+import pytest
+
 from llmc.docgen.gating import resolve_doc_path
+
 
 class TestResolveDocPathRen:
     """Ruthless security testing for docgen path resolution."""
@@ -49,7 +52,7 @@ class TestResolveDocPathRen:
         try:
             # Python pathlib might raise ValueError on null bytes immediately
             resolve_doc_path(repo_root, Path("src/main.py\0.evil"))
-        except ValueError as e:
+        except ValueError:
             # If it raises ValueError for null byte, that's also a pass for "secure"
             # But we want to ensure it doesn't pass through
             pass

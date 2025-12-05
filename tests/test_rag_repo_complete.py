@@ -399,7 +399,7 @@ def test_workspace_init_idempotent(tmp_path: Path) -> None:
 
     # First init
     init_workspace(plan, inspection, tool_config, non_interactive=True)
-    first_config = plan.rag_config_path.read_text()
+    plan.rag_config_path.read_text()
 
     # Modify config
     plan.rag_config_path.write_text("# Modified")

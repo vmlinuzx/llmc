@@ -30,8 +30,8 @@ LLMC now provides a unified `llmc` command that consolidates all functionality u
 | `python -m tools.rag.cli nav search` | `llmc nav search` | ✅ Recommended |
 | `python -m tools.rag.cli nav where-used` | `llmc nav where-used` | ✅ Recommended |
 | `python -m tools.rag.cli nav lineage` | `llmc nav lineage` | ✅ Recommended |
-| `scripts/llmc-tui` | `llmc tui` | ✅ Recommended |
-| `scripts/llmc-rag` (service) | `llmc service` | ⚠️ Different interface |
+| `scripts/llmc-tui` | `llmc tui` | ❌ Removed |
+| `scripts/llmc-rag` (service) | `llmc service` | ❌ Removed |
 
 ---
 
@@ -287,8 +287,9 @@ llmc monitor
 
 **Current (v0.5.5):**
 - ✅ Unified CLI available
-- ✅ Legacy commands still work
-- ℹ️ No deprecation warnings
+- ✅ Legacy module commands (`python -m ...`) still work
+- ❌ Legacy wrapper scripts (`scripts/llmc-*`) removed
+- ℹ️ No deprecation warnings on modules
 
 **Future (v0.6.0 - Estimated Q1 2026):**
 - ⚠️ Deprecation warnings added to legacy commands

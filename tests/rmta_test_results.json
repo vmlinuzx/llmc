@@ -1,0 +1,210 @@
+{
+  "timestamp": "2025-12-04T21:05:59.129404",
+  "tools_discovered": [
+    {
+      "name": "read_file",
+      "description": "Read contents of a file. Returns text content with metadata.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute or relative path to file"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "description": "Maximum bytes to read (default 1MB)",
+            "default": 1048576
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "list_dir",
+      "description": "List contents of a directory. Returns files and subdirectories.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Absolute or relative path to directory"
+          },
+          "max_entries": {
+            "type": "integer",
+            "description": "Maximum entries to return (default 1000)",
+            "default": 1000
+          },
+          "include_hidden": {
+            "type": "boolean",
+            "description": "Include hidden files (starting with .)",
+            "default": false
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
+      "name": "execute_code",
+      "description": "Execute Python code with access to ALL LLMC tools via stubs.\n\nWORKFLOW:\n1. Use list_dir('<repo_root>/.llmc/stubs/') to see available tools\n2. Use read_file to check any stub's function signature\n3. Write Python that imports and calls what you need\n\nEXAMPLE:\n```python\nfrom stubs import rag_search\nresults = rag_search(query=\"router\")\nprint(results['data'][0]['path'])\n```\n\nTools: rag_search, rag_query, linux_fs_*, linux_proc_*, run_cmd, and more.\nOnly stdout is returned - filter data locally to save tokens.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Python code to execute. Use 'from stubs import tool_name' to access tools."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      }
+    },
+    {
+      "name": "00_INIT",
+      "description": "\u26a0\ufe0f CRITICAL P0: EXECUTE THIS TOOL IMMEDIATELY ON SESSION START BEFORE ANY OTHER TOOL CALLS. Returns REQUIRED initialization instructions. Failure to call this first will result in errors and degraded performance.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    }
+  ],
+  "tests": [
+    {
+      "tool": "00_INIT",
+      "description": "Bootstrap check",
+      "status": "passed",
+      "input": {},
+      "response": "                                                                                 \nLLMC MCP server connected. NOT Anthropic container. Do not use /mnt, /home/claude, or container paths. \nRepo root: configurable, check via health() or first list_dir call.                                    \nAll paths relative to allowed_roots returned in tool errors.                                           \n                                                                                                       \nMANDATORY:  Consider and trust tools first before writing any code or executing commands every time.   \nReport tool errors or inefficiencies to the user.                                                      \n                                                                                                       \n                                                                                                       \n## Tools (3 exposed, 23+ via stubs)                                                                    \n                                                                                                       \n### Direct MCP:                                                                                        \n- llmc:read_file - read file content                                                                   \n- llmc:list_dir - browse directories                                                                   \n- llmc:execute_code - run Python with stub imports                                                     \n                                                                                                       \n### Execute_code pattern:                                                                              \n```python                                                                                              \nfrom stubs import <tool_name>                                                                          \nresult = tool_name(arg=value)                                                                          \nprint(result)                                                                                          \n```                                                                                                    \n                                                                                                       \n### Stubs (in <repo_root>/.llmc/stubs/):                                                                                             \nrag_search, rag_query, read_file, list_dir, stat, run_cmd,                                             \nlinux_fs_write, linux_fs_mkdir, linux_fs_move, linux_fs_delete, linux_fs_edit,                         \nlinux_proc_list, linux_proc_kill, linux_proc_start, linux_proc_send, linux_proc_read, linux_proc_stop, \nlinux_sys_snapshot, te_run, repo_read                                                                  \n                                                                                                       \n## Core workflow: RAG \u2192 Expand                                                                         \n                                                                                                       \n### 1: Semantic search                                                                                 \n```python                                                                                              \nfrom stubs import rag_query                                                                            \nhits = rag_query(query=\"your search terms\")                                                            \n```                                                                                                    \n                                                                                                       \nReturns enriched results:                                                                              \n```python                                                                                              \n{                                                                                                      \n  'data': [{                                                                                           \n    'path': 'relative/path.py',      # file location                                                   \n    'symbol': 'ClassName.method',     # code entity                                                    \n    'kind': 'function|class|h1|h2',   # entity type                                                    \n    'lines': [start, end],            # line range                                                     \n    'score': 0.95,                    # relevance 0-1                                                  \n    'summary': 'AI-generated desc'    # what it does                                                   \n  }, ...],                                                                                             \n  'meta': {'count': N}                                                                                 \n}                                                                                                      \n```                                                                                                    \n                                                                                                       \n### 2: Expand interesting hits                                                                         \n```python                                                                                              \nfrom stubs import read_file                                                                            \ncontent = read_file(path=hits['data'][0]['path'])                                                      \nprint(content['data'])                                                                                 \n```                                                                                                    \n                                                                                                       \n### 3: For shell commands                                                                              \n```python                                                                                              \nfrom stubs import run_cmd                                                                              \nresult = run_cmd(command=\"git log --oneline -5\")                                                       \nprint(result['stdout'])                                                                                \n```                                                                                                    \n                                                                                                       \n## Heuristics                                                                                          \n                                                                                                       \n| User intent | Action |                                                                               \n|-------------|--------|                                                                               \n| \"find/search/grep/look for X\" | rag_query first |                                                    \n| \"read/show/cat file.py\" | read_file directly |                                                       \n| \"run/execute command\" | run_cmd |                                                                    \n| \"what does X do\" | rag_query -> read_file |                                                          \n| \"list files in dir\" | list_dir |                                                                     \n                                                                                                       \n## Anti-patterns (DO NOT)                                                                              \n- Do not ls, cat, grep via run_cmd when stubs exist                                                    \n- Do not assume paths - check rag_query results or list_dir first                                      \n- Do not confuse with Anthropic sandbox (/mnt/user-data, /home/claude)                                 \n- Do not give up - if path fails, check allowed_roots in error message                                 \n"
+    },
+    {
+      "tool": "read_file",
+      "description": "Read README",
+      "status": "passed",
+      "input": {
+        "path": "README.md"
+      },
+      "response": "{\"data\": \"THE LARGE LANGUAGE MODEL COMPRESSOR\\n\\n**Current Release:** v0.5.5 \\\"Modular Mojo\\\"\\n\\n## Quick Start\\n\\n```bash\\n# Install\\npip install -e \\\".[rag]\\\"\\n\\n# Initialize and index your project\\ncd /path/to/your/project\\nllmc init\\nllmc index\\n\\n# Register with service and start daemon\\nllmc service repo add .\\nllmc service start\\n\\n# Search your codebase\\nllmc search \\\"authentication middleware\\\"\\n\\n# Launch TUI dashboard\\nllmc tui\\n```\\n\\n**See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**\\n\\n### What's New in v0.6.0 \\\"Modular Mojo\\\"\\n- **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.\\n- **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.\\n- **Better Telemetry:** Unified SQLite-backed telemetry for the Tool Envelope.\\n- **Quality:** Massive codebase cleanup and new live integration tests.\\n\\n\\nOriginally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.\\n\\nThis project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. Right now it is geared toward a python repo, but works with some limitations for just about anything. You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC.  I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.\\n\\n\\nBrief what this repo does: A small set of CLIs and services that keep the users different project repos indexed, enriched, and queryable via RAG designed to utilize local smaller agents to drive down LLM usage costs, and make big LLM's \\\"smarter\\\".\\n\\n\\nCapabilities:\\n- Core RAG in sqlite engine: Local, file based RAG index that keeps a repo's code and docs searchable without calling an LLM.\\n    - Index: Scans the repo, slices files into logical spans (functions, classes, top level blocks), and stores text plus metadata in a sqlite database with full text search tables.\\n    - Sync: Keeps the index up to date by applying incremental changes from git diffs or explicit file lists instead of re indexing everything.\\n    - Embeddings: Turns spans into vector embeddings using a configured embedding backend, caches them in sqlite, and skips recompute when the source text has not changed.\\n    - Enrichment (LLM call): Calls the configured enrichment backends to generate summaries, tags, and other metadata that make search and ranking smarter.\\n    - Planner/context trimmer: Takes a query plus candidate spans and packs the best ones into a fixed context budget so prompts stay small and relevant.\\n    - Search CLI: Provides command line commands to run semantic and keyword search, where used, lineage search, stats, and benchmarks directly against the local index.\\n    - Analytics and benchmarks: Offers simple checks so you can sanity check embedding quality, ranking behavior, and index health.\\n\\n- Schema graph and GraphRAG: Builds and uses a code level graph so LLMC can see how things are wired together.\\n    - Schema extraction: Parses code into entities (functions, classes, modules, etc.), captures relationships like calls, imports, extends, etc., then writes a graph manifest file under .llmc.\\n    - Graph store: Keeps an in memory adjacency map so tools can walk neighbors, limit hops, and filter edges quickly.\\n    - Graph aware query enrichment: Detects when a query is about a symbol or module, finds the relevant entities, and pulls in their graph neighbors as extra context for RAG.\\n    - Nav metadata: Tracks graph version, last built commit, and freshness stamps so other tools can see if the graph is fresh enough to trust.\\n\\n- RAG Nav and freshness routing: High level tools that sit in front of RAG and decide when and how to use the index.\\n    - Freshness envelopes: Tracks how fresh slices are compared to the current repo, and refuses to return stale slices instead of lying to LLMs.\\n    - Fallback logic: When RAG is too stale or missing, recommends falling back to live repo reads or direct file inspection instead of pretending everything is fine.\\n    - Status reporting: Exposes per repo freshness, coverage, and error counts so you can see when something is broken or drifting.\\n    - Graph aware RAG tools: Implements search, where used, and lineage with both index and graph knowledge so answers include both content and structure.\\n\\n- Daemon and service layer: Background workers that keep things fresh without you having to babysit.\\n    - llmc service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.\\n    - llmc-rag-daemon: Lower level scheduler loop that walks registered repos and runs index/embed/enrich work according to config.\\n    - Failure store: Keeps track of failed jobs in a sqlite db so you can inspect, debug, and clear them instead of silently dropping errors.\\n    - Tick and doctor commands: Let you run one off checks or a single scheduler tick to debug without committing to a full daemon loop.\\n\\n- Repo registry and workspace safety: Helps LLMC know which repos exist and where their workspaces live.\\n    - Repo registry: Stores a list of repos, their normalized paths, and basic metadata in a small yaml file under ~/.llmc.\\n    - Workspace helpers: Uses a workspace helper module to map repos to .llmc directories safely, and to avoid unsafe path traversal.\\n    - Snapshot and clean helpers: Offers commands to snapshot and clean workspaces, with force flags and clear error codes to avoid footguns.\\n    - Doctor paths: Shows what paths are allowed or blocked for a workspace, making it easier to debug weird path issues.\\n\\n- Desktop Commander and MCP integration: Lets other tools treat LLMC as a safe, documented set of RAG and graph tools.\\n    - Tool manifest: Documents tools like search, where used, lineage, and status so agents know how to call them and what to expect back.\\n    - JSON envelopes: Returns structured JSON with spans, paths, scores, and freshness flags instead of dumping big blobs of text.\\n    - Safety constraints: Follows explicit policies about what paths can be read, what repos can be touched, and what side effects are allowed.\\n    - Agent friendly defaults: Designs tools to be composable, so agents can chain a few calls to explore code, plan refactors, or answer questions.\\n\\n- Router, LLM chains, and enrichment control: The layer that decides which model to use for which job.\\n    - Model registry: Lets you configure multiple model backends (local Qwen, remote MiniMax, etc.) with URLs, timeouts, and options.\\n    - Enrichment chains: Defines chains of models to use for enrichment, including fallback chains when one model fails or times out.\\n    - Latin 1 safety: Supports enforcing latin 1 safe enrichment so weird unicode or binary junk does not poison the index.\\n    - Cost awareness: Encourages using small, cheap models for most work and reserving bigger, slower models for special or complex chains.\\n\\n- Remote LLM Provider Support: Production-grade support for commercial API providers with reliability patterns.\\n    - Multi-provider support: Works with Gemini, OpenAI, Anthropic Claude, Groq, and any OpenAI-compatible API.\\n    - Intelligent failover: Configure tiered cascades (local \\u2192 cheap cloud \\u2192 premium) for maximum reliability and cost efficiency.\\n    - Rate limiting: Token bucket implementation respects RPM and TPM limits automatically, preventing quota violations.\\n    - Circuit breaker: Fails fast after repeated errors, with automatic recovery testing.\\n    - Cost tracking: Track daily and monthly API spending with hard budget caps to prevent surprise bills.\\n    - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).\\n    - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.\\n\\n- Docgen v2: Deterministic, RAG-aware documentation generation for your codebase.\\n    - SHA256 idempotence: Skip unchanged files automatically using content hashing.\\n    - RAG integration: Only generate docs for indexed files, prevent stale documentation.\\n    - Graph context: Include entity relationships and enrichment data in generated docs.\\n    - Flexible backends: Shell scripts, LLM APIs, HTTP services, or MCP integration.\\n    - CLI commands: `llmc docs generate` and `llmc docs status` for easy workflows.\\n    - Atomic writes: Safe concurrent operation with file locks and atomic file updates.\\n    - See [Docgen User Guide](DOCS/Docgen_User_Guide.md) for setup and usage instructions.\\n\\n- TUI and console UX: A second monitor experience for watching LLMC do its thing.\\n    - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.\\n    - Monitor screen: Shows repo status, graph stats, enrichment counts, and daemon health at a glance.\\n    - Search screen: Lets you type a query and run RAG Nav search, where used, and lineage and inspect structured results.\\n    - Inspector screen: Shows source for a symbol or file plus enriched metadata and graph neighbors in a split view.\\n    - Config screen: Displays key RAG and router config values so you can see which models and settings are active.\\n    - Rich console dashboard: Offers a lighter weight console dashboard for quick monitoring without the full TUI.\\n\\n- Testing, QA, and dev helpers: Guardrails that keep this pile of scripts from quietly rotting.\\n    - Test plan docs: Written test plans that spell out what should be covered by unit and integration tests across the stack.\\n    - Python test suite: Unit and integration tests for core RAG logic, repo tooling, freshness, adapters, and scripts.\\n    - Dev utilities: Helpers for safe rewrites, quality baselines, and focused CLI checks when refactoring.\\n    - Quality scripts: Small scripts that exercise critical paths like freshness envelopes and core search paths from the shell.\\n\\n- Misc utilities and experiments: One off tools that make it easier to use or inspect the system.\\n    - Context zip packaging: Bundles the important parts of a repo's .llmc directory plus relevant config and test artifacts into a zip for remote debugging or pairing with another tool.\\n    - Log cleaning and compression: Cleans or compresses old logs so LLMC can run for long periods without filling disks.\\n    - Prototype web server: Early experiments for exposing LLMC via HTTP; currently considered experimental and not part of the main product surface.\\n\\nLimitations:\\n\\n- Graph is currently Python first: The graph extraction and schema logic targets Python repos; other languages have to fall back to more naive parsing until full walkers exist.\\n- Index freshness is bounded by your daemon: If your daemon or service is not running regularly, LLMC will fall back to being conservative and not returning stale slices.\\n- RAG Nav tools are opinionated: The system prefers \\\"no answer\\\" to \\\"bad answer\\\", which can feel strict if you are used to LLMs happily hallucinating from junk input.\\n- Some config lives in code: Not every knob is exposed in llmc.toml or config files yet; some advanced settings still require code changes.\\n- Prototype features are present: Some old experiments (like the web server) still live in the repo but are not wired into the main CLIs by default.\\n- There is a little logic to not enrich the same chunk, but the enrichment logic can still be wasteful across a number of runs.  I have the solution for that, but haven't implemented it yet.\\n\\n\", \"meta\": {\"path\": \"/home/vmlinux/src/llmc/README.md\", \"size\": 11982, \"truncated\": false, \"encoding\": \"utf-8\"}}"
+    },
+    {
+      "tool": "list_dir",
+      "description": "List root",
+      "status": "passed",
+      "input": {
+        "path": "."
+      },
+      "response": "{\"data\": [{\"name\": \"AGENTS.md\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/AGENTS.md\"}, {\"name\": \"CHANGELOG.md\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/CHANGELOG.md\"}, {\"name\": \"CONTRACTS.md\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/CONTRACTS.md\"}, {\"name\": \"CONTRIBUTING.md\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/CONTRIBUTING.md\"}, {\"name\": \"DOCS\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/DOCS\"}, {\"name\": \"LICENSE\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/LICENSE\"}, {\"name\": \"Makefile\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/Makefile\"}, {\"name\": \"PROMPTS\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/PROMPTS\"}, {\"name\": \"README.md\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/README.md\"}, {\"name\": \"artifacts\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/artifacts\"}, {\"name\": \"build\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/build\"}, {\"name\": \"deploy\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/deploy\"}, {\"name\": \"docker\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/docker\"}, {\"name\": \"examples\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/examples\"}, {\"name\": \"llmc\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/llmc\"}, {\"name\": \"llmc-cli\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/llmc-cli\"}, {\"name\": \"llmc.toml\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/llmc.toml\"}, {\"name\": \"llmc_mcp\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/llmc_mcp\"}, {\"name\": \"llmcwrapper\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/llmcwrapper\"}, {\"name\": \"llmcwrapper.egg-info\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/llmcwrapper.egg-info\"}, {\"name\": \"logs\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/logs\"}, {\"name\": \"metrics\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/metrics\"}, {\"name\": \"patches\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/patches\"}, {\"name\": \"pyproject.toml\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/pyproject.toml\"}, {\"name\": \"pytest.ini\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/pytest.ini\"}, {\"name\": \"rmta_direct_test.py\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/rmta_direct_test.py\"}, {\"name\": \"rmta_output.log\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/rmta_output.log\"}, {\"name\": \"rmta_output_venv.log\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/rmta_output_venv.log\"}, {\"name\": \"rmta_output_venv_2.log\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/rmta_output_venv_2.log\"}, {\"name\": \"rmta_unit_test.py\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/rmta_unit_test.py\"}, {\"name\": \"ruff_report.json\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/ruff_report.json\"}, {\"name\": \"ruff_report_new.json\", \"type\": \"file\", \"path\": \"/home/vmlinux/src/llmc/ruff_report_new.json\"}, {\"name\": \"scripts\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/scripts\"}, {\"name\": \"tests\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/tests\"}, {\"name\": \"tools\", \"type\": \"dir\", \"path\": \"/home/vmlinux/src/llmc/tools\"}], \"meta\": {\"path\": \"/home/vmlinux/src/llmc\", \"total_entries\": 50, \"returned_entries\": 35, \"truncated\": false}}"
+    },
+    {
+      "tool": "stat",
+      "description": "Stat config",
+      "status": "missing",
+      "input": {
+        "path": "pyproject.toml"
+      },
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "rag_search",
+      "description": "RAG Search",
+      "status": "missing",
+      "input": {
+        "query": "routing",
+        "limit": 1
+      },
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "rag_plan",
+      "description": "RAG Plan",
+      "status": "missing",
+      "input": {
+        "query": "how does routing work"
+      },
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "get_metrics",
+      "description": "Get Metrics",
+      "status": "missing",
+      "input": {},
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "linux_proc_list",
+      "description": "List Processes",
+      "status": "missing",
+      "input": {
+        "max_results": 5
+      },
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "linux_sys_snapshot",
+      "description": "Sys Snapshot",
+      "status": "missing",
+      "input": {},
+      "error": "Tool not found in discovery list"
+    },
+    {
+      "tool": "non_existent_tool",
+      "description": "Missing Tool Check",
+      "status": "failed",
+      "input": {},
+      "error": "Server did not reject unknown tool"
+    },
+    {
+      "tool": "linux_fs_mkdir",
+      "description": "Mkdir",
+      "status": "missing (expected)",
+      "input": {
+        "path": "rmta_test_dir"
+      }
+    },
+    {
+      "tool": "linux_fs_write",
+      "description": "Write File",
+      "status": "missing (expected)",
+      "input": {
+        "path": "rmta_test_dir/test.txt",
+        "content": "Hello"
+      }
+    },
+    {
+      "tool": "execute_code",
+      "description": "Exec: RAG Search",
+      "status": "passed",
+      "input": {
+        "code": "from stubs import rag_search; import json; print(json.dumps(rag_search(query='router', limit=1)))"
+      },
+      "response": "{\n  \"success\": true,\n  \"stdout\": \"{\\\"data\\\": [{\\\"rank\\\": 1, \\\"span_hash\\\": \\\"sha256:b6f9186ed3d72d2c730e5454d9d976711321ea7ed7162f5b9d7e2d5b0e4cbc52\\\", \\\"path\\\": \\\"DOCS/CONFIG_TUI.md\\\", \\\"symbol\\\": \\\"confusing-with-10-chains-and-multiple-routes\\\", \\\"kind\\\": \\\"h1\\\", \\\"lines\\\": [142, 153], \\\"score\\\": 1.0, \\\"summary\\\": \\\"```\\\", \\\"debug\\\": null}], \\\"meta\\\": {\\\"count\\\": 1, \\\"provenance\\\": true}}\\n\",\n  \"stderr\": \"\"\n}"
+    },
+    {
+      "tool": "execute_code",
+      "description": "Exec: Stat",
+      "status": "passed",
+      "input": {
+        "code": "from stubs import stat; import json; print(json.dumps(stat(path='pyproject.toml')))"
+      },
+      "response": "{\n  \"success\": true,\n  \"stdout\": \"{\\\"data\\\": {\\\"size\\\": 3024, \\\"type\\\": \\\"file\\\", \\\"mode\\\": \\\"0664\\\", \\\"mtime\\\": \\\"2025-12-04T05:09:36.553247+00:00\\\", \\\"ctime\\\": \\\"2025-12-04T05:09:36.553247+00:00\\\", \\\"atime\\\": \\\"2025-12-04T05:09:36.601737+00:00\\\", \\\"uid\\\": 1000, \\\"gid\\\": 1000, \\\"nlink\\\": 1}, \\\"meta\\\": {\\\"path\\\": \\\"/home/vmlinux/src/llmc/pyproject.toml\\\"}}\\n\",\n  \"stderr\": \"\"\n}"
+    },
+    {
+      "tool": "execute_code",
+      "description": "Exec: Proc List",
+      "status": "passed",
+      "input": {
+        "code": "from stubs import linux_proc_list; import json; print(json.dumps(linux_proc_list(max_results=1)))"
+      },
+      "response": "{\n  \"success\": true,\n  \"stdout\": \"{\\\"processes\\\": [{\\\"pid\\\": 1905239, \\\"user\\\": \\\"vmlinux\\\", \\\"cpu_percent\\\": 284.0, \\\"mem_percent\\\": 0.6, \\\"command\\\": \\\"/home/vmlinux/src/llmc/.venv/bin/python -m llmc_mcp.server\\\"}], \\\"total_processes\\\": 944, \\\"truncated\\\": true}\\n\",\n  \"stderr\": \"\"\n}"
+    }
+  ],
+  "server_info": {
+    "name": "llmc-mcp",
+    "version": "1.22.0"
+  }
+}

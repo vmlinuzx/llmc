@@ -40,7 +40,7 @@ class TestFileMtimeGuard:
 
         # Create a file from 2 hours ago
         old_file = tmp_path / "old.py"
-        old_time = last_indexed.timestamp() - 3600  # 1 hour before indexing
+        last_indexed.timestamp() - 3600  # 1 hour before indexing
         old_file.write_text("# old code")
 
         # Simulate checking if RAG is safe for this file
@@ -60,7 +60,7 @@ class TestFileMtimeGuard:
 
         # Create a file from 30 minutes ago (after indexing)
         new_file = tmp_path / "new.py"
-        new_time = last_indexed.timestamp() + 1800  # 30 minutes after indexing
+        last_indexed.timestamp() + 1800  # 30 minutes after indexing
         new_file.write_text("# new code")
 
         # Simulate checking if RAG is safe for this file
@@ -83,7 +83,7 @@ class TestFileMtimeGuard:
         exact_file.write_text("# exact time")
 
         # Set mtime to match last_indexed
-        exact_time = last_indexed.timestamp()
+        last_indexed.timestamp()
         # Note: mtime is set via os.utime or touch command
 
         # Simulate checking if RAG is safe for this file
@@ -104,8 +104,8 @@ class TestMtimeGuardEdgeCases:
         """
         Checking a non-existent file should handle gracefully.
         """
-        nonexistent = tmp_path / "does_not_exist.py"
-        last_indexed = datetime.now(UTC)
+        tmp_path / "does_not_exist.py"
+        datetime.now(UTC)
 
         # This might raise FileNotFoundError or return a safe default
         # result = check_file_mtime_guard(nonexistent, last_indexed)
@@ -118,7 +118,7 @@ class TestMtimeGuardEdgeCases:
         """
         dir_path = tmp_path / "subdir"
         dir_path.mkdir()
-        last_indexed = datetime.now(UTC)
+        datetime.now(UTC)
 
         # Directories have mtimes too - should this be allowed?
         # result = check_file_mtime_guard(dir_path, last_indexed)
@@ -136,10 +136,10 @@ class TestMtimeGuardEdgeCases:
         # target_file.utime((target_time, target_time))
 
         # Create symlink
-        link_file = tmp_path / "link.py"
+        tmp_path / "link.py"
         # link_file.symlink_to(target_file)
 
-        last_indexed = datetime.fromtimestamp(target_time, UTC)
+        datetime.fromtimestamp(target_time, UTC)
 
         # Should follow symlink and get target's mtime
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -153,15 +153,15 @@ class TestMtimeGuardEdgeCases:
         """
         # Create an old file
         target_file = tmp_path / "target.py"
-        target_time = time.time() + 3600  # 1 hour in future
+        time.time() + 3600  # 1 hour in future
         target_file.write_text("# target")
         # target_file.utime((target_time, target_time))
 
         # Create symlink
-        link_file = tmp_path / "link.py"
+        tmp_path / "link.py"
         # link_file.symlink_to(target_file)
 
-        last_indexed = datetime.now(UTC)
+        datetime.now(UTC)
 
         # Should follow symlink and detect new mtime
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -174,10 +174,10 @@ class TestMtimeGuardEdgeCases:
         A broken symlink should handle gracefully.
         """
         # Create symlink to non-existent target
-        link_file = tmp_path / "broken.py"
+        tmp_path / "broken.py"
         # link_file.symlink_to("nonexistent.py")
 
-        last_indexed = datetime.now(UTC)
+        datetime.now(UTC)
 
         # Should handle the error gracefully
         # is_safe, reason = check_file_mtime_guard(link_file, last_indexed)
@@ -197,7 +197,7 @@ class TestMtimeGuardIntegration:
         The mtime guard should work with IndexStatus.last_indexed_at.
         """
         # Create a realistic IndexStatus
-        index_status = IndexStatus(
+        IndexStatus(
             repo="test",
             index_state="fresh",
             last_indexed_at="2025-11-16T15:00:00Z",
@@ -241,13 +241,13 @@ class TestMtimeGuardIntegration:
             # Create files before, at, and after last_indexed
             if i < 2:
                 # Old files
-                timestamp = last_indexed.timestamp() - (i + 1) * 3600
+                last_indexed.timestamp() - (i + 1) * 3600
             elif i == 2:
                 # Exact match
-                timestamp = last_indexed.timestamp()
+                last_indexed.timestamp()
             else:
                 # New files
-                timestamp = last_indexed.timestamp() + (i - 1) * 3600
+                last_indexed.timestamp() + (i - 1) * 3600
 
             f.write_text(f"# file {i}")
             # f.utime((timestamp, timestamp))

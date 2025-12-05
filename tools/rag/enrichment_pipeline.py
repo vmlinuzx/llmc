@@ -309,7 +309,8 @@ class EnrichmentPipeline:
                     else:
                         low_items.append((item, decision))
                 
-                key = lambda pair: pair[1].final_priority
+                def key(pair):
+                    return pair[1].final_priority
                 high_items.sort(key=key, reverse=True)
                 mid_items.sort(key=key, reverse=True)
                 low_items.sort(key=key, reverse=True)

@@ -24,14 +24,13 @@ Usage:
         print(f"Generated {result.doc_path} in {result.duration_ms}ms")
 """
 
-import hashlib
-import os
-import tempfile
-import time
 from collections import deque
 from dataclasses import dataclass, field
+import hashlib
+import os
 from pathlib import Path
-from typing import Optional, Deque, List
+import tempfile
+import time
 
 from .maasl import MAASL, ResourceDescriptor
 
@@ -41,12 +40,12 @@ class DocgenResult:
     """Result of a docgen operation."""
     status: str  # "generated", "noop", "skipped", "error"
     source_file: str
-    doc_path: Optional[str] = None
-    hash: Optional[str] = None
+    doc_path: str | None = None
+    hash: str | None = None
     duration_ms: int = 0
-    error: Optional[str] = None
-    agent_id: Optional[str] = None
-    session_id: Optional[str] = None
+    error: str | None = None
+    agent_id: str | None = None
+    session_id: str | None = None
     timestamp: float = field(default_factory=time.time)
 
 
@@ -82,7 +81,7 @@ class DocgenCoordinator:
         self.docs_dir.mkdir(parents=True, exist_ok=True)
         
         # Circular buffer for status tracking (thread-safe due to deque)
-        self._history: Deque[DocgenResult] = deque(maxlen=self.BUFFER_SIZE)
+        self._history: deque[DocgenResult] = deque(maxlen=self.BUFFER_SIZE)
     
     def compute_source_hash(self, source_path: str) -> str:
         """
@@ -128,7 +127,7 @@ class DocgenCoordinator:
         doc_name = str(rel_path).replace("/", "_").replace("\\", "_") + ".md"
         return self.docs_dir / doc_name
     
-    def read_doc_hash(self, doc_path: Path) -> Optional[str]:
+    def read_doc_hash(self, doc_path: Path) -> str | None:
         """
         Extract SHA256 hash from existing doc header.
         
@@ -148,7 +147,7 @@ class DocgenCoordinator:
                 hash_part = first_line[len(self.SHA_HEADER_PREFIX):].strip()
                 if hash_part.endswith("-->"):
                     return hash_part[:-3].strip()
-        except (IOError, IndexError):
+        except (OSError, IndexError):
             pass
         
         return None
@@ -306,7 +305,7 @@ class DocgenCoordinator:
             self._history.append(result)
             raise
     
-    def get_status(self, limit: int = 10) -> List[DocgenResult]:
+    def get_status(self, limit: int = 10) -> list[DocgenResult]:
         """
         Get recent docgen operation history.
         

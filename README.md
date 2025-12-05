@@ -26,21 +26,6 @@ llmc tui
 
 **See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
 
-### Development Mode (No Install)
-
-If you're developing and don't want to install, use the wrapper script in the repo root:
-
-```bash
-# From repo root
-./llmc-cli --help
-./llmc-cli index
-./llmc-cli search "query"
-
-# Or add to your PATH
-export PATH="$PWD:$PATH"
-llmc-cli --help
-```
-
 ### What's New in v0.6.0 "Modular Mojo"
 - **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
 - **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.
@@ -79,7 +64,7 @@ Capabilities:
     - Graph aware RAG tools: Implements search, where used, and lineage with both index and graph knowledge so answers include both content and structure.
 
 - Daemon and service layer: Background workers that keep things fresh without you having to babysit.
-    - llmc-rag-service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.
+    - llmc service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.
     - llmc-rag-daemon: Lower level scheduler loop that walks registered repos and runs index/embed/enrich work according to config.
     - Failure store: Keeps track of failed jobs in a sqlite db so you can inspect, debug, and clear them instead of silently dropping errors.
     - Tick and doctor commands: Let you run one off checks or a single scheduler tick to debug without committing to a full daemon loop.

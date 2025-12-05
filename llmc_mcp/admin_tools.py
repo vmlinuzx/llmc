@@ -9,16 +9,15 @@ Tools:
 - llmc.docgen_status: Recent docgen operations
 """
 
-import time
 from dataclasses import asdict
-from typing import Dict, List, Optional
+import time
 
 from .docgen_guard import DocgenCoordinator
 from .locks import get_lock_manager
 from .telemetry import get_telemetry_sink
 
 
-def maasl_locks() -> Dict:
+def maasl_locks() -> dict:
     """
     List all currently active MAASL locks.
     
@@ -50,7 +49,7 @@ def maasl_locks() -> Dict:
     }
 
 
-def maasl_stomp_stats() -> Dict:
+def maasl_stomp_stats() -> dict:
     """
     Get aggregated MAASL contention and coordination statistics.
     
@@ -109,9 +108,9 @@ def maasl_stomp_stats() -> Dict:
 
 
 def maasl_docgen_status(
-    coordinator: Optional[DocgenCoordinator] = None,
+    coordinator: DocgenCoordinator | None = None,
     limit: int = 10
-) -> Dict:
+) -> dict:
     """
     Get recent documentation generation operations.
     

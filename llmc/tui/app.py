@@ -1,136 +1,45 @@
 #!/usr/bin/env python3
 """
-LLMC TUI - Main Application
-A cyberpunk-styled terminal UI for LLMC
+LLMC TUI - Cyberpunk Terminal Interface
+
+The visual frontend to the LLMC CLI. Every CLI command has a corresponding
+TUI screen. Same logic, different interface.
+
+Launch with: llmc tui
 """
 
 from pathlib import Path
+import sys
 
-from textual.app import App, ComposeResult
+from textual.app import App
 from textual.binding import Binding
-from textual.containers import ScrollableContainer, Vertical
-from textual.screen import Screen
-from textual.widgets import Button, Static
 
-from llmc.tui.screens.config import ConfigScreen
-from llmc.tui.screens.inspector import InspectorScreen
-
-# Import our custom screens
-from llmc.tui.screens.monitor import MonitorScreen
-from llmc.tui.screens.search import SearchScreen
-
-
-class MenuScreen(Screen):
-    """Main menu screen with navigation options"""
-
-    BINDINGS = [
-        Binding("1", "show_monitor", "Monitor System"),
-        Binding("2", "show_search", "Search Code"),
-        Binding("3", "show_inspect", "Inspect Entity"),
-        Binding("4", "show_config", "Configuration"),
-        Binding("5", "show_rag_doctor", "RAG Doctor"),
-        Binding("q", "quit", "Quit"),
-    ]
-
-    CSS = """
-    MenuScreen {
-        align: center middle;
-    }
-    
-    #menu-container {
-        width: 60;
-        height: auto;
-        border: heavy $primary;
-        background: $surface;
-        padding: 2 4;
-    }
-    
-    #title {
-        text-align: center;
-        text-style: bold;
-        color: $accent;
-        margin-bottom: 2;
-    }
-    
-    .menu-item {
-        width: 100%;
-        height: 3;
-        margin: 1 0;
-        border: solid $secondary;
-    }
-    
-    .menu-item:hover {
-        border: heavy $accent;
-        background: $boost;
-    }
-    """
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="menu-container"):
-            yield Static("LLMC - Cyberpunk Console", id="title")
-            with ScrollableContainer(id="menu-scroll"):
-                yield Button("[1] Monitor System", id="btn-monitor", classes="menu-item")
-                yield Button("[2] Search Code", id="btn-search", classes="menu-item")
-                yield Button("[3] Inspect Entity", id="btn-inspect", classes="menu-item")
-                yield Button("[4] Configuration", id="btn-config", classes="menu-item")
-                yield Button("[5] RAG Doctor", id="btn-rag-doctor", classes="menu-item")
-            yield Static("\nPress number keys or click buttons to navigate", id="help-text")
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        """Handle button clicks"""
-        if event.button.id == "btn-monitor":
-            self.action_show_monitor()
-        elif event.button.id == "btn-search":
-            self.action_show_search()
-        elif event.button.id == "btn-inspect":
-            self.action_show_inspect()
-        elif event.button.id == "btn-config":
-            self.action_show_config()
-        elif event.button.id == "btn-rag-doctor":
-            self.action_show_rag_doctor()
-
-    def action_show_monitor(self) -> None:
-        """Switch to monitor screen"""
-        self.app.push_screen(MonitorScreen())
-
-    def action_show_search(self) -> None:
-        """Switch to search screen"""
-        self.app.push_screen(SearchScreen())
-
-    def action_show_inspect(self) -> None:
-        """Switch to inspector screen"""
-        self.app.push_screen(InspectorScreen())
-
-    def action_show_config(self) -> None:
-        """Switch to configuration screen"""
-        self.app.push_screen(ConfigScreen())
-
-    def action_show_rag_doctor(self) -> None:
-        """Switch to RAG Doctor screen"""
-        from llmc.tui.screens.rag_doctor import RAGDoctorScreen
-
-        self.app.push_screen(RAGDoctorScreen())
-
-    def action_quit(self) -> None:
-        """Quit the application"""
-        self.app.exit()
+from llmc.tui.screens.dashboard import DashboardScreen
+from llmc.tui.theme import GLOBAL_CSS
 
 
 class LLMC_TUI(App):
-    """Main LLMC TUI Application"""
-
-    TITLE = "LLMC - Large Language Model Controller"
-    SUB_TITLE = "Cyberpunk Console"
-
-    CSS = """
-    Screen {
-        background: $surface;
-    }
+    """
+    Main LLMC TUI Application.
+    
+    Navigation:
+        1 - Dashboard (stats, quick actions, logs)
+        2 - Search (code search)
+        3 - Service (daemon control)
+        4 - Navigate (where-used, lineage)
+        5 - Docs (documentation generation)
+        6 - RUTA (user testing)
+        7 - Analytics (query stats)
+        8 - Config (enrichment editor)
+        q - Quit
     """
 
+    TITLE = "LLMC"
+    SUB_TITLE = "Cyberpunk Console"
+    CSS = GLOBAL_CSS
+
     BINDINGS = [
-        Binding("escape", "pop_screen", "Back"),
-        Binding("ctrl+c", "quit", "Quit"),
+        Binding("ctrl+c", "quit", "Quit", show=False),
     ]
 
     def __init__(self, repo_root: Path | None = None):
@@ -138,24 +47,29 @@ class LLMC_TUI(App):
         self.repo_root = repo_root or Path.cwd()
 
     def on_mount(self) -> None:
-        """Initialize the app"""
-        # Start on the monitor screen but keep the menu as the previous page so ESC
-        # returns to navigation instead of quitting immediately.
-        self.push_screen(MenuScreen())
-        self.push_screen(MonitorScreen())
+        """Start on the dashboard."""
+        self.push_screen(DashboardScreen())
 
 
 def main():
-    """Entry point for the TUI"""
-    from pathlib import Path
-    import sys
-
-    # Determine repo root
+    """Entry point for the TUI."""
+    # Parse args
+    repo_root = Path.cwd()
+    
     if len(sys.argv) > 1:
-        repo_root = Path(sys.argv[1]).resolve()
-    else:
-        repo_root = Path.cwd()
-
+        arg = sys.argv[1]
+        if arg in ("-h", "--help"):
+            print(__doc__)
+            print("\nUsage: llmc-tui [repo_path]")
+            print("  repo_path: Path to repository (default: current directory)")
+            return
+        repo_root = Path(arg).resolve()
+    
+    if not repo_root.exists():
+        print(f"Error: Path does not exist: {repo_root}")
+        sys.exit(1)
+    
+    # Launch TUI
     app = LLMC_TUI(repo_root=repo_root)
     app.run()
 

@@ -7320,14 +7320,14 @@ F401 [*] `functools.lru_cache` imported but unused
 help: Remove unused import: `functools.lru_cache`
 
 PLW2901 `for` loop variable `raw` overwritten by assignment target
-   --> tools/rag/config_enrichment.py:214:17
+   --> tools/rag/config_enrichment.py:212:17
     |
-212 |                 if not isinstance(raw, Mapping):
-213 |                     continue
-214 |                 raw = dict(raw)
+210 |                 if not isinstance(raw, Mapping):
+211 |                     continue
+212 |                 raw = dict(raw)
     |                 ^^^
-215 |                 raw.setdefault("chain", chain_name)
-216 |                 spec = _parse_backend_spec(raw, default_chain=default_chain)
+213 |                 raw.setdefault("chain", chain_name)
+214 |                 spec = _parse_backend_spec(raw, default_chain=default_chain)
     |
 
 UP028 Replace `yield` over `for` loop with `yield from`

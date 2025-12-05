@@ -15,6 +15,8 @@ from datetime import UTC, datetime
 import json
 import logging
 import os
+from pathlib import Path
+import sqlite3
 from threading import Lock
 import time
 from typing import Any
@@ -165,6 +167,74 @@ class MetricsCollector:
             self._tokens_out = 0
 
 
+class SQLiteMetricsCollector:
+    """SQLite-backed metrics collector for long-term trends."""
+
+    def __init__(self, db_path: str, enabled: bool = True):
+        self.enabled = enabled
+        self.db_path = Path(db_path)
+        if self.enabled:
+            self._init_db()
+
+    def _init_db(self):
+        """Initialize database schema."""
+        try:
+            self.db_path.parent.mkdir(parents=True, exist_ok=True)
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS tool_usage (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT NOT NULL,
+                        tool TEXT NOT NULL,
+                        latency_ms REAL,
+                        success BOOLEAN,
+                        tokens_in INTEGER,
+                        tokens_out INTEGER,
+                        correlation_id TEXT
+                    )
+                """)
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_tool_usage_ts ON tool_usage(timestamp)")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_tool_usage_tool ON tool_usage(tool)")
+        except Exception as e:
+            logging.getLogger("llmc-mcp").error(f"Failed to init telemetry DB: {e}")
+            self.enabled = False
+
+    def record(
+        self,
+        tool: str,
+        latency_ms: float,
+        success: bool,
+        tokens_in: int,
+        tokens_out: int,
+        correlation_id: str,
+    ):
+        """Record tool usage to SQLite."""
+        if not self.enabled:
+            return
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute(
+                    """
+                    INSERT INTO tool_usage 
+                    (timestamp, tool, latency_ms, success, tokens_in, tokens_out, correlation_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        datetime.now(UTC).isoformat(),
+                        tool,
+                        latency_ms,
+                        success,
+                        tokens_in,
+                        tokens_out,
+                        correlation_id,
+                    ),
+                )
+        except Exception as e:
+            # Don't crash on telemetry failure
+            logging.getLogger("llmc-mcp").warning(f"Failed to record telemetry: {e}")
+
+
 class ObservabilityContext:
     """Unified observability context for the MCP server.
 
@@ -194,6 +264,12 @@ class ObservabilityContext:
         self.audit = TokenAuditWriter(
             csv_path=config.csv_path,
             enabled=config.enabled and config.csv_token_audit_enabled,
+        )
+        
+        # SQLite metrics
+        self.sqlite = SQLiteMetricsCollector(
+            db_path=config.sqlite_path,
+            enabled=config.enabled and getattr(config, "sqlite_enabled", True),
         )
 
     def correlation_id(self) -> str:
@@ -228,6 +304,15 @@ class ObservabilityContext:
             tokens_out=tokens_out,
             latency_ms=latency_ms,
             success=success,
+        )
+        
+        self.sqlite.record(
+            tool=tool,
+            latency_ms=latency_ms,
+            success=success,
+            tokens_in=tokens_in,
+            tokens_out=tokens_out,
+            correlation_id=correlation_id,
         )
 
     def get_stats(self) -> dict[str, Any]:

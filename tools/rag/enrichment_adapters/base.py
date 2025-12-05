@@ -11,22 +11,18 @@ This module provides the base class for remote LLM API providers with:
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 import json
 import logging
 import re
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any
 
 from tools.rag.enrichment_backends import BackendError
 from tools.rag.enrichment_config import (
     EnrichmentProviderConfig,
-    get_provider_metadata,
 )
 from tools.rag.enrichment_reliability import (
     CircuitBreaker,
-    CircuitBreakerConfig,
-    CircuitBreakerError,
     CostTracker,
     RateLimiter,
     RetryConfig,

@@ -396,7 +396,7 @@ class TestRunEmbeddingBenchmark:
         mock_backend.embed_passages = Mock(return_value=[[0.5, 0.5]])
         mock_build_backend.return_value = mock_backend
 
-        results = run_embedding_benchmark()
+        run_embedding_benchmark()
 
         # Should call embed_queries for each case
         assert mock_backend.embed_queries.called

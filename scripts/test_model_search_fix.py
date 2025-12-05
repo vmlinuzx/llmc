@@ -52,6 +52,7 @@ print("\n✓ Config edited")
 
 # Load and check
 import time
+
 time.sleep(0.1)
 config = load_config(repo_root)
 default_profile = config.get("embeddings", {}).get("default_profile")

@@ -318,7 +318,7 @@ def build_graph_for_repo(repo_root: Path | str):
     # Build the enriched schema graph. This replaces the manual AST-only scan below
     # as the source of truth for rag_graph.json.
     try:
-        enriched_graph = build_enriched_schema_graph(repo_root_path)
+        build_enriched_schema_graph(repo_root_path)
         # Since build_enriched_schema_graph already saves the file, we can return status early
         # However, to maintain compatibility with the existing function structure which
         # reads rag_graph.json later if needed, we can let it proceed or just return.

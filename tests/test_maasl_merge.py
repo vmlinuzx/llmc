@@ -5,13 +5,12 @@ Tests for MAASL Phase 5: Graph Merge Engine.
 Tests deterministic graph merging with concurrent updates.
 """
 
-import pytest
 import threading
-from typing import List
 
-from llmc_mcp.merge_meta import GraphPatch, MergeEngine, MergeResult, get_merge_engine
+import pytest
+
+from llmc_mcp.merge_meta import GraphPatch, MergeResult, get_merge_engine
 from tools.rag.graph import GraphStore
-from tools.rag.schema import Entity
 
 
 @pytest.fixture
@@ -159,7 +158,7 @@ def test_concurrent_graph_updates(merge_engine, empty_graph):
     
     Core anti-stomp test for graph operations.
     """
-    results: List[MergeResult] = []
+    results: list[MergeResult] = []
     lock = threading.Lock()
     
     def update_agent(agent_id: str, node_id: str):

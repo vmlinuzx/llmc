@@ -109,7 +109,7 @@ class TestRagRefreshCron:
         """Test --repo flag accepts path."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), "--repo", tmpdir], check=False, capture_output=True, text=True
             )
             # May fail without proper setup, but should accept --repo
@@ -118,7 +118,7 @@ class TestRagRefreshCron:
         """Test --repo=/path syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), f"--repo={tmpdir}"], check=False, capture_output=True, text=True
             )
             # Should accept this syntax
@@ -409,7 +409,7 @@ class TestRagSync:
         """Test --repo=/path syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
-            result = subprocess.run(
+            subprocess.run(
                 [str(script_path), f"--repo={tmpdir}"], check=False, capture_output=True, text=True
             )
             # Should fail due to missing path args

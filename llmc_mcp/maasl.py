@@ -9,13 +9,14 @@ Provides:
 - stomp_guard() context manager for long-running protected sections
 """
 
-import time
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Iterator, List, Optional
 import logging
+import time
+from typing import Any
 
-from llmc_mcp.locks import get_lock_manager, LockHandle, ResourceBusyError
+from llmc_mcp.locks import LockHandle, ResourceBusyError, get_lock_manager
 from llmc_mcp.telemetry import get_telemetry_sink
 
 logger = logging.getLogger("llmc-mcp.maasl")
@@ -96,7 +97,7 @@ class PolicyRegistry:
         ),
     }
     
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: dict | None = None):
         """
         Initialize policy registry.
         
@@ -177,7 +178,7 @@ class MAASLError(Exception):
 
 class DbBusyError(MAASLError):
     """Database lock timeout."""
-    def __init__(self, description: str, sqlite_error: Optional[str] = None):
+    def __init__(self, description: str, sqlite_error: str | None = None):
         self.description = description
         self.sqlite_error = sqlite_error
         super().__init__(description)
@@ -208,7 +209,7 @@ class StaleVersionError(MAASLError):
 
 class MaaslInternalError(MAASLError):
     """Unexpected internal error."""
-    def __init__(self, message: str, original_exception: Optional[Exception] = None):
+    def __init__(self, message: str, original_exception: Exception | None = None):
         self.message = message
         self.original_exception = original_exception
         super().__init__(message)
@@ -221,7 +222,7 @@ class MAASL:
     Provides call_with_stomp_guard() wrapper for protected operations.
     """
     
-    def __init__(self, policy_registry: Optional[PolicyRegistry] = None):
+    def __init__(self, policy_registry: PolicyRegistry | None = None):
         self.policy = policy_registry or PolicyRegistry()
         self.lock_manager = get_lock_manager()
         self.telemetry = get_telemetry_sink()
@@ -229,7 +230,7 @@ class MAASL:
     def call_with_stomp_guard(
         self,
         op: Callable[[], Any],
-        resources: List[ResourceDescriptor],
+        resources: list[ResourceDescriptor],
         intent: str,
         mode: str,
         agent_id: str,
@@ -257,7 +258,7 @@ class MAASL:
             MaaslInternalError: Unexpected error
         """
         start_time = time.time()
-        acquired_locks: List[LockHandle] = []
+        acquired_locks: list[LockHandle] = []
         
         try:
             # Step 1: Resolve descriptors to resource classes and keys
@@ -373,12 +374,12 @@ class MAASL:
     @contextmanager
     def stomp_guard(
         self,
-        resources: List[ResourceDescriptor],
+        resources: list[ResourceDescriptor],
         intent: str,
         mode: str,
         agent_id: str,
         session_id: str,
-    ) -> Iterator[List[LockHandle]]:
+    ) -> Iterator[list[LockHandle]]:
         """
         Context manager for long-running protected sections.
         
@@ -408,9 +409,9 @@ class MAASL:
             ...     conn.commit()
         """
         start_time = time.time()
-        acquired_locks: List[LockHandle] = []
+        acquired_locks: list[LockHandle] = []
         success = False
-        error_type: Optional[str] = None
+        error_type: str | None = None
         
         try:
             # Step 1: Resolve descriptors to resource classes and keys
@@ -495,10 +496,10 @@ class MAASL:
 
 
 # Global singleton instance
-_maasl: Optional[MAASL] = None
+_maasl: MAASL | None = None
 
 
-def get_maasl(config: Optional[Dict] = None) -> MAASL:
+def get_maasl(config: dict | None = None) -> MAASL:
     """Get or create global MAASL instance."""
     global _maasl
     if _maasl is None:
@@ -507,7 +508,7 @@ def get_maasl(config: Optional[Dict] = None) -> MAASL:
     return _maasl
 
 
-def configure_maasl(config: Dict):
+def configure_maasl(config: dict):
     """Configure global MAASL instance."""
     global _maasl
     policy = PolicyRegistry(config=config)

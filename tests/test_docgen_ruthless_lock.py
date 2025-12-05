@@ -1,10 +1,8 @@
 
-import pytest
-import fcntl
-import time
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 from llmc.docgen.locks import DocgenLock
+
 
 def test_docgen_lock_leak_on_timeout(tmp_path):
     """Verify that DocgenLock leaks a file handle if acquire times out."""

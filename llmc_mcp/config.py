@@ -124,6 +124,9 @@ class McpObservabilityConfig:
     # Token audit CSV
     csv_token_audit_enabled: bool = False
     csv_path: str = "./artifacts/token_audit.csv"
+    # SQLite Metrics
+    sqlite_enabled: bool = True
+    sqlite_path: str = "./.llmc/telemetry.db"
     # Retention (0 = forever)
     retention_days: int = 0
 
@@ -298,6 +301,8 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
             "csv_token_audit_enabled", cfg.observability.csv_token_audit_enabled
         )
         cfg.observability.csv_path = obs.get("csv_path", cfg.observability.csv_path)
+        cfg.observability.sqlite_enabled = obs.get("sqlite_enabled", cfg.observability.sqlite_enabled)
+        cfg.observability.sqlite_path = obs.get("sqlite_path", cfg.observability.sqlite_path)
         cfg.observability.retention_days = obs.get(
             "retention_days", cfg.observability.retention_days
         )

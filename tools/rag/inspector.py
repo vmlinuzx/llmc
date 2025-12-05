@@ -55,17 +55,46 @@ class InspectionResult:
         return asdict(self)
 
 
+class PathSecurityError(ValueError):
+    """Raised when path access is denied for security reasons."""
+    pass
+
+
 def _normalize_path(repo_root: Path, target: str) -> Path:
-    """Resolve target path relative to repo root, with fuzzy suffix matching."""
+    """Resolve target path relative to repo root, with fuzzy suffix matching.
+    
+    Security: Rejects paths outside repo_root to prevent path traversal attacks.
+    
+    Raises:
+        PathSecurityError: If path is outside repo_root boundary.
+    """
+    # Security: Reject null bytes
+    if "\x00" in target:
+        raise PathSecurityError("Path contains null bytes")
+    
     # 1. Try as exact path (relative or absolute)
     p = Path(target)
     if p.is_absolute():
+        # Security: Absolute paths MUST be inside repo_root
+        resolved = p.resolve()
         try:
-            return p.relative_to(repo_root)
+            return resolved.relative_to(repo_root.resolve())
         except ValueError:
-            pass  # Not inside repo, might be fine if exists, but we prefer repo-rel
+            raise PathSecurityError(
+                f"Path '{target}' is outside repository boundary. "
+                f"Only paths within {repo_root} are allowed."
+            )
 
-    full_path = repo_root / target
+    # Security: Check for traversal attempts (../)
+    full_path = (repo_root / target).resolve()
+    try:
+        full_path.relative_to(repo_root.resolve())
+    except ValueError:
+        raise PathSecurityError(
+            f"Path '{target}' escapes repository boundary via traversal. "
+            f"Only paths within {repo_root} are allowed."
+        )
+    
     if full_path.exists():
         return Path(target)
 
@@ -233,6 +262,49 @@ def _fetch_enrichment(
     return data
 
 
+def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
+    """Calculate importance score for an entity."""
+    score = 0.0
+    
+    # 1. Kind Score
+    kind_scores = {
+        "class": 100,
+        "interface": 90,
+        "function": 50,
+        "method": 40,
+        "type": 30,
+        "variable": 10,
+    }
+    score += kind_scores.get(entity.kind, 0)
+    
+    # 2. Name Score
+    name = entity.id.split(":", 1)[-1].split(".")[-1]
+    if name.startswith("__"):
+        score -= 30
+    elif name.startswith("_"):
+        score -= 20
+    if "test" in name.lower():
+        score -= 10
+        
+    # 3. Size Score (lines)
+    if entity.start_line and entity.end_line:
+        lines = entity.end_line - entity.start_line
+        score += min(lines * 0.5, 50)  # Cap at 50 points
+        
+    # 4. Connectivity Score (if graph available)
+    if graph:
+        # This is O(E) per entity, might be slow if many relations.
+        # But inspect_entity is usually focused on one file.
+        # Optimization: Pre-calculate counts if performance becomes an issue.
+        in_degree = sum(1 for r in graph.relations if r.dst == entity.id)
+        out_degree = sum(1 for r in graph.relations if r.src == entity.id)
+        
+        score += min(in_degree * 5, 50)  # Cap at 50 points
+        score += min(out_degree * 1, 20) # Cap at 20 points
+        
+    return score
+
+
 def inspect_entity(
     repo_root: Path,
     *,
@@ -337,8 +409,11 @@ def inspect_entity(
             graph_status = "file_not_indexed"
         else:
             # Defined symbols in this file
-            # Sort by line
-            file_entities.sort(key=lambda x: x.start_line or 0)
+            # Sort by importance score, then line number
+            file_entities.sort(key=lambda x: (
+                -_calculate_entity_score(x, graph), 
+                x.start_line or 0
+            ))
 
             for ent in file_entities[:10]:  # Limit to 10
                 name = ent.id.split(":", 1)[-1].split(".")[-1]

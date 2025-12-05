@@ -40,7 +40,7 @@ A complete, production-ready documentation generation system that:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                     CLI Layer                            │
-│  llmc docs generate / llmc docs status                  │
+│  llmc debug autodoc generate / llmc debug autodoc status                  │
 └────────────────┬────────────────────────────────────────┘
                  │
 ┌────────────────▼────────────────────────────────────────┐
@@ -160,10 +160,10 @@ llmc.toml                             # ✏️ Added [docs.docgen] config
 
 ### 7. **CLI Commands**
 ```bash
-llmc docs generate --all       # Generate for all files
-llmc docs generate path/to/file.py  # Single file
-llmc docs generate --all --force    # Force regeneration
-llmc docs status                    # Show coverage
+llmc debug autodoc generate --all       # Generate for all files
+llmc debug autodoc generate path/to/file.py  # Single file
+llmc debug autodoc generate --all --force    # Force regeneration
+llmc debug autodoc status                    # Show coverage
 ```
 
 ### 8. **Concurrency Control**
@@ -272,12 +272,12 @@ llmc index
 
 ### 3. Generate Documentation
 ```bash
-llmc docs generate --all
+llmc debug autodoc generate --all
 ```
 
 ### 4. Check Results
 ```bash
-llmc docs status
+llmc debug autodoc status
 ls DOCS/REPODOCS/
 ```
 
@@ -406,7 +406,7 @@ enabled = true
 
 # Generate! 
 llmc index
-llmc docs generate --all
+llmc debug autodoc generate --all
 ```
 
 ---

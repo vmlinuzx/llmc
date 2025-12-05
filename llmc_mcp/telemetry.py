@@ -7,7 +7,6 @@ Provides lightweight structured logging for lock events, contention, and coordin
 
 import logging
 import time
-from typing import Any, Optional
 
 logger = logging.getLogger("llmc-mcp.maasl")
 
@@ -81,8 +80,8 @@ class TelemetrySink:
         agent_id: str,
         session_id: str,
         max_wait_ms: int,
-        holder_agent_id: Optional[str] = None,
-        holder_session_id: Optional[str] = None,
+        holder_agent_id: str | None = None,
+        holder_session_id: str | None = None,
     ):
         """Log lock acquisition timeout (contention)."""
         if not self.enabled:
@@ -134,7 +133,7 @@ class TelemetrySink:
         intent: str,
         duration_ms: float,
         success: bool,
-        error: Optional[str] = None,
+        error: str | None = None,
     ):
         """Log database write operation."""
         if not self.enabled:
@@ -191,7 +190,7 @@ class TelemetrySink:
         duration_ms: float,
         agent_id: str,
         session_id: str,
-        error: Optional[str] = None,
+        error: str | None = None,
     ):
         """Log documentation generation event."""
         if not self.enabled:
@@ -230,7 +229,7 @@ class TelemetrySink:
         resource_count: int,
         duration_ms: float,
         success: bool,
-        error_type: Optional[str] = None,
+        error_type: str | None = None,
     ):
         """Log high-level call_with_stomp_guard invocation."""
         if not self.enabled:
@@ -256,7 +255,7 @@ class TelemetrySink:
 
 
 # Global singleton instance
-_telemetry_sink: Optional[TelemetrySink] = None
+_telemetry_sink: TelemetrySink | None = None
 
 
 def get_telemetry_sink() -> TelemetrySink:

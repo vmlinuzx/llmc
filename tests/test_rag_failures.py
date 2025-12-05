@@ -71,19 +71,8 @@ def test_scheduler_consecutive_failures():
     print("TEST: Scheduler - Consecutive Failures & Backoff")
     print("=" * 70)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory():
         # Create a config
-        config = {
-            "tick_interval_seconds": 60,
-            "max_concurrent_jobs": 2,
-            "max_consecutive_failures": 3,
-            "base_backoff_seconds": 60,
-            "max_backoff_seconds": 3600,
-            "registry_path": f"{tmpdir}/registry.yml",
-            "state_store_path": f"{tmpdir}/state",
-            "log_path": f"{tmpdir}/logs",
-            "control_dir": f"{tmpdir}/control",
-        }
 
         # Test backoff calculation
         code = f"""

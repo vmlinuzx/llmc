@@ -44,16 +44,16 @@ class TestOneHopNeighborExpansion:
 
     def test_expand_search_items_with_neighbors(self, tmp_path: Path):
         """Test expanding search items with graph neighbors."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
         # Mock search items (starting points)
-        search_items = [
+        [
             Mock(file="file1.py"),
             Mock(file="file2.py"),
         ]
 
         # Mock neighbors from graph
-        neighbors = [
+        [
             Mock(path="file3.py"),
             Mock(path="file4.py"),
             Mock(path="file5.py"),
@@ -64,19 +64,17 @@ class TestOneHopNeighborExpansion:
 
     def test_max_expansion_limit(self, tmp_path: Path):
         """Test that max_expansion limits number of neighbors added."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Graph has 4 neighbors but max_expansion is 2
-        max_expansion = 2
-        hops = 1
 
         # Should only add 2 neighbors
 
     def test_one_hop_only(self, tmp_path: Path):
         """Test that only 1-hop neighbors are expanded (not 2-hop)."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
         # Graph structure: func_a -> func_b -> func_c -> func_d
         # Starting from func_a:
@@ -84,15 +82,15 @@ class TestOneHopNeighborExpansion:
         # - 2-hop: func_c (neighbor's neighbor)
         # Should only include func_b, not func_c
 
-        search_items = [Mock(file="file1.py")]  # func_a
+        [Mock(file="file1.py")]  # func_a
 
         # Should not include func_c (2-hop away)
 
     def test_zero_hop_expansion(self, tmp_path: Path):
         """Test expansion with hops=0 (no expansion)."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
-        search_items = [
+        [
             Mock(file="file1.py"),
             Mock(file="file2.py"),
         ]
@@ -105,7 +103,7 @@ class TestOneHopNeighborExpansion:
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle missing graph gracefully
         # May return original items or empty
@@ -121,7 +119,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Empty graph means no neighbors to find
 
@@ -142,7 +140,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # No edges means no neighbors
 
@@ -168,7 +166,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle cycles without infinite loop
         # May use visited set to prevent cycles
@@ -191,7 +189,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle self-loops gracefully
 
@@ -221,10 +219,10 @@ class TestOneHopNeighborExpansion:
 
     def test_neighbors_from_multiple_items(self, tmp_path: Path):
         """Test expansion from multiple starting items."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
         # Multiple starting points
-        search_items = [
+        [
             Mock(file="file1.py"),  # func_a
             Mock(file="file2.py"),  # func_b
         ]
@@ -255,7 +253,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle missing target nodes
 
@@ -275,7 +273,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file_0.py")]
+        [Mock(file="file_0.py")]
 
         # Should handle large graphs efficiently
         # May need batching or streaming
@@ -301,7 +299,7 @@ class TestOneHopNeighborExpansion:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="файл.py")]
+        [Mock(file="файл.py")]
 
         # Should handle unicode properly
 
@@ -346,7 +344,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text("{ corrupt json !@#$ }")
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle parse error gracefully
         # Return original items without expansion
@@ -370,7 +368,7 @@ class TestGraphStitchFailures:
         # Make file unreadable
         graph_path.chmod(0o000)
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle permission error
 
@@ -381,7 +379,7 @@ class TestGraphStitchFailures:
 
         # Simulate I/O error
         with patch("builtins.open", side_effect=OSError("Disk error")):
-            search_items = [Mock(file="file1.py")]
+            [Mock(file="file1.py")]
 
             # Should handle I/O error gracefully
 
@@ -404,7 +402,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file_0.py")]
+        [Mock(file="file_0.py")]
 
         # Should have timeout protection
         # Prevent infinite expansion
@@ -433,7 +431,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should validate node structure
 
@@ -459,7 +457,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should validate edge structure
 
@@ -480,7 +478,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should handle or deduplicate
 
@@ -504,7 +502,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]
+        [Mock(file="file1.py")]
 
         # Should deduplicate or handle
 
@@ -532,7 +530,7 @@ class TestGraphStitchFailures:
         graph_path.parent.mkdir(parents=True)
         graph_path.write_text(json.dumps(graph))
 
-        search_items = [Mock(file="file1.py")]  # In component 1
+        [Mock(file="file1.py")]  # In component 1
 
         # Should only find neighbors in same component
 
@@ -545,7 +543,7 @@ class TestGraphStitchFailures:
         """Test concurrent expansion requests on same graph."""
         import threading
 
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
         results = []
 
         def expand():
@@ -595,16 +593,16 @@ class TestMixedRAGStitchedResults:
 
     def test_mix_rag_and_stitched_results(self, tmp_path: Path):
         """Test combining original RAG results with stitched neighbors."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
         # Original RAG results
-        rag_items = [
+        [
             Mock(file="file1.py"),
             Mock(file="file2.py"),
         ]
 
         # Stitched neighbors
-        stitched_items = [
+        [
             Mock(file="file3.py"),
             Mock(file="file4.py"),
             Mock(file="file5.py"),
@@ -615,17 +613,17 @@ class TestMixedRAGStitchedResults:
 
     def test_duplicate_files_deduplication(self, tmp_path: Path):
         """Test that duplicate files between RAG and stitched are deduplicated."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
         # Original RAG results
-        rag_items = [
+        [
             Mock(file="file1.py"),
             Mock(file="file2.py"),
             Mock(file="file3.py"),  # This will also be in stitched
         ]
 
         # Stitched neighbors (file3.py overlaps)
-        stitched_items = [
+        [
             Mock(file="file3.py"),  # Duplicate!
             Mock(file="file4.py"),
         ]
@@ -651,6 +649,6 @@ class TestMixedRAGStitchedResults:
 
     def test_max_results_enforcement(self, tmp_path: Path):
         """Test that max_results limit is enforced after stitching."""
-        repo_root = self.create_test_graph(tmp_path)
+        self.create_test_graph(tmp_path)
 
-        rag_items = [Mock(file=f"file{i}.py") for i in range(15)]
+        [Mock(file=f"file{i}.py") for i in range(15)]

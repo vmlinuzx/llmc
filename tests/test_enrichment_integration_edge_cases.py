@@ -193,7 +193,7 @@ class TestEnrichmentDatabaseDiscovery:
         workspace = repo_root / ".llmc" / "rag"
         workspace.mkdir(parents=True)
 
-        db_path = create_test_db(workspace, "enrichment.db")
+        create_test_db(workspace, "enrichment.db")
 
         # Should find DB in workspace
         assert (workspace / "enrichment.db").exists()
@@ -206,7 +206,7 @@ class TestEnrichmentDatabaseDiscovery:
         llmc_dir = repo_root / ".llmc"
         llmc_dir.mkdir()
 
-        db_path = create_test_db(llmc_dir, "enrichment.db")
+        create_test_db(llmc_dir, "enrichment.db")
 
         # Should find DB in .llmc
         assert (llmc_dir / "enrichment.db").exists()
@@ -237,7 +237,7 @@ class TestEnrichmentDatabaseDiscovery:
         workspace.mkdir(parents=True)
 
         # Create DB with items
-        db_path = create_test_db(workspace, "enrichment.db")
+        create_test_db(workspace, "enrichment.db")
 
         # Simulate search items
         search_items = [
@@ -315,7 +315,7 @@ class TestEnrichmentDatabaseDiscovery:
             conn = sqlite3.connect(str(db_path))
             conn.execute("SELECT * FROM sqlite_master")
             conn.close()
-            assert False, "Should have failed to open corrupted DB"
+            raise AssertionError("Should have failed to open corrupted DB")
         except sqlite3.DatabaseError:
             pass  # Expected
 
@@ -367,7 +367,7 @@ class TestEnrichmentAttachment:
 
     def test_attach_enrichments_where_used(self, tmp_path: Path):
         """Test attaching enrichments to WhereUsedResult."""
-        db_path = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Similar to search result test
         where_used_result = Mock()
@@ -378,7 +378,7 @@ class TestEnrichmentAttachment:
 
     def test_attach_enrichments_lineage(self, tmp_path: Path):
         """Test attaching enrichments to LineageResult."""
-        db_path = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         lineage_result = Mock()
         lineage_result.items = [
@@ -421,7 +421,7 @@ class TestEnrichmentAttachment:
 
     def test_no_enrichment_data(self, tmp_path: Path):
         """Test behavior when DB has no enrichment data."""
-        db_path = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Don't add any data
         # Should handle gracefully - return result unchanged
@@ -538,7 +538,7 @@ class TestEnrichmentMetrics:
                 del os.environ["LLMC_ENRICH_LOG"]
 
             # Should not log when disabled
-            logger = Mock()
+            Mock()
 
             # Simulate no-op (logging disabled)
             # logger.info should not be called
@@ -648,7 +648,7 @@ class TestEnrichmentMetrics:
         """Test that metrics tracking doesn't significantly impact performance."""
         import time
 
-        db_path = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Measure time with metrics
         start = time.time()
@@ -698,16 +698,16 @@ class TestEnrichmentEdgeCases:
             conn = sqlite3.connect(str(db_path))
             conn.execute("SELECT * FROM sqlite_master")
             conn.close()
-            assert False, "Should fail to open empty DB as SQLite"
+            raise AssertionError("Should fail to open empty DB as SQLite")
         except sqlite3.DatabaseError:
             pass  # Expected
 
     def test_enrichment_with_very_large_result_set(self, tmp_path: Path):
         """Test enrichment with 1000+ search results."""
-        db_path = create_test_db(tmp_path)
+        create_test_db(tmp_path)
 
         # Create large result set
-        items = [Mock(file=f"file_{i}.py") for i in range(1000)]
+        [Mock(file=f"file_{i}.py") for i in range(1000)]
 
         # Should handle large sets without memory issues
         # May need batching
@@ -815,7 +815,7 @@ class TestEnrichmentEdgeCases:
         # Should deduplicate or handle gracefully
         conn = sqlite3.connect(str(db_path))
         cursor = conn.execute("SELECT COUNT(*) FROM enrichments WHERE file_path = ?", ("test.py",))
-        count = cursor.fetchone()[0]
+        cursor.fetchone()[0]
         conn.close()
 
         # May want to deduplicate

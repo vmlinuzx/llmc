@@ -82,7 +82,6 @@ def rag_search(
         os.chdir(repo_path)
 
         # Config reloads automatically every time (no caching)
-        from tools.rag.config import load_config
 
         # Direct import - module stays loaded between calls
         from tools.rag.search import search_spans
@@ -168,7 +167,6 @@ def rag_search_enriched(
         os.chdir(repo_path)
 
         # Config reloads automatically every time (no caching)
-        from tools.rag.config import load_config
 
         # For now, we'll use the existing search_spans with debug=True to get graph data
         # In future phases, we'll add proper mode selection and enrichment orchestration

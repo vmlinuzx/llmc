@@ -9,11 +9,10 @@ Provides mutex-based resource locking with:
 - Deadlock prevention through sorted lock acquisition
 """
 
+from dataclasses import dataclass, field
+import logging
 import threading
 import time
-from dataclasses import dataclass, field
-from typing import Dict, Optional, List
-import logging
 
 from llmc_mcp.telemetry import get_telemetry_sink
 
@@ -29,8 +28,8 @@ class LockState:
     """
     resource_key: str
     mutex: threading.Lock = field(default_factory=threading.Lock)
-    holder_agent_id: Optional[str] = None
-    holder_session_id: Optional[str] = None
+    holder_agent_id: str | None = None
+    holder_session_id: str | None = None
     lease_expiry_ts: float = 0.0  # epoch seconds
     fencing_token: int = 0  # monotonic increasing
     acquired_at: float = 0.0  # epoch seconds when lock was acquired
@@ -77,7 +76,7 @@ class LockManager:
     """
     
     def __init__(self):
-        self._locks: Dict[str, LockState] = {}
+        self._locks: dict[str, LockState] = {}
         self._global_lock = threading.Lock()  # Protects _locks dict
         self._next_token = 1  # Global monotonic counter
         self._telemetry = get_telemetry_sink()
@@ -313,7 +312,7 @@ class LockManager:
             f"new expiry: {lock_state.lease_expiry_ts}"
         )
     
-    def snapshot(self) -> List[Dict]:
+    def snapshot(self) -> list[dict]:
         """
         Get snapshot of all active locks for introspection.
         
@@ -348,8 +347,8 @@ class ResourceBusyError(Exception):
     def __init__(
         self,
         resource_key: str,
-        holder_agent_id: Optional[str],
-        holder_session_id: Optional[str],
+        holder_agent_id: str | None,
+        holder_session_id: str | None,
         wait_ms: float,
         max_wait_ms: int,
     ):
@@ -380,7 +379,7 @@ class ResourceBusyError(Exception):
 
 
 # Global singleton instance
-_lock_manager: Optional[LockManager] = None
+_lock_manager: LockManager | None = None
 
 
 def get_lock_manager() -> LockManager:

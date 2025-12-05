@@ -36,7 +36,7 @@ class TestLocalDevWorkflow:
             llmc_rag_repo = Path(__file__).parent.parent / "scripts" / "llmc-rag-repo"
             if llmc_rag_repo.exists():
                 # Try to register the repo
-                result = subprocess.run(
+                subprocess.run(
                     [str(llmc_rag_repo), "add", str(repo_path)],
                     check=False,
                     capture_output=True,
@@ -45,11 +45,9 @@ class TestLocalDevWorkflow:
                 )
                 # May fail without full setup, but documents the workflow
 
-            # Step 2: Check that daemon script exists
-            daemon_script = Path(__file__).parent.parent / "scripts" / "llmc-rag-service"
-            assert daemon_script.exists() or daemon_script.with_suffix(".py").exists(), (
-                "Daemon service script should exist"
-            )
+            # Step 2: Check that daemon service is available via CLI
+            cli_path = Path(__file__).parent.parent / "llmc-cli"
+            assert cli_path.exists(), "llmc-cli should exist"
 
     def test_wrapper_with_repo_context(self):
         """Test wrapper scripts can work with repository context."""
@@ -69,7 +67,7 @@ class TestLocalDevWorkflow:
                 env["LLMC_TARGET_REPO"] = str(repo_path)
 
                 # Try to run with --help or check it fails gracefully
-                result = subprocess.run(
+                subprocess.run(
                     [str(cmw), "--repo", str(repo_path), "test"],
                     check=False,
                     capture_output=True,
@@ -91,7 +89,7 @@ class TestLocalDevWorkflow:
 
             helper_script = Path(__file__).parent.parent / "scripts" / "rag_plan_helper.sh"
             if helper_script.exists():
-                result = subprocess.run(
+                subprocess.run(
                     [str(helper_script), "--repo", str(repo_path)],
                     check=False,
                     capture_output=True,
@@ -130,7 +128,7 @@ class TestLocalDevWorkflow:
                 repo_path.mkdir()
 
                 # Test with --repo flag
-                result = subprocess.run(
+                subprocess.run(
                     [str(cw), "--repo", str(repo_path), "test query"],
                     check=False,
                     capture_output=True,
@@ -157,7 +155,7 @@ class TestLocalDevWorkflow:
 
                 # Should work with either repo
                 for repo in [repo1, repo2]:
-                    result = subprocess.run(
+                    subprocess.run(
                         [str(cmw), "--repo", str(repo), "test"],
                         check=False,
                         capture_output=True,
@@ -184,7 +182,7 @@ class TestLocalDevWorkflow:
                 env["ANTHROPIC_AUTH_TOKEN"] = "sk-test"
                 env["LLMC_TARGET_REPO"] = str(repo_path)
 
-                result = subprocess.run(
+                subprocess.run(
                     [str(cmw), "test"],
                     check=False,
                     capture_output=True,
@@ -209,7 +207,7 @@ class TestCronDrivenRefreshWorkflow:
                 rag_dir.mkdir()
 
                 # Run cron wrapper
-                result = subprocess.run(
+                subprocess.run(
                     [str(cron_script), "--repo", str(tmpdir)],
                     check=False,
                     capture_output=True,

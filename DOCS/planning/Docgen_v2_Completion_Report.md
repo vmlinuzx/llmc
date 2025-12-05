@@ -88,8 +88,8 @@ Successfully implemented Docgen v2, a deterministic, RAG-aware documentation gen
 - `llmc/main.py` - Added docs subcommand group
 
 **Commands:**
-- `llmc docs generate [--all] [PATH] [--force]`
-- `llmc docs status`
+- `llmc debug autodoc generate [--all] [PATH] [--force]`
+- `llmc debug autodoc status`
 
 **Key Features:**
 - Single file or batch generation
@@ -203,10 +203,10 @@ enabled = true
 llmc index
 
 # 3. Generate docs for all files
-llmc docs generate --all
+llmc debug autodoc generate --all
 
 # 4. Check status
-llmc docs status
+llmc debug autodoc status
 ```
 
 ### Output
@@ -344,7 +344,7 @@ Coverage:          156/342 (45%)
 3. **Run Initial Generation:**
    ```bash
    llmc index
-   llmc docs generate --all
+   llmc debug autodoc generate --all
    ```
 
 4. **Add to Workflow:**

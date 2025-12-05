@@ -1,9 +1,7 @@
 
-import pytest
-import sqlite3
-from pathlib import Path
-from tools.rag.database import Database
 from scripts.migrate_fts5_no_stopwords import migrate_fts5_index
+from tools.rag.database import Database
+
 
 def test_fts5_migration(tmp_path):
     repo_root = tmp_path / "repo"

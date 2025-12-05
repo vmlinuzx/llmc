@@ -347,9 +347,9 @@ Implement deterministic, RAG-aware documentation generation as a first-class enr
 **Tasks:**
 1. Add CLI command:
    ```bash
-   llmc docs generate [PATH]
-   llmc docs generate --all
-   llmc docs status
+   llmc debug autodoc generate [PATH]
+   llmc debug autodoc generate --all
+   llmc debug autodoc status
    ```
 
 2. Implementation:
@@ -374,7 +374,7 @@ Implement deterministic, RAG-aware documentation generation as a first-class enr
 
 4. Status command:
    ```bash
-   llmc docs status
+   llmc debug autodoc status
    # Shows:
    # - Total files in RAG
    # - Files with docs
@@ -635,6 +635,6 @@ Implement deterministic, RAG-aware documentation generation as a first-class enr
 - Core docgen functionality is complete and working
 - Phase 9 (Daemon integration) is deferred - can be added later when needed
 - Phase 10 (Testing & Polish) - basic tests complete, can add more as needed
-- Ready for production use via CLI: `llmc docs generate --all`
+- Ready for production use via CLI: `llmc debug autodoc generate --all`
 
 

@@ -64,7 +64,7 @@ def test_pending_enrichments_diversity():
     print(f"\n   Unique files: {len(files_seen)}")
     
     # Show first 10 files
-    print(f"\n📁 First 10 files in sample:")
+    print("\n📁 First 10 files in sample:")
     for i, item in enumerate(items[:10], 1):
         print(f"   {i:2d}. {item.file_path} (type={item.slice_type})")
     

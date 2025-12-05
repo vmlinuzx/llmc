@@ -8,9 +8,9 @@ Tests:
 - Backend factory
 """
 
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 
 # Add repo to path
 repo_root = Path(__file__).resolve().parents[1]
@@ -45,7 +45,7 @@ def test_backoff_calculation():
 def test_rate_limiter():
     """Test token bucket rate limiter."""
     print("\n2. Testing rate limiter...")
-    from tools.rag.enrichment_reliability import RateLimiter, RateLimitConfig
+    from tools.rag.enrichment_reliability import RateLimitConfig, RateLimiter
 
     config = RateLimitConfig(
         requests_per_minute=10,

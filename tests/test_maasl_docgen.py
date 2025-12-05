@@ -4,14 +4,13 @@ Tests for MAASL Phase 6: Docgen Coordination
 Tests docgen SHA gating, repo-level mutex, and idempotent behavior.
 """
 
+from pathlib import Path
 import tempfile
 import threading
-import time
-from pathlib import Path
 
 import pytest
 
-from llmc_mcp.docgen_guard import DocgenCoordinator, DocgenResult
+from llmc_mcp.docgen_guard import DocgenCoordinator
 from llmc_mcp.maasl import MAASL
 
 
@@ -396,7 +395,7 @@ class TestDocgenStatus:
         
         # Should be newest BUFFER_SIZE
         assert status[0].agent_id == f"agent-{DocgenCoordinator.BUFFER_SIZE + 49}"
-        assert status[-1].agent_id == f"agent-50"
+        assert status[-1].agent_id == "agent-50"
 
 
 class TestDocgenIntegration:

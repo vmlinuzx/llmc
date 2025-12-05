@@ -208,8 +208,29 @@ Treat every green check as **unproven** until you have tried hard to break it.
 - **Make assumptions**: If something is ambiguous, state your assumption and proceed
 - **No questions**: Don't ask for permission, just test ruthlessly
 - **Report findings**: Document everything in ./tests/REPORTS/
-- **Fix test scripts**: If a test script has a simple bug, or linting error attempt to fix it and rerun the test one time.
 - **Don't fix production code**: Report bugs, don't patch them
+
+## Test Repair Policy (IMPORTANT)
+
+When a test fails, follow this escalation procedure:
+
+1. **First attempt**: If the failure looks like an OBVIOUS test bug (typo, import error, simple mock issue, formatting corruption), fix it and rerun ONCE.
+
+2. **Second attempt**: If the first fix didn't work, try ONE more targeted fix.
+
+3. **STOP after 2 attempts**: If the test still fails after 2 repair attempts:
+   - **DO NOT continue trying to fix it**
+   - **Report it as a CRITICAL PRODUCTION BUG**
+   - Document: "Test [name] fails. After 2 repair attempts, treating this as a production bug."
+   - Include the error message, your fix attempts, and why you believe the test is correct
+
+4. **Signs it's a PRODUCTION bug, not a test bug:**
+   - Test logic looks correct but assertions fail
+   - Mocks are set up properly but expected methods aren't called
+   - Multiple tests in the same area all fail the same way
+   - The error aligns with recent code changes
+
+**Rationale:** A persistent test failure after reasonable repair attempts usually means the test is correctly catching a real bug. Never mask production bugs by over-"fixing" tests to pass.
 
 ## Testing Procedure
 

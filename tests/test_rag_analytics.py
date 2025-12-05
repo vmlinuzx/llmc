@@ -85,7 +85,7 @@ class TestQueryTrackerInit:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "analytics.db"
 
-            tracker = QueryTracker(db_path)
+            QueryTracker(db_path)
 
             # Verify database file was created
             assert db_path.exists()

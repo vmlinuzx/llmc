@@ -4,11 +4,11 @@ CLI commands for documentation generation.
 
 import logging
 from pathlib import Path
-import sys
+
 import toml
 import typer
 
-from llmc.docgen.config import load_docgen_backend, get_output_dir, get_require_rag_fresh
+from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docgen_backend
 from llmc.docgen.orchestrator import DocgenOrchestrator
 from tools.rag.database import Database
 
@@ -34,7 +34,7 @@ def generate(
         typer.echo(f"❌ Config not found: {config_path}", err=True)
         raise typer.Exit(1)
     
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         toml_data = toml.load(f)
     
     # Load backend
@@ -72,7 +72,20 @@ def generate(
         file_paths = _discover_all_files(db)
         typer.echo(f"📄 Found {len(file_paths)} indexed files")
     elif path:
-        file_paths = [Path(path)]
+        # Normalize path: if absolute and inside repo, convert to relative
+        input_path = Path(path)
+        if input_path.is_absolute():
+            try:
+                # Try to make it relative to repo_root
+                relative_path = input_path.resolve().relative_to(repo_root.resolve())
+                file_paths = [relative_path]
+            except ValueError:
+                # Path is outside repo, keep as-is (will likely fail later, but with clearer error)
+                typer.echo("⚠️  Warning: Path appears to be outside repository root", err=True)
+                file_paths = [input_path]
+        else:
+            # Already relative, use as-is
+            file_paths = [input_path]
     else:
         typer.echo("❌ Either --all or PATH must be specified", err=True)
         raise typer.Exit(1)
@@ -111,7 +124,7 @@ def status():
         typer.echo(f"❌ Config not found: {config_path}", err=True)
         raise typer.Exit(1)
     
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         toml_data = toml.load(f)
     
     # Check if docgen is enabled

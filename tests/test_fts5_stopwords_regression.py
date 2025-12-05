@@ -9,11 +9,11 @@ See: ROADMAP.md - P0 Bugfix: FTS5 Stopwords Filter Critical Keywords
 """
 
 from pathlib import Path
+
 import pytest
 
 from tools.rag.database import Database
 from tools.rag.types import FileRecord, SpanRecord
-
 
 # Critical ML/AI domain keywords that were being filtered by default FTS5 stopwords
 # These keywords appear in our test enrichments
@@ -118,7 +118,7 @@ def test_fts5_no_stopwords_single_keyword(test_db: Database) -> None:
         
         # Verify result contains the keyword
         found_keyword = False
-        for symbol, summary, score in results:
+        for symbol, summary, _score in results:
             if summary and keyword.lower() in summary.lower():
                 found_keyword = True
                 break

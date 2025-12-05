@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import atexit
+from collections.abc import Callable
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
-from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ class MCPDaemon:
         self.LOGFILE.parent.mkdir(parents=True, exist_ok=True)
 
         # Redirect stdin to /dev/null
-        with open("/dev/null", "r") as devnull:
+        with open("/dev/null") as devnull:
             os.dup2(devnull.fileno(), sys.stdin.fileno())
 
         # Redirect stdout and stderr to logfile

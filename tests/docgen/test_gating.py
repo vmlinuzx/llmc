@@ -3,17 +3,16 @@ Tests for docgen gating logic (SHA256 and RAG freshness).
 """
 
 import hashlib
-import pytest
-import sqlite3
-import tempfile
 from pathlib import Path
 
+import pytest
+
 from llmc.docgen.gating import (
+    check_rag_freshness,
     compute_file_sha256,
     read_doc_sha256,
-    should_skip_sha_gate,
     resolve_doc_path,
-    check_rag_freshness,
+    should_skip_sha_gate,
 )
 
 

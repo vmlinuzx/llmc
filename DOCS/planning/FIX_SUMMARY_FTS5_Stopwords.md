@@ -101,6 +101,9 @@ CREATE VIRTUAL TABLE IF NOT EXISTS enrichments_fts
 USING fts5(
     symbol,
     summary,
+    path,        # ← Added for generic search
+    start_line,  # ← Added for generic search
+    end_line,    # ← Added for generic search
     tokenize='unicode61'  # ← NO STOPWORDS!
 )
 ```
@@ -222,6 +225,7 @@ Recommendation: Add CI/CD metric for search zero-result rate
 
 ### Modified
 - `tools/rag/database.py` - FTS5 table creation with unicode61 tokenizer
+- `tools/rag/db_fts.py` - Updated column mapping to support `enrichments_fts` table (mapped `summary` to `text`)
 
 ### Created
 - `scripts/migrate_fts5_no_stopwords.py` - Migration script for existing DBs

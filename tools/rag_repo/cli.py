@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 
 from .config import load_tool_config
+from .configurator import RepoConfigurator
 from .fs import SafeFS
 from .inspect_repo import inspect_repo
 from .models import RegistryEntry
@@ -113,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     p_add = sub.add_parser("add", help="Register or re-register a repo for RAG")
     p_add.add_argument("path", help="Path to repo (default: .)", nargs="?", default=".")
     p_add.add_argument("--config", help="Path to tool config", default=None)
+    p_add.add_argument("--template", help="Path to custom llmc.toml template", default=None)
     p_add.add_argument("-y", "--yes", action="store_true", help="Assume yes to prompts")
     p_add.add_argument("--json", action="store_true", help="JSON output")
 
@@ -203,6 +205,10 @@ def _cmd_add(args, tool_config, registry: RegistryAdapter | None) -> int:
     )
     registry.register(entry)
     notify_refresh(entry, tool_config)
+
+    # Repo Configurator Integration
+    configurator = RepoConfigurator(interactive=not args.yes)
+    configurator.configure(repo_path=repo_path, template_path=args.template)
 
     if args.json:
         import json

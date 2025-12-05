@@ -42,15 +42,17 @@ class SystemdManager:
         """Generate and install systemd service file."""
         SYSTEMD_USER_DIR.mkdir(parents=True, exist_ok=True)
 
-        llmc_rag_path = self.repo_root / "scripts" / "llmc-rag"
-
+        # Use python -m tools.rag.service instead of missing script
+        import sys
+        python_exe = sys.executable
+        
         service_content = f"""[Unit]
 Description=LLMC RAG Enrichment Service
 After=network.target
 
 [Service]
 Type=simple
-ExecStart={llmc_rag_path} _daemon_loop
+ExecStart={python_exe} -m tools.rag.service _daemon_loop
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

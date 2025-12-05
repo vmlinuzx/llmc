@@ -148,6 +148,38 @@ def stats(
         "estimated_remote_tokens": estimated_remote_tokens,
     }
 
+    # Add Tool Stats from Telemetry DB
+    telemetry_db = repo_root / ".llmc" / "telemetry.db"
+    tool_stats = {"total_calls": 0, "total_errors": 0, "top_tools": []}
+    
+    if telemetry_db.exists():
+        try:
+            import sqlite3
+            with sqlite3.connect(telemetry_db) as conn:
+                # Total calls
+                row = conn.execute("SELECT COUNT(*) FROM tool_usage").fetchone()
+                if row:
+                    tool_stats["total_calls"] = row[0]
+                
+                # Total errors
+                row = conn.execute("SELECT COUNT(*) FROM tool_usage WHERE success = 0").fetchone()
+                if row:
+                    tool_stats["total_errors"] = row[0]
+                
+                # Top tools
+                rows = conn.execute("""
+                    SELECT tool, COUNT(*) as c 
+                    FROM tool_usage 
+                    GROUP BY tool 
+                    ORDER BY c DESC 
+                    LIMIT 5
+                """).fetchall()
+                tool_stats["top_tools"] = [{"tool": r[0], "calls": r[1]} for r in rows]
+                
+            data["tool_stats"] = tool_stats
+        except Exception:
+            pass
+
     if json_output:
         typer.echo(json.dumps(data, indent=2))
     else:
@@ -157,6 +189,14 @@ def stats(
         typer.echo(f"Embeddings: {data['embeddings']}")
         typer.echo(f"Enrichments: {data['enrichments']}")
         typer.echo(f"Est. Remote Tokens: {data['estimated_remote_tokens']:,}")
+        
+        if tool_stats["total_calls"] > 0:
+            typer.echo("\nTool Usage:")
+            typer.echo(f"  Total Calls: {tool_stats['total_calls']}")
+            typer.echo(f"  Errors: {tool_stats['total_errors']}")
+            typer.echo("  Top Tools:")
+            for t in tool_stats["top_tools"]:
+                typer.echo(f"    - {t['tool']}: {t['calls']}")
 
 
 def doctor(

@@ -4,7 +4,7 @@ import pytest
 
 from llmc.routing.content_type import classify_slice
 from llmc.routing.query_type import classify_query
-from tools.rag.config import is_query_routing_enabled, load_config
+from tools.rag.config import is_query_routing_enabled
 
 # ==============================================================================
 # Slice Classification Tests
@@ -115,8 +115,6 @@ def mock_config_disable_routing(monkeypatch, tmp_path):
 [routing.options]
 enable_query_routing = false
 """)
-    # Clear cache
-    load_config.cache_clear()
     return repo_root
 
 
@@ -133,8 +131,6 @@ def mock_config_enable_routing(monkeypatch, tmp_path):
 [routing.options]
 enable_query_routing = true
 """)
-    # Clear cache
-    load_config.cache_clear()
     return repo_root
 
 

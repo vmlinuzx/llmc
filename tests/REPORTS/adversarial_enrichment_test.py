@@ -131,7 +131,7 @@ def test_enrichment_router_edge_cases():
         # Test with invalid metrics event
         try:
             # Invalid metric name (non-string)
-            event = EnrichmentRouterMetricsEvent(
+            EnrichmentRouterMetricsEvent(
                 timestamp=1234567890,
                 query="test",
                 route="code",
@@ -145,7 +145,7 @@ def test_enrichment_router_edge_cases():
 
         # Test with negative confidence
         try:
-            event = EnrichmentRouterMetricsEvent(
+            EnrichmentRouterMetricsEvent(
                 timestamp=1234567890,
                 query="test",
                 route="code",

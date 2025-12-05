@@ -9,14 +9,14 @@ This module provides production-grade reliability patterns for remote API calls:
 
 from __future__ import annotations
 
-import asyncio
+from collections import deque
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import date
 import logging
 import random
 import time
-from collections import deque
-from dataclasses import dataclass, field
-from datetime import date
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

@@ -11,13 +11,13 @@ Provides safe, concurrent access to SQLite databases with:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 import logging
 import sqlite3
 import time
-from typing import Iterator, Optional
 
-from llmc_mcp.maasl import DbBusyError, get_maasl, ResourceDescriptor
+from llmc_mcp.maasl import DbBusyError, ResourceDescriptor, get_maasl
 
 logger = logging.getLogger("llmc-mcp.maasl.db_guard")
 
@@ -108,7 +108,7 @@ class DbTransactionManager:
             try:
                 # Start transaction with retry logic for SQLite BUSY
                 retries = 0
-                last_error: Optional[Exception] = None
+                last_error: Exception | None = None
                 
                 while retries <= self.max_retries:
                     try:
@@ -153,7 +153,7 @@ class DbTransactionManager:
                         self.db_conn.commit()
                         transaction_started = False
                         
-                except Exception as e:
+                except Exception:
                     # Caller raised exception - rollback
                     if transaction_started:
                         try:

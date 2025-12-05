@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmcwrapper"
-version = "0.5.5"
+version = "0.6.0"
 description = "LLM cost compression through intelligent RAG and multi-tier routing"
 authors = [{name="LLMC Core"}]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["requests>=2.31", "tomli; python_version<'3.11'", "typer>=0.9.0", "rich>=13.0.0", "tomli-w>=1.0.0", "textual>=0.41.0"]
+dependencies = ["requests>=2.31", "tomli; python_version<'3.11'", "typer>=0.9.0", "rich>=13.0.0", "tomli-w>=1.0.0", "textual>=0.41.0", "tomlkit>=0.12.0"]
 
 [project.optional-dependencies]
 rag = [
@@ -26,6 +26,8 @@ rag = [
   "pyyaml>=6.0.1",
   "tqdm>=4.66.1",
   "mcp>=0.9.0",
+  "psutil>=5.9.0",   # Cross-platform process & system monitoring
+  "humanize>=4.0.0", # Human-readable sizes and times
 ]
 tui = [
   "typer>=0.9.0",
@@ -45,10 +47,6 @@ packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.hand
 
 [project.scripts]
 llmc = "llmc.main:app"
-llmc-yolo = "llmcwrapper.cli.llmc_yolo:main"
-llmc-rag  = "llmcwrapper.cli.llmc_rag:main"
-llmc-doctor = "llmcwrapper.cli.llmc_doctor:main"
-llmc-profile = "llmcwrapper.cli.llmc_profile:main"
 llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
 

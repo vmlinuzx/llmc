@@ -178,7 +178,7 @@ class TestRoundRobinMaxRetries:
         # Simulate sequence of failures at 7b tier
         failures = ["parse", "truncation", "timeout"]
 
-        for i, failure in enumerate(failures):
+        for _i, failure in enumerate(failures):
             # Assume we're still within max retries
             next_tier = choose_next_tier_on_failure(
                 failure_type=failure,
@@ -209,11 +209,11 @@ class TestBackoffResetsOnSuccess:
         settings = RouterSettings()
 
         # Initial selection should not be affected by previous failures
-        tier1 = choose_start_tier(metrics, settings, override=None)
+        choose_start_tier(metrics, settings, override=None)
 
         # Simulate failure and retry
         failure_metrics = {"tokens_in": 2000}
-        tier2 = choose_start_tier(failure_metrics, settings, override=None)
+        choose_start_tier(failure_metrics, settings, override=None)
 
         # After success, metrics should be fresh for next decision
         # This is implicit in the design - start fresh each time
@@ -224,11 +224,11 @@ class TestBackoffResetsOnSuccess:
 
         # First request - high token count
         metrics1 = {"tokens_in": 50000}
-        tier1 = choose_start_tier(metrics1, settings)
+        choose_start_tier(metrics1, settings)
 
         # Second request - low token count (simulating success/recovery)
         metrics2 = {"tokens_in": 1000}
-        tier2 = choose_start_tier(metrics2, settings)
+        choose_start_tier(metrics2, settings)
 
         # Should select tier based on current metrics, not cached backoff
         # (tier depends on actual metrics, not backoff history)

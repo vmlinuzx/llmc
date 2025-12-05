@@ -2,182 +2,127 @@
 
 All notable changes to LLMC will be documented in this file.
 
-## [Unreleased]
+## [0.6.0] - "Sleep Deprivation" - 2025-12-05
 
-### Summary
-This release includes **Automated Repository Onboarding** - a critical productization feature that eliminates manual setup friction when adding new repositories. Additionally, it completes the **Roswaal Bug Fix Sprint** - a comprehensive autonomous testing and remediation effort that identified and fixed 7 bugs (1 critical, 1 high, 3 medium, 2 low) discovered through autonomous agent testing. All bugs fixed, test suite improved, and codebase cleaned up. See [ROSWAAL_BUG_FIX_COMPLETE.md](DOCS/planning/ROSWAAL_BUG_FIX_COMPLETE.md) for bug fix details and [SDD_Repo_Onboarding_Automation.md](DOCS/planning/SDD_Repo_Onboarding_Automation.md) for onboarding architecture.
+### Purple Flavor: **Sleep Deprivation**
+
+The most intense development week in LLMC history: **93 commits in 5 days**. Major new subsystems, critical security fixes, and the introduction of autonomous testing agents that found bugs humans missed.
 
 ### Added
-- **Automated Repository Onboarding (P0):**
-  - **Service-layer orchestration** for complete repository setup in one command
-  - **Architecture shift:** Business logic moved from CLI to service layer (`RAGService.onboard_repo()`)
-  - **Automated phases:**
-    1. Workspace structure creation (`.rag/` directories)
-    2. `llmc.toml` configuration generation with automatic path substitution
-    3. Initial indexing using existing `process_repo()` machinery
-    4. Interactive enrichment prompt (skippable with `--yes` flag)
-    5. MCP readiness instructions for Claude Desktop integration
-    6. Daemon state registration for automatic monitoring
-  - **CLI enhancements:**
-    - `llmc-rag-repo add /path/to/repo` - full automated onboarding
-    - `--yes` flag for non-interactive/CI mode
-    - `--no-index` / `--no-enrich` flags for granular control
-    - `--template` flag for custom config templates
-    - `--json` output for programmatic usage
-  - **New components:**
-    - `OnboardingResult` dataclass for structured results
-    - `_copy_or_generate_llmc_toml()` for config management
-    - `_run_initial_indexing()` leveraging existing indexing
-    - `_run_initial_enrichment()` with configurable batch size
-    - `_print_mcp_instructions()` for user guidance
-  - **Impact:** 
-    - From 6+ manual steps → 1 command
-    - Consistent configurations across all repos
-    - MCP/Antigravity ready immediately after onboarding
-    - 90% reduction in time-to-productivity for new repos
-  - **Design:** `DOCS/planning/SDD_Repo_Onboarding_Automation.md`
-  - **Why P0:** Primary UX friction point blocking multi-repo workflows and developer adoption
 
+- **MAASL (Multi-Agent Anti-Stomp Layer) - Complete:**
+  - 8-phase implementation delivering production-ready agent coordination
+  - **Phase 1:** Core infrastructure with PolicyRegistry and ResourceDescriptor
+  - **Phase 2:** File Locking Primitives with deadlock detection
+  - **Phase 3:** Code Protection for critical file operations
+  - **Phase 4:** DB Transaction Guard for SQLite coordination
+  - **Phase 5:** Graph Merge Engine for concurrent graph updates
+  - **Phase 6:** Docgen Coordination preventing parallel doc conflicts
+  - **Phase 7:** Introspection Tools for debugging lock state
+  - **Phase 8:** Production hardening and comprehensive tests
+  - **Impact:** Multiple agents can now safely work on the same repo without stepping on each other
+  - See: `DOCS/planning/SDD_MAASL.md`
 
-- **RAG Service Idle Loop Throttling:**
-  - Implemented intelligent CPU throttling when RAG daemon has no work to do
-  - Sets process nice level (+10) to run at lower priority and not compete with interactive work
-  - Exponential backoff: sleep time increases from 3min → 6min → 12min → 24min → 30min (capped) when idle
-  - Instant reset to normal cycle on any work detected (file changes, pending enrichment, etc.)
-  - Interruptible sleep in 5s chunks for responsive signal handling
-  - Configurable via `llmc.toml` `[daemon]` section: `nice_level`, `idle_backoff_max`, `idle_backoff_base`
-  - **Impact:** 90% reduction in CPU cycles when idle (480/day → 50/day), lower fan noise, better battery life
-  - Based on SDD: `DOCS/planning/SDD_Idle_Loop_Throttling.md`
-  - Implementation: `DOCS/planning/IMPL_Idle_Loop_Throttling.md`
+- **MCP Daemon Architecture:**
+  - HTTP/SSE transport with token authentication (Phases 1-2)
+  - Daemon management and unified CLI (Phases 3-4)
+  - `rag_plan` observability tool for query debugging
+  - **Impact:** MCP server can now run as a persistent daemon, not just stdio
 
-- **Enrichment Pipeline Architecture Refactor (All 3 Phases Complete):**
-  - Extracted clean, testable architecture from 2,271-line monolithic script
-  - **Phase 1 - OllamaBackend adapter** (186 lines) implementing `BackendAdapter` protocol
-    - HTTP client with proper timeout handling
-    - JSON response parsing with markdown fence support
-    - Error handling for timeout, HTTP, and backend failures
-    - Context manager support for resource cleanup
-  - **Phase 2 - EnrichmentPipeline orchestrator** (406 lines) for batch enrichment
-    - Clean separation: span selection → routing → backend execution → DB writes
-    - Integrates with existing `enrichment_plan()` helper
-    - Uses `EnrichmentRouter` for chain selection
-    - `BackendCascade` for multi-tier LLM generation
-    - Failure tracking and cooldown support
-  - **Phase 3 - Service integration** (wired `service.py` to use pipeline directly)
-    - Replaced subprocess call to 2,271-line script with direct function calls
-    - `RAGService.process_repo()` now uses `EnrichmentPipeline` API
-    - Clean error handling and progress reporting
-    - No more shell-out overhead
-  - Full typing throughout with protocols (`BackendFactory`, `BackendAdapter`)
-  - Foundation for remote LLM providers (Roadmap 3.6)
-  - **Impact:** From monolith + subprocess → clean typed modules with direct calls
-  - Based on SDD: `DOCS/planning/SDD_Enrichment_Pipeline_Tidy.md`
-  - Implementation: `DOCS/planning/IMPL_Enrichment_Pipeline_Tidy.md`
+- **Ruthless Testing Agents:**
+  - **Ren** - The Maiden Warrior Bug Hunting Demon (Gemini-based)
+  - **Roswaal** - Autonomous testing and remediation agent
+  - Shell wrapper scripts for reproducible test runs
+  - 2-attempt repair policy before escalating to production bug reports
+  - MCP-specific testing variant (`ruthless_mcp_tester.sh`)
+  - **Impact:** Autonomous agents now continuously test the system and file bug reports
 
-- **Remote LLM Provider Support (Phase 3):**
-  - Production-grade support for commercial API providers (Gemini, OpenAI, Anthropic, Groq)
-  - **Reliability Middleware:**
-    - Exponential backoff with jitter for automatic retries (1s → 2s → 4s → 8s → 16s → 32s → 60s capped)
-    - Token bucket rate limiting (RPM and TPM) prevents quota violations
-    - Circuit breaker fails fast after 5 consecutive failures, auto-recovers after 60s
-    - Cost tracking with daily/monthly budget caps ($0.001 precision)
-  - **Multi-Provider Adapters:**
-    - `GeminiBackend` - Google Gemini (Flash, Pro)
-    - `OpenAICompatBackend` - OpenAI, Groq, and OpenAI-compatible APIs
-    - `AnthropicBackend` - Claude (Haiku, Sonnet, Opus)
-    - `RemoteBackend` - Base class with shared HTTP client and middleware integration
-  - **Unified Backend Factory:**
-    - Single factory function `create_backend_from_spec()` supports all providers
-    - Backwards compatible with existing `OllamaBackend.from_spec()` usage
-    - Automatic middleware initialization (rate limiter, circuit breaker, cost tracker)
-  - **Configuration:**
-    - Provider registry with sensible defaults for each API
-    - Per-provider rate limits, pricing, and retry config in `llmc.toml`
-    - Environment variable resolution for API keys (`GOOGLE_API_KEY`, `OPENAI_API_KEY`, etc.)
-    - Tiered cascade support: local → cheap cloud → premium
-  - **Testing:**
-    - Comprehensive unit tests (backoff, rate limit, circuit breaker, cost tracking)
-    - All tests passing (7/7)
-    - Manual testing requires real API keys (deferred to user)
-  - **Impact:** Use commercial APIs as intelligent failover when local models fail, with production-grade reliability and cost controls
-  - Based on SDD: `DOCS/planning/SDD_Remote_LLM_Providers.md`
-  - Implementation: `DOCS/planning/IMPL_Remote_LLM_Providers.md`
-  - Usage Guide: `DOCS/Remote_LLM_Providers_Usage.md`
-
-- **Polyglot RAG Support (TypeScript/JavaScript):**
-  - Extended schema extraction beyond Python to support TypeScript and JavaScript
-  - **TreeSitterSchemaExtractor base class** for language-agnostic entity/relation extraction
-  - **TypeScriptSchemaExtractor** for TS/JS files
-    - Functions (regular, arrow, methods)
-    - Classes with inheritance tracking
-    - Interfaces and type aliases
-    - Imports and exports
-  - **Relation Extraction:**
-    - Import statements → symbol resolution map
-    - Function calls → `calls` relation
-    - Class inheritance → `extends` relation
-  - **Integration:**
-    - `_discover_source_files()` now finds `.ts`, `.tsx`, `.js`, `.jsx` files
-    - Schema graph builder processes polyglot repos
-    - Test coverage: 6 unit tests + end-to-end integration test
-  - **Impact:** RAG system now works with TypeScript/JavaScript codebases, enabling cross-language navigation and search
-  - Based on SDD: `DOCS/planning/SDD_Polyglot_RAG_TypeScript.md`
-  - Implementation: `DOCS/planning/IMPL_Polyglot_RAG_TypeScript.md`
-
-- **Docgen v2 Hardening (3 Critical Fixes):**
-  - **Bug 1 (High): Batch Fault Tolerance**
-    - Fixed batch processing crash when single file fails - now continues with error status
-    - Added "error" as valid DocgenResult status
-    - Updated batch summary logging to show error count
-    - **Impact:** Long-running docgen jobs are now resilient to individual file failures
-  - **Bug 2 (Medium): Duck-Typed Database Parameter**
-    - Replaced strict `isinstance(db, Database)` check with `hasattr(db, 'conn')`
-    - Enables unit testing with mocks and test doubles
-    - **Impact:** Test-friendly, more Pythonic code
-  - **Bug 3 (Low): Context Manager Timeout Support**
-    - Added timeout parameter to `DocgenLock.__init__`
-    - Users can now use `with DocgenLock(path, timeout=10):` syntax
-    - **Impact:** Better control over lock acquisition behavior
-  - All fixes verified with passing tests
-  - Identified by Ren (ruthless testing agent)
-  - Report: `tests/REPORTS/docgen_v2_hardening_complete.md`
-
-- **CLI UX - Progressive Disclosure (Phase 1):**
-  - Fixed cryptic "Missing command" errors in main CLI subcommands
-  - Added `no_args_is_help=True` to all Typer subapps
-  - Subcommands now show available commands and descriptions when invoked without arguments
-  - **Impact:** Users see helpful guidance instead of confusion
-  - Commands improved: `service`, `nav`, `docs`, `service repo`
-  - Example: `llmc-cli service` now shows all service management commands
-  - Roadmap: `DOCS/ROADMAP.md` section 2.3 for full CLI audit plan
-
-
+- **MCP Bootstrap Race Condition Fix:**
+  - Changed `00_INIT` from unconditional "EXECUTE IMMEDIATELY" to conditional "IF YOU HAVE NOT BEEN GIVEN MCP INSTRUCTIONS"
+  - Prevents session crashes when eager agents race to call bootstrap
+  - Documented in `DOCS/MCP_DESIGN_DECISIONS.md` (DD-MCP-001)
+  - **Impact:** New Antigravity sessions no longer crash on "what's on the roadmap?"
 
 ### Fixed
-- **P0 Bug Fix:** Search command AttributeError crash
-  - Fixed `AttributeError: 'SpanSearchResult' object has no attribute 'file_path'` in `llmc search` command
-  - Changed `.file_path` → `.path` and `.text` → `.summary` to match SpanSearchResult dataclass
-  - Added improved JSON output with `kind` and `summary` fields
-  - Created regression test in `tests/test_search_command_regression.py`
-  - Identified and fixed by Roswaal autonomous testing agent
-  - **Impact:** Search command (`llmc search "query"`) now works correctly with both text and JSON output
-- **P1 Bug Fix:** Module import error when running RAG tools from outside repository
-  - Fixed `ModuleNotFoundError: No module named 'llmc'` when running `tools.rag.cli` from arbitrary directories
-  - Added automatic sys.path resolution in `tools/rag/__init__.py` to add repo root to path
-  - Reinstalled package in editable mode with updated mapping to include `llmc` module
-  - Created comprehensive usage documentation in `tools/rag/USAGE.md`
-  - Identified and fixed by Roswaal autonomous testing agent
-  - **Impact:** RAG CLI tools now work from any directory with proper venv activation
-- **P2 Bug Fixes:** Code quality improvements in CLI
-  - Removed duplicate `make_layout` function in `llmc/cli.py` (Bug #3)
-  - Cleaned up 5 unused rich imports: `Align`, `BarColumn`, `Progress`, `SpinnerColumn`, `TextColumn` (Bug #4)
-  - Fixed B008 mutable default argument in `llmc/commands/init.py` using `Annotated[Optional[Path], ...]` (Bug #5)
-  - Fixed B904 exception chaining issue in init.py
-  - Created regression test in `tests/test_cli_p2_regression.py`
-  - All ruff linting issues resolved (7 total)
-  - Identified by Roswaal, fixed by Gemini
-  - **Impact:** Cleaner codebase, better performance, no linting errors
 
+- **CRITICAL SECURITY - Lock File Symlink Attack:**
+  - Fixed file destruction vulnerability in lock file creation
+  - Attackers could create symlinks at lock paths to trick LLMC into truncating arbitrary files
+  - Now uses `O_CREAT | O_EXCL` to fail safely on existing files
+  - **Severity:** Critical - could destroy production files
+
+- **CRITICAL SECURITY - Path Traversal in Docgen:**
+  - Fixed path traversal allowing access to files outside repo root
+  - Hardened path normalization and validation
+  - **Severity:** Critical - information disclosure
+
+- **Routing Tier Whitelist Removal:**
+  - Removed arbitrary whitelist that was blocking valid routing configurations
+  - Routing now respects user configuration
+
+- **Type Safety Improvements:**
+  - Fixed multiple MyPy errors in RAG tools and service layer
+  - Resolved runtime crashes from type mismatches
+
+- **Enrichment Pipeline Data Loss Bugs:**
+  - Fixed critical bugs that could lose enrichment data during batch processing
+
+### Changed
+
+- **Docgen v2 Performance:**
+  - Critical performance fix reducing documentation generation time
+  - Improved type safety throughout
+
+- **Code Quality:**
+  - Formatted 265+ files with Ruff
+  - Auto-fixed 1,655 linting errors
+  - Made MCP dependency required, not skippable
+
+### Documentation
+
+- Added MCP Design Decisions doc (`DOCS/MCP_DESIGN_DECISIONS.md`)
+- Added MAASL quick reference card
+- Added MCP Design Decisions doc (`DOCS/MCP_DESIGN_DECISIONS.md`)
+- Added MAASL quick reference card
+- Comprehensive session summaries for each MAASL phase
+- December 2025 mega release summary
+
+### Also Included (from prior work)
+
+- **Automated Repository Onboarding (P0):**
+  - **Service-layer orchestration** for complete repository setup in one command
+  - `llmc-rag-repo add /path/to/repo` - full automated onboarding
+  - `--yes` flag for non-interactive/CI mode
+  - **Impact:** From 6+ manual steps → 1 command
+
+- **RAG Service Idle Loop Throttling:**
+  - Exponential backoff when idle (3min → 30min capped)
+  - **Impact:** 90% reduction in CPU cycles when idle
+
+- **Enrichment Pipeline Architecture Refactor:**
+  - Extracted clean architecture from 2,271-line monolithic script
+  - Now uses direct function calls instead of subprocess
+
+- **Remote LLM Provider Support:**
+  - Gemini, OpenAI, Anthropic, Groq adapters
+  - Circuit breaker, rate limiting, cost tracking
+
+- **Polyglot RAG Support (TypeScript/JavaScript):**
+  - TreeSitterSchemaExtractor for polyglot extraction
+  - TS/JS: functions, classes, interfaces, types
+
+- **Docgen v2 Hardening (3 Critical Fixes)**
+
+- **CLI UX - Progressive Disclosure**
+
+### Fixed (Additional)
+
+- **CLI UX:** Absolute path handling in `llmc docs generate`
+- **P0:** Search command AttributeError crash
+- **P1:** Module import error when running RAG tools from outside repository
+- **P2:** Code quality improvements (duplicate functions, unused imports, mutable defaults)
+
+---
 
 ## [0.5.7] - "Enterprise Rocky Road" - 2025-11-30
 

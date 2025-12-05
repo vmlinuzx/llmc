@@ -22,8 +22,8 @@ SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from tools.rag.database import Database
 from tools.rag.config import index_path_for_read
+from tools.rag.database import Database
 
 
 def migrate_fts5_index(repo_root: Path) -> None:
@@ -50,6 +50,9 @@ def migrate_fts5_index(repo_root: Path) -> None:
             USING fts5(
                 symbol,
                 summary,
+                path,
+                start_line,
+                end_line,
                 tokenize='unicode61'
             )
             """
@@ -63,7 +66,7 @@ def migrate_fts5_index(repo_root: Path) -> None:
         db.conn.commit()
         
         print(f"  ✅ Migration complete! Indexed {count} enrichments")
-        print(f"  🎯 Keyword 'model' is now searchable!")
+        print("  🎯 Keyword 'model' is now searchable!")
         
     except Exception as e:
         print(f"  ❌ Migration failed: {e}")

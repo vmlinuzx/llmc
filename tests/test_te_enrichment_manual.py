@@ -107,7 +107,7 @@ def test_vector_integrity(fresh_db):
     decoded_vec = list(struct.unpack(f"<{len(original_vec)}f", blob))
 
     # Compare with tolerance
-    for v1, v2 in zip(original_vec, decoded_vec):
+    for v1, v2 in zip(original_vec, decoded_vec, strict=False):
         assert abs(v1 - v2) < 1e-6
 
 

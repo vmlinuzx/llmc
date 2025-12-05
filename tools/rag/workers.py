@@ -113,6 +113,7 @@ def enrichment_plan(
                 "lang": item.lang,
                 "lines": [item.start_line, item.end_line],
                 "code_snippet": _snippet(code),
+                "content_type": item.slice_type,  # Add slice_type for routing
                 "llm_contract": {
                     "schema_version": "enrichment.v1",
                     "fields": [
@@ -129,6 +130,7 @@ def enrichment_plan(
                 },
             }
         )
+
     return plan
 
 
@@ -199,11 +201,16 @@ def embedding_plan(
     return plan
 
 
-def _format_embedding_text(item, code: str) -> str:
+def _format_embedding_text(item, code: str, max_chars: int = 4000) -> str:
+    """Format span for embedding, truncating to avoid Ollama batch overflow."""
     header = f"{item.file_path} • {item.lang} • lines {item.start_line}-{item.end_line}"
     body = code.strip()
     if not body:
         return header
+    # Truncate to ~1000 tokens (4000 chars) to stay under Ollama's batch limit
+    # This prevents "caching disabled but unable to fit entire input in a batch" panics
+    if len(body) > max_chars:
+        body = body[:max_chars] + "\n... (truncated for embedding)"
     return f"{header}\n\n{body}"
 
 
@@ -435,7 +442,8 @@ def execute_enrichment(
                 else:
                     low_items.append((item, decision))
 
-            key = lambda pair: pair[1].final_priority  # type: ignore[assignment]
+            def key(pair):
+                return pair[1].final_priority  # type: ignore[assignment]
             high_items.sort(key=key, reverse=True)
             mid_items.sort(key=key, reverse=True)
             low_items.sort(key=key, reverse=True)

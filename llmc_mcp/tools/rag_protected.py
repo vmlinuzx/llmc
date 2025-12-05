@@ -12,8 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from llmc_mcp.db_guard import get_db_transaction_manager
-from llmc_mcp.maasl import DbBusyError, get_maasl, ResourceDescriptor
+from llmc_mcp.maasl import ResourceDescriptor, get_maasl
 
 logger = logging.getLogger("llmc-mcp.rag.protected")
 

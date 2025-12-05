@@ -8,16 +8,15 @@ Phase 3: Code Protection - wraps file write operations with stomping protection.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from llmc_mcp.maasl import get_maasl, ResourceDescriptor, ResourceBusyError
+from llmc_mcp.maasl import ResourceBusyError, ResourceDescriptor, get_maasl
 from llmc_mcp.tools.fs import (
     FsResult,
-    write_file as _write_file_unprotected,
+    delete_file as _delete_file_unprotected,
     edit_block as _edit_block_unprotected,
     move_file as _move_file_unprotected,
-    delete_file as _delete_file_unprotected,
     validate_path,
+    write_file as _write_file_unprotected,
 )
 
 

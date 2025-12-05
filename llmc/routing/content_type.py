@@ -87,7 +87,7 @@ def classify_slice(path: Path, mime: str | None, text: str) -> ClassificationRes
 
     # 0. ERP/Product check (High priority)
     # Path heuristics
-    path_str = str(path).lower()
+    str(path).lower()
     is_erp_path = any(part in path.parts for part in ["erp", "pim", "products", "catalog"])
 
     # Content heuristics for structured files
