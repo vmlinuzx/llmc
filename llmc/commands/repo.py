@@ -164,7 +164,15 @@ def add(
             "embeddings": {
                 "default_profile": "docs",
                 "profiles": {
-                    "docs": {"provider": "ollama", "model": "nomic-embed-text", "dimension": 768}
+                    "docs": {
+                        "provider": "ollama",
+                        "model": "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M",
+                        "dimension": 768,
+                        "ollama": {
+                            "api_base": "http://192.168.5.20:11434",
+                            "timeout": 120,
+                        },
+                    }
                 },
                 "routes": {
                     "docs": {"profile": "docs", "index": "embeddings"},
