@@ -166,6 +166,19 @@ def add(
                 "profiles": {
                     "docs": {"provider": "ollama", "model": "nomic-embed-text", "dimension": 768}
                 },
+                "routes": {
+                    "docs": {"profile": "docs", "index": "embeddings"},
+                    "code": {"profile": "docs", "index": "embeddings"},
+                },
+            },
+            "routing": {
+                "slice_type_to_route": {
+                    "code": "code",
+                    "docs": "docs",
+                    "config": "docs",
+                    "data": "docs",
+                    "other": "docs",
+                },
             },
             "rag": {"enabled": True},
         }
