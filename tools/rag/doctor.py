@@ -82,16 +82,28 @@ def run_rag_doctor(repo_path: Path, verbose: bool = False) -> dict[str, Any]:
         ).fetchone()[0]
 
         # Count spans that still need embeddings (default profile).
-        pending_embeddings = conn.execute(
-            """
-            SELECT COUNT(*)
-            FROM spans
-            LEFT JOIN embeddings
-                ON spans.span_hash = embeddings.span_hash
-               AND embeddings.profile = 'default'
-            WHERE embeddings.span_hash IS NULL
-            """
-        ).fetchone()[0]
+        # Handle older schemas that don't have the profile column.
+        try:
+            pending_embeddings = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM spans
+                LEFT JOIN embeddings
+                    ON spans.span_hash = embeddings.span_hash
+                   AND embeddings.profile = 'default'
+                WHERE embeddings.span_hash IS NULL
+                """
+            ).fetchone()[0]
+        except Exception:
+            # Fallback for older schemas without profile column
+            pending_embeddings = conn.execute(
+                """
+                SELECT COUNT(*)
+                FROM spans
+                LEFT JOIN embeddings ON spans.span_hash = embeddings.span_hash
+                WHERE embeddings.span_hash IS NULL
+                """
+            ).fetchone()[0]
 
         # Safety check: enrichments that no longer have a backing span.
         orphan_enrichments = conn.execute(
