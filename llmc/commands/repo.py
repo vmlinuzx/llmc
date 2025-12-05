@@ -145,6 +145,25 @@ def add(
     # Create logs subdirectory
     (llmc_dir / "logs").mkdir(exist_ok=True)
     
+    # Step 1b: Update .gitignore
+    gitignore_path = repo_path / ".gitignore"
+    gitignore_entries = [".llmc/", ".rag/"]
+    try:
+        existing = gitignore_path.read_text() if gitignore_path.exists() else ""
+        missing = [e for e in gitignore_entries if e not in existing]
+        if missing:
+            with open(gitignore_path, "a") as f:
+                if existing and not existing.endswith("\n"):
+                    f.write("\n")
+                f.write("# LLMC artifacts\n")
+                for entry in missing:
+                    f.write(f"{entry}\n")
+            console.print(f"  ✅ Added {', '.join(missing)} to .gitignore")
+        else:
+            console.print(f"  ℹ️  .gitignore already has LLMC entries")
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Could not update .gitignore: {e}[/yellow]")
+    
     # Step 2: Create llmc.toml if it doesn't exist
     config_path = repo_path / "llmc.toml"
     if not config_path.exists():
