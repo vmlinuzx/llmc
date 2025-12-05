@@ -23,8 +23,8 @@ from llmc.core import find_repo_root
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 
-# State file location
-STATE_FILE = Path.home() / ".llmc" / "service-state.json"
+# State file location - must match tools/rag/service.py
+STATE_FILE = Path.home() / ".llmc" / "rag-service.json"
 
 
 def _get_state() -> dict:
