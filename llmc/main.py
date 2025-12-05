@@ -14,6 +14,7 @@ Reorganized into logical command groups:
 import typer
 
 from llmc.commands import config as config_commands, service as service_commands
+from llmc.commands import repo as repo_commands
 from llmc.commands.init import init as init_command
 from llmc.commands.rag import (
     benchmark,
@@ -71,17 +72,23 @@ service_app.command()(service_commands.logs)
 service_app.command()(service_commands.enable)
 service_app.command()(service_commands.disable)
 
-# Nested repo management under service
-repo_app = typer.Typer(
-    help="Manage registered repositories",
+# Nested repo management under service (legacy, kept for backwards compat)
+service_repo_app = typer.Typer(
+    help="Manage registered repositories (use 'llmc repo' for full features)",
     no_args_is_help=True,
 )
-repo_app.command(name="add")(service_commands.repo_add)
-repo_app.command(name="remove")(service_commands.repo_remove)
-repo_app.command(name="list")(service_commands.repo_list)
-service_app.add_typer(repo_app, name="repo")
+service_repo_app.command(name="add")(service_commands.repo_add)
+service_repo_app.command(name="remove")(service_commands.repo_remove)
+service_repo_app.command(name="list")(service_commands.repo_list)
+service_app.add_typer(service_repo_app, name="repo")
 
 app.add_typer(service_app, name="service")
+
+
+# ============================================================================
+# REPO GROUP - Repository management (full-featured)
+# ============================================================================
+app.add_typer(repo_commands.app, name="repo")
 
 
 # ============================================================================
