@@ -1,1 +1,0 @@
-{"q": "search evaluation harness", "relevant": ["search", "evaluation", "harness"], "gold_globs": ["tools/rag/eval/search_eval.py"]}
