@@ -47,6 +47,7 @@ packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.hand
 
 [project.scripts]
 llmc = "llmc.main:app"
+mcgrep = "llmc.mcgrep:main"
 llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
 

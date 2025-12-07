@@ -52,6 +52,7 @@ def _get_repo_stats(repo_path: Path) -> dict:
         "has_llmc": False,
         "has_config": False,
         "has_db": False,
+        "files": 0,
         "spans": 0,
         "enriched": 0,
         "embedded": 0,
@@ -81,6 +82,13 @@ def _get_repo_stats(repo_path: Path) -> dict:
             import sqlite3
             conn = sqlite3.connect(str(db_path))
             cursor = conn.cursor()
+            
+            # Get file count
+            try:
+                cursor.execute("SELECT COUNT(*) FROM files")
+                stats["files"] = cursor.fetchone()[0]
+            except Exception:
+                pass
             
             # Get span count
             try:
@@ -145,6 +153,28 @@ def add(
     # Create logs subdirectory
     (llmc_dir / "logs").mkdir(exist_ok=True)
     
+    # Step 1a: Copy LLMCAGENTS.md for AI agent integration
+    # Look for canonical file in llmc install location
+    agents_source = None
+    candidates = [
+        Path(__file__).parent.parent.parent / "LLMCAGENTS.md",  # Relative to this file
+        Path.home() / ".llmc" / "LLMCAGENTS.md",  # Global install
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            agents_source = candidate
+            break
+    
+    agents_dest = llmc_dir / "LLMCAGENTS.md"
+    if agents_source and not agents_dest.exists():
+        try:
+            shutil.copy(agents_source, agents_dest)
+            console.print(f"  ✅ Installed LLMCAGENTS.md (for AI agent integration)")
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Could not copy LLMCAGENTS.md: {e}[/yellow]")
+    elif agents_dest.exists():
+        console.print(f"  ℹ️  LLMCAGENTS.md already exists")
+    
     # Step 1b: Update .gitignore
     gitignore_path = repo_path / ".gitignore"
     gitignore_entries = [".llmc/", ".rag/"]
@@ -179,6 +209,43 @@ def add(
                     ".git", ".llmc", ".venv", "__pycache__",
                     "node_modules", "dist", "build", ".pytest_cache",
                 ]
+            },
+            # ENRICHMENT CONFIG - Required for LLM-based code summarization
+            "enrichment": {
+                "default_chain": "code_enrichment_models",
+                "batch_size": 50,
+                "est_tokens_per_span": 350,
+                "enforce_latin1_enrichment": True,
+                "max_failures_per_span": 4,
+                "enable_routing": True,
+                "routes": {
+                    "docs": "code_enrichment_models",
+                    "code": "code_enrichment_models",
+                },
+                "chain": [
+                    {
+                        "name": "qwen2.5-7b",
+                        "chain": "code_enrichment_models",
+                        "provider": "ollama",
+                        "model": "qwen2.5:7b-instruct",
+                        "url": "http://192.168.5.20:11434",
+                        "routing_tier": "7b",
+                        "timeout_seconds": 120,
+                        "enabled": True,
+                        "options": {"num_ctx": 8192, "temperature": 0.2},
+                    },
+                    {
+                        "name": "qwen2.5-14b",
+                        "chain": "code_enrichment_models",
+                        "provider": "ollama",
+                        "model": "qwen2.5:14b-instruct-q4_K_M",
+                        "url": "http://192.168.5.20:11434",
+                        "routing_tier": "14b",
+                        "timeout_seconds": 180,
+                        "enabled": True,
+                        "options": {"num_ctx": 12288, "temperature": 0.2},
+                    },
+                ],
             },
             "embeddings": {
                 "default_profile": "docs",
@@ -363,66 +430,212 @@ def list_repos():
     
     # Header
     console.print("[bold]LLMC Repository Status[/bold]")
-    console.print("=" * 60)
+    console.print("=" * 70)
     
     # Service status
     pid = state.get("pid")
+    daemon_running = False
     if pid:
         try:
             os.kill(pid, 0)
+            daemon_running = True
             console.print(f"Daemon: [green]🟢 running[/green] (PID {pid})")
         except OSError:
             console.print(f"Daemon: [red]🔴 stopped[/red] (stale PID {pid})")
     else:
         console.print(f"Daemon: [red]🔴 stopped[/red]")
     
-    # Last cycle
+    # Last cycle with human-readable time
     last_cycle = state.get("last_cycle")
     if last_cycle:
         try:
             last = datetime.fromisoformat(last_cycle)
             ago = (datetime.now(timezone.utc) - last).total_seconds()
-            console.print(f"Last cycle: {int(ago)}s ago")
+            if ago < 60:
+                ago_str = f"{int(ago)}s ago"
+            elif ago < 3600:
+                ago_str = f"{int(ago/60)}m ago"
+            else:
+                ago_str = f"{int(ago/3600)}h {int((ago%3600)/60)}m ago"
+            console.print(f"Last cycle: {ago_str} | Interval: {state.get('interval', 180)}s")
         except Exception:
             pass
     
     console.print()
     
-    # Repository table
-    table = Table(show_header=True, header_style="bold")
-    table.add_column("Repository", style="cyan")
-    table.add_column("Spans", justify="right")
-    table.add_column("Enriched", justify="right")
-    table.add_column("Embedded", justify="right")
-    table.add_column("Status")
-    
-    for repo_str in state["repos"]:
+    # Per-repository detailed status
+    for i, repo_str in enumerate(state["repos"]):
         repo_path = Path(repo_str)
         stats = _get_repo_stats(repo_path)
         
-        # Determine status
+        # Get quality info if available
+        quality_info = _get_quality_info(repo_path)
+        
+        # Status icon and text
         if not stats["exists"]:
-            status = "[red]❌ missing[/red]"
+            status_icon = "❌"
+            status_text = "MISSING"
+            status_color = "red"
         elif not stats["has_llmc"]:
-            status = "[yellow]⚠️ not init[/yellow]"
+            status_icon = "⚠️"
+            status_text = "NOT INIT"
+            status_color = "yellow"
         elif not stats["has_db"]:
-            status = "[yellow]⚠️ no db[/yellow]"
+            status_icon = "⚠️"
+            status_text = "NO DB"
+            status_color = "yellow"
+        elif stats["spans"] == 0:
+            status_icon = "📂"
+            status_text = "EMPTY"
+            status_color = "yellow"
         elif stats["enriched"] == 0:
-            status = "[blue]📂 indexed[/blue]"
+            status_icon = "📂"
+            status_text = "INDEXED"
+            status_color = "blue"
         else:
             pct = (stats["enriched"] / stats["spans"] * 100) if stats["spans"] > 0 else 0
-            if pct >= 90:
-                status = "[green]✅ enriched[/green]"
+            if pct >= 100:
+                status_icon = "✅"
+                status_text = "READY"
+                status_color = "green"
+            elif pct >= 90:
+                status_icon = "✅"
+                status_text = f"{pct:.0f}%"
+                status_color = "green"
             else:
-                status = f"[yellow]🔄 {pct:.0f}%[/yellow]"
+                status_icon = "🔄"
+                status_text = f"{pct:.0f}%"
+                status_color = "yellow"
         
-        table.add_row(
-            stats["name"],
-            str(stats["spans"]),
-            str(stats["enriched"]),
-            str(stats["embedded"]),
-            status,
-        )
+        # Calculate pending work
+        pending_enrich = max(0, stats["spans"] - stats["enriched"])
+        pending_embed = max(0, stats["spans"] - stats["embedded"])
+        
+        # Print repo header
+        console.print(f"[bold cyan]{status_icon} {stats['name']}[/bold cyan] [{status_color}]{status_text}[/{status_color}]")
+        
+        # Stats line
+        stats_parts = [
+            f"files={stats.get('files', '?')}",
+            f"spans={stats['spans']}",
+            f"enriched={stats['enriched']}",
+            f"embedded={stats['embedded']}",
+        ]
+        if pending_enrich > 0:
+            stats_parts.append(f"[yellow]pending_enrich={pending_enrich}[/yellow]")
+        if pending_embed > 0:
+            stats_parts.append(f"[yellow]pending_embed={pending_embed}[/yellow]")
+        console.print(f"   {', '.join(stats_parts)}")
+        
+        # Quality line if available
+        if quality_info:
+            console.print(f"   [dim]quality={quality_info}[/dim]")
+        
+        # Path (abbreviated)
+        home = str(Path.home())
+        display_path = repo_str.replace(home, "~")
+        console.print(f"   [dim]{display_path}[/dim]")
+        
+        if i < len(state["repos"]) - 1:
+            console.print()  # spacing between repos
     
-    console.print(table)
-    console.print(f"\nTotal: {len(state['repos'])} repos")
+    console.print()
+    console.print(f"[bold]Total: {len(state['repos'])} repos[/bold]")
+    
+    # Helpful hints
+    if not daemon_running:
+        console.print("\n[yellow]💡 Start daemon: llmc service start[/yellow]")
+
+
+def _get_quality_info(repo_path: Path) -> str | None:
+    """Try to get quality score from last doctor run."""
+    # Check for quality in the database metadata or last log
+    db_path = repo_path / ".rag" / "index_v2.db"
+    if not db_path.exists():
+        db_path = repo_path / ".llmc" / "index_v2.db"
+    if not db_path.exists():
+        return None
+    
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+        
+        # Try to get quality metrics from enrichments
+        cursor.execute("""
+            SELECT 
+                COUNT(*) as total,
+                SUM(CASE WHEN summary IS NULL OR summary = '' THEN 1 ELSE 0 END) as empty,
+                SUM(CASE WHEN summary LIKE '%placeholder%' OR summary LIKE '%TODO%' THEN 1 ELSE 0 END) as placeholder,
+                SUM(CASE WHEN LENGTH(summary) < 20 AND summary IS NOT NULL AND summary != '' THEN 1 ELSE 0 END) as short
+            FROM enrichments
+        """)
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row and row[0] > 0:
+            total, empty, placeholder, short = row
+            issues = empty + placeholder + short
+            quality_pct = ((total - issues) / total * 100) if total > 0 else 0
+            
+            issue_parts = []
+            if placeholder > 0:
+                issue_parts.append(f"{placeholder} placeholder")
+            if empty > 0:
+                issue_parts.append(f"{empty} empty")
+            if short > 0:
+                issue_parts.append(f"{short} short")
+            
+            if issue_parts:
+                return f"{quality_pct:.1f}% ({', '.join(issue_parts)})"
+            else:
+                return f"{quality_pct:.1f}%"
+    except Exception:
+        pass
+    
+    return None
+
+
+@app.command("validate")
+def validate(
+    path: str = typer.Argument(..., help="Path to repository to validate"),
+    fix_bom: bool = typer.Option(False, "--fix-bom", help="Auto-fix BOM characters in files"),
+    no_connectivity: bool = typer.Option(False, "--no-connectivity", help="Skip Ollama connectivity checks"),
+    verbose: bool = typer.Option(False, "-v", "--verbose", help="Show all diagnostic info"),
+):
+    """
+    Validate repository configuration for LLMC.
+    
+    Checks that llmc.toml has all required sections and that
+    configured backends (like Ollama) are reachable.
+    
+    Examples:
+        llmc repo validate /path/to/repo
+        llmc repo validate . --fix-bom
+        llmc repo validate . --no-connectivity
+    """
+    from llmc.commands.repo_validator import validate_repo, print_result
+    
+    repo_path = Path(path).resolve()
+    
+    if not repo_path.exists():
+        console.print(f"[red]❌ Path does not exist: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    if not repo_path.is_dir():
+        console.print(f"[red]❌ Path is not a directory: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    result = validate_repo(
+        repo_path,
+        check_connectivity=not no_connectivity,
+        check_models=not no_connectivity,
+        fix_bom=fix_bom,
+        verbose=verbose,
+    )
+    
+    print_result(result, verbose=verbose)
+    
+    if not result.passed:
+        raise typer.Exit(code=1)
+

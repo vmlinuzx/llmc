@@ -6,6 +6,7 @@ llmc/cli.py
 llmc/client.py
 llmc/core.py
 llmc/main.py
+llmc/mcgrep.py
 llmc/te/__init__.py
 llmc/te/cli.py
 llmc/te/config.py
@@ -32,10 +33,6 @@ llmc_mcp/observability.py
 llmc_mcp/prompts.py
 llmc_mcp/server.py
 llmc_mcp/telemetry.py
-llmc_mcp/test_observability.py
-llmc_mcp/test_smoke.py
-llmc_mcp/test_tool_expansion.py
-llmc_mcp/test_tools_visibility_and_metrics.py
 llmcwrapper/__init__.py
 llmcwrapper.egg-info/PKG-INFO
 llmcwrapper.egg-info/SOURCES.txt
@@ -52,6 +49,7 @@ tests/test_cli_entry_error_codes.py
 tests/test_cli_entry_json_output.py
 tests/test_cli_p2_regression.py
 tests/test_cli_path_safety.py
+tests/test_code_first_fix.py
 tests/test_config_est_tokens_per_span.py
 tests/test_context_gateway_edge_cases.py
 tests/test_daemon_purge_guard.py
@@ -59,6 +57,14 @@ tests/test_daemon_submission_path_safety.py
 tests/test_database_bootstrap.py
 tests/test_database_core.py
 tests/test_db_fts_basic.py
+tests/test_docgen_path_traversal.py
+tests/test_docgen_perf_ren.py
+tests/test_docgen_ren.py
+tests/test_docgen_ruthless.py
+tests/test_docgen_ruthless_batch.py
+tests/test_docgen_ruthless_config.py
+tests/test_docgen_ruthless_graph.py
+tests/test_docgen_ruthless_lock.py
 tests/test_doctor_paths_cli.py
 tests/test_e2e_cli_workspace_guard.py
 tests/test_e2e_daemon_operation.py
@@ -89,6 +95,7 @@ tests/test_export_path_safety.py
 tests/test_file_mtime_guard.py
 tests/test_freshness_gateway.py
 tests/test_freshness_index_status.py
+tests/test_fts5_stopwords_regression.py
 tests/test_fts_backend_edge_cases.py
 tests/test_fusion_logic.py
 tests/test_fuzzy_linking.py
@@ -98,6 +105,8 @@ tests/test_graph_stitching_edge_cases.py
 tests/test_idle_loop_throttling.py
 tests/test_index_status.py
 tests/test_indexer_basic.py
+tests/test_inspector_ranking.py
+tests/test_locks_ren.py
 tests/test_log_management_scripts.py
 tests/test_maasl_admin_tools.py
 tests/test_maasl_db_guard.py
@@ -108,6 +117,8 @@ tests/test_maasl_locks.py
 tests/test_maasl_merge.py
 tests/test_maasl_phase8.py
 tests/test_mcp_executables.py
+tests/test_mcp_http_transport.py
+tests/test_model_search_fix.py
 tests/test_multi_route_retrieval.py
 tests/test_multiple_registry_entries.py
 tests/test_nav_adapter_wraps_models.py
@@ -157,6 +168,7 @@ tests/test_remote_providers.py
 tests/test_repo_add_idempotency.py
 tests/test_reranker_edge_cases.py
 tests/test_resilient_rag.py
+tests/test_rmta_rag_nav_fix.py
 tests/test_router.py
 tests/test_router_critical.py
 tests/test_router_logic_bug.py
@@ -181,6 +193,7 @@ tests/test_symlink_escape_strict.py
 tests/test_te_enrichment_manual.py
 tests/test_te_stats_output.py
 tests/test_te_unit.py
+tests/test_telemetry_sqlite.py
 tests/test_worker_pool_comprehensive.py
 tests/test_wrapper_scripts.py
 tools/__init__.py

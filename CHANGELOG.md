@@ -2,6 +2,52 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.1] - "Model Compressor" - 2025-12-07
+
+### Purple Flavor: **Model Compressor**
+
+Local-first semantic search gets a clean UX. While Docker and Mixedbread build cloud-based alternatives, LLMC stays true to its mission: your code never leaves your machine.
+
+### Added
+
+- **mcgrep - Semantic Grep for Code:**
+  - mgrep-style CLI: `mcgrep "where is auth handled?"`
+  - Freshness-aware fallback (uses local grep when index is stale)
+  - Shows LLM-enriched summaries alongside results  
+  - Commands: `mcgrep watch`, `mcgrep status`, `mcgrep init`, `mcgrep stop`
+  - **Philosophy:** Like mgrep, but private. Local. No cloud.
+
+- **Repository Validation (llmc repo validate):**
+  - Validates llmc.toml configuration completeness
+  - Checks Ollama connectivity and model availability
+  - Detects and auto-fixes BOM characters in source files
+  - Runs automatically after `llmc repo add`
+
+- **LLMCAGENTS.md:**
+  - Progressive disclosure instructions for AI agents
+  - Auto-installed to `.llmc/LLMCAGENTS.md` on `llmc repo add`
+  - Reduces tool definition overhead from 40KB to ~4KB
+
+### Changed
+
+- **Roadmap Updated:**
+  - Marked P0 items DONE: RMTA Phase 1, MCP Tool Alignment, Repo Onboarding, Config Validation
+  - Path Traversal security vulnerability verified as FIXED
+  - Renumbered completed items for clarity
+
+- **Default llmc.toml Template:**
+  - Now includes complete `[enrichment]` section
+  - Prevents silent failures during onboarding
+
+### Fixed
+
+- **Path Traversal Security:**
+  - Verified protection already implemented in `tools/rag/inspector.py`
+  - Blocks absolute paths outside repo, `../` traversal, null bytes
+  - All attack vectors tested and confirmed blocked
+
+---
+
 ## [0.6.0] - "Sleep Deprivation" - 2025-12-05
 
 ### Purple Flavor: **Sleep Deprivation**

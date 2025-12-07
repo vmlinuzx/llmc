@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: llmcwrapper
-Version: 0.5.5
+Version: 0.6.0
 Summary: LLM cost compression through intelligent RAG and multi-tier routing
 Author: LLMC Core
 Requires-Python: >=3.9
@@ -12,6 +12,7 @@ Requires-Dist: typer>=0.9.0
 Requires-Dist: rich>=13.0.0
 Requires-Dist: tomli-w>=1.0.0
 Requires-Dist: textual>=0.41.0
+Requires-Dist: tomlkit>=0.12.0
 Provides-Extra: rag
 Requires-Dist: setuptools>=68.0.0; extra == "rag"
 Requires-Dist: tree_sitter==0.20.1; extra == "rag"
@@ -26,6 +27,8 @@ Requires-Dist: gitpython>=3.1.40; extra == "rag"
 Requires-Dist: pyyaml>=6.0.1; extra == "rag"
 Requires-Dist: tqdm>=4.66.1; extra == "rag"
 Requires-Dist: mcp>=0.9.0; extra == "rag"
+Requires-Dist: psutil>=5.9.0; extra == "rag"
+Requires-Dist: humanize>=4.0.0; extra == "rag"
 Provides-Extra: tui
 Requires-Dist: typer>=0.9.0; extra == "tui"
 Requires-Dist: rich>=13.0.0; extra == "tui"
@@ -62,21 +65,6 @@ llmc tui
 ```
 
 **See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
-
-### Development Mode (No Install)
-
-If you're developing and don't want to install, use the wrapper script in the repo root:
-
-```bash
-# From repo root
-./llmc-cli --help
-./llmc-cli index
-./llmc-cli search "query"
-
-# Or add to your PATH
-export PATH="$PWD:$PATH"
-llmc-cli --help
-```
 
 ### What's New in v0.6.0 "Modular Mojo"
 - **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
@@ -116,7 +104,7 @@ Capabilities:
     - Graph aware RAG tools: Implements search, where used, and lineage with both index and graph knowledge so answers include both content and structure.
 
 - Daemon and service layer: Background workers that keep things fresh without you having to babysit.
-    - llmc-rag-service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.
+    - llmc service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.
     - llmc-rag-daemon: Lower level scheduler loop that walks registered repos and runs index/embed/enrich work according to config.
     - Failure store: Keeps track of failed jobs in a sqlite db so you can inspect, debug, and clear them instead of silently dropping errors.
     - Tick and doctor commands: Let you run one off checks or a single scheduler tick to debug without committing to a full daemon loop.
@@ -147,6 +135,15 @@ Capabilities:
     - Cost tracking: Track daily and monthly API spending with hard budget caps to prevent surprise bills.
     - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).
     - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.
+
+- Docgen v2: Deterministic, RAG-aware documentation generation for your codebase.
+    - SHA256 idempotence: Skip unchanged files automatically using content hashing.
+    - RAG integration: Only generate docs for indexed files, prevent stale documentation.
+    - Graph context: Include entity relationships and enrichment data in generated docs.
+    - Flexible backends: Shell scripts, LLM APIs, HTTP services, or MCP integration.
+    - CLI commands: `llmc docs generate` and `llmc docs status` for easy workflows.
+    - Atomic writes: Safe concurrent operation with file locks and atomic file updates.
+    - See [Docgen User Guide](DOCS/Docgen_User_Guide.md) for setup and usage instructions.
 
 - TUI and console UX: A second monitor experience for watching LLMC do its thing.
     - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.
