@@ -28,12 +28,23 @@ Local-first semantic search gets a clean UX. While Docker and Mixedbread build c
   - Auto-installed to `.llmc/LLMCAGENTS.md` on `llmc repo add`
   - Reduces tool definition overhead from 40KB to ~4KB
 
+- **Testing Demon Army (Emilia + 11 Demons):**
+  - `tools/emilia_testing_saint.sh` - Orchestrator that commands all demons
+  - Security Demon, Testing Demon, GAP Demon, MCP Tester
+  - Performance Demon, Chaos Demon, Dependency Demon
+  - Documentation Demon, Config Demon, Concurrency Demon, Upgrade Demon
+  - GAP demon auto-generates SDDs and spawns fixer subagents
+
+- **Isolation Detection (`llmc_mcp/isolation.py`):**
+  - Detects Docker, Kubernetes, nsjail, Firejail environments
+  - Dangerous tools require isolation or explicit `LLMC_ISOLATED=1`
+
 ### Changed
 
 - **Roadmap Updated:**
   - Marked P0 items DONE: RMTA Phase 1, MCP Tool Alignment, Repo Onboarding, Config Validation
-  - Path Traversal security vulnerability verified as FIXED
-  - Renumbered completed items for clarity
+  - Section 3.8: Testing Demon Army architecture added
+  - Phases 0-4 complete for demon army implementation
 
 - **Default llmc.toml Template:**
   - Now includes complete `[enrichment]` section
@@ -41,10 +52,34 @@ Local-first semantic search gets a clean UX. While Docker and Mixedbread build c
 
 ### Fixed
 
+- **CRITICAL: Command Injection (VULN-001):**
+  - `llmc_mcp/tools/cmd.py`: Changed `shell=True` to `shell=False`
+  - Commands now passed as list, not string
+  - Prevents `;`, `&&`, `|` injection attacks
+
+- **CRITICAL: RUTA eval() Injection (VULN-002):**
+  - `llmc/ruta/judge.py`: Replaced `eval()` with `simpleeval`
+  - Blocks `__import__`, `exec`, and arbitrary code execution
+  - Safe expression evaluation for scenario constraints
+
+- **Docgen Arbitrary File Read:**
+  - `llmc_mcp/docgen_guard.py`: Path validation before reading
+  - Rejects paths outside repository root
+
+- **URL Scheme Validation:**
+  - `llmc/commands/repo_validator.py`: Only allows http/https
+  - Blocks `file://` SSRF attempts
+
 - **Path Traversal Security:**
   - Verified protection already implemented in `tools/rag/inspector.py`
   - Blocks absolute paths outside repo, `../` traversal, null bytes
   - All attack vectors tested and confirmed blocked
+
+### Security
+
+- **4 CRITICAL vulnerabilities fixed** (2 RCE, 1 command injection, 1 file read)
+- Added `simpleeval>=1.0.0` dependency for safe expression evaluation
+- Isolation enforcement for `execute_code` and `run_cmd` tools
 
 ---
 
