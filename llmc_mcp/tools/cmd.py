@@ -83,6 +83,8 @@ def run_cmd(
 ) -> ExecResult:
     """
     Execute a shell command with security constraints.
+    
+    SECURITY: Requires isolated environment (Docker, K8s, nsjail).
 
     Args:
         command: Shell command string to execute
@@ -94,6 +96,19 @@ def run_cmd(
     Returns:
         ExecResult with stdout, stderr, exit_code
     """
+    # SECURITY: Only allow execution in isolated environments
+    from llmc_mcp.isolation import require_isolation
+    try:
+        require_isolation("run_cmd")
+    except RuntimeError as e:
+        return ExecResult(
+            success=False,
+            stdout="",
+            stderr=str(e),
+            exit_code=-1,
+            error=str(e),
+        )
+    
     if not command or not command.strip():
         return ExecResult(
             success=False,

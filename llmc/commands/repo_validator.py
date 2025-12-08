@@ -279,6 +279,7 @@ def check_ollama_connectivity(config: dict[str, Any], result: ValidationResult) 
     """Check if Ollama endpoints are reachable."""
     import urllib.request
     import urllib.error
+    from urllib.parse import urlparse
     
     # Collect all Ollama URLs from enrichment chains
     urls_to_check: set[str] = set()
@@ -303,6 +304,16 @@ def check_ollama_connectivity(config: dict[str, Any], result: ValidationResult) 
         return
     
     for url in urls_to_check:
+        # SECURITY: Only allow http/https schemes
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            result.add_error(
+                "connectivity",
+                f"Invalid URL scheme '{parsed.scheme}' in {url}. Only http/https allowed.",
+                "Check your endpoint URL in llmc.toml"
+            )
+            continue
+        
         try:
             # Try to hit the /api/tags endpoint (lists models)
             req = urllib.request.Request(f"{url}/api/tags", method="GET")

@@ -238,6 +238,8 @@ def execute_code(
     The code can import from 'stubs' to access tool functions.
     Only stdout/stderr and explicit return values are captured.
     This is the "sandbox" where Claude's code runs.
+    
+    SECURITY: Requires isolated environment (Docker, K8s, nsjail).
 
     Args:
         code: Python code to execute
@@ -249,6 +251,18 @@ def execute_code(
     Returns:
         CodeExecResult with stdout, stderr, return_value, and error
     """
+    # SECURITY: Only allow execution in isolated environments
+    from llmc_mcp.isolation import require_isolation
+    try:
+        require_isolation("execute_code")
+    except RuntimeError as e:
+        return CodeExecResult(
+            success=False,
+            stdout="",
+            stderr=str(e),
+            error=str(e),
+        )
+    
     # Prepare execution namespace
     # Inject _call_tool into builtins so imported stubs can find it
     import builtins
