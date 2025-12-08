@@ -299,14 +299,10 @@ main() {
   
   # Add user request if provided
   if [ -n "$user_prompt" ]; then
-    full_prompt="$full_prompt"$''$
-''\n\n"[USER GAP ANALYSIS REQUEST]"$''$
-''\n"$user_prompt"
+    full_prompt="${full_prompt}"$'\n\n'"[USER GAP ANALYSIS REQUEST]"$'\n'"$user_prompt"
   else
     # Default gap analysis prompt
-    full_prompt="$full_prompt"$''$
-''\n\n"[USER GAP ANALYSIS REQUEST]"$''$
-''\n"Perform a gap analysis of the current codebase. Look for logic gaps, missing edge case handling, and security blind spots."
+    full_prompt="${full_prompt}"$'\n\n'"[USER GAP ANALYSIS REQUEST]"$'\n'"Perform a gap analysis of the current codebase. Look for logic gaps, missing edge case handling, and security blind spots."
   fi
 
   # Execute with -y -p flags

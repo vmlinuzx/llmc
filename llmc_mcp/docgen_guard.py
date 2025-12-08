@@ -222,14 +222,17 @@ class DocgenCoordinator:
         """
         Generate documentation for a source file with SHA gating.
         
+        SECURITY: Only files within repo_root are allowed.
+        
         Workflow:
-        1. Compute SHA256 of source file
-        2. Check existing doc header for matching hash
-        3. If match, return NO-OP (doc is up to date)
-        4. Acquire IDEMP_DOCS lock (repo-level mutex)
-        5. Generate documentation
-        6. Write atomically with SHA header
-        7. Release lock and return result
+        1. SECURITY: Validate source_path is within repo_root
+        2. Compute SHA256 of source file
+        3. Check existing doc header for matching hash
+        4. If match, return NO-OP (doc is up to date)
+        5. Acquire IDEMP_DOCS lock (repo-level mutex)
+        6. Generate documentation
+        7. Write atomically with SHA header
+        8. Release lock and return result
         
         Args:
             source_path: Absolute path to source file
@@ -239,11 +242,24 @@ class DocgenCoordinator:
             
         Returns:
             DocgenResult with status and metadata
+            
+        Raises:
+            ValueError: If source_path is outside repo_root
         """
         start_time = time.time()
         
+        # SECURITY: Validate path is within repository
+        source = Path(source_path).resolve()
         try:
-            # 1. Compute source hash
+            source.relative_to(self.repo_root)
+        except ValueError:
+            raise ValueError(
+                f"Access denied: '{source_path}' is not within repository root. "
+                f"Only files within {self.repo_root} are allowed."
+            )
+        
+        try:
+            # 1. Compute source hash (now safe after validation)
             source_hash = self.compute_source_hash(source_path)
             doc_path = self.get_doc_path(source_path)
             
