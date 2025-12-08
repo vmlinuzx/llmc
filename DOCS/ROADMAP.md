@@ -576,18 +576,13 @@ RUTA uses simulated end users to exercise LLMC through **real public interfaces*
 | **Rem (Testing)** | Functional/behavioral tests | `tools/rem_ruthless_testing_agent.sh` |
 | **Rem (GAP)** | Untested code, missing coverage | `tools/rem_ruthless_gap_agent.sh` |
 | **MCP Tester** | MCP protocol stress testing | `tools/ruthless_mcp_tester.sh` |
-
-**Planned Demons:**
-
-| Demon | Purpose | Priority |
-|-------|---------|----------|
-| **Performance Demon** | Benchmarks, slowdowns, memory leaks | P2 |
-| **Chaos Demon** | Random failures, timeouts, OOM, disk full | P2 |
-| **Dependency Demon** | CVE scanning, outdated deps, `pip-audit` | P2 |
-| **Documentation Demon** | Stale docs, broken links, missing docstrings | P3 |
-| **Config Demon** | Fuzz `llmc.toml`, edge cases, schema validation | P3 |
-| **Concurrency Demon** | Race conditions, deadlocks, MAASL violations | P3 |
-| **Upgrade Demon** | Migration paths, DB schema changes | P3 |
+| **Performance** | Benchmarks, slowdowns, memory leaks | `tools/rem_performance_demon.sh` |
+| **Chaos** | Random failures, timeouts, OOM | `tools/rem_chaos_demon.sh` |
+| **Dependency** | CVE scanning, pip-audit | `tools/rem_dependency_demon.sh` |
+| **Documentation** | Stale docs, broken links | `tools/rem_documentation_demon.sh` |
+| **Config** | Fuzz llmc.toml, edge cases | `tools/rem_config_demon.sh` |
+| **Concurrency** | Race conditions, deadlocks | `tools/rem_concurrency_demon.sh` |
+| **Upgrade** | Migration paths, schema changes | `tools/rem_upgrade_demon.sh` |
 
 **Key Innovation:**
 The GAP demon already implements the full autonomous loop:
@@ -598,11 +593,12 @@ The GAP demon already implements the full autonomous loop:
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 0 | Core demons (Security, Testing, GAP) | ✅ Done |
-| 1 | Emilia orchestrator shell script | |
-| 2 | Performance + Chaos demons | |
-| 3 | Dependency + Config demons | |
-| 4 | Daily CI integration | |
-| 5 | Slack/Discord notifications | |
+| 1 | Emilia orchestrator shell script | ✅ Done |
+| 2 | Performance + Chaos demons | ✅ Done |
+| 3 | Dependency + Config demons | ✅ Done |
+| 4 | Documentation + Concurrency + Upgrade demons | ✅ Done |
+| 5 | Daily CI integration | |
+| 6 | Slack/Discord notifications | |
 
 **Effort:** 4-8 hours per demon | **Total:** 40-60 hours for full army
 

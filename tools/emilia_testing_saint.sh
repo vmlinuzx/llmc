@@ -40,12 +40,19 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Demon registry
+# Demon registry - all available demons
 declare -A DEMONS=(
     ["security"]="rem_ruthless_security_agent.sh"
     ["testing"]="rem_ruthless_testing_agent.sh"
     ["gap"]="rem_ruthless_gap_agent.sh"
     ["mcp"]="ruthless_mcp_tester.sh"
+    ["performance"]="rem_performance_demon.sh"
+    ["chaos"]="rem_chaos_demon.sh"
+    ["dependency"]="rem_dependency_demon.sh"
+    ["documentation"]="rem_documentation_demon.sh"
+    ["config"]="rem_config_demon.sh"
+    ["concurrency"]="rem_concurrency_demon.sh"
+    ["upgrade"]="rem_upgrade_demon.sh"
 )
 
 # Results storage
