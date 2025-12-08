@@ -575,7 +575,6 @@ RUTA uses simulated end users to exercise LLMC through **real public interfaces*
 | **Rem (Security)** | RCE, injection, sandbox escapes | `tools/rem_ruthless_security_agent.sh` |
 | **Rem (Testing)** | Functional/behavioral tests | `tools/rem_ruthless_testing_agent.sh` |
 | **Rem (GAP)** | Untested code, missing coverage | `tools/rem_ruthless_gap_agent.sh` |
-| **Roswaal** | Autonomous testing + remediation | `tools/roswaal_ruthless_testing_agent.sh` |
 | **MCP Tester** | MCP protocol stress testing | `tools/ruthless_mcp_tester.sh` |
 
 **Planned Demons:**
