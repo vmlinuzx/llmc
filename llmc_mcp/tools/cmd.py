@@ -149,9 +149,9 @@ def run_cmd(
     # Execute with timeout
     try:
         result = subprocess.run(
-            command,
+            cmd_parts,
             check=False,
-            shell=True,
+            shell=False,
             cwd=str(cwd_path),
             capture_output=True,
             text=True,
