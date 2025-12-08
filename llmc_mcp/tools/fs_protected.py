@@ -103,7 +103,7 @@ def write_file_protected(
                 "wait_ms": e.wait_ms,
                 "max_wait_ms": e.max_wait_ms,
             },
-            error=f"File locked by {e.holder_agent_id}: {e.message}",
+            error=f"File locked by {e.holder_agent_id}: {str(e)}",
         )
 
 
@@ -176,7 +176,7 @@ def edit_block_protected(
                 "resource_key": e.resource_key,
                 "holder_agent_id": e.holder_agent_id,
             },
-            error=f"File locked by {e.holder_agent_id}: {e.message}",
+            error=f"File locked by {e.holder_agent_id}: {str(e)}",
         )
 
 
@@ -243,7 +243,7 @@ def move_file_protected(
             success=False,
             data=None,
             meta={"resource_key": e.resource_key, "holder_agent_id": e.holder_agent_id},
-            error=f"Path locked by {e.holder_agent_id}: {e.message}",
+            error=f"Path locked by {e.holder_agent_id}: {str(e)}",
         )
 
 
@@ -310,5 +310,5 @@ def delete_file_protected(
                 "resource_key": e.resource_key,
                 "holder_agent_id": e.holder_agent_id,
             },
-            error=f"File locked by {e.holder_agent_id}: {e.message}",
+            error=f"File locked by {e.holder_agent_id}: {str(e)}",
         )

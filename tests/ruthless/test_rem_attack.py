@@ -150,27 +150,30 @@ code = {{ profile = "docs", index = "code" }}
         # We don't assert pass/fail, just that it finished
         assert isinstance(result, ValidationResult)
 
-    def test_validator_missing_optional_fields(self, tmp_path):
-        """Test validator with a barebones valid config."""
-        config_file = tmp_path / "llmc.toml"
-        config_content = """
-[enrichment]
-[[enrichment.chain]]
-provider = "openai"
-model = "gpt-4"
-# No URL needed for openai
-
-[embeddings]
-[embeddings.profiles.docs]
-provider = "openai"
-model = "text-embedding-3-small"
-[embeddings.routes]
-docs = { profile = "docs", index = "docs" }
-code = { profile = "docs", index = "code" }
-"""
-        config_file.write_text(config_content)
-        
-        result = validate_repo(tmp_path)
-        assert result.passed
-        assert result.warning_count == 0  # Should be clean
-
+        def test_validator_missing_optional_fields(self, tmp_path):
+            """Test validator with a barebones valid config."""
+            config_file = tmp_path / "llmc.toml"
+            config_content = """
+    [enrichment]
+    [[enrichment.chain]]
+    provider = "openai"
+    model = "gpt-4"
+    # No URL needed for openai
+    
+    [embeddings]
+    [embeddings.profiles.docs]
+    provider = "openai"
+    model = "text-embedding-3-small"
+    [embeddings.routes]
+    docs = { profile = "docs", index = "docs" }
+    code = { profile = "docs", index = "code" }
+    
+    [routing.slice_type_to_route]
+    code = "code"
+    docs = "docs"
+    """
+            config_file.write_text(config_content)
+            
+            result = validate_repo(tmp_path)
+            assert result.passed
+            assert result.warning_count == 0  # Should be clean

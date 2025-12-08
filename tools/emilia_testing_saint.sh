@@ -121,8 +121,12 @@ run_demon() {
     local duration=$((end_time - start_time))
     
     # Parse results (look for P0/P1 counts in output)
-    local p0_count=$(grep -c "P0\|CRITICAL\|Severity: Critical" "$output_file" 2>/dev/null || echo "0")
-    local p1_count=$(grep -c "P1\|HIGH\|Severity: High" "$output_file" 2>/dev/null || echo "0")
+    local p0_count=$(grep -c "P0\|CRITICAL\|Severity: Critical" "$output_file" 2>/dev/null | head -n 1 || echo "0")
+    local p1_count=$(grep -c "P1\|HIGH\|Severity: High" "$output_file" 2>/dev/null | head -n 1 || echo "0")
+    
+    # Ensure they are integers
+    [[ ! "$p0_count" =~ ^[0-9]+$ ]] && p0_count=0
+    [[ ! "$p1_count" =~ ^[0-9]+$ ]] && p1_count=0
     
     DEMON_P0_COUNT[$demon_key]="$p0_count"
     DEMON_P1_COUNT[$demon_key]="$p1_count"
