@@ -2,7 +2,33 @@ import json
 from pathlib import Path
 from typing import Any
 
+from simpleeval import simple_eval, EvalWithCompoundTypes
+
 from llmc.ruta.types import Scenario, TraceEvent
+
+
+def _safe_eval(expr: str, context: dict) -> Any:
+    """
+    Safely evaluate an expression using simpleeval.
+    
+    This replaces Python's eval() to prevent arbitrary code execution.
+    Only allows basic operations, comparisons, and pre-defined functions.
+    
+    SECURITY: This is the fix for VULN-002 (RUTA eval injection).
+    """
+    evaluator = EvalWithCompoundTypes(
+        names=context,
+        functions={
+            # Whitelist only safe functions
+            "len": len,
+            "min": min,
+            "max": max,
+            "abs": abs,
+            "sum": sum,
+            "round": round,
+        }
+    )
+    return evaluator.eval(expr)
 
 
 class Judge:
@@ -133,7 +159,7 @@ class Judge:
                 # If relation starts with jaccard(, evaluate it and bind to 'jaccard' variable
                 # This is a heuristic to support the specific YAML format
                 if prop.relation.strip().startswith("jaccard("):
-                     relation_val = eval(prop.relation, {}, context)
+                     relation_val = _safe_eval(prop.relation, context)
                      context["jaccard"] = relation_val
             except Exception:
                 # We don't fail here, we might fail in constraint if variable is missing
@@ -143,7 +169,7 @@ class Judge:
         try:
             # Replace YAML operators with Python ones
             expr = prop.constraint.replace("AND", "and").replace("OR", "or")
-            success = eval(expr, {}, context)
+            success = _safe_eval(expr, context)
             
             if not success:
                  self.incidents.append({
