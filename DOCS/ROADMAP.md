@@ -538,6 +538,75 @@ RUTA uses simulated end users to exercise LLMC through **real public interfaces*
 
 ---
 
+### 3.8 Testing Demon Army (P2)
+
+**Goal:** Autonomous testing infrastructure that finds, documents, and fixes issues with minimal human intervention.
+
+**Architecture:**
+
+```
+                     ┌─────────────────────┐
+                     │      EMILIA         │
+                     │ (Testing Saint /    │
+                     │   Orchestrator)     │
+                     └──────────┬──────────┘
+                                │
+        ┌───────────┬───────────┼───────────┬───────────┐
+        ▼           ▼           ▼           ▼           ▼
+   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+   │Security │ │  GAP    │ │  Perf   │ │  Chaos  │ │  Deps   │
+   │ Demon   │ │ Demon   │ │ Demon   │ │ Demon   │ │ Demon   │
+   │ (Rem)   │ │ (Rem)   │ │ (NEW)   │ │ (NEW)   │ │ (NEW)   │
+   └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
+```
+
+**Emilia (Orchestrator):**
+- Schedules demon runs (daily/on-commit)
+- Triages findings by severity
+- Dispatches SDD creation for P0/P1 issues
+- Spawns fixer subagents for automated remediation
+- Generates daily summary reports
+- CLI: `llmc test orchestrate` or `tools/emilia_testing_saint.sh`
+
+**Current Demons (✅ Implemented):**
+
+| Demon | Purpose | Location |
+|-------|---------|----------|
+| **Rem (Security)** | RCE, injection, sandbox escapes | `tools/rem_ruthless_security_agent.sh` |
+| **Rem (Testing)** | Functional/behavioral tests | `tools/rem_ruthless_testing_agent.sh` |
+| **Rem (GAP)** | Untested code, missing coverage | `tools/rem_ruthless_gap_agent.sh` |
+| **Roswaal** | Autonomous testing + remediation | `tools/roswaal_ruthless_testing_agent.sh` |
+| **MCP Tester** | MCP protocol stress testing | `tools/ruthless_mcp_tester.sh` |
+
+**Planned Demons:**
+
+| Demon | Purpose | Priority |
+|-------|---------|----------|
+| **Performance Demon** | Benchmarks, slowdowns, memory leaks | P2 |
+| **Chaos Demon** | Random failures, timeouts, OOM, disk full | P2 |
+| **Dependency Demon** | CVE scanning, outdated deps, `pip-audit` | P2 |
+| **Documentation Demon** | Stale docs, broken links, missing docstrings | P3 |
+| **Config Demon** | Fuzz `llmc.toml`, edge cases, schema validation | P3 |
+| **Concurrency Demon** | Race conditions, deadlocks, MAASL violations | P3 |
+| **Upgrade Demon** | Migration paths, DB schema changes | P3 |
+
+**Key Innovation:**
+The GAP demon already implements the full autonomous loop:
+1. **Find** problem → 2. **Create SDD** → 3. **Spawn subagents** → 4. **Write tests/fixes** → 5. **Verify**
+
+**Phased Implementation:**
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Core demons (Security, Testing, GAP) | ✅ Done |
+| 1 | Emilia orchestrator shell script | |
+| 2 | Performance + Chaos demons | |
+| 3 | Dependency + Config demons | |
+| 4 | Daily CI integration | |
+| 5 | Slack/Discord notifications | |
+
+**Effort:** 4-8 hours per demon | **Total:** 40-60 hours for full army
+
 ## 4. How to use this roadmap
 
 - When you start a work session, pull one item from **Now** and ignore the rest.
