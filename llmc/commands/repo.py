@@ -1048,3 +1048,71 @@ def validate(
     if not result.passed:
         raise typer.Exit(code=1)
 
+
+@app.command("sync-agents")
+def sync_agents(
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing LLMCAGENTS.md files"),
+):
+    """
+    Sync LLMCAGENTS.md to all registered repositories.
+    
+    Updates or installs the agent instructions file in every registered repo.
+    Use this after updating the canonical LLMCAGENTS.md in the LLMC repo.
+    
+    Examples:
+        llmc-cli repo sync-agents           # Install where missing
+        llmc-cli repo sync-agents --force   # Update all repos
+    """
+    # Find canonical source
+    agents_source = None
+    candidates = [
+        Path(__file__).parent.parent.parent / "LLMCAGENTS.md",
+        Path.home() / ".llmc" / "LLMCAGENTS.md",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            agents_source = candidate
+            break
+    
+    if not agents_source:
+        console.print("[red]❌ Cannot find canonical LLMCAGENTS.md[/red]")
+        console.print("   Expected at: llmc repo root or ~/.llmc/")
+        raise typer.Exit(code=1)
+    
+    console.print(f"[bold]📋 Syncing LLMCAGENTS.md from: {agents_source}[/bold]")
+    
+    state = _get_state()
+    if not state["repos"]:
+        console.print("[yellow]ℹ️  No repos registered[/yellow]")
+        return
+    
+    updated = 0
+    skipped = 0
+    failed = 0
+    
+    for repo_str in state["repos"]:
+        repo_path = Path(repo_str)
+        if not repo_path.exists():
+            console.print(f"  [yellow]⚠️  {repo_path.name}: repo missing[/yellow]")
+            failed += 1
+            continue
+        
+        llmc_dir = repo_path / ".llmc"
+        llmc_dir.mkdir(parents=True, exist_ok=True)
+        agents_dest = llmc_dir / "LLMCAGENTS.md"
+        
+        if agents_dest.exists() and not force:
+            console.print(f"  ℹ️  {repo_path.name}: already exists (use --force)")
+            skipped += 1
+            continue
+        
+        try:
+            shutil.copy(agents_source, agents_dest)
+            action = "updated" if agents_dest.exists() else "installed"
+            console.print(f"  ✅ {repo_path.name}: {action}")
+            updated += 1
+        except Exception as e:
+            console.print(f"  [red]❌ {repo_path.name}: {e}[/red]")
+            failed += 1
+    
+    console.print(f"\n[bold]Summary:[/bold] {updated} updated, {skipped} skipped, {failed} failed")

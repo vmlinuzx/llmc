@@ -46,7 +46,7 @@ daemon = [
 packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers"]
 
 [project.scripts]
-llmc = "llmc.main:app"
+llmc-cli = "llmc.main:app"
 mcgrep = "llmc.mcgrep:main"
 llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
