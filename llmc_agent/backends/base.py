@@ -1,8 +1,8 @@
 """Abstract backend interface for LLM inference."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import AsyncIterator
+from dataclasses import dataclass, field
+from typing import Any, AsyncIterator
 
 
 @dataclass
@@ -24,7 +24,8 @@ class GenerateResponse:
     tokens_prompt: int
     tokens_completion: int
     model: str
-    finish_reason: str  # "stop", "length", "error"
+    finish_reason: str  # "stop", "length", "error", "tool_calls"
+    tool_calls: list[dict[str, Any]] = field(default_factory=list)
 
 
 class Backend(ABC):

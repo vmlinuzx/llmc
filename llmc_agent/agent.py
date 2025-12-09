@@ -5,19 +5,31 @@ The agent is the orchestrator that ties together:
 - RAG search
 - Prompt assembly
 - LLM generation
+- Tool execution (progressive disclosure)
 """
 
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from llmc_agent.backends.base import GenerateRequest
 from llmc_agent.backends.llmc import LLMCBackend, RAGResult
 from llmc_agent.backends.ollama import OllamaBackend
 from llmc_agent.config import Config
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
+
+
+@dataclass
+class ToolCall:
+    """A tool call from the model."""
+    
+    name: str
+    arguments: dict[str, Any]
+    result: Any = None
 
 
 @dataclass
@@ -29,10 +41,12 @@ class AgentResponse:
     tokens_completion: int
     rag_sources: list[str] | None
     model: str
+    tool_calls: list[ToolCall] = field(default_factory=list)
+    tier_used: int = 0
 
 
 class Agent:
-    """The llmc agent."""
+    """The llmc agent with progressive tool disclosure."""
     
     def __init__(self, config: Config):
         self.config = config
@@ -48,6 +62,10 @@ class Agent:
         self.rag: LLMCBackend | None = None
         if config.rag.enabled:
             self.rag = LLMCBackend()
+        
+        # Initialize tool registry
+        from llmc_agent.tools import ToolRegistry
+        self.tools = ToolRegistry(allowed_roots=["."])
     
     async def ask(
         self,
@@ -169,6 +187,147 @@ class Agent:
             model=response.model,
         )
     
+    async def ask_with_tools(
+        self,
+        question: str,
+        session: "Session | None" = None,
+        max_tool_rounds: int = 5,
+    ) -> AgentResponse:
+        """Ask with tool support (Walk/Run phases).
+        
+        This method:
+        1. Detects intent tier from the question
+        2. Includes appropriate tools in the request
+        3. Executes tool calls and loops until model is done
+        4. Returns final response
+        """
+        from llmc_agent.session import Session
+        from llmc_agent.tools import ToolTier, detect_intent_tier
+        
+        # Detect intent and unlock tier
+        detected_tier = detect_intent_tier(question)
+        self.tools.unlock_tier(detected_tier)
+        
+        # Get available tools for this tier
+        tools_for_request = self.tools.to_ollama_tools()
+        
+        # Build system prompt with tool instructions
+        system_prompt = load_system_prompt(
+            self.config.agent.model,
+            prompts_dir=Path("prompts") if Path("prompts").exists() else None,
+        )
+        
+        if self.tools.current_tier > ToolTier.CRAWL:
+            # Add tool usage instructions
+            tool_names = [t.name for t in self.tools.get_tools_for_tier()]
+            system_prompt += f"\n\nYou have access to these tools: {', '.join(tool_names)}. Use them when you need to read or modify files."
+        
+        # Start message history
+        messages = []
+        total_prompt_tokens = 0
+        total_completion_tokens = 0
+        all_tool_calls: list[ToolCall] = []
+        
+        # Add user question
+        messages.append({"role": "user", "content": question})
+        
+        # Tool loop
+        for round_num in range(max_tool_rounds):
+            # Generate response
+            request = GenerateRequest(
+                messages=messages,
+                system=system_prompt,
+                model=self.config.agent.model,
+                temperature=self.config.ollama.temperature,
+                max_tokens=self.config.agent.response_reserve,
+            )
+            
+            response = await self.ollama.generate_with_tools(request, tools_for_request)
+            total_prompt_tokens += response.tokens_prompt
+            total_completion_tokens += response.tokens_completion
+            
+            # Check for tool calls
+            if not response.tool_calls:
+                # No tool calls, we're done
+                final_content = response.content
+                break
+            
+            # Execute tool calls
+            for tc in response.tool_calls:
+                tool = self.tools.get_tool(tc["function"]["name"])
+                if not tool:
+                    continue
+                
+                # Check if available at current tier
+                if not self.tools.is_tool_available(tc["function"]["name"]):
+                    # Tool not available, skip
+                    continue
+                
+                # Execute tool
+                try:
+                    args = tc["function"]["arguments"]
+                    if isinstance(args, str):
+                        args = json.loads(args)
+                    
+                    # Async or sync execution
+                    if asyncio.iscoroutinefunction(tool.function):
+                        result = await tool.function(**args)
+                    else:
+                        result = tool.function(**args)
+                    
+                    tool_call = ToolCall(
+                        name=tool.name,
+                        arguments=args,
+                        result=result,
+                    )
+                    all_tool_calls.append(tool_call)
+                    
+                    # Add tool result to messages
+                    messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [tc],
+                    })
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.get("id", ""),
+                        "content": json.dumps(result),
+                    })
+                    
+                except Exception as e:
+                    # Tool execution failed
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tc.get("id", ""),
+                        "content": json.dumps({"error": str(e)}),
+                    })
+        else:
+            # Max rounds reached
+            final_content = response.content if 'response' in dir() else "Max tool rounds reached."
+        
+        # Update session if provided
+        if session:
+            session.add_message(
+                role="user",
+                content=question,
+                tokens=count_tokens(question),
+            )
+            session.add_message(
+                role="assistant",
+                content=final_content,
+                tokens=total_completion_tokens,
+            )
+        
+        return AgentResponse(
+            content=final_content,
+            tokens_prompt=total_prompt_tokens,
+            tokens_completion=total_completion_tokens,
+            rag_sources=None,
+            model=self.config.agent.model,
+            tool_calls=all_tool_calls,
+            tier_used=self.tools.current_tier,
+        )
+    
     async def health_check(self) -> dict[str, bool]:
         """Check health of all backends."""
         
@@ -182,12 +341,22 @@ class Agent:
         return results
 
 
-async def run_agent(question: str, config: Config | None = None) -> AgentResponse:
-    """Convenience function to run the agent."""
+async def run_agent(question: str, config: Config | None = None, use_tools: bool = False) -> AgentResponse:
+    """Convenience function to run the agent.
+    
+    Args:
+        question: The question to ask
+        config: Optional config (loads default if not provided)
+        use_tools: If True, use ask_with_tools (Walk/Run), else use ask (Crawl)
+    """
     
     if config is None:
         from llmc_agent.config import load_config
         config = load_config()
     
     agent = Agent(config)
-    return await agent.ask(question)
+    
+    if use_tools:
+        return await agent.ask_with_tools(question)
+    else:
+        return await agent.ask(question)

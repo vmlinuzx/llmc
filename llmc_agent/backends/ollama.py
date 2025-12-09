@@ -101,6 +101,72 @@ class OllamaBackend(Backend):
                         except json.JSONDecodeError:
                             continue
     
+    async def generate_with_tools(
+        self,
+        request: GenerateRequest,
+        tools: list[dict],
+    ) -> GenerateResponse:
+        """Generate a response with tool support.
+        
+        Args:
+            request: The generation request
+            tools: List of tools in Ollama format
+        
+        Returns:
+            GenerateResponse with tool_calls populated if model used tools
+        """
+        
+        # Build messages in Ollama format
+        messages = [
+            {"role": "system", "content": request.system},
+            *request.messages,
+        ]
+        
+        payload = {
+            "model": request.model,
+            "messages": messages,
+            "stream": False,
+            "options": {
+                **self.default_options,
+                "num_predict": request.max_tokens,
+                "temperature": request.temperature,
+            },
+        }
+        
+        # Add tools if provided
+        if tools:
+            payload["tools"] = tools
+        
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(
+                f"{self.base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+        
+        # Extract tool calls if present
+        message = data.get("message", {})
+        tool_calls = message.get("tool_calls", [])
+        content = message.get("content", "")
+        
+        # Determine finish reason
+        if tool_calls:
+            finish_reason = "tool_calls"
+        elif data.get("done", False):
+            finish_reason = "stop"
+        else:
+            finish_reason = "unknown"
+        
+        return GenerateResponse(
+            content=content,
+            tokens_prompt=data.get("prompt_eval_count", 0),
+            tokens_completion=data.get("eval_count", 0),
+            model=data.get("model", request.model),
+            finish_reason=finish_reason,
+            tool_calls=tool_calls,
+        )
+    
     async def health_check(self) -> bool:
         """Check if Ollama is available."""
         try:

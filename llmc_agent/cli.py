@@ -35,6 +35,7 @@ stdout_console = Console()  # Main output to stdout
 @click.option("--no-rag", is_flag=True, help="Disable RAG search")
 @click.option("--no-session", is_flag=True, help="Disable session (stateless mode)")
 @click.option("--model", help="Override model")
+@click.option("--tools", "use_tools", is_flag=True, help="Enable tools (Walk/Run mode)")
 @click.option("--version", is_flag=True, help="Show version")
 def main(
     prompt: str | None,
@@ -49,6 +50,7 @@ def main(
     no_rag: bool,
     no_session: bool,
     model: str | None,
+    use_tools: bool,
     version: bool,
 ) -> None:
     """llmc chat - AI coding assistant with RAG.
@@ -126,7 +128,7 @@ def main(
     # Run the agent
     try:
         response = asyncio.run(_run_agent(
-            prompt, config, session, session_mgr, json_output, quiet
+            prompt, config, session, session_mgr, json_output, quiet, use_tools
         ))
     except KeyboardInterrupt:
         console.print("\n[dim]Interrupted[/dim]")
@@ -200,6 +202,7 @@ async def _run_agent(
     session_mgr: SessionManager | None,
     json_output: bool,
     quiet: bool,
+    use_tools: bool = False,
 ):
     """Run the agent and display results."""
     
@@ -218,7 +221,16 @@ async def _run_agent(
         console.print(f"[dim]Model: {config.agent.model} | RAG: {rag_status}[/dim]")
     
     # Get response (with session for context)
-    response = await agent.ask(prompt, session=session)
+    if use_tools:
+        from llmc_agent.tools import ToolTier
+        tier_names = {0: "Crawl", 1: "Walk", 2: "Run"}
+        if not quiet and not json_output:
+            console.print(f"[dim]Tools enabled (tier auto-detected)[/dim]")
+        response = await agent.ask_with_tools(prompt, session=session)
+        if not quiet and not json_output and response.tier_used > 0:
+            console.print(f"[dim]Tier: {tier_names.get(response.tier_used, response.tier_used)} | Tools used: {len(response.tool_calls)}[/dim]")
+    else:
+        response = await agent.ask(prompt, session=session)
     
     # Save session
     if session and session_mgr:
