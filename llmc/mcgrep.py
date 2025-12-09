@@ -199,14 +199,15 @@ def status():
 @app.command()
 def init():
     """
-    Bootstrap the current directory for mcgrep.
+    Register the current directory with LLMC.
     
     Creates .llmc/ workspace, generates config, and starts initial index.
+    Equivalent to: llmc repo register .
     """
-    from llmc.commands.repo import add
+    from llmc.commands.repo import register
     
-    console.print("[bold]Initializing mcgrep...[/bold]")
-    add(path=".", skip_index=False, skip_enrich=True)
+    console.print("[bold]Registering repository with LLMC...[/bold]")
+    register(path=".", skip_index=False, skip_enrich=True)
     console.print("\n[green]Ready![/green] Run: mcgrep watch")
 
 
@@ -219,23 +220,44 @@ def stop():
 
 def main():
     """Entry point with mgrep-style default behavior."""
+    # Handle no args - show friendly help instead of error
+    if len(sys.argv) == 1:
+        console.print("[bold]mcgrep[/bold] - Semantic grep for code. Private. Local. No cloud.\n")
+        console.print("[dim]Usage:[/dim]")
+        console.print("  mcgrep [green]\"your query\"[/green]          Search for code semantically")
+        console.print("  mcgrep [green]status[/green]                 Check index health")
+        console.print("  mcgrep [green]watch[/green]                  Start background indexer")
+        console.print("  mcgrep [green]init[/green]                   Register current repo")
+        console.print()
+        console.print("[dim]Examples:[/dim]")
+        console.print("  mcgrep \"authentication flow\"")
+        console.print("  mcgrep \"database connection\" --limit 10")
+        console.print("  mcgrep -n 5 \"error handling\"")
+        console.print()
+        console.print("[dim]Traditional grep (for exact matches):[/dim]")
+        console.print("  grep -rn \"pattern\" .              Recursive with line numbers")
+        console.print("  grep -ri \"Pattern\" .              Case insensitive")
+        console.print("  grep -rn --include=\"*.py\" \"x\" .   Filter by file type")
+        console.print()
+        console.print("[dim]Run 'mcgrep --help' for full options.[/dim]")
+        return
+    
     # Handle bare query without 'search' subcommand
     # e.g., `mcgrep "my query"` instead of `mcgrep search "my query"`
     # Also handles: `mcgrep -n 5 "my query"`
-    if len(sys.argv) > 1:
-        first_arg = sys.argv[1]
-        known_commands = {"search", "watch", "status", "init", "stop"}
-        help_flags = {"--help", "-h"}
-        
-        # If first arg is a help flag, let typer handle it
-        if first_arg in help_flags:
-            pass
-        # If first arg is a known command, let typer handle it normally
-        elif first_arg in known_commands:
-            pass
-        # Otherwise, insert 'search' - could be a query or a search flag like -n
-        else:
-            sys.argv.insert(1, "search")
+    first_arg = sys.argv[1]
+    known_commands = {"search", "watch", "status", "init", "stop"}
+    help_flags = {"--help", "-h"}
+    
+    # If first arg is a help flag, let typer handle it
+    if first_arg in help_flags:
+        pass
+    # If first arg is a known command, let typer handle it normally
+    elif first_arg in known_commands:
+        pass
+    # Otherwise, insert 'search' - could be a query or a search flag like -n
+    else:
+        sys.argv.insert(1, "search")
     
     app()
 

@@ -81,7 +81,7 @@ class TestChainOperations:
         can_delete, warnings = ops.delete_chain("c1")
         
         assert can_delete is False, "Should block deletion when chain is the only one in a route group"
-        assert any("only backend" in w for w in warnings)
+        assert any("last ENABLED backend" in w for w in warnings)
 
     def test_safe_deletion_siblings_disabled(self):
         """

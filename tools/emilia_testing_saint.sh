@@ -233,6 +233,10 @@ main() {
                 mode="report"
                 shift
                 ;;
+            --tmux)
+                mode="tmux"
+                shift
+                ;;
             *)
                 echo "Unknown option: $1"
                 exit 1
@@ -243,6 +247,35 @@ main() {
     if [[ "$mode" == "report" ]]; then
         echo "Report-only mode - checking existing reports..."
         generate_summary
+        exit 0
+    fi
+    
+    if [[ "$mode" == "tmux" ]]; then
+        echo -e "${CYAN}TMUX Mode: Spawning all demons in parallel...${NC}"
+        local session_name="emilia_demons_$(date +%H%M%S)"
+        
+        # Create new tmux session with first demon
+        local first_demon=""
+        local first_script=""
+        for demon_key in "${!DEMONS[@]}"; do
+            first_demon="$demon_key"
+            first_script="$SCRIPT_DIR/${DEMONS[$demon_key]}"
+            break
+        done
+        
+        tmux new-session -d -s "$session_name" -n "$first_demon" "bash -c '$first_script; echo \"=== $first_demon COMPLETE ===\"; read'"
+        
+        # Add remaining demons as new windows
+        for demon_key in "${!DEMONS[@]}"; do
+            [[ "$demon_key" == "$first_demon" ]] && continue
+            local demon_script="$SCRIPT_DIR/${DEMONS[$demon_key]}"
+            tmux new-window -t "$session_name" -n "$demon_key" "bash -c '$demon_script; echo \"=== $demon_key COMPLETE ===\"; read'"
+        done
+        
+        echo -e "${GREEN}✓ Spawned ${#DEMONS[@]} demons in tmux session: $session_name${NC}"
+        echo ""
+        echo "Attach with:  tmux attach -t $session_name"
+        echo "Kill with:    tmux kill-session -t $session_name"
         exit 0
     fi
     

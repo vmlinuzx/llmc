@@ -4,6 +4,7 @@ High-level chain CRUD operations for the config TUI.
 Provides safe duplicate, delete, and reference tracking operations.
 """
 
+import copy
 from typing import Any
 
 
@@ -38,7 +39,7 @@ class ChainOperations:
             raise ValueError(f"Chain '{new_name}' already exists")
         
         # Create deep copy
-        new_chain = dict(source_chain)
+        new_chain = copy.deepcopy(source_chain)
         new_chain["name"] = new_name
         
         return new_chain
@@ -82,11 +83,15 @@ class ChainOperations:
             if target == chain_group
         ]
         
-        if referencing_routes and len(siblings) == 0:
-            # This is the ONLY chain in a route - cannot delete
+        # Check for enabled siblings to ensure route viability
+        enabled_siblings = [s for s in siblings if s.get("enabled", True)]
+        
+        if referencing_routes and len(enabled_siblings) == 0:
+            # This is the ONLY enabled chain in a route - cannot delete
             return False, [
-                f"Cannot delete: '{chain_name}' is the only backend for route(s): "
-                f"{', '.join(referencing_routes)}"
+                f"Cannot delete: '{chain_name}' is the last ENABLED backend for route(s): "
+                f"{', '.join(referencing_routes)}",
+                f"Remaining siblings: {len(siblings)} (all disabled)"
             ]
         
         # Safe to delete, but add warnings
@@ -96,7 +101,7 @@ class ChainOperations:
                 f"{', '.join(referencing_routes)}"
             )
             warnings.append(
-                f"   After deletion, {len(siblings)} backend(s) will remain"
+                f"   After deletion, {len(enabled_siblings)} enabled backend(s) will remain"
             )
         
         if not referencing_routes:

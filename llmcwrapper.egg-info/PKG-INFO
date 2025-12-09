@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: llmcwrapper
-Version: 0.6.0
+Version: 0.6.2
 Summary: LLM cost compression through intelligent RAG and multi-tier routing
 Author: LLMC Core
 Requires-Python: >=3.9
@@ -13,6 +13,7 @@ Requires-Dist: rich>=13.0.0
 Requires-Dist: tomli-w>=1.0.0
 Requires-Dist: textual>=0.41.0
 Requires-Dist: tomlkit>=0.12.0
+Requires-Dist: simpleeval>=1.0.0
 Provides-Extra: rag
 Requires-Dist: setuptools>=68.0.0; extra == "rag"
 Requires-Dist: tree_sitter==0.20.1; extra == "rag"

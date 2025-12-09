@@ -59,10 +59,11 @@ class OllamaBackend:
         
         timeout = spec.timeout_seconds or 120
         base_url = spec.url or "http://localhost:11434"
+        connect_timeout = (spec.options or {}).get("connect_timeout", 10.0)
         
         client = httpx.Client(
             base_url=base_url,
-            timeout=httpx.Timeout(timeout, connect=10.0),
+            timeout=httpx.Timeout(timeout, connect=connect_timeout),
         )
         
         return cls(spec=spec, client=client)
@@ -96,11 +97,17 @@ class OllamaBackend:
         Raises:
             BackendError: On timeout, HTTP error, or other failure
         """
+        # Build options - support keep_alive from config or default to immediate unload
+        options = dict(self.spec.options or {})
+        if "keep_alive" not in options:
+            options["keep_alive"] = "0"  # Unload model immediately after generation
+        
         payload = {
             "model": self.spec.model,
             "prompt": prompt,
             "stream": False,
-            "options": self.spec.options or {},
+            "options": options,
+            "keep_alive": options.pop("keep_alive"),  # keep_alive is top-level, not in options
         }
         
         try:
@@ -123,17 +130,33 @@ class OllamaBackend:
                 failure_type="backend_error",
             ) from e
         
-        # Parse response
+        # Parse response - Qwen3 uses "thinking" field for chain-of-thought
+        # Combine both fields to handle models that split content
         raw_text = data.get("response", "")
+        thinking_text = data.get("thinking", "")
+        
+        # If response is empty but thinking has content, use thinking
+        # This handles Qwen3's "thinking" mode where response is often empty
+        if not raw_text.strip() and thinking_text.strip():
+            raw_text = thinking_text
+        
         result = self._parse_enrichment(raw_text, item)
+        
+        # Calculate tokens per second
+        eval_count = data.get("eval_count", 0)
+        eval_duration_ns = data.get("eval_duration", 0)
+        tokens_per_sec = 0.0
+        if eval_duration_ns > 0 and eval_count > 0:
+            tokens_per_sec = eval_count / (eval_duration_ns / 1e9)
         
         meta = {
             "model": data.get("model"),
             "host": self.spec.url,
-            "eval_count": data.get("eval_count"),
-            "eval_duration": data.get("eval_duration"),
+            "eval_count": eval_count,
+            "eval_duration": eval_duration_ns,
             "prompt_eval_count": data.get("prompt_eval_count"),
             "total_duration": data.get("total_duration"),
+            "tokens_per_second": round(tokens_per_sec, 1),
         }
         
         return result, meta

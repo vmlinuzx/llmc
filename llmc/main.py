@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """LLMC Unified CLI - Main entry point.
 
-Reorganized into logical command groups:
-- Core: init, config, tui, monitor
+Command groups:
+- repo: Repository management (init, register, bootstrap, validate)
 - service: Daemon management
 - analytics: Search, stats, benchmark, graph navigation
 - debug: Troubleshooting and diagnostic commands
 - docs: LLMC documentation
-- usertest: RUTA testing
+
+Core commands: config, tui, monitor
 """
 
 
@@ -15,7 +16,6 @@ import typer
 
 from llmc.commands import config as config_commands, service as service_commands
 from llmc.commands import repo as repo_commands
-from llmc.commands.init import init as init_command
 from llmc.commands.rag import (
     benchmark,
     doctor,
@@ -39,14 +39,13 @@ from llmc.core import LLMC_VERSION, find_repo_root, load_config
 app = typer.Typer(
     name="llmc",
     help="LLMC: LLM Cost Compression & RAG Tooling",
-    add_completion=True,
+    add_completion=False,  # Disable --install-completion/--show-completion clutter
     no_args_is_help=True,
 )
 
 # ============================================================================
 # CORE COMMANDS (Top-level essentials)
 # ============================================================================
-app.command(name="init")(init_command)
 app.command(name="config")(config_commands.main)
 app.command(name="tui")(tui)
 
@@ -215,12 +214,8 @@ def docs_userguide():
 app.add_typer(docs_app, name="docs")
 
 
-# ============================================================================
-# USERTEST GROUP - RUTA testing
-# ============================================================================
-from llmc.commands import usertest as usertest_commands
-
-app.add_typer(usertest_commands.app, name="usertest")
+# NOTE: RUTA (usertest) is developer tooling for the ruthless testing army.
+# Not exposed in end-user CLI. Run directly: python -m llmc.commands.usertest
 
 
 # ============================================================================

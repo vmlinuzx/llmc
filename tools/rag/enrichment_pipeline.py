@@ -540,10 +540,14 @@ class EnrichmentPipeline:
         attempt_count = len(attempts)
         attempts_note = f" [{attempt_count} attempt{'s' if attempt_count != 1 else ''}]" if attempt_count > 1 else ""
         
+        # Build T/s note (tokens per second)
+        tps = meta.get("tokens_per_second", 0)
+        tps_note = f" {tps:.1f} T/s" if tps and tps > 0 else ""
+        
         # Print detailed log line (matching old format)
         print(
             f"✓ Enriched span {span_number}: {file_path}:{start_line}-{end_line} "
-            f"({duration:.2f}s){model_note}{config_note}{attempts_note}",
+            f"({duration:.2f}s){tps_note}{model_note}{config_note}{attempts_note}",
             flush=True,
         )
     

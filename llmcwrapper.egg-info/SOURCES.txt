@@ -26,6 +26,7 @@ llmc_mcp/context.py
 llmc_mcp/daemon.py
 llmc_mcp/db_guard.py
 llmc_mcp/docgen_guard.py
+llmc_mcp/isolation.py
 llmc_mcp/locks.py
 llmc_mcp/maasl.py
 llmc_mcp/merge_meta.py

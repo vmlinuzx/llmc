@@ -1325,8 +1325,10 @@ def cmd_disable(args, state: ServiceState, tracker: FailureTracker) -> int:
 
 def cmd_daemon_loop(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Internal command for systemd to run the daemon loop."""
+    # Prefer interval from state file (set via `interval` command), fall back to args
+    interval = state.state.get("interval", args.interval)
     service = RAGService(state, tracker)
-    service.run_loop(args.interval)
+    service.run_loop(interval)
     return 0
 
 

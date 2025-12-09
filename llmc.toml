@@ -10,11 +10,11 @@ default_profile = "docs"
 
 [embeddings.profiles.docs]
 provider = "ollama"
-model = "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M"
+model = "nomic-embed-text"
 dimension = 768
 
 [embeddings.profiles.docs.ollama]
-api_base = "http://192.168.5.20:11434"
+api_base = "http://localhost:11434"
 timeout = 120
 
 [embeddings.profiles.code]
@@ -23,7 +23,7 @@ model = "nomic-embed-text"
 dimension = 768
 
 [embeddings.profiles.code.ollama]
-api_base = "http://192.168.5.20:11434"
+api_base = "http://localhost:11434"
 timeout = 60
 
 [embeddings.profiles.cheap]
@@ -32,7 +32,7 @@ model = "all-minilm"
 dimension = 384
 
 [embeddings.profiles.cheap.ollama]
-api_base = "http://192.168.5.20:11434"
+api_base = "http://localhost:11434"
 timeout = 60
 
 [embeddings.profiles.test]
@@ -41,13 +41,13 @@ dimension = 64
 
 [embeddings.profiles.code_jina]
 provider = "ollama"
-model = "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M"
+model = "nomic-embed-text"
 dimension = 768
 cost_class = "low"
 capabilities = ["code"]
 
 [embeddings.profiles.code_jina.ollama]
-api_base = "http://192.168.5.20:11434"
+api_base = "http://localhost:11434"
 timeout = 120
 
 [embeddings.routes.code]
@@ -99,9 +99,9 @@ gpu_min_free_mb = 1536
 pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
 
 # Idle Loop Throttling - reduce CPU usage when no work to do
-nice_level = 10                    # Process priority (0-19, higher = lower priority)
-idle_backoff_max = 10              # Max multiplier when idle (10x = 30min at default interval)
-idle_backoff_base = 2              # Exponential base (2^n)
+nice_level = 19                    # Process priority (0-19, higher = lower priority) - MAXED OUT
+idle_backoff_max = 2               # Max multiplier when idle (2x = 60s with 30s interval)
+idle_backoff_base = 1.5            # Gradual ramp: 30s → 45s → 60s cap
 
 
 # ==============================================================================
@@ -133,7 +133,6 @@ timeout_seconds = 60
 # 
 # 
 
-
 [enrichment]
 #enabled = true
 default_chain = "code_enrichment_models" # The default chain for enrichment when routing doesn't match. Must match a [[enrichment.chain]] entry's "chain" value.
@@ -142,6 +141,31 @@ est_tokens_per_span = 350
 enforce_latin1_enrichment = true
 max_failures_per_span = 4 #Stop retrying after this many failures.  Especially important if you are using a paid provider.
 enable_routing = true  # Enable content-type based routing
+
+# =============================================================================
+# OLLAMA OPTIONS REFERENCE
+# =============================================================================
+# These options can be set in [enrichment.chain.options] for any Ollama backend.
+#
+# MEMORY/PERFORMANCE:
+#   keep_alive = "0"      # Unload model immediately after use (default, saves memory)
+#   keep_alive = "5m"     # Keep model loaded for 5 minutes (faster if reused)
+#   keep_alive = "24h"    # Keep model loaded for 24 hours (use with caution!)
+#   num_ctx = 8192        # Context window size (higher = more memory, longer context)
+#   num_batch = 512       # Batch size for prompt processing
+#   num_gpu = 99          # Number of layers to offload to GPU (99 = all)
+#
+# GENERATION:
+#   temperature = 0.2     # Creativity (0.0 = deterministic, 1.0 = creative)
+#   top_p = 0.9           # Nucleus sampling threshold
+#   top_k = 40            # Top-k sampling
+#   repeat_penalty = 1.1  # Penalty for repeating tokens
+#
+# NETWORK (not in options, set at chain level):
+#   timeout_seconds = 120 # Request timeout (increase for slow inference)
+#   url = "http://localhost:11434"  # Ollama server URL
+#   connect_timeout = 10  # Connection timeout in seconds (set in options)
+#
 
 # ==============================================================================
 # Content-Type Routing - Route different content types to different chains
@@ -158,31 +182,69 @@ code = "code_enrichment_models"        # Route code to your local models
 #chain = "code_enrichment_models"
 #provider = "ollama"
 #model = "hf.co/bartowski/Ministral-8B-Instruct-2410-GGUF:F16"
-#url = "http://192.168.5.20:11434"
+#url = "http://localhost:11434"
 #routing_tier = "8b"
 #timeout_seconds = 120
 #enabled = true
 #options = { num_ctx = 8192, temperature = 0.2 }
 
 
+# OLD: Qwen2.5 7b - replaced by Qwen3 4b (better quality, similar speed)
+# [[enrichment.chain]]
+# name = "qwen2.5 7b instruct"
+# chain = "code_enrichment_models"
+# provider = "ollama"
+# model = "qwen2.5:7b-instruct"
+# url = "http://localhost:11434"
+# routing_tier = "7b"
+# timeout_seconds = 120
+# enabled = true
+# options = { num_ctx = 8192, temperature = 0.2 }
+
+# DESKTOP-NBHNN60 (Tailscale) - PRIMARY enrichment server (offloads from laptop!)
 [[enrichment.chain]]
-name = "qwen2.5 7b instruct"
+name = "desktop qwen3 4b"
 chain = "code_enrichment_models"
 provider = "ollama"
-model = "qwen2.5:7b-instruct"
-url = "http://192.168.5.20:11434"
-routing_tier = "7b"
+model = "qwen3:4b-instruct"
+url = "http://100.64.0.6:11434"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
+
+# LOCAL FALLBACK: Qwen3 4b Instruct - instruction-tuned for structured output!
+[[enrichment.chain]]
+name = "qwen3 4b instruct"
+chain = "code_enrichment_models"
+provider = "ollama"
+model = "qwen3:4b-instruct"
+url = "http://localhost:11434"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+
+# NEW: Qwen3 8b - fallback if 4b struggles
+[[enrichment.chain]]
+name = "qwen3 8b"
+chain = "code_enrichment_models"
+provider = "ollama"
+model = "qwen3:8b"
+url = "http://localhost:11434"
+routing_tier = "8b"
 timeout_seconds = 120
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2 }
 
-# Final fallback - 14B Qwen for hard cases
+# Final fallback - 14B Qwen2.5 for hard cases (known good)
 [[enrichment.chain]]
 name = "qwen2.5 14b instruct"
 chain = "code_enrichment_models"
 provider = "ollama"
 model = "qwen2.5:14b-instruct-q4_K_M"
-url = "http://192.168.5.20:11434"
+url = "http://localhost:11434"
 routing_tier = "14b"
 timeout_seconds = 180
 enabled = true
@@ -211,25 +273,62 @@ options = { num_ctx = 12288, temperature = 0.2 }
 # 
 
 
-# Fallback 1: Local Qwen 7B (if Minimax fails)
+# OLD: Qwen2.5 7b - replaced by Qwen3
+# [[enrichment.chain]]
+# name = "Qwen 2.5 7b Instruct"
+# chain = "document_routes"
+# provider = "ollama"
+# model = "qwen2.5:7b-instruct"
+# url = "http://localhost:11434"
+# routing_tier = "7b"
+# timeout_seconds = 120
+# enabled = true
+# options = { num_ctx = 8192, temperature = 0.2 }
+
+# DESKTOP-NBHNN60 (Tailscale) - PRIMARY for docs
 [[enrichment.chain]]
-name = "Qwen 2.5 7b Instruct"
+name = "desktop qwen3 4b docs"
 chain = "document_routes"
 provider = "ollama"
-model = "qwen2.5:7b-instruct"
-url = "http://192.168.5.20:11434"
-routing_tier = "7b"
+model = "qwen3:4b-instruct"
+url = "http://100.64.0.6:11434"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
+
+# LOCAL FALLBACK: Qwen3 4b Instruct for docs (instruction-tuned)
+[[enrichment.chain]]
+name = "qwen3 4b instruct"
+chain = "document_routes"
+provider = "ollama"
+model = "qwen3:4b-instruct"
+url = "http://localhost:11434"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { num_ctx = 8192, temperature = 0.2 }
+
+
+# NEW: Qwen3 8b fallback
+[[enrichment.chain]]
+name = "qwen3 8b"
+chain = "document_routes"
+provider = "ollama"
+model = "qwen3:8b"
+url = "http://localhost:11434"
+routing_tier = "8b"
 timeout_seconds = 120
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2 }
 
-# Fallback 2: Local Qwen 14B (if 7B also fails)
+# Final fallback: Local Qwen2.5 14B (known good)
 [[enrichment.chain]]
 name = "qwen2.5 14b Instruct"
 chain = "document_routes"
 provider = "ollama"
 model = "qwen2.5:14b-instruct-q4_K_M"
-url = "http://192.168.5.20:11434"
+url = "http://localhost:11434"
 routing_tier = "14b"
 timeout_seconds = 180
 enabled = true

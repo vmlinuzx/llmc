@@ -2,7 +2,7 @@ from pathlib import Path
 import tomllib
 from typing import Any
 
-LLMC_VERSION = "0.6.0"  # Sleep Deprivation release - Dec 2025
+LLMC_VERSION = "0.6.2"  # User Friendliness release - Dec 2025
 
 
 def find_repo_root(start_path: Path = Path(".")) -> Path:

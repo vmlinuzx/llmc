@@ -2,6 +2,102 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.3] - "Shitbox Army" - 2025-12-09
+
+### Purple Flavor: **Distributed Local Compute**
+
+Why pay for cloud when you have old PCs lying around?
+
+### Added
+
+- **Distributed Enrichment Support:**
+  - Configure multiple Ollama servers in `llmc.toml` enrichment chains
+  - Primary server (e.g., desktop) with localhost fallback
+  - `connect_timeout` option for fast failover
+
+- **T/s (Tokens Per Second) Logging:**
+  - Enrichment logs now show inference speed: `✓ Enriched span 5: ... (3.98s) 73.3 T/s`
+  - Easy to spot GPU vs CPU performance
+
+- **Emilia --tmux Mode:**
+  - `./tools/emilia_testing_saint.sh --tmux`
+  - Spawns all 11 testing demons in parallel tmux windows
+  - Much faster than sequential execution
+
+- **OpenCode Integration (Experimental):**
+  - Minimal `.opencode/INSTRUCTIONS.md` (~100 bytes)
+  - Disabled bloat tools (todoread, todowrite, patch, webfetch)
+
+### Fixed
+
+- **Config Shallow Copy Bug:** `duplicate_chain` now uses `deepcopy`
+- **Unsafe Chain Deletion:** Checks for enabled siblings before allowing delete
+
+### Changed
+
+- **nice_level now defaults to 19:** Enrichment service runs at lowest CPU priority
+
+## [0.6.2] - "User Friendliness" - 2025-12-08
+
+### Purple Flavor: **User Friendliness**
+
+CLI commands should say what they do. "Bootstrap" is developer jargon - "register" is what users actually want.
+
+### Changed
+
+- **`llmc init` → `llmc repo init`:**
+  - Moved init under repo group for better organization
+  - Quick init: just creates `.llmc/` workspace without indexing or daemon registration
+
+- **`llmc repo add` → `llmc repo register`:**
+  - Renamed for clarity - you're registering a repo with LLMC
+  - Same functionality: creates `.llmc/`, `llmc.toml`, indexes files, registers with daemon
+  - User-facing messages updated to use "register" terminology
+
+- **`mcgrep init` messaging updated:**
+  - Now says "Registering repository with LLMC" instead of "Initializing mcgrep"
+  - Shows equivalent command: `llmc repo register .`
+
+- **Removed `--install-completion` / `--show-completion` clutter:**
+  - These Typer auto-completion options cluttered help output
+  - Disabled for cleaner CLI experience
+
+### Added
+
+- **`llmc repo bootstrap` command:**
+  - New command for fixing broken repo configs without re-registering with daemon
+  - Use when: config is corrupted, need to regenerate workspace files, or database needs reinit
+  - `--force` flag to overwrite existing `llmc.toml` and `LLMCAGENTS.md`
+  - `--no-index` flag to skip re-indexing
+  - Warns if repo isn't registered with daemon after bootstrap
+
+- **Repo group now has a description:**
+  - `llmc repo --help` shows "Repository management: register, bootstrap, validate, and manage LLMC repos."
+
+- **Updated default config template:**
+  - Bootstrap now uses Qwen3 models (4b → 8b → 14b fallback chain)
+  - Matches the current best-performing local model configuration
+
+### Removed
+
+- **`llmc usertest` hidden from end-user CLI:**
+  - RUTA (Ruthless User Testing Agent) is developer tooling, not for end users
+  - Still available for devs: `python -m llmc.commands.usertest`
+
+### CLI Summary
+
+| Command | Purpose |
+|---------|---------|
+| `llmc repo init` | Quick init: create `.llmc/` workspace only |
+| `llmc repo register <path>` | Full setup for NEW repos (creates everything + daemon tracking) |
+| `llmc repo bootstrap <path>` | Fix existing repos (regenerates config, no daemon re-registration) |
+| `llmc repo rm <path>` | Unregister from daemon (keeps artifacts) |
+| `llmc repo clean <path>` | Nuclear: delete all LLMC artifacts |
+| `llmc repo list` | Show all registered repos and status |
+| `llmc repo validate <path>` | Check config validity |
+
+---
+
 ## [0.6.1] - "Model Compressor" - 2025-12-07
 
 ### Purple Flavor: **Model Compressor**

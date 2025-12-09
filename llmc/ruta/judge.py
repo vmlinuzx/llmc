@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from simpleeval import simple_eval, EvalWithCompoundTypes
+from simpleeval import EvalWithCompoundTypes
 
 from llmc.ruta.types import Scenario, TraceEvent
 

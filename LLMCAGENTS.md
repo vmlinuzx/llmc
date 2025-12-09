@@ -17,13 +17,13 @@ Before doing ANY code work in a repo, run these two commands:
 
 ```bash
 # 1. Check if repo is set up for LLMC
-llmc repo list
+llmc-cli repo list
 
 # 2. Search for relevant code (your first query)
-cd /path/to/repo && rag search "your topic"
+cd /path/to/repo && llmc-cli analytics search "your topic"
 ```
 
-**If the repo isn't listed:** Run `llmc repo add /path/to/repo` to bootstrap it.
+**If the repo isn't listed:** Run `llmc-cli repo register /path/to/repo` to bootstrap it.
 
 ---
 
@@ -32,29 +32,26 @@ cd /path/to/repo && rag search "your topic"
 ### Semantic Search
 ```bash
 # Search enriched code summaries (fast, uses local embeddings)
-rag search "authentication flow"
-rag search "database connection" --limit 10
-
-# Full-text search in code content
-rag grep "def process_"
+llmc-cli analytics search "authentication flow"
+llmc-cli analytics search "database connection" --limit 10
 ```
 
-### Get Context for a File
+### Repository Stats & Health
 ```bash
-# See what's in a specific file (summaries + structure)
-rag query --file src/auth/handler.py
+# Quick stats for current repo
+llmc-cli analytics stats
 
-# Get related files to understand context
-rag related src/auth/handler.py
+# Full repo status with enrichment progress
+llmc-cli repo list
 ```
 
-### Repository Health
+### Navigation Tools
 ```bash
-# Quick health check for current repo
-rag doctor
+# Find where a symbol is used (callers, importers)
+llmc-cli analytics where-used "function_name"
 
-# Detailed stats
-rag stats
+# Show symbol lineage (parents, children, dependencies)
+llmc-cli analytics lineage "ClassName"
 ```
 
 ---
@@ -63,48 +60,35 @@ rag stats
 
 **DO NOT** dump all commands at once. Follow these rules:
 
-1. **Start with `rag search`** for any new topic
-2. **Only use `rag query --file`** when you need deeper context on a specific file
-3. **Use `rag grep`** for exact string matches (function names, imports, etc.)
-4. **Check `rag doctor`** if searches return empty or stale results
+1. **Start with `analytics search`** for any new topic
+2. **Only use `where-used`** when you need to trace callers
+3. **Use grep** for exact string matches (function names, imports, etc.)
+4. **Check `repo list`** if searches return empty or stale results
 
 ### When to Use Which Command
 
 | Goal | Command |
 |------|---------|
-| "Find code related to X" | `rag search "X"` |
-| "Find exact function name" | `rag grep "function_name"` |
-| "Understand this file" | `rag query --file path/to/file.py` |
-| "What files relate to this?" | `rag related path/to/file.py` |
-| "Is the index healthy?" | `rag doctor` |
-| "How big is the index?" | `rag stats` |
+| "Find code related to X" | `llmc-cli analytics search "X"` |
+| "Find exact function name" | `grep -r "function_name" .` |
+| "Where is this called from?" | `llmc-cli analytics where-used "func"` |
+| "What does this depend on?" | `llmc-cli analytics lineage "Class"` |
+| "How big is the index?" | `llmc-cli analytics stats` |
+| "Is enrichment running?" | `llmc-cli repo list` |
 
 ---
 
-## 🔧 Advanced Commands (Use Sparingly)
+## 🔧 Service Management
 
-### Force Re-index
-```bash
-# Re-index a file after major changes
-rag index --force
-
-# Re-enrich (regenerate summaries)
-rag enrich --force
-```
-
-### Service Management
 ```bash
 # Check daemon status (handles background enrichment)
-llmc service status
+llmc-cli service status
 
 # View enrichment logs
-llmc service logs -f
-```
+llmc-cli service logs -f
 
-### MCP Mode (Optional)
-If the repo has MCP configured, you can use the bootstrap tool:
-```bash
-llmc mcp bootstrap  # Discover all available tools
+# Restart service (triggers re-enrichment)
+llmc-cli service restart
 ```
 
 ---
@@ -113,20 +97,20 @@ llmc mcp bootstrap  # Discover all available tools
 
 1. **Never query the entire codebase** - Always filter by topic or file
 2. **Limit search results** - Use `--limit 5` unless you need more
-3. **Prefer summaries over raw code** - `rag search` returns enriched summaries
+3. **Prefer summaries over raw code** - `analytics search` returns enriched summaries
 4. **Use progressive refinement** - Start broad, then narrow down
 
 ### Example Workflow
 
 ```bash
 # Step 1: Broad search
-rag search "user authentication"
+llmc-cli analytics search "user authentication"
 
-# Step 2: Found auth/handler.py looks relevant, get details
-rag query --file src/auth/handler.py
+# Step 2: Found auth/handler.py looks relevant, trace its usage
+llmc-cli analytics where-used "authenticate_user"
 
 # Step 3: Need exact import, use grep
-rag grep "from auth import"
+grep -r "from auth import" .
 ```
 
 ---
@@ -134,10 +118,10 @@ rag grep "from auth import"
 ## ❌ Anti-Patterns
 
 **DON'T:**
-- Run `rag search` with no query or very broad terms
+- Run `analytics search` with no query or very broad terms
 - Dump entire file contents when summaries suffice
-- Skip checking `rag doctor` when results seem wrong
-- Ignore the daemon (`llmc service status`) if enrichment seems stale
+- Skip checking `repo list` when results seem wrong
+- Ignore the daemon (`service status`) if enrichment seems stale
 
 **DO:**
 - Start with specific queries
@@ -151,20 +135,20 @@ rag grep "from auth import"
 
 ### "No results found"
 ```bash
-rag doctor  # Check index health
-llmc service status  # Is daemon running?
+llmc-cli analytics stats  # Check index health
+llmc-cli service status   # Is daemon running?
 ```
 
 ### "Results seem stale"
 ```bash
-llmc service restart  # Trigger re-enrichment
-rag doctor --verbose  # See pending work
+llmc-cli service restart  # Trigger re-enrichment
+llmc-cli repo list        # See pending work
 ```
 
 ### "Repo not recognized"
 ```bash
-llmc repo add .  # Bootstrap the repo
-llmc repo validate .  # Check config
+llmc-cli repo register .  # Bootstrap the repo
+llmc-cli repo validate .  # Check config
 ```
 
 ---
@@ -172,16 +156,17 @@ llmc repo validate .  # Check config
 ## 📍 Quick Reference
 
 ```
-rag search "query"          → Semantic search (start here!)
-rag grep "pattern"          → Exact text search
-rag query --file FILE       → File context
-rag related FILE            → Related files
-rag doctor                  → Health check
-rag stats                   → Index statistics
-llmc service status         → Daemon + repo health
-llmc repo add PATH          → Bootstrap new repo
+llmc-cli analytics search "query"     → Semantic search (start here!)
+llmc-cli analytics where-used "sym"   → Find callers/importers
+llmc-cli analytics lineage "sym"      → Show dependencies
+llmc-cli analytics stats              → Index statistics
+llmc-cli repo list                    → All repos + enrichment status
+llmc-cli repo register PATH           → Bootstrap new repo
+llmc-cli service status               → Daemon health
+llmc-cli service logs -f              → Watch enrichment logs
 ```
 
 ---
 
-*This file is auto-installed by `llmc repo add`. Version: 2025-12-06*
+*This file is auto-installed by `llmc repo register`. Version: 2025-12-08*
+

@@ -111,3 +111,4 @@ llmc_backups/
 llmc/.llmc/
 llmc/.venv_new/
 llmcwrapper/.llmc/
+opencode.json

@@ -2,10 +2,13 @@
 Repository management commands for LLMC.
 
 Commands:
-    llmc repo add <path>    - Full bootstrap: init + index + register
-    llmc repo rm <path>     - Unregister from daemon
-    llmc repo clean <path>  - Nuclear: delete all LLMC artifacts
-    llmc repo list          - Show status of all registered repos
+    llmc repo init              - Quick init: create .llmc/ workspace only
+    llmc repo register <path>   - Register repo with LLMC: init + index + daemon tracking
+    llmc repo bootstrap <path>  - Re-bootstrap: fix configs without re-registering
+    llmc repo rm <path>         - Unregister from daemon
+    llmc repo clean <path>      - Nuclear: delete all LLMC artifacts
+    llmc repo list              - Show status of all registered repos
+    llmc repo validate <path>   - Validate repo config
 """
 
 import json
@@ -20,7 +23,10 @@ from rich.table import Table
 
 from llmc.core import find_repo_root
 
-app = typer.Typer(no_args_is_help=True)
+app = typer.Typer(
+    help="Repository management: register, bootstrap, validate, and manage LLMC repos.",
+    no_args_is_help=True,
+)
 console = Console()
 
 # State file location - must match tools/rag/service.py
@@ -118,14 +124,104 @@ def _get_repo_stats(repo_path: Path) -> dict:
     return stats
 
 
-@app.command("add")
-def add(
-    path: str = typer.Argument(..., help="Path to repository to add"),
+@app.command("init")
+def init(
+    path: str = typer.Argument(".", help="Path to initialize (default: current directory)"),
+):
+    """
+    Quick init: create .llmc/ workspace and llmc.toml only.
+    
+    This is the lightest-weight setup - just creates the workspace structure
+    without indexing files or registering with the daemon.
+    
+    For full setup, use: llmc repo register <path>
+    
+    Examples:
+        llmc repo init           # Init current directory
+        llmc repo init /path     # Init specific path
+    """
+    import tomli_w
+    from tools.rag.database import Database
+    
+    repo_path = Path(path).resolve()
+    
+    if not repo_path.exists():
+        console.print(f"[red]❌ Path does not exist: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    if not repo_path.is_dir():
+        console.print(f"[red]❌ Path is not a directory: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    console.print(f"[bold]📁 Initializing LLMC workspace in: {repo_path.name}[/bold]")
+    
+    # 1. Create .llmc/ directory
+    llmc_dir = repo_path / ".llmc"
+    llmc_dir.mkdir(parents=True, exist_ok=True)
+    console.print(f"  ✅ Created .llmc/ directory")
+    
+    # 2. Create logs subdirectory
+    (llmc_dir / "logs").mkdir(exist_ok=True)
+    
+    # 3. Create llmc.toml if missing
+    config_path = repo_path / "llmc.toml"
+    if not config_path.exists():
+        default_config = {
+            "storage": {"index_path": ".rag/index_v2.db"},
+            "logging": {
+                "log_directory": ".llmc/logs",
+                "enable_rotation": True,
+                "max_file_size_mb": 10,
+            },
+            "indexing": {
+                "exclude_dirs": [
+                    ".git", ".llmc", ".venv", "__pycache__",
+                    "node_modules", "dist", "build", ".pytest_cache",
+                ]
+            },
+            "embeddings": {
+                "default_profile": "docs",
+                "profiles": {
+                    "docs": {
+                        "provider": "ollama",
+                        "model": "nomic-embed-text",
+                        "dimension": 768,
+                    }
+                },
+            },
+            "rag": {"enabled": True},
+        }
+        with open(config_path, "wb") as f:
+            tomli_w.dump(default_config, f)
+        console.print(f"  ✅ Created llmc.toml configuration")
+    else:
+        console.print(f"  ℹ️  llmc.toml already exists")
+    
+    # 4. Initialize database
+    rag_dir = repo_path / ".rag"
+    rag_dir.mkdir(parents=True, exist_ok=True)
+    db_path = rag_dir / "index_v2.db"
+    try:
+        db = Database(db_path)
+        db.close()
+        console.print(f"  ✅ Initialized database")
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Database init failed: {e}[/yellow]")
+    
+    console.print(f"\n[bold green]✨ Workspace initialized![/bold green]")
+    console.print(f"\nNext steps:")
+    console.print(f"  • Full setup with indexing: [cyan]llmc repo register {path}[/cyan]")
+    console.print(f"  • Start daemon:            [cyan]llmc service start[/cyan]")
+
+
+@app.command("register")
+def register(
+    path: str = typer.Argument(..., help="Path to repository to register"),
     skip_index: bool = typer.Option(False, "--no-index", help="Skip initial indexing"),
     skip_enrich: bool = typer.Option(False, "--no-enrich", help="Skip initial enrichment"),
 ):
     """
-    Add and bootstrap a repository for LLMC.
+    Register a repository with LLMC.
     
     This does everything needed to get a repo working:
     1. Creates .llmc/ directory and llmc.toml config
@@ -143,7 +239,7 @@ def add(
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
     
-    console.print(f"[bold]🚀 Bootstrapping LLMC for: {repo_path.name}[/bold]")
+    console.print(f"[bold]🚀 Registering {repo_path.name} with LLMC[/bold]")
     
     # Step 1: Create .llmc/ directory
     llmc_dir = repo_path / ".llmc"
@@ -224,26 +320,26 @@ def add(
                 },
                 "chain": [
                     {
-                        "name": "qwen2.5-7b",
+                        "name": "qwen3-4b-instruct",
                         "chain": "code_enrichment_models",
                         "provider": "ollama",
-                        "model": "qwen2.5:7b-instruct",
-                        "url": "http://192.168.5.20:11434",
-                        "routing_tier": "7b",
-                        "timeout_seconds": 120,
+                        "model": "qwen3:4b-instruct",
+                        "url": "http://localhost:11434",
+                        "routing_tier": "4b",
+                        "timeout_seconds": 90,
                         "enabled": True,
                         "options": {"num_ctx": 8192, "temperature": 0.2},
                     },
                     {
-                        "name": "qwen2.5-14b",
+                        "name": "qwen2.5-7b-instruct",
                         "chain": "code_enrichment_models",
                         "provider": "ollama",
-                        "model": "qwen2.5:14b-instruct-q4_K_M",
-                        "url": "http://192.168.5.20:11434",
-                        "routing_tier": "14b",
-                        "timeout_seconds": 180,
+                        "model": "qwen2.5:7b-instruct",
+                        "url": "http://localhost:11434",
+                        "routing_tier": "7b",
+                        "timeout_seconds": 120,
                         "enabled": True,
-                        "options": {"num_ctx": 12288, "temperature": 0.2},
+                        "options": {"num_ctx": 8192, "temperature": 0.2},
                     },
                 ],
             },
@@ -252,10 +348,10 @@ def add(
                 "profiles": {
                     "docs": {
                         "provider": "ollama",
-                        "model": "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M",
+                        "model": "nomic-embed-text",
                         "dimension": 768,
                         "ollama": {
-                            "api_base": "http://192.168.5.20:11434",
+                            "api_base": "http://localhost:11434",
                             "timeout": 120,
                         },
                     }
@@ -334,6 +430,232 @@ def add(
         console.print(f"\n💡 Start enrichment with: llmc service start")
 
 
+@app.command("bootstrap")
+def bootstrap(
+    path: str = typer.Argument(..., help="Path to repository to bootstrap"),
+    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
+    skip_index: bool = typer.Option(False, "--no-index", help="Skip re-indexing"),
+):
+    """
+    Re-bootstrap an existing repository.
+    
+    Use this to fix broken configs or regenerate LLMC workspace files.
+    Unlike 'register', this does NOT add the repo to daemon tracking.
+    
+    Steps performed:
+    1. Recreates .llmc/ directory structure
+    2. Regenerates llmc.toml (if --force or missing)
+    3. Reinitializes the database
+    4. Re-indexes files (unless --no-index)
+    
+    Examples:
+        llmc repo bootstrap .              # Fix current repo
+        llmc repo bootstrap . --force      # Force regenerate config
+        llmc repo bootstrap /path/to/repo  # Fix another repo
+    """
+    repo_path = Path(path).resolve()
+    
+    if not repo_path.exists():
+        console.print(f"[red]❌ Path does not exist: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    if not repo_path.is_dir():
+        console.print(f"[red]❌ Path is not a directory: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    console.print(f"[bold]🔧 Re-bootstrapping {repo_path.name}[/bold]")
+    
+    # Step 1: Ensure .llmc/ directory exists
+    llmc_dir = repo_path / ".llmc"
+    llmc_dir.mkdir(parents=True, exist_ok=True)
+    console.print(f"  ✅ Ensured .llmc/ directory")
+    
+    # Create logs subdirectory
+    (llmc_dir / "logs").mkdir(exist_ok=True)
+    
+    # Step 2: Copy LLMCAGENTS.md
+    agents_source = None
+    candidates = [
+        Path(__file__).parent.parent.parent / "LLMCAGENTS.md",
+        Path.home() / ".llmc" / "LLMCAGENTS.md",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            agents_source = candidate
+            break
+    
+    agents_dest = llmc_dir / "LLMCAGENTS.md"
+    if agents_source and (force or not agents_dest.exists()):
+        try:
+            shutil.copy(agents_source, agents_dest)
+            console.print(f"  ✅ {'Replaced' if force else 'Installed'} LLMCAGENTS.md")
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Could not copy LLMCAGENTS.md: {e}[/yellow]")
+    elif agents_dest.exists():
+        console.print(f"  ℹ️  LLMCAGENTS.md already exists (use --force to replace)")
+    
+    # Step 3: Update .gitignore
+    gitignore_path = repo_path / ".gitignore"
+    gitignore_entries = [".llmc/", ".rag/"]
+    try:
+        existing = gitignore_path.read_text() if gitignore_path.exists() else ""
+        missing = [e for e in gitignore_entries if e not in existing]
+        if missing:
+            with open(gitignore_path, "a") as f:
+                if existing and not existing.endswith("\n"):
+                    f.write("\n")
+                f.write("# LLMC artifacts\n")
+                for entry in missing:
+                    f.write(f"{entry}\n")
+            console.print(f"  ✅ Added {', '.join(missing)} to .gitignore")
+        else:
+            console.print(f"  ℹ️  .gitignore already has LLMC entries")
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Could not update .gitignore: {e}[/yellow]")
+    
+    # Step 4: Create/replace llmc.toml
+    config_path = repo_path / "llmc.toml"
+    if force or not config_path.exists():
+        default_config = {
+            "storage": {"index_path": ".rag/index_v2.db"},
+            "logging": {
+                "log_directory": ".llmc/logs",
+                "enable_rotation": True,
+                "max_file_size_mb": 10,
+            },
+            "indexing": {
+                "exclude_dirs": [
+                    ".git", ".llmc", ".venv", "__pycache__",
+                    "node_modules", "dist", "build", ".pytest_cache",
+                ]
+            },
+            "enrichment": {
+                "default_chain": "code_enrichment_models",
+                "batch_size": 50,
+                "est_tokens_per_span": 350,
+                "enforce_latin1_enrichment": True,
+                "max_failures_per_span": 4,
+                "enable_routing": True,
+                "routes": {
+                    "docs": "code_enrichment_models",
+                    "code": "code_enrichment_models",
+                },
+                "chain": [
+                    {
+                        "name": "qwen3-4b",
+                        "chain": "code_enrichment_models",
+                        "provider": "ollama",
+                        "model": "qwen3:4b-instruct",
+                        "url": "http://localhost:11434",
+                        "routing_tier": "4b",
+                        "timeout_seconds": 90,
+                        "enabled": True,
+                        "options": {"num_ctx": 8192, "temperature": 0.2},
+                    },
+                    {
+                        "name": "qwen3-8b",
+                        "chain": "code_enrichment_models",
+                        "provider": "ollama",
+                        "model": "qwen3:8b",
+                        "url": "http://localhost:11434",
+                        "routing_tier": "8b",
+                        "timeout_seconds": 120,
+                        "enabled": True,
+                        "options": {"num_ctx": 8192, "temperature": 0.2},
+                    },
+                    {
+                        "name": "qwen2.5-14b",
+                        "chain": "code_enrichment_models",
+                        "provider": "ollama",
+                        "model": "qwen2.5:14b-instruct-q4_K_M",
+                        "url": "http://localhost:11434",
+                        "routing_tier": "14b",
+                        "timeout_seconds": 180,
+                        "enabled": True,
+                        "options": {"num_ctx": 12288, "temperature": 0.2},
+                    },
+                ],
+            },
+            "embeddings": {
+                "default_profile": "docs",
+                "profiles": {
+                    "docs": {
+                        "provider": "ollama",
+                        "model": "hf.co/second-state/jina-embeddings-v2-base-code-GGUF:Q5_K_M",
+                        "dimension": 768,
+                        "ollama": {
+                            "api_base": "http://localhost:11434",
+                            "timeout": 120,
+                        },
+                    }
+                },
+                "routes": {
+                    "docs": {"profile": "docs", "index": "embeddings"},
+                    "code": {"profile": "docs", "index": "embeddings"},
+                },
+            },
+            "routing": {
+                "slice_type_to_route": {
+                    "code": "code",
+                    "docs": "docs",
+                    "config": "docs",
+                    "data": "docs",
+                    "other": "docs",
+                },
+            },
+            "rag": {"enabled": True},
+        }
+        import tomli_w
+        with open(config_path, "wb") as f:
+            tomli_w.dump(default_config, f)
+        console.print(f"  ✅ {'Replaced' if force and config_path.exists() else 'Created'} llmc.toml")
+    else:
+        console.print(f"  ℹ️  llmc.toml already exists (use --force to replace)")
+    
+    # Step 5: Initialize/reinit database
+    rag_dir = repo_path / ".rag"
+    rag_dir.mkdir(parents=True, exist_ok=True)
+    db_path = rag_dir / "index_v2.db"
+    try:
+        from tools.rag.database import Database
+        db = Database(db_path)
+        db.close()
+        console.print(f"  ✅ Initialized database")
+    except Exception as e:
+        console.print(f"  [yellow]⚠️  Database init failed: {e}[/yellow]")
+    
+    # Step 6: Re-index if requested
+    if not skip_index:
+        console.print(f"  📂 Re-indexing files...")
+        try:
+            import os as _os
+            from tools.rag.indexer import index_repo
+            
+            orig_cwd = Path.cwd()
+            _os.chdir(repo_path)
+            
+            try:
+                result = index_repo()
+                console.print(f"  ✅ Indexed {result.files} files, {result.spans} spans")
+            finally:
+                _os.chdir(orig_cwd)
+        except Exception as e:
+            console.print(f"  [yellow]⚠️  Indexing failed: {e}[/yellow]")
+    else:
+        console.print(f"  ⏭️  Skipped indexing (--no-index)")
+    
+    # Show summary
+    stats = _get_repo_stats(repo_path)
+    console.print(f"\n[bold green]🔧 {repo_path.name} re-bootstrapped![/bold green]")
+    console.print(f"   Spans: {stats['spans']}")
+    console.print(f"   Enriched: {stats['enriched']}")
+    
+    # Check if registered
+    state = _get_state()
+    if str(repo_path) not in state["repos"]:
+        console.print(f"\n[yellow]💡 Repo not registered with daemon. Run: llmc repo register {path}[/yellow]")
+
+
 @app.command("rm")
 def rm(
     path: str = typer.Argument(..., help="Path to repository to unregister"),
@@ -366,7 +688,8 @@ def clean(
     Completely remove LLMC from a repository.
     
     This deletes:
-    - .llmc/ directory (database, logs, cache)
+    - .llmc/ directory (logs, cache)
+    - .rag/ directory (database, embeddings, graph)
     - llmc.toml configuration
     - Removes from daemon tracking
     """
@@ -377,9 +700,10 @@ def clean(
         raise typer.Exit(code=1)
     
     llmc_dir = repo_path / ".llmc"
+    rag_dir = repo_path / ".rag"
     config_file = repo_path / "llmc.toml"
     
-    if not llmc_dir.exists() and not config_file.exists():
+    if not llmc_dir.exists() and not rag_dir.exists() and not config_file.exists():
         console.print(f"[yellow]ℹ️  No LLMC artifacts found in: {repo_path}[/yellow]")
         return
     
@@ -388,6 +712,8 @@ def clean(
         console.print(f"[bold red]⚠️  This will permanently delete:[/bold red]")
         if llmc_dir.exists():
             console.print(f"   - {llmc_dir}")
+        if rag_dir.exists():
+            console.print(f"   - {rag_dir}")
         if config_file.exists():
             console.print(f"   - {config_file}")
         
@@ -409,11 +735,94 @@ def clean(
         shutil.rmtree(llmc_dir)
         console.print(f"  ✅ Deleted .llmc/")
     
+    if rag_dir.exists():
+        shutil.rmtree(rag_dir)
+        console.print(f"  ✅ Deleted .rag/ (database)")
+    
     if config_file.exists():
         config_file.unlink()
         console.print(f"  ✅ Deleted llmc.toml")
     
     console.print(f"\n[green]✨ LLMC removed from {repo_path.name}[/green]")
+
+
+@app.command("nukerag")
+def nukerag(
+    path: str = typer.Argument(".", help="Path to repository"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation"),
+):
+    """
+    Clear all enrichment data for a repository.
+    
+    This deletes enrichments and embeddings but keeps:
+    - File index (no need to re-scan files)
+    - Configuration (llmc.toml)
+    - Daemon registration
+    
+    Use this when enrichments are corrupted or you want to
+    re-run enrichment with different models/prompts.
+    """
+    repo_path = Path(path).resolve()
+    
+    if not repo_path.exists():
+        console.print(f"[red]❌ Path does not exist: {path}[/red]")
+        raise typer.Exit(code=1)
+    
+    rag_dir = repo_path / ".rag"
+    db_path = rag_dir / "index_v2.db"
+    
+    if not db_path.exists():
+        console.print(f"[yellow]ℹ️  No RAG database found in: {repo_path}[/yellow]")
+        return
+    
+    # Count enrichments
+    import sqlite3
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM enrichments")
+        enrichment_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM embeddings")
+        embedding_count = cursor.fetchone()[0]
+        conn.close()
+    except Exception as e:
+        console.print(f"[red]❌ Failed to read database: {e}[/red]")
+        raise typer.Exit(code=1)
+    
+    if enrichment_count == 0 and embedding_count == 0:
+        console.print(f"[yellow]ℹ️  No enrichment data to clear[/yellow]")
+        return
+    
+    # Confirm
+    if not force:
+        console.print(f"[bold red]⚠️  This will permanently delete:[/bold red]")
+        console.print(f"   - {enrichment_count} enrichments")
+        console.print(f"   - {embedding_count} embeddings")
+        console.print(f"   in {repo_path}")
+        console.print()
+        console.print("[dim]File index will be preserved - no need to re-scan files.[/dim]")
+        
+        confirm = typer.confirm("Are you sure?")
+        if not confirm:
+            console.print("Cancelled.")
+            raise typer.Exit(code=0)
+    
+    # Clear enrichments and embeddings
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM enrichments")
+        cursor.execute("DELETE FROM embeddings")
+        conn.commit()
+        conn.close()
+        
+        console.print(f"  ✅ Deleted {enrichment_count} enrichments")
+        console.print(f"  ✅ Deleted {embedding_count} embeddings")
+        console.print(f"\n[green]✨ RAG data cleared for {repo_path.name}[/green]")
+        console.print("[dim]Run 'llmc service restart' to begin re-enrichment.[/dim]")
+    except Exception as e:
+        console.print(f"[red]❌ Failed to clear data: {e}[/red]")
+        raise typer.Exit(code=1)
 
 
 @app.command("list")

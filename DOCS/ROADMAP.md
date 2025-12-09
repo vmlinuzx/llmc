@@ -384,6 +384,59 @@ These are things that make LLMC nicer to live with once the core system is “go
 - ✅ Consistent "tree-style" help overview for all tools
 
 
+### 2.4 Interactive Configuration Wizard (P1)
+
+**Status:** 🔴 Not started
+
+**Goal:** Guide users through LLMC configuration with a friendly, interactive experience instead of requiring manual TOML editing.
+
+**Problem:**
+- Current `llmc repo register` creates a hardcoded config template
+- Users have to manually edit `llmc.toml` to change models, Ollama URLs, etc.
+- The TOML config structure is confusing (enrichment chains, routing, embedding profiles)
+- Easy to misconfigure and get silent failures
+
+**Proposed Solution:**
+An interactive wizard triggered by `llmc repo register --interactive` or `llmc config wizard`:
+
+1. **Ollama Discovery:**
+   - Prompt for Ollama server URL (default: `http://localhost:11434`)
+   - Ping the server to verify connectivity
+   - Fetch available models via `/api/tags`
+   - Display available models and let user select:
+     - Primary enrichment model (smallest/fastest)
+     - Optional fallback model (medium)
+     - Optional final fallback model (largest)
+
+2. **Model Recommendations:**
+   - Suggest models based on popularity/capability (e.g., "qwen3:4b is fast, qwen3:8b is balanced")
+   - Show model sizes to help users choose based on VRAM
+   - Validate selected models are actually loaded in Ollama
+
+3. **Embeddings Setup:**
+   - Offer to use same Ollama server or different endpoint
+   - Suggest common embedding models (jina, nomic-embed-text)
+   - Test embedding generation works
+
+4. **Generate Config:**
+   - Write validated `llmc.toml` with user's choices
+   - Show summary of what was configured
+   - Offer to run `llmc repo validate` immediately
+
+**CLI:**
+```bash
+llmc repo register . --interactive    # Full setup with wizard
+llmc config wizard                    # Reconfigure existing repo
+llmc config wizard --models-only      # Just update model selection
+```
+
+**Why P1:**
+- Config errors are a major source of frustration (see "qwen2.5 instead of qwen3" bug)
+- First-run experience is critical for adoption
+- Reduces documentation burden
+
+**Effort:** 8-12 hours | **Difficulty:** 🟡 Medium (5/10)
+
 ---
 
 ## 3. Later (P2+ / R&D)

@@ -1,0 +1,9 @@
+TOOLS
+bash CMD
+read PATH
+write PATH CONTENT
+edit PATH OLD NEW
+grep PATTERN
+glob PATTERN
+list PATH
+mcgrep QUERY
