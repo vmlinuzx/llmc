@@ -16,6 +16,17 @@ llmc/te/store.py
 llmc/te/telemetry.py
 llmc/te/handlers/__init__.py
 llmc/te/handlers/grep.py
+llmc_agent/__init__.py
+llmc_agent/__main__.py
+llmc_agent/agent.py
+llmc_agent/cli.py
+llmc_agent/config.py
+llmc_agent/prompt.py
+llmc_agent/session.py
+llmc_agent/backends/__init__.py
+llmc_agent/backends/base.py
+llmc_agent/backends/llmc.py
+llmc_agent/backends/ollama.py
 llmc_mcp/__init__.py
 llmc_mcp/admin_tools.py
 llmc_mcp/audit.py

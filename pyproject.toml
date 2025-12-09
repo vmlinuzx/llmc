@@ -38,18 +38,25 @@ daemon = [
   "uvicorn>=0.30.0",  # ASGI server for HTTP transport
   "httpx>=0.27.0",    # HTTP client for health checks
 ]
+agent = [
+  "httpx>=0.27.0",    # Ollama client
+  "click>=8.1.7",     # CLI framework
+  # rich already a core dep
+]
 
 [tool.setuptools]
 # Explicitly declare which top-level packages are part of the install.
 # This avoids setuptools' flat-layout safety check on unrelated dirs
 # like DOCS/, logs/, and legacy/.
-packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers"]
+packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
 
 [project.scripts]
 llmc-cli = "llmc.main:app"
 mcgrep = "llmc.mcgrep:main"
 llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
+llmc-chat = "llmc_agent.cli:main"
+bx = "llmc_agent.cli:main"
 
 [tool.pytest.ini_options]
 addopts = ["-q", "-ra"]

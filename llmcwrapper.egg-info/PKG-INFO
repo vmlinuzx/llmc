@@ -37,6 +37,9 @@ Requires-Dist: textual>=0.41.0; extra == "tui"
 Provides-Extra: daemon
 Requires-Dist: uvicorn>=0.30.0; extra == "daemon"
 Requires-Dist: httpx>=0.27.0; extra == "daemon"
+Provides-Extra: agent
+Requires-Dist: httpx>=0.27.0; extra == "agent"
+Requires-Dist: click>=8.1.7; extra == "agent"
 Dynamic: license-file
 
 THE LARGE LANGUAGE MODEL COMPRESSOR

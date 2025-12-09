@@ -28,6 +28,15 @@ Why pay for cloud when you have old PCs lying around?
   - Minimal `.opencode/INSTRUCTIONS.md` (~100 bytes)
   - Disabled bloat tools (todoread, todowrite, patch, webfetch)
 
+- **llmc_agent: Merged bx Agent into LLMC:**
+  - New `llmc_agent/` package - AI coding assistant with RAG
+  - `llmc chat "question"` - conversational AI with code context
+  - `llmc-chat` / `bx` standalone CLI entry points (for muscle memory)
+  - Session persistence in `~/.llmc/sessions/`
+  - Progressive tool disclosure for token frugality
+  - Config via `llmc.toml [agent]` section or `~/.llmc/agent.toml`
+  - Install with `pip install llmc[agent]`
+
 ### Fixed
 
 - **Config Shallow Copy Bug:** `duplicate_chain` now uses `deepcopy`

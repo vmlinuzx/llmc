@@ -56,6 +56,67 @@ def monitor():
     service_commands.logs(follow=True, lines=50)
 
 
+@app.command()
+def chat(
+    prompt: str = typer.Argument(None, help="Question to ask about the codebase"),
+    new: bool = typer.Option(False, "-n", "--new", help="Start a new session"),
+    recall: bool = typer.Option(False, "-r", "--recall", help="Show last exchange"),
+    list_sessions: bool = typer.Option(False, "-l", "--list", help="List recent sessions"),
+    session_id: str = typer.Option(None, "-s", "--session", help="Use specific session"),
+    status: bool = typer.Option(False, "--status", help="Show status"),
+    json_output: bool = typer.Option(False, "--json", help="JSON output"),
+    quiet: bool = typer.Option(False, "-q", "--quiet", help="Suppress metadata"),
+    no_rag: bool = typer.Option(False, "--no-rag", help="Disable RAG search"),
+    no_session: bool = typer.Option(False, "--no-session", help="Disable session"),
+    model: str = typer.Option(None, "--model", help="Override model"),
+):
+    """AI coding assistant with RAG-powered context.
+    
+    Examples:
+        llmc chat "where is the routing logic"
+        llmc chat "tell me more"
+        llmc chat -n "new topic"
+        llmc chat -r
+        llmc chat -l
+    """
+    import sys
+    
+    # Build args for the click CLI
+    args = []
+    if prompt:
+        args.append(prompt)
+    if new:
+        args.append("-n")
+    if recall:
+        args.append("-r")
+    if list_sessions:
+        args.append("-l")
+    if session_id:
+        args.extend(["-s", session_id])
+    if status:
+        args.append("--status")
+    if json_output:
+        args.append("--json")
+    if quiet:
+        args.append("-q")
+    if no_rag:
+        args.append("--no-rag")
+    if no_session:
+        args.append("--no-session")
+    if model:
+        args.extend(["--model", model])
+    
+    # Import and run the click CLI
+    from llmc_agent.cli import main as agent_main
+    sys.argv = ["llmc-chat"] + args
+    try:
+        agent_main(standalone_mode=False)
+    except SystemExit as e:
+        if e.code != 0:
+            raise typer.Exit(e.code)
+
+
+
 # ============================================================================
 # SERVICE GROUP - Daemon management
 # ============================================================================

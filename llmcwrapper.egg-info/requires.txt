@@ -9,6 +9,10 @@ simpleeval>=1.0.0
 [:python_version < "3.11"]
 tomli
 
+[agent]
+httpx>=0.27.0
+click>=8.1.7
+
 [daemon]
 uvicorn>=0.30.0
 httpx>=0.27.0
