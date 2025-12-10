@@ -2,11 +2,11 @@
 
 All notable changes to LLMC will be documented in this file.
 
-## [0.6.3] - "Shitbox Army" - 2025-12-09
+## [0.6.4] - "Bad Mojo" - 2025-12-10
 
-### Purple Flavor: **Distributed Local Compute**
+### Purple Flavor: **Bad Mojo**
 
-Why pay for cloud when you have old PCs lying around?
+Metrics that tell the truth. Know your T/s, know your model.
 
 ### Added
 
@@ -24,6 +24,11 @@ Why pay for cloud when you have old PCs lying around?
   - Enables model comparison analysis (e.g., Qwen 3B vs 7B vs 4B)
   - Track GPU vs CPU inference, ROCm vs Vulkan driver performance
   - Scripts: `migrate_add_enrichment_metrics.py`, `analyze_enrichment_metrics.py`, `compare_enrichment_models.py`
+
+- **Model Comparison CLI Commands:**
+  - `llmc analytics compare-models` - Compare enrichment quality between models (summary length, metadata richness, side-by-side examples)
+  - `llmc analytics compare-models --baseline .rag/backup.db` - Compare against backup database
+  - `llmc analytics metrics` - View T/s performance stats with classification (🐢 Slow → 🔥 Very Fast)
 
 - **Emilia --tmux Mode:**
   - `./tools/emilia_testing_saint.sh --tmux`
