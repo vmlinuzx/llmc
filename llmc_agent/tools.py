@@ -252,6 +252,71 @@ def _make_write_file_tool(allowed_roots: list[str]) -> Tool:
     )
 
 
+def _make_inspect_tool() -> Tool:
+    """Inspect code tool (Tier 1) - span-aware with enrichment."""
+    from pathlib import Path
+    
+    def inspect_code(path: str, symbol: str | None = None, line: int | None = None) -> dict[str, Any]:
+        """Inspect a file or symbol with RAG enrichment.
+        
+        Returns focused snippets instead of whole files - much more context efficient!
+        """
+        try:
+            from tools.rag.inspector import inspect_entity, PathSecurityError
+            
+            repo_root = Path.cwd()
+            
+            result = inspect_entity(
+                repo_root,
+                path=path if not symbol else None,
+                symbol=symbol,
+                line=line,
+                include_full_source=False,  # Just snippets
+                max_neighbors=3,
+            )
+            
+            return {
+                "path": result.path,
+                "snippet": result.snippet,
+                "span": result.primary_span,
+                "summary": result.file_summary,
+                "symbols": [
+                    {"name": s.name, "line": s.line, "type": s.type, "summary": s.summary}
+                    for s in (result.defined_symbols or [])[:5]
+                ],
+                "enrichment": result.enrichment if result.enrichment else None,
+            }
+        except PathSecurityError as e:
+            return {"error": f"Security: {e}", "path": path}
+        except Exception as e:
+            return {"error": str(e), "path": path}
+    
+    return Tool(
+        name="inspect_code",
+        description="Inspect a file or symbol with RAG context. Returns focused snippets with enrichment - use this instead of read_file for code understanding.",
+        tier=ToolTier.WALK,
+        function=inspect_code,
+        parameters={
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "File path to inspect"
+                },
+                "symbol": {
+                    "type": "string",
+                    "description": "Optional symbol name to focus on (e.g., 'MyClass.my_method')"
+                },
+                "line": {
+                    "type": "integer",
+                    "description": "Optional line number to focus on"
+                }
+            },
+            "required": ["path"]
+        }
+    )
+
+
 # ============================================================================
 # Tool Registry
 # ============================================================================
@@ -273,6 +338,7 @@ class ToolRegistry:
         # Tier 1: Walk
         self._register(_make_read_file_tool(self.allowed_roots))
         self._register(_make_list_dir_tool(self.allowed_roots))
+        self._register(_make_inspect_tool())
         
         # Tier 2: Run
         self._register(_make_edit_block_tool(self.allowed_roots))
