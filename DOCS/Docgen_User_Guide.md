@@ -46,23 +46,23 @@ llmc index
 
 For all files:
 ```bash
-llmc debug autodoc generate --all
+llmc docs generate --all
 ```
 
 For a specific file:
 ```bash
-llmc debug autodoc generate path/to/file.py
+llmc docs generate path/to/file.py
 ```
 
 Force regeneration (ignore SHA cache):
 ```bash
-llmc debug autodoc generate --all --force
+llmc docs generate --all --force
 ```
 
 ### 4. Check Status
 
 ```bash
-llmc debug autodoc status
+llmc docs status
 ```
 
 Output:
@@ -182,13 +182,13 @@ daemon_batch_size = 10            # Files per batch
 
 ## CLI Reference
 
-### `llmc debug autodoc generate`
+### `llmc docs generate`
 
 Generate documentation for files.
 
 **Usage:**
 ```bash
-llmc debug autodoc generate [OPTIONS] [PATH]
+llmc docs generate [OPTIONS] [PATH]
 ```
 
 **Options:**
@@ -198,22 +198,22 @@ llmc debug autodoc generate [OPTIONS] [PATH]
 **Examples:**
 ```bash
 # Generate for all files
-llmc debug autodoc generate --all
+llmc docs generate --all
 
 # Generate for specific file
-llmc debug autodoc generate src/main.py
+llmc docs generate src/main.py
 
 # Force regeneration
-llmc debug autodoc generate --all --force
+llmc docs generate --all --force
 ```
 
-### `llmc debug autodoc status`
+### `llmc docs status`
 
 Show documentation generation status.
 
 **Usage:**
 ```bash
-llmc debug autodoc status
+llmc docs status
 ```
 
 Shows:
@@ -326,7 +326,7 @@ Keep RAG index fresh:
 ```bash
 # After major changes
 llmc index
-llmc debug autodoc generate --all
+llmc docs generate --all
 ```
 
 ### 2. Incremental Generation

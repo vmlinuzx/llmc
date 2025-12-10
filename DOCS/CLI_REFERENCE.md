@@ -49,15 +49,14 @@ llmc
 │   ├── plan          # Retrieval plan
 │   ├── inspect       # Deep dive
 │   ├── export        # Export RAG data
-│   ├── enrich-status # Enrichment metrics
-│   └── autodoc       # Documentation generation
-│       ├── generate
-│       └── status
+│   └── enrich-status # Enrichment metrics
 │
 ├── docs              # LLMC documentation
 │   ├── readme
 │   ├── quickstart
-│   └── userguide
+│   ├── userguide
+│   ├── generate      # Generate docs
+│   └── status        # Docgen status
 │
 └── usertest          # RUTA testing
     ├── init
@@ -463,20 +462,20 @@ llmc debug enrich-status --json
 
 ---
 
-### `llmc debug autodoc generate`
+### `llmc docs generate`
 Generate documentation for repository files.
 
 ```bash
-llmc debug autodoc generate
+llmc docs generate
 ```
 
 ---
 
-### `llmc debug autodoc status`
+### `llmc docs status`
 Show documentation generation status.
 
 ```bash
-llmc debug autodoc status
+llmc docs status
 ```
 
 ---
@@ -748,8 +747,8 @@ llmc debug graph
 | `llmc inspect` | `llmc debug inspect` |
 | `llmc export` | `llmc debug export` |
 | `llmc enrich-status` | `llmc debug enrich-status` |
-| `llmc debug autodoc generate` | `llmc debug autodoc generate` |
-| `llmc debug autodoc status` | `llmc debug autodoc status` |
+| `llmc docs generate` | `llmc docs generate` |
+| `llmc docs status` | `llmc docs status` |
 
 ---
 
