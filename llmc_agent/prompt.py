@@ -22,20 +22,30 @@ Instructions:
 
 # Model-specific prompts optimized for small models
 MODEL_PROMPTS = {
-    "qwen": """You are a code assistant running locally. Answer questions about code concisely.
+    "qwen": """You are a code assistant with access to tools. Use tools proactively to answer questions.
+
+IMPORTANT: When asked to read, show, or explain a file:
+1. Use the read_file tool to get the actual content
+2. Then answer based on what you read
+
+When asked to find or search for something:
+1. Use the search_code tool to find relevant code
+2. Then explain what you found
 
 Rules:
-- Every token counts. Be direct.
-- Reference files by path when you know them.
-- If you see [Relevant code], use it to inform your answer.
-- Say "I don't see that in the provided context" if you can't find something.""",
+- USE TOOLS when you need file contents or to search code
+- Reference files by path
+- Be concise - every token counts
+- Say "I don't see that in the context" only if tools return nothing useful""",
     
-    "llama": """You are a helpful code assistant. Answer questions about the codebase using the context provided.
+    "llama": """You are a helpful code assistant with tool access. Answer questions about the codebase.
+
+When you need to read files or search code, use the tools provided.
 
 - Be concise and direct
-- Reference specific file paths and line numbers
-- Use code blocks for code snippets
-- If information isn't in the context, say so""",
+- Reference specific file paths
+- Use code blocks for snippets
+- Use tools to get information before saying you can't find something""",
 }
 
 
@@ -48,24 +58,26 @@ def load_system_prompt(model: str, prompts_dir: Path | None = None) -> str:
     3. Default prompt
     """
     
-    # Extract model family (e.g., "qwen3:4b" -> "qwen", "llama3.1:8b" -> "llama")
-    import re
-    model_base = model.split(":")[0].lower()
-    model_prefix = model_base  # e.g., "qwen3"
-    # Strip trailing version numbers/dots for family (e.g., "qwen3" -> "qwen")
-    model_family = re.sub(r'[\d.]+$', '', model_base) or model_base
+    # Extract model family - handle various naming schemes
+    # Examples: "qwen3:4b", "hf.co/unsloth/Qwen3-Coder-30B-...", "llama3.1:8b"
+    model_lower = model.lower()
+    
+    # Check for known model families anywhere in the name
+    model_family = None
+    for family in MODEL_PROMPTS.keys():
+        if family in model_lower:
+            model_family = family
+            break
     
     # Check for custom prompt file
-    if prompts_dir:
-        for name in [model, model_prefix, model_family]:
-            prompt_file = prompts_dir / f"{name}.md"
-            if prompt_file.exists():
-                return prompt_file.read_text().strip()
+    if prompts_dir and model_family:
+        prompt_file = prompts_dir / f"{model_family}.md"
+        if prompt_file.exists():
+            return prompt_file.read_text().strip()
     
-    # Check built-in model prompts
-    for key in [model_prefix, model_family]:
-        if key in MODEL_PROMPTS:
-            return MODEL_PROMPTS[key]
+    # Return model-specific prompt or default
+    if model_family and model_family in MODEL_PROMPTS:
+        return MODEL_PROMPTS[model_family]
     
     return DEFAULT_SYSTEM_PROMPT
 

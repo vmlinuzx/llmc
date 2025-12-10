@@ -217,10 +217,33 @@ class Agent:
             prompts_dir=Path("prompts") if Path("prompts").exists() else None,
         )
         
-        if self.tools.current_tier > ToolTier.CRAWL:
-            # Add tool usage instructions
-            tool_names = [t.name for t in self.tools.get_tools_for_tier()]
-            system_prompt += f"\n\nYou have access to these tools: {', '.join(tool_names)}. Use them when you need to read or modify files."
+        # Always tell the model about available tools
+        available_tools = self.tools.get_tools_for_tier()
+        if available_tools:
+            tool_descriptions = []
+            for t in available_tools:
+                tool_descriptions.append(f"- {t.name}: {t.description}")
+            tools_text = "\n".join(tool_descriptions)
+            system_prompt += f"\n\nYou have access to these tools:\n{tools_text}\n\nUse tools when you need to search code, read files, or get more information. Call tools to gather data before answering."
+        
+        # Step: RAG search for initial context (even if tools don't work)
+        rag_results: list[RAGResult] = []
+        rag_sources = None
+        if self.rag:
+            rag_results = await self.rag.search(
+                question,
+                limit=self.config.rag.max_results,
+                min_score=self.config.rag.min_score,
+            )
+            if rag_results:
+                rag_sources = [f"{r.path}:{r.start_line}-{r.end_line}" for r in rag_results]
+        
+        # Assemble user content with RAG context
+        user_content = assemble_prompt(
+            question,
+            rag_results=rag_results,
+            include_summary=self.config.rag.include_summary,
+        )
         
         # Start message history
         messages = []
@@ -228,8 +251,8 @@ class Agent:
         total_completion_tokens = 0
         all_tool_calls: list[ToolCall] = []
         
-        # Add user question
-        messages.append({"role": "user", "content": question})
+        # Add user question with RAG context
+        messages.append({"role": "user", "content": user_content})
         
         # Tool loop
         for round_num in range(max_tool_rounds):
@@ -322,7 +345,7 @@ class Agent:
             content=final_content,
             tokens_prompt=total_prompt_tokens,
             tokens_completion=total_completion_tokens,
-            rag_sources=None,
+            rag_sources=rag_sources,
             model=self.config.agent.model,
             tool_calls=all_tool_calls,
             tier_used=self.tools.current_tier,

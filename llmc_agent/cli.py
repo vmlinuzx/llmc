@@ -23,7 +23,7 @@ stdout_console = Console()  # Main output to stdout
 
 
 @click.command()
-@click.argument("prompt", required=False)
+@click.argument("prompt_words", nargs=-1)
 @click.option("-n", "--new", is_flag=True, help="Start a new session")
 @click.option("-r", "--recall", is_flag=True, help="Show last exchange")
 @click.option("-l", "--list", "list_sessions", is_flag=True, help="List recent sessions")
@@ -35,10 +35,10 @@ stdout_console = Console()  # Main output to stdout
 @click.option("--no-rag", is_flag=True, help="Disable RAG search")
 @click.option("--no-session", is_flag=True, help="Disable session (stateless mode)")
 @click.option("--model", help="Override model")
-@click.option("--tools", "use_tools", is_flag=True, help="Enable tools (Walk/Run mode)")
+@click.option("--no-tools", "no_tools", is_flag=True, help="Disable tools (Crawl-only mode)")
 @click.option("--version", is_flag=True, help="Show version")
 def main(
-    prompt: str | None,
+    prompt_words: tuple[str, ...],
     new: bool,
     recall: bool,
     list_sessions: bool,
@@ -50,22 +50,29 @@ def main(
     no_rag: bool,
     no_session: bool,
     model: str | None,
-    use_tools: bool,
+    no_tools: bool,
     version: bool,
 ) -> None:
-    """llmc chat - AI coding assistant with RAG.
+    """bx - AI coding assistant with RAG and tools.
     
     \b
     Examples:
-        llmc chat "where is the routing logic"     Ask about code
-        llmc chat "tell me more about that"        Continue conversation
-        llmc chat -n "new topic"                   Start fresh session
-        llmc chat -r                               Recall last exchange
-        llmc chat -l                               List recent sessions
+        bx where is the routing logic       Ask about code
+        bx read the config and explain it   Use tools to read files
+        bx tell me more about that          Continue conversation
     
     \b
-    Crawl Phase (v0.1.x): RAG-powered Q&A with persistence
-    "You can't edit what you can't find."
+    Sessions:
+        bx -n start fresh topic             New session (forgets context)
+        bx -r                               Recall last exchange
+        bx -l                               List recent sessions  
+        bx -s abc123 continue here          Resume specific session
+    
+    \b
+    Tools are enabled by default. Tier auto-detected from intent:
+      • Crawl: search/find code
+      • Walk: read files, list dirs
+      • Run: edit/write files (coming soon)
     """
     
     if version:
@@ -102,12 +109,14 @@ def main(
         return
     
     # Get prompt
+    prompt = " ".join(prompt_words) if prompt_words else ""
     if not prompt:
         if not sys.stdin.isatty():
             prompt = sys.stdin.read().strip()
         else:
-            console.print("[dim]Usage: llmc chat \"your question here\"[/dim]")
-            console.print("[dim]       llmc chat --help for more options[/dim]")
+            # No args, show help
+            ctx = click.get_current_context()
+            click.echo(ctx.get_help())
             return
     
     if not prompt:
@@ -128,7 +137,7 @@ def main(
     # Run the agent
     try:
         response = asyncio.run(_run_agent(
-            prompt, config, session, session_mgr, json_output, quiet, use_tools
+            prompt, config, session, session_mgr, json_output, quiet, not no_tools
         ))
     except KeyboardInterrupt:
         console.print("\n[dim]Interrupted[/dim]")
