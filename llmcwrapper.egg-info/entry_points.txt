@@ -1,7 +1,0 @@
-[console_scripts]
-bx = llmc_agent.cli:main
-llmc-chat = llmc_agent.cli:main
-llmc-cli = llmc.main:app
-llmc-mcp = llmc_mcp.cli:main
-mcgrep = llmc.mcgrep:main
-te = llmc.te.cli:main

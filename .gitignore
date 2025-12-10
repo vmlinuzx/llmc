@@ -113,3 +113,15 @@ llmc/.venv_new/
 llmcwrapper/.llmc/
 opencode.json
 DOCS/REPODOCS/
+
+# OpenCode fork/reference - huge external codebase (2,289 files!)
+opencode/
+.opencode/
+
+# Build artifacts
+llmcwrapper.egg-info/
+*.egg-info/
+
+# Editor swap/backup files
+DEADJOE
+*~
