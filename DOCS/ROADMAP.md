@@ -134,36 +134,17 @@ Error: Path '../../../etc/passwd' escapes repository boundary via traversal.
 
 ---
 
-### 1.3 Documentation Accuracy Fix **P1**
+### ~~1.3 Documentation Accuracy Fix~~ ✅ DONE
 
-**Status:** 🔴 Docs lie about capabilities
+**Completed:** Dec 2025
 
 **Goal:** Remove or implement `llmc docs generate` - currently documented but doesn't exist.
 
-**📄 Evidence:** Ren's Ruthless Report 2025-12-04
-
-**Problem:**
-26 documentation references to `llmc docs generate` command that doesn't exist:
-- `DOCS/CLI_REFERENCE.md`
-- `DOCS/Docgen_User_Guide.md`
-- `DOCS/ROADMAP.md`
-- `DOCS/planning/Docgen_v2_Final_Summary.md`
-
-**Actual `llmc docs` commands:**
-- `readme` - Display README
-- `quickstart` - Display quickstart  
-- `userguide` - Display user guide
-
-**Options:**
-1. **Implement the command** - Wire up existing docgen to CLI
-2. **Remove documentation** - Delete all references
-3. **Clarify** - Rename to `llmc debug autodoc generate` (which exists)
-
-**Total Effort:** ~2-4 hours | **Difficulty:** 🟢 Easy (3/10)
-
-**Why P1:**
-- **User trust** - Documentation that lies erodes confidence
-- **Onboarding friction** - New users try command and it fails
+**Summary:**
+- ✅ Moved `llmc debug autodoc generate` to `llmc docs generate`
+- ✅ Fixed CLI argument handling and DB path discovery
+- ✅ Docs now match reality (command exists)
+- ✅ Verified with `llmc docs status`
 
 ---
 

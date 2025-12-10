@@ -294,3 +294,11 @@ Carried from prior roadmap “Recently Completed (Highlights)”:
 
 
 
+
+## 9. CLI Polish & Consistency
+
+### 9.1 Documentation Accuracy (Dec 2025)
+
+- Implemented `llmc docs generate` (previously hidden as `debug autodoc`).
+- Fixed DB path discovery and argument handling.
+- Resolved discrepancy between documentation and implementation.
