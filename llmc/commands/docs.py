@@ -19,7 +19,7 @@ app = typer.Typer(help="Documentation generation commands")
 
 @app.command()
 def generate(
-    path: str | None = None,
+    path: str | None = typer.Argument(None, help="Path to file to generate docs for"),
     all: bool = typer.Option(False, "--all", help="Generate docs for all indexed files"),
     force: bool = typer.Option(False, "--force", help="Force generation (ignore SHA gate)"),
 ):
@@ -44,10 +44,22 @@ def generate(
         typer.echo("💡 Enable it by setting [docs.docgen] enabled = true", err=True)
         raise typer.Exit(1)
     
-    # Load database
-    db_path = repo_root / ".llmc" / "rag" / "index_v2.db"
-    if not db_path.exists():
-        typer.echo(f"❌ RAG database not found: {db_path}", err=True)
+    # Load database - try multiple locations
+    # Load database - try multiple locations
+    candidates = [
+        repo_root / ".rag" / "index_v2.db",
+        repo_root / ".llmc" / "index_v2.db",
+        repo_root / ".llmc" / "rag" / "index.db",
+    ]
+    
+    db_path = None
+    for p in candidates:
+        if p.exists():
+            db_path = p
+            break
+            
+    if not db_path:
+        typer.echo(f"❌ RAG database not found. Searched: {[str(p) for p in candidates]}", err=True)
         typer.echo("💡 Run `llmc index` first to index the repository", err=True)
         raise typer.Exit(1)
     
@@ -135,9 +147,21 @@ def status():
     require_rag = get_require_rag_fresh(toml_data)
     
     # Load database
-    db_path = repo_root / ".llmc" / "rag" / "index_v2.db"
-    if not db_path.exists():
-        typer.echo(f"❌ RAG database not found: {db_path}", err=True)
+    # Load database - try multiple locations
+    candidates = [
+        repo_root / ".rag" / "index_v2.db",
+        repo_root / ".llmc" / "index_v2.db",
+        repo_root / ".llmc" / "rag" / "index.db",
+    ]
+    
+    db_path = None
+    for p in candidates:
+        if p.exists():
+            db_path = p
+            break
+
+    if not db_path:
+        typer.echo(f"❌ RAG database not found", err=True)
         raise typer.Exit(1)
     
     db = Database(db_path)

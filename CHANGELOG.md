@@ -45,6 +45,7 @@ Why pay for cloud when you have old PCs lying around?
 
 ### Fixed
 
+- **Missing Docgen Command:** Implemented `llmc docs generate` (was incorrectly documented as existing)
 - **Config Shallow Copy Bug:** `duplicate_chain` now uses `deepcopy`
 - **Unsafe Chain Deletion:** Checks for enabled siblings before allowing delete
 

@@ -190,17 +190,6 @@ debug_app.command(name="inspect")(inspect)
 debug_app.command(name="export")(export)
 debug_app.command(name="enrich-status")(enrich_status)
 
-# Nested autodoc under debug
-from llmc.commands import docs as docs_commands
-
-autodoc_app = typer.Typer(
-    help="Auto-documentation generation (runs as background service)",
-    no_args_is_help=True,
-)
-autodoc_app.command(name="generate")(docs_commands.generate)
-autodoc_app.command(name="status")(docs_commands.status)
-debug_app.add_typer(autodoc_app, name="autodoc")
-
 app.add_typer(debug_app, name="debug")
 
 
@@ -276,6 +265,11 @@ def docs_userguide():
     typer.echo("User guide not found. Run 'llmc docs quickstart' for basic usage.", err=True)
     raise typer.Exit(1)
 
+
+# Docgen commands
+from llmc.commands import docs as docs_commands
+docs_app.command(name="generate")(docs_commands.generate)
+docs_app.command(name="status")(docs_commands.status)
 
 app.add_typer(docs_app, name="docs")
 
