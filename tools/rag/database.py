@@ -174,6 +174,13 @@ class Database:
             ("enrichments", "content_language", "TEXT"),
             ("enrichments", "content_type_confidence", "REAL"),
             ("enrichments", "content_type_source", "TEXT"),
+            # Performance metrics (2025-12 - for model comparison)
+            ("enrichments", "tokens_per_second", "REAL"),
+            ("enrichments", "eval_count", "INTEGER"),
+            ("enrichments", "eval_duration_ns", "INTEGER"),
+            ("enrichments", "prompt_eval_count", "INTEGER"),
+            ("enrichments", "total_duration_ns", "INTEGER"),
+            ("enrichments", "backend_host", "TEXT"),
         ]
         for table, column, coltype in migrations:
             try:
@@ -396,21 +403,31 @@ class Database:
                 break
         return filtered
 
-    def store_enrichment(self, span_hash: str, payload: dict) -> None:
+    def store_enrichment(self, span_hash: str, payload: dict, meta: dict | None = None) -> None:
+        """Store enrichment with optional performance metrics.
+        
+        Args:
+            span_hash: Unique identifier for the span
+            payload: Enrichment data from LLM (summary, tags, evidence, etc.)
+            meta: Optional performance metrics from backend (tokens_per_second, eval_count, etc.)
+        """
+        meta = meta or {}
         self.conn.execute(
             """
             INSERT OR REPLACE INTO enrichments (
                 span_hash, summary, tags, evidence, model, created_at, schema_ver,
                 inputs, outputs, side_effects, pitfalls, usage_snippet,
-                content_type, content_language, content_type_confidence, content_type_source
-            ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                content_type, content_language, content_type_confidence, content_type_source,
+                tokens_per_second, eval_count, eval_duration_ns, prompt_eval_count,
+                total_duration_ns, backend_host
+            ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 span_hash,
-                payload.get("summary_120w"),
+                payload.get("summary_120w") or payload.get("summary"),
                 ",".join(payload.get("tags", [])) if payload.get("tags") else None,
                 json.dumps(payload.get("evidence", [])),
-                payload.get("model"),
+                payload.get("model") or meta.get("model"),
                 payload.get("schema_version"),
                 json.dumps(payload.get("inputs", [])),
                 json.dumps(payload.get("outputs", [])),
@@ -421,6 +438,13 @@ class Database:
                 payload.get("content_language"),
                 payload.get("content_type_confidence"),
                 payload.get("content_type_source"),
+                # Performance metrics from Ollama
+                meta.get("tokens_per_second"),
+                meta.get("eval_count"),
+                meta.get("eval_duration"),  # eval_duration is in ns
+                meta.get("prompt_eval_count"),
+                meta.get("total_duration"),  # total_duration is in ns
+                meta.get("host") or meta.get("backend_host"),
             ),
         )
 

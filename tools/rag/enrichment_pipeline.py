@@ -477,7 +477,7 @@ class EnrichmentPipeline:
         result: dict[str, Any],
         meta: dict[str, Any],
     ) -> None:
-        """Write enrichment result to database."""
+        """Write enrichment result to database with performance metrics."""
         # Build the full payload with all enrichment fields
         # The result dict comes from the LLM and should have the full schema
         payload: dict[str, Any] = {
@@ -486,8 +486,9 @@ class EnrichmentPipeline:
             "schema_version": result.get("schema_version", "enrichment.v1"),
         }
         
-        # Store the full enrichment directly
-        self.db.store_enrichment(span_hash, payload)
+        # Store the full enrichment with performance metrics
+        # meta contains tokens_per_second, eval_count, eval_duration, etc.
+        self.db.store_enrichment(span_hash, payload, meta=meta)
         
         # CRITICAL: Commit the transaction so data is actually saved!
         # Without this, all enrichments are lost when the process ends.

@@ -164,6 +164,11 @@ analytics_app.command(name="benchmark")(benchmark)
 analytics_app.command(name="where-used")(nav_where_used)
 analytics_app.command(name="lineage")(nav_lineage)
 
+# Model comparison and performance metrics
+from llmc.commands.model_compare import compare_models, metrics as model_metrics
+analytics_app.command(name="compare-models")(compare_models)
+analytics_app.command(name="metrics")(model_metrics)
+
 app.add_typer(analytics_app, name="analytics")
 
 

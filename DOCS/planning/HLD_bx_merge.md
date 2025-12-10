@@ -160,7 +160,7 @@ agent = [
 
 - [x] `llmc chat "question"` works end-to-end
 - [x] Sessions persist in `~/.llmc/sessions/`
-- [ ] Tools (read_file, rag_search) accessible via progressive disclosure *(Phase 2: Walk)*
+- [x] Tools (read_file, rag_search) accessible via progressive disclosure
 - [x] `llmc chat -r` recalls last exchange
 - [x] Config loads from llmc.toml `[agent]` section
 

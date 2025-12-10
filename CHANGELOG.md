@@ -19,6 +19,12 @@ Why pay for cloud when you have old PCs lying around?
   - Enrichment logs now show inference speed: `✓ Enriched span 5: ... (3.98s) 73.3 T/s`
   - Easy to spot GPU vs CPU performance
 
+- **Enrichment Performance Metrics Persistence:**
+  - New database columns: `tokens_per_second`, `eval_count`, `eval_duration_ns`, `prompt_eval_count`, `total_duration_ns`, `backend_host`
+  - Enables model comparison analysis (e.g., Qwen 3B vs 7B vs 4B)
+  - Track GPU vs CPU inference, ROCm vs Vulkan driver performance
+  - Scripts: `migrate_add_enrichment_metrics.py`, `analyze_enrichment_metrics.py`, `compare_enrichment_models.py`
+
 - **Emilia --tmux Mode:**
   - `./tools/emilia_testing_saint.sh --tmux`
   - Spawns all 11 testing demons in parallel tmux windows
