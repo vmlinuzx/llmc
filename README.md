@@ -40,7 +40,7 @@ llmc-cli tui
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.
 
-This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. Right now it is geared toward a python repo, but works with some limitations for just about anything. You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC.  I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
+This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. It supports **Python, JavaScript, TypeScript, Go, Java, and Markdown** with full semantic parsing via TreeSitter. You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC. I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
 
 
 Brief what this repo does: A small set of CLIs and services that keep the users different project repos indexed, enriched, and queryable via RAG designed to utilize local smaller agents to drive down LLM usage costs, and make big LLM's "smarter".
@@ -131,7 +131,7 @@ Capabilities:
 
 Limitations:
 
-- Graph is currently Python first: The graph extraction and schema logic targets Python repos; other languages have to fall back to more naive parsing until full walkers exist.
+- GraphRAG is strongest for Python and TypeScript: Full entity/relation extraction for Python and TS/JS; other languages get basic span indexing but not full graph relationships yet.
 - Index freshness is bounded by your daemon: If your daemon or service is not running regularly, LLMC will fall back to being conservative and not returning stale slices.
 - RAG Nav tools are opinionated: The system prefers "no answer" to "bad answer", which can feel strict if you are used to LLMs happily hallucinating from junk input.
 - Some config lives in code: Not every knob is exposed in llmc.toml or config files yet; some advanced settings still require code changes.
