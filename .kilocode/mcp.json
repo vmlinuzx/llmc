@@ -1,1 +1,0 @@
-{"mcpServers":{"llmc":{"command":"/home/vmlinux/src/llmc/.venv/bin/python","args":["-m","llmc_mcp.server"],"env":{"PYTHONPATH":"/home/vmlinux/src/llmc","LLMC_ROOT":"/home/vmlinux/src/llmc","LLMC_CONFIG":"/home/vmlinux/src/llmc/llmc.toml"},"alwaysAllow":["health"]}}}

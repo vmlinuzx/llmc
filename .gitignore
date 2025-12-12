@@ -125,3 +125,7 @@ llmcwrapper.egg-info/
 # Editor swap/backup files
 DEADJOE
 *~
+
+# Local/temp directories - not for GitHub
+.trash/
+.kilocode/
