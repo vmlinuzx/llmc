@@ -98,6 +98,14 @@ gpu_min_free_mb = 1536
 # Prevents unbounded file accumulation from long-running daemon processes
 pycache_cleanup_days = 7  # Delete .pyc files older than N days (0 = disabled)
 
+# Service Mode: "event" (inotify, ~0% CPU when idle) or "poll" (legacy)
+mode = "event"
+
+# Event-Driven Mode Settings (only applies when mode = "event")
+debounce_seconds = 2.0             # Wait after last file change before processing
+housekeeping_interval = 300        # Periodic maintenance (vacuum, log rotation) in seconds
+
+# Poll Mode Settings (only applies when mode = "poll")
 # Idle Loop Throttling - reduce CPU usage when no work to do
 nice_level = 19                    # Process priority (0-19, higher = lower priority) - MAXED OUT
 idle_backoff_max = 2               # Max multiplier when idle (2x = 60s with 30s interval)

@@ -2,6 +2,37 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.5] - "Zero Waste" - 2025-12-11
+
+### Purple Flavor: **Zero Waste**
+
+The service no longer burns CPU cycles checking if nothing happened. Event-driven means ~0% CPU when idle.
+
+### Added
+
+- **Event-Driven RAG Service (inotify):**
+  - `llmc-rag start --mode event` - Uses Linux inotify to watch for file changes
+  - ~0% CPU when idle (was 180%+ with polling loop)
+  - Instant response to file saves (< 3s with debounce)
+  - Automatic fallback to poll mode if inotify unavailable
+
+- **New `tools/rag/watcher.py` Module:**
+  - `RepoWatcher` - inotify wrapper per repository
+  - `ChangeQueue` - Debounced change queue with blocking wait
+  - `FileFilter` - Gitignore-aware path filtering
+
+- **New Configuration Options (`llmc.toml`):**
+  - `[daemon] mode = "event"` - Set default to event-driven mode
+  - `[daemon] debounce_seconds = 2.0` - Wait after last change before processing
+  - `[daemon] housekeeping_interval = 300` - Periodic maintenance interval
+
+### Changed
+
+- **Default mode is now `event`** - Poll mode available via `--mode poll` for compatibility
+- Refactored `run_loop()` into `run_loop_event()` and `run_loop_poll()` for clarity
+
+---
+
 ## [0.6.4] - "Bad Mojo" - 2025-12-10
 
 ### Purple Flavor: **Bad Mojo**

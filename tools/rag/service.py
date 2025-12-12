@@ -40,6 +40,19 @@ from tools.rag.quality import format_quality_summary, run_quality_check
 from tools.rag.runner import detect_changes, run_embed, run_sync
 from tools.rag_nav.tool_handlers import build_graph_for_repo
 
+# Event-driven mode imports
+try:
+    from tools.rag.watcher import (
+        RepoWatcher,
+        ChangeQueue,
+        FileFilter,
+        is_inotify_available,
+        get_inotify_watch_limit,
+    )
+    WATCHER_AVAILABLE = True
+except ImportError:
+    WATCHER_AVAILABLE = False
+
 try:  # Python 3.11+
     import tomllib  # type: ignore
 except Exception:
@@ -671,8 +684,132 @@ class RAGService:
                 pass
         return {}
 
-    def run_loop(self, interval: int):
-        """Main service loop with idle throttling."""
+    def run_loop(self, interval: int, mode: str = "poll"):
+        """Main service loop - dispatches to event or poll mode."""
+        if mode == "event" and WATCHER_AVAILABLE:
+            return self.run_loop_event(interval)
+        elif mode == "event" and not WATCHER_AVAILABLE:
+            print("⚠️  Event mode requested but inotify not available, falling back to poll mode")
+        return self.run_loop_poll(interval)
+
+    def run_loop_event(self, housekeeping_interval: int = 300):
+        """Event-driven service loop using inotify.
+        
+        Sleeps indefinitely until file changes are detected.
+        ~0% CPU when idle, instant response to file changes.
+        """
+        signal.signal(signal.SIGTERM, self.handle_signal)
+        signal.signal(signal.SIGINT, self.handle_signal)
+
+        # Set process nice level
+        nice_level = self._daemon_cfg.get("nice_level", 10)
+        try:
+            current = os.nice(0)
+            os.nice(nice_level - current)
+            print(f"   Nice level: +{nice_level}")
+        except (OSError, PermissionError) as e:
+            print(f"   ⚠️  Could not set nice level: {e}")
+
+        # Initialize watchers for all registered repos
+        debounce_seconds = float(self._daemon_cfg.get("debounce_seconds", 2.0))
+        queue = ChangeQueue(debounce_seconds=debounce_seconds)
+        watchers: list[RepoWatcher] = []
+        
+        for repo_path in self.state.state["repos"]:
+            try:
+                repo = Path(repo_path)
+                if not repo.exists():
+                    print(f"   ⚠️  Repo not found, skipping watch: {repo_path}")
+                    continue
+                watcher = RepoWatcher(
+                    repo,
+                    lambda p, r=repo_path: queue.add(r),
+                    FileFilter(repo),
+                )
+                watcher.start()
+                watchers.append(watcher)
+            except Exception as e:
+                print(f"   ⚠️  Failed to watch {repo_path}: {e}")
+
+        self.state.set_running(os.getpid())
+        print(f"🚀 RAG service started (PID {os.getpid()})")
+        print(f"   Mode: event-driven (inotify)")
+        print(f"   Watching {len(watchers)} repos")
+        print(f"   Debounce: {debounce_seconds}s")
+        print(f"   Housekeeping interval: {housekeeping_interval}s")
+        
+        watch_limit = get_inotify_watch_limit()
+        if watch_limit:
+            print(f"   inotify watch limit: {watch_limit}")
+        print()
+
+        # Initial processing - catch up on any pending work
+        print("📋 Initial sync for all repos...")
+        for repo in self.state.state["repos"]:
+            if not self.running:
+                break
+            self.process_repo(repo)
+        print("✅ Initial sync complete\n")
+
+        last_housekeeping = time.time()
+
+        while self.running:
+            # Block until changes or periodic housekeeping
+            # Use small timeout chunks so signals are handled promptly
+            timeout = min(5.0, housekeeping_interval)
+            queue.wait(timeout=timeout)
+
+            if not self.running:
+                break
+
+            # Get repos with debounced changes
+            ready_repos = queue.get_ready()
+
+            if ready_repos:
+                print(f"\n📂 Changes detected in {len(ready_repos)} repo(s)")
+                for repo in ready_repos:
+                    if not self.running:
+                        break
+                    self.process_repo(repo)
+                self.state.update_cycle()
+
+            # Periodic housekeeping
+            now = time.time()
+            if now - last_housekeeping >= housekeeping_interval:
+                self._periodic_housekeeping()
+                last_housekeeping = now
+
+        # Cleanup
+        print("\n🛑 Stopping file watchers...")
+        for watcher in watchers:
+            try:
+                watcher.stop()
+            except Exception:
+                pass
+
+        self.state.set_stopped()
+        print("👋 RAG service stopped")
+
+    def _periodic_housekeeping(self):
+        """Run periodic maintenance tasks (log rotation, vacuum check)."""
+        try:
+            if self._log_manager is not None:
+                rotation_interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
+                log_dir_val = self._logging_cfg.get("log_directory", "logs")
+                log_dir = Path(str(log_dir_val))
+                if not log_dir.is_absolute():
+                    log_dir = (self._repo_root / log_dir).resolve()
+                now = time.time()
+                if rotation_interval == 0 or now - self._last_rotate >= rotation_interval:
+                    result = self._log_manager.rotate_logs(log_dir)
+                    self._last_rotate = now
+                    if result.get("rotated_files", 0) > 0:
+                        print(f"🔄 Rotated {result['rotated_files']} log files")
+        except Exception as e:
+            print(f"  ⚠️  Housekeeping failed: {e}")
+
+    def run_loop_poll(self, interval: int):
+        """Legacy polling service loop with idle throttling."""
         signal.signal(signal.SIGTERM, self.handle_signal)
         signal.signal(signal.SIGINT, self.handle_signal)
 
@@ -844,7 +981,8 @@ def cmd_start_fork(args, state: ServiceState, tracker: FailureTracker) -> int:
         sys.stderr = open(os.devnull, "w")
 
     service = RAGService(state, tracker)
-    service.run_loop(args.interval)
+    mode = getattr(args, "mode", "event")
+    service.run_loop(args.interval, mode=mode)
     return 0
 
 
@@ -1327,8 +1465,9 @@ def cmd_daemon_loop(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Internal command for systemd to run the daemon loop."""
     # Prefer interval from state file (set via `interval` command), fall back to args
     interval = state.state.get("interval", args.interval)
+    mode = getattr(args, "mode", "event")
     service = RAGService(state, tracker)
-    service.run_loop(interval)
+    service.run_loop(interval, mode=mode)
     return 0
 
 
@@ -1347,6 +1486,10 @@ def main(argv: list[str] | None | None = None):
     # Service management
     start_p = subparsers.add_parser("start", help="Start the service")
     start_p.add_argument("--interval", type=int, default=180, help="Loop interval in seconds")
+    start_p.add_argument(
+        "--mode", choices=["event", "poll"], default="event",
+        help="Service mode: 'event' (inotify, low CPU) or 'poll' (legacy)"
+    )
     start_p.add_argument(
         "--daemon", action="store_true", help="Run in background (deprecated, uses systemd)"
     )
@@ -1410,6 +1553,7 @@ def main(argv: list[str] | None | None = None):
     # Hidden internal command for systemd
     daemon_p = subparsers.add_parser("_daemon_loop", help=argparse.SUPPRESS)
     daemon_p.add_argument("--interval", type=int, default=180)
+    daemon_p.add_argument("--mode", choices=["event", "poll"], default="event")
 
     args = parser.parse_args(argv)
 
