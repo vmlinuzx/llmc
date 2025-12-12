@@ -1,30 +1,35 @@
-THE LARGE LANGUAGE MODEL COMPRESSOR
+# LLMC - The Large Language Model Compressor
 
-**Current Release:** v0.5.5 "Modular Mojo"
+**Stop burning money on LLM tokens.** Get 70-95% cost reduction through local RAG and intelligent routing.
+
+## Install (One Line)
+
+```bash
+curl -sSL https://raw.githubusercontent.com/vmlinuzx/llmc/main/install.sh | bash
+```
+
+Or if you prefer pip:
+```bash
+pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
+```
 
 ## Quick Start
 
 ```bash
-# Install
-pip install -e ".[rag]"
-
-# Initialize and index your project
+# Go to your project
 cd /path/to/your/project
-llmc init
-llmc index
 
-# Register with service and start daemon
-llmc service repo add .
-llmc service start
+# Register it with LLMC
+llmc-cli repo register .
 
-# Search your codebase
-llmc search "authentication middleware"
+# Search your codebase (no LLM needed!)
+llmc-cli search "authentication middleware"
 
-# Launch TUI dashboard
-llmc tui
+# Launch the dashboard
+llmc-cli tui
 ```
 
-**See [CLI Reference](DOCS/CLI_REFERENCE.md) for complete command documentation.**
+**Current Release:** v0.6.5 "Zero Waste" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
 
 ### What's New in v0.6.0 "Modular Mojo"
 - **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.

@@ -33,7 +33,7 @@ Replace the CPU-hungry polling loop in `tools/rag/service.py` with inotify-based
 - [ ] **4.1** Manual test: verify ~0% CPU when idle
 - [ ] **4.2** Manual test: verify file change triggers processing
 - [x] **4.3** Update CHANGELOG.md
-- [ ] **4.4** Commit and push
+- [x] **4.4** Commit (done) - push needs manual auth: `git push -u origin feature/event-driven-service`
 
 ---
 
