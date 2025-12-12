@@ -1,6 +1,7 @@
 """llmc_agent - AI coding assistant integrated with LLMC RAG."""
 
-__version__ = "0.1.0"
+__version__ = "0.6.6"  # Matches main llmc package
+__purple_flavor__ = "boxxy is alive"
 __author__ = "David Carroll"
 
 from llmc_agent.agent import Agent, AgentResponse, ToolCall, run_agent

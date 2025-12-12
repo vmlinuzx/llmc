@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmcwrapper"
-version = "0.6.2"
+version = "0.6.6"
 description = "LLM cost compression through intelligent RAG and multi-tier routing"
 authors = [{name="LLMC Core"}]
 readme = "README.md"

@@ -324,9 +324,11 @@ def _make_inspect_tool() -> Tool:
 class ToolRegistry:
     """Manages available tools and tier transitions."""
     
-    def __init__(self, allowed_roots: list[str] | None = None):
+    def __init__(self, allowed_roots: list[str] | None = None, default_tier: ToolTier = ToolTier.WALK):
         self.allowed_roots = allowed_roots or ["."]
-        self.current_tier = ToolTier.CRAWL
+        # Default to WALK - give the model read access by default
+        # The tier system was meant for implementation phases, not runtime gating
+        self.current_tier = default_tier
         self._tools: dict[str, Tool] = {}
         self._build_tools()
     

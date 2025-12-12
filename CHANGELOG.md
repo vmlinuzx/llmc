@@ -2,6 +2,30 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.6] - "boxxy is alive" - 2025-12-12
+
+### Purple Flavor: **boxxy is alive**
+
+bx finally uses its tools instead of gaslighting you about not having access.
+
+### Fixed
+
+- **Tool Tier Gating Removed:** Agent now starts at WALK tier by default — `read_file`, `list_dir`, and `inspect_code` are always available. The Crawl/Walk/Run tier system was meant for implementation phases, not runtime gating.
+
+- **Aggressive Tool Prompting:** Qwen-specific system prompt now explicitly tells the model "NEVER say 'I don't have access' - USE THE TOOLS." The previous wishy-washy prompt let the model weasel out of using its tools.
+
+### Changed
+
+- `ToolRegistry` now accepts `default_tier` parameter (defaults to `WALK`)
+- System prompt for Qwen models is now much more forceful about tool usage
+
+### Results
+
+- Before: `Tools used: 0` + "I don't have access to information about..."  
+- After: `Tools used: 5` + actual useful answers from file contents
+
+---
+
 ## [0.6.5] - "Zero Waste" - 2025-12-11
 
 ### Purple Flavor: **Zero Waste**
