@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "queries": [
+    {
+      "query_id": "q1",
+      "text": "how to configure enrichment",
+      "judgments": [
+        {"doc_id": "DOCS/LLMC_USER_GUIDE.md", "score": 2.0},
+        {"doc_id": "llmc.toml", "score": 1.0},
+        {"doc_id": "DOCS/CLI_REFERENCE.md", "score": 0.0}
+      ]
+    },
+    {
+      "query_id": "q2",
+      "text": "install mcp",
+      "judgments": [
+        {"doc_id": "DOCS/MCP_DESIGN_DECISIONS.md", "score": 2.0},
+        {"doc_id": "README.md", "score": 1.0}
+      ]
+    },
+    {
+      "query_id": "q3",
+      "text": "what is domain rag",
+      "judgments": [
+        {"doc_id": "DOCS/planning/SDD_Domain_RAG_Tech_Docs.md", "score": 2.0},
+        {"doc_id": "DOCS/ROADMAP.md", "score": 1.0}
+      ]
+    }
+  ]
+}

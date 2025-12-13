@@ -2,28 +2,21 @@
 
 ## Changes
 
-- Created `tools/rag/metrics/retrieval.py`: Implemented `mean_reciprocal_rank` and `recall_at_k`.
-- Created `tools/rag/ci/config_lint.py`: Implemented `lint_config` for `llmc.toml` validation.
-- Created `tools/rag/ci/extractor_smoke.py`: Implemented `run_extractor_smoke` for `TechDocsExtractor` validation.
-- Created `tools/rag/ci/eval_output.py`: Implemented `generate_eval_artifact` for JSON reporting.
-- Created `tests/rag/test_retrieval_metrics.py`: Tests for metrics.
-- Created `tests/rag/ci/`: Tests for CI tools (`config_lint`, `extractor_smoke`, `eval_output`).
-- Created `tests/fixtures/sample_docs/`: Sample markdown files for smoke tests.
+- Implemented `ndcg_at_k` in `tools/rag/metrics/retrieval.py`.
+- Created `tools/rag/eval/query_set.py` with Pydantic models for golden query sets.
+- Created `tests/eval/tech_docs_queries.json` with sample golden queries.
+- Created `tests/rag/eval/test_query_set.py` to verify loading logic.
+- Updated `tests/rag/test_retrieval_metrics.py` with nDCG tests.
 
 ## Test Results
 
-Ran `pytest tests/rag/ci/ tests/rag/test_retrieval_metrics.py -v`.
+Ran `pytest tests/rag/test_retrieval_metrics.py tests/rag/eval/test_query_set.py -v`.
 
-**Result:** 21 tests collected.
-- 19 passed.
-- 2 skipped (due to missing `mistune` dependency for real file tests).
-- 0 failed.
-
-Note: `test_extractor_smoke.py` uses mocking to verify logic even when `mistune` is missing, and skips integration tests if dependency is absent.
+**Result:** 16 tests passed.
 
 ## Disagreements with B-Team
 
-None (First turn of Phase 5).
+None (First turn of Phase 6).
 
 ---
-SUMMARY: Implemented CI gates (lint, smoke) and retrieval metrics (MRR, Recall) with full test coverage.
+SUMMARY: Implemented nDCG metric and golden query set loader with sample data. 100% test pass.
