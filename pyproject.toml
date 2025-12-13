@@ -28,6 +28,7 @@ rag = [
   "mcp>=0.9.0",
   "psutil>=5.9.0",   # Cross-platform process & system monitoring
   "humanize>=4.0.0", # Human-readable sizes and times
+  "mistune>=3.1.0",
 ]
 tui = [
   "typer>=0.9.0",

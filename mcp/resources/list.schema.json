@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TechDocResourceList",
+  "type": "object",
+  "properties": {
+    "resources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["uri", "title", "section_path", "handle", "summary", "token_estimate"],
+        "properties": {
+          "uri": { "type": "string" },
+          "title": { "type": "string" },
+          "section_path": { "type": "string" },
+          "handle": { "type": "string" },
+          "summary": { "type": "string" },
+          "token_estimate": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
