@@ -23,6 +23,12 @@ Claude was gaslighting itself AND us. First fix was documentation-only. Web Opus
 
 - MCP server now runs in **classic mode** (23 tools) instead of code_execution mode (3 + stubs)
 - Bootstrap prompt completely rewritten for accuracy and clarity
+- **TechDocsExtractor integrated for markdown indexing:**
+  - Heading-aware chunking with hierarchical section paths (`LLMC > Quick Start > What's New`)
+  - Size ceiling (2500 chars) with paragraph-based splitting for large sections
+  - **Before:** README.md = 195 fragmented spans (one per heading)
+  - **After:** README.md = 9 coherent section chunks
+  - Dependencies: `mistune>=3.1.0`
 
 ---
 
