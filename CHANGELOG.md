@@ -30,6 +30,8 @@ Claude was gaslighting itself AND us. First fix was documentation-only. Web Opus
   - **After:** README.md = 9 coherent section chunks
   - Dependencies: `mistune>=3.1.0`
 
+
+
 ---
 
 ## [0.6.7] - "Secure by Default" - 2025-12-12
