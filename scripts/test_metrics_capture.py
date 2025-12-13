@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Test file to force a new enrichment
 def test_metrics_capture_function():
     """

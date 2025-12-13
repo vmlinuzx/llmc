@@ -14,7 +14,39 @@ Think of this as:
 
 These are the things that make the current LLMC stack feel solid and intentional for you and for any future users.
 
-### ~~1.0 Ruthless MCP Testing Agent (RMTA)~~ ✅ DONE (Phase 1)
+### 1.0 Domain RAG – Technical Documentation Support (P0)
+
+**Status:** 🟡 In Progress
+
+**Goal:** Extend LLMC beyond code to handle technical documentation repositories with domain-aware chunking, embeddings, and enrichment.
+
+**📄 Design:** [`planning/SDD_Domain_RAG_Tech_Docs.md`](planning/SDD_Domain_RAG_Tech_Docs.md)  
+**📄 Research:** [`legacy/research/Extending LLMC to Domain-Specific Documents Research Finding.md`](legacy/research/Extending%20LLMC%20to%20Domain-Specific%20Documents%20Research%20Finding.md), [`legacy/research/Extending RAG to Non-Code Domains.md`](legacy/research/Extending%20RAG%20to%20Non-Code%20Domains.md)
+
+**Key Changes:**
+- New `[repository]` config section with `domain = "code" | "tech_docs" | "legal" | "medical" | "mixed"`
+- `TechDocsExtractor` for heading-aware Markdown/DITA/RST chunking
+- Section path prepending for context preservation
+- Tech docs enrichment prompts (parameters, warnings, prereqs)
+- Graph edges: `REFERENCES`, `REQUIRES`, `WARNS_ABOUT`
+
+**Phases:**
+- [ ] Phase 1: Config schema (`[repository]` section, `domain` field)
+- [ ] Phase 2: TechDocsExtractor implementation
+- [ ] Phase 3: Enrichment integration
+- [ ] Phase 4: Graph extraction
+- [ ] Phase 5: Testing & validation on LLMC's own DOCS/
+
+**Why This Matters:**
+- Same 70-95% token savings for documentation repos
+- Foundation for legal/medical domains later
+- Already works with code repo docs (README, DOCS/)
+
+**Effort:** ~20-30 hours | **Difficulty:** 🟡 Medium (6/10)
+
+---
+
+### ~~1.1 Ruthless MCP Testing Agent (RMTA)~~ ✅ DONE (Phase 1)
 
 **Completed:** Dec 2025
 
@@ -635,6 +667,32 @@ The GAP demon already implements the full autonomous loop:
 | 6 | Slack/Discord notifications | |
 
 **Effort:** 4-8 hours per demon | **Total:** 40-60 hours for full army
+
+---
+
+### 3.9 Architecture Polish & Tech Debt (P3)
+
+**Status:** 🟡 Backlog  
+**Added:** 2025-12-12
+
+Collection of architectural improvements identified during code review. System works, but these would improve maintainability.
+
+| Item | Description | Effort | Notes |
+|------|-------------|--------|-------|
+| **Defer Heavy Imports** | Move `DocgenOrchestrator`, `Database` imports inside functions in `llmc/commands/docs.py` to prevent import-time failures when `[rag]` extras not installed | Low | Prevents CLI crashes for users without optional deps |
+| **Type Discipline in RAG** | Fix `no-any-return`, `Union/None` path errors in `tools/rag/indexer.py`, `inspector.py`, `enrichment_pipeline.py` | Medium-High | Run `mypy --strict tools/rag/` for baseline |
+| **Startup Health Checks** | Add venv/mcp presence check in CLI entry | Low | Warning, not blocker |
+| **Dev Dependencies** | Add `types-toml` to dev deps, consider `shellingham` explicit | Low | Clears mypy stubs |
+| **MCP Test Environment** | Add Makefile target or tox env for `llmc_mcp/` tests with proper deps | Medium | No tests currently in `llmc_mcp/` |
+| **Path Safety Consolidation** | Extract `_normalize_path()` from `inspector.py` to shared `llmc/security.py` | Medium | Pattern exists, needs reuse |
+| **Event Schema Versioning** | Define `EVENT_SCHEMA_VERSION` and golden JSONL fixtures | Medium | Protects downstream consumers |
+| **Clean egg-info Artifacts** | Delete stale `llmcwrapper.egg-info/` dirs (gitignore exists, just need cleanup) | Low | `rm -rf llmcwrapper.egg-info llmcwrapper/llmcwrapper.egg-info` |
+| **Import Hygiene in docs.py** | Exception chaining (`raise ... from err`), ruff auto-fixes | Low | Polish |
+| **Create ARCHITECTURE.md** | Document package overview, data flows, config reference, MCP integration | Medium-High | Missing entirely |
+
+**Why P3:** System is functional. These are quality-of-life improvements that don't affect runtime behavior. Tackle opportunistically or when touching related code.
+
+---
 
 ## 4. How to use this roadmap
 

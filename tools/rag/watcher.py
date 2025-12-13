@@ -17,15 +17,19 @@ import fnmatch
 import threading
 import time
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 # inotify support (Linux only)
 try:
     import pyinotify
     INOTIFY_AVAILABLE = True
+    ProcessEvent = pyinotify.ProcessEvent
 except ImportError:
     pyinotify = None  # type: ignore
     INOTIFY_AVAILABLE = False
+    class ProcessEvent:  # type: ignore
+        """Dummy class for when pyinotify is missing"""
+        pass
 
 
 # Directories to always ignore (fast path before gitignore check)
@@ -207,14 +211,14 @@ class RepoWatcher:
             self.on_change(path)
 
 
-class _InotifyHandler(pyinotify.ProcessEvent):
+class _InotifyHandler(ProcessEvent):
     """Internal handler for inotify events."""
     
     def __init__(self, watcher: RepoWatcher):
         super().__init__()
         self.watcher = watcher
     
-    def process_default(self, event: pyinotify.Event) -> None:
+    def process_default(self, event: Any) -> None:
         """Handle any inotify event."""
         if event.pathname:
             path = Path(event.pathname)

@@ -8,6 +8,20 @@ All notable changes to LLMC will be documented in this file.
 
 bx finally uses its tools instead of gaslighting you about not having access.
 
+### Added
+
+- **Domain RAG Tech Docs SDD (Comprehensive Execution Plan):**
+  - Extended `SDD_Domain_RAG_Tech_Docs.md` with 6-phase execution plan
+  - Phase 1: Index naming rule, structured diagnostics, `--show-domain-decisions`
+  - Phase 2: AST parsing (mistune/docutils), anchors, acronyms, MCP JSON schemas
+  - Phase 3: Reranker intent gating, field budgets, truncation flags
+  - Phase 4: Graph edge confidence, provenance, LLM trace IDs
+  - Phase 5: CI gates (config lint, extractor smoke, schema validation, index connectivity)
+  - Phase 6: nDCG@K evaluation metrics
+  - Added Definition of Done for each phase
+  - Added PR template for consistent reviews
+  - Decision summary table with phase assignments
+
 ### Fixed
 
 - **Tool Tier Gating Removed:** Agent now starts at WALK tier by default — `read_file`, `list_dir`, and `inspect_code` are always available. The Crawl/Walk/Run tier system was meant for implementation phases, not runtime gating.

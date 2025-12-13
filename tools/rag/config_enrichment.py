@@ -5,7 +5,10 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import types
 from typing import Any
+
+_toml: types.ModuleType | None
 
 try:  # Python 3.11+
     import tomllib  # type: ignore[import]
@@ -83,7 +86,7 @@ def _load_toml(path: Path) -> dict[str, Any]:
     if _toml is None:
         raise EnrichmentConfigError("No TOML parser available (tomllib/tomli not installed).")
     with path.open("rb") as f:
-        return _toml.load(f)
+        return _toml.load(f)  # type: ignore[no-any-return]
 
 
 def _parse_backend_spec(

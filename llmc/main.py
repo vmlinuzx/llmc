@@ -48,6 +48,7 @@ app = typer.Typer(
 # ============================================================================
 app.command(name="config")(config_commands.main)
 app.command(name="tui")(tui)
+app.command(name="init")(repo_commands.init)
 
 
 @app.command()
