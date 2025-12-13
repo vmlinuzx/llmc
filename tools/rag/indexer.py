@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import Iterable
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import time
+import fnmatch
 
 # Import classification logic
 from llmc.routing.content_type import classify_slice
@@ -15,8 +17,12 @@ from .config import (
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
+    get_repository_domain,
+    get_default_domain,
+    get_path_overrides,
 )
 from .database import Database
+from .index_naming import resolve_index_name
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
 from .utils import (
@@ -35,7 +41,29 @@ try:
 except ImportError:
     SIDECAR_AVAILABLE = False
 
+log = logging.getLogger(__name__)
+
 EMBED_META = "embed_meta.json"
+
+
+def _resolve_domain(relative_path: Path, repo_root: Path) -> tuple[str, str, str]:
+    """
+    Resolve domain for a file path.
+    Returns: (domain, reason, detail)
+    """
+    str_path = str(relative_path)
+    overrides = get_path_overrides(repo_root)
+    
+    # 1. Path Overrides (including extensions defined as globs)
+    for pattern, domain in overrides.items():
+        if fnmatch.fnmatch(str_path, pattern):
+            if pattern.startswith("*."):
+                return domain, "extension", pattern
+            return domain, "path_override", pattern
+            
+    # 2. Default Domain
+    default_domain = get_default_domain(repo_root)
+    return default_domain, "default_domain", ""
 
 
 class IndexStats(dict):
@@ -142,6 +170,7 @@ def index_repo(
     include_paths: Iterable[Path] | None = None,
     since: str | None = None,
     export_json: bool = True,
+    show_domain_decisions: bool = False,
 ) -> IndexStats:
     repo_root = find_repo_root()
     ensure_storage(repo_root)
@@ -190,6 +219,7 @@ def index_repo(
                 continue
 
             # ATOMIC OPERATION: Extract spans and generate sidecar from same source/AST
+            file_process_start = time.time()
             text_preview = source[:1024].decode("utf-8", errors="ignore")
             classification = classify_slice(relative_path, None, text_preview)
 
@@ -202,6 +232,24 @@ def index_repo(
 
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(relative_path, lang, repo_root, source)
+
+            # Domain Resolution & Logging
+            domain, reason_type, reason_detail = _resolve_domain(relative_path, repo_root)
+            index_name = resolve_index_name(f"emb_{domain}", repo_root.name, "per-repo")
+            
+            if show_domain_decisions:
+                reason_str = f"{reason_type}:{reason_detail}" if reason_detail else reason_type
+                print(f"INFO indexer: file={relative_path} domain={domain} reason={reason_str}")
+
+            file_ms = int((time.time() - file_process_start) * 1000)
+            log.info(
+                f"domain={domain} "
+                f"override=\"{reason_detail if reason_detail else reason_type}\" "
+                f"index=\"{index_name}\" "
+                f"extractor=\"TreeSitter\" "
+                f"chunks={len(spans)} "
+                f"ms={file_ms}"
+            )
 
             # Generate sidecar (using same loaded content)
             sidecar_path = generate_sidecar_if_enabled(relative_path, lang, source, repo_root)

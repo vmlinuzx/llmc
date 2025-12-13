@@ -682,3 +682,29 @@ def load_rerank_weights(repo_root: Path | None = None) -> dict[str, float]:
             weights[key] = _parse_float(value, weights[key])
 
     return _normalize(weights)
+
+
+def get_repository_domain(repo_root: Path | None = None) -> str:
+    """
+    Get the repository-wide domain setting.
+    Defaults to "tech_docs" if not specified.
+    """
+    cfg = load_config(repo_root)
+    return cfg.get("repository", {}).get("domain", "tech_docs")
+
+
+def get_default_domain(repo_root: Path | None = None) -> str:
+    """
+    Get the default domain to use when no specific rule matches.
+    Defaults to "tech_docs".
+    """
+    cfg = load_config(repo_root)
+    return cfg.get("repository", {}).get("default_domain", "tech_docs")
+
+
+def get_path_overrides(repo_root: Path | None = None) -> dict[str, str]:
+    """
+    Get the map of path patterns to domain names.
+    """
+    cfg = load_config(repo_root)
+    return cfg.get("repository", {}).get("path_overrides", {})

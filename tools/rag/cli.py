@@ -62,11 +62,16 @@ def cli() -> None:
 @click.option("--since", metavar="SHA", help="Only parse files changed since the given commit")
 @click.option("--no-export", is_flag=True, default=False, help="Skip JSONL span export")
 @click.option("--json", "as_json", is_flag=True, help="Emit output as JSON.")
-def index(since: str | None, no_export: bool, as_json: bool) -> None:
+@click.option("--show-domain-decisions", is_flag=True, help="Show domain resolution decisions.")
+def index(since: str | None, no_export: bool, as_json: bool, show_domain_decisions: bool) -> None:
     """Index the repository (full or incremental)."""
     from .indexer import index_repo
 
-    stats = index_repo(since=since, export_json=not no_export)
+    stats = index_repo(
+        since=since,
+        export_json=not no_export,
+        show_domain_decisions=show_domain_decisions,
+    )
     if as_json:
         click.echo(json.dumps(stats, indent=2))
     else:
