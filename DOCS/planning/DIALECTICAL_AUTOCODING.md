@@ -35,7 +35,139 @@ You are **THE ORCHESTRATOR** — you invoke agents, read their output, and decid
 
 ---
 
-## The Loop (You Execute This)
+## Multi-Phase Orchestration (The Full Pipeline)
+
+**When given an SDD, you are SELF-DIRECTING.** You don't wait for Dave to write REQUIREMENTS.md — you extract it yourself.
+
+```
+FOR phase IN SDD.phases:
+    
+    1. EXTRACT REQUIREMENTS
+       - Read the SDD section for this phase
+       - Write DOCS/planning/autocode/REQUIREMENTS.md with:
+         - Phase number and title
+         - Objective (1-2 sentences)
+         - Acceptance Criteria (AC-1, AC-2, etc.) with:
+           - Implementation location
+           - Expected behavior
+           - Test requirements
+         - Out of Scope (what NOT to implement)
+         - Verification checklist for B-Team
+    
+    2. CLEAR ARTIFACTS
+       - Delete: A_TEAM_OUTPUT.md, B_TEAM_FEEDBACK.md, REFEREE_RULING.md
+       - Append to turn_log.md: "=== PHASE {N}: {title} ==="
+    
+    3. RUN THE DIALECTIC LOOP (see below)
+       - Continue until B-Team says APPROVED or terminal failure
+    
+    4. ON B-TEAM "APPROVED" → EXECUTE C-TEAM GAUNTLET:
+       - 🛑 Run: `./tools/emilia_testing_saint.sh --quick`
+       
+       - IF PASS (Exit 0):
+          - Append "✅ PHASE {N} APPROVED (Survived Emilia)" to turn_log.md
+          - Proceed to phase N+1
+       
+       - IF FAIL (Exit 1):
+          - REJECT B-Team's verdict
+          - Read Emilia's report from `tests/REPORTS/emilia_*.md`
+          - Orchestrator triages findings:
+            * CRITICAL → Add to REQUIREMENTS.md as new AC
+            * MEDIUM → Add to REFEREE_RULING.md for A-Team
+            * LOW → Log to turn_log.md, defer to tech debt
+          - Clear A_TEAM_OUTPUT.md, B_TEAM_FEEDBACK.md
+          - Invoke A-Team with updated requirements/ruling
+          - Resume dialectic loop
+    
+    5. ON FAILURE (max turns, loop detected, agent crash):
+       - Append failure summary to turn_log.md
+       - STOP. Do NOT proceed to next phase.
+
+END when:
+  - All phases APPROVED (including Emilia) → Write "🎉 SDD COMPLETE" to turn_log.md
+  - Any phase fails → Write failure analysis, STOP
+```
+
+### C-Team (Emilia) — Security & Quality Gauntlet
+
+**Role:** Final verification gate after B-Team functional approval.
+
+**Invocation:** `./tools/emilia_testing_saint.sh --quick`
+
+**What Emilia Checks:**
+- Security vulnerabilities (injection, auth, secrets)
+- Code quality issues (complexity, duplication)
+- Test coverage gaps
+- Dependency issues
+
+**Orchestrator Triage Rules:**
+
+| Emilia Finding | Severity | Orchestrator Action |
+|----------------|----------|---------------------|
+| SQL injection, auth bypass, hardcoded secrets | CRITICAL | Add new AC to REQUIREMENTS.md |
+| Missing error handling, weak validation | MEDIUM | Add to REFEREE_RULING.md |
+| Style issues, minor complexity | LOW | Log to turn_log.md, defer |
+| False positive / not applicable | IGNORE | Skip |
+
+**Key Principle:** Emilia doesn't decide what's actionable — the orchestrator does. This prevents security perfectionism loops.
+
+
+### Generating REQUIREMENTS.md from SDD
+
+When extracting requirements, follow this template:
+
+```markdown
+# REQUIREMENTS: {Phase Title}
+
+**SDD Source:** `{path to SDD}` → Section N, Phase N
+**Branch:** `{current branch}`
+**Scope:** {one-line description}
+
+---
+
+## Objective
+
+{1-2 sentences from SDD}
+
+---
+
+## Acceptance Criteria
+
+### AC-1: {Title}
+
+**Implementation:** {file path and function/class name}
+
+{Specific requirements with code examples if applicable}
+
+**Tests:** {test file path}
+- `test_case_1()` — {description}
+- `test_case_2()` — {description}
+
+---
+
+## Out of Scope (Phase N+1)
+
+- ❌ {thing not to implement}
+- ❌ {another thing}
+
+---
+
+## Verification
+
+B-Team must verify:
+1. {file} exists and has {function/class}
+2. {test file} exists with N+ tests
+3. Tests pass: `pytest {path} -v`
+4. {any other checks}
+
+---
+
+**END OF REQUIREMENTS**
+```
+
+---
+
+## The Turn Loop (You Execute This)
 
 **THIS IS FULLY AUTONOMOUS. No stopping to check with Dave. Run until terminal state.**
 
@@ -156,6 +288,50 @@ Then invoke A-Team again with the ruling in context.
 
 ---
 
+## Modifying Requirements (Orchestrator Authority)
+
+**You have authority to modify REQUIREMENTS.md** when issues arise. This is NOT failure — it's scope management.
+
+### When to Modify Requirements
+
+| Situation | Action |
+|-----------|--------|
+| **Ambiguous AC** | Clarify the acceptance criterion with specific examples |
+| **Impossible AC** | Remove/defer to next phase with `❌ DEFERRED:` prefix |
+| **Scope Creep** | Tighten the AC to prevent A-Team gold-plating |
+| **External Blocker** | Mark as out-of-scope with explanation |
+| **Conflict with Codebase** | Adjust AC to fit existing architecture |
+
+### Modification Protocol
+
+1. Append to `turn_log.md`:
+   ```
+   T{N}|ORCH|REQUIREMENTS MODIFIED: {what changed and why}
+   ```
+
+2. Update `REQUIREMENTS.md` with changes:
+   - Add `[MODIFIED T{N}]` tag to changed ACs
+   - Add `[DEFERRED]` prefix to removed ACs
+   - Add explanation comment
+
+3. Clear A_TEAM_OUTPUT.md and B_TEAM_FEEDBACK.md
+
+4. Invoke A-Team with fresh context
+
+### Example Modification
+
+```markdown
+### AC-3: CLI Flag `--show-domain-decisions` [MODIFIED T3]
+
+**Original:** Output detailed reasoning for each file.
+**Modified:** Output one-line summary per file (detailed mode deferred to Phase 3).
+**Reason:** A-Team/B-Team loop on log format — simplified for Phase 1.
+```
+
+**Rule:** If you modify requirements 3+ times for the same phase, STOP and escalate to Dave.
+
+---
+
 ## Turn Log (Micro-Summaries)
 
 Append each turn's summary to `DOCS/planning/autocode/turn_log.md`:
@@ -187,24 +363,54 @@ This is your audit trail for loop detection.
 
 | File | Purpose |
 |------|---------|
-| `DOCS/planning/autocode/REQUIREMENTS.md` | The contract (Dave wrote this) |
+| `DOCS/planning/SDD_*.md` | Source of truth — phases extracted from here |
+| `DOCS/planning/autocode/REQUIREMENTS.md` | The contract (orchestrator generates this) |
 | `DOCS/planning/autocode/A_TEAM_OUTPUT.md` | A-Team's turn output |
 | `DOCS/planning/autocode/B_TEAM_FEEDBACK.md` | B-Team's evaluation |
 | `DOCS/planning/autocode/REFEREE_RULING.md` | Your rulings (when needed) |
 | `DOCS/planning/autocode/turn_log.md` | Micro-summary audit trail |
-| `DOCS/planning/autocode/HANDOFF.md` | This file (your instructions) |
+| `DOCS/planning/DIALECTICAL_AUTOCODING.md` | This file (your instructions) |
 
 ---
 
 ## Ready Protocol
 
-When Dave says "go" or gives you REQUIREMENTS.md:
+### Mode 1: SDD-Driven (Fully Autonomous)
+
+When Dave says "go" and points you to an SDD:
+
+1. Read the SDD, identify all phases
+2. Initialize turn_log.md with SDD name and phase count
+3. FOR each phase:
+   - Extract requirements → Write REQUIREMENTS.md
+   - Clear artifacts
+   - Run dialectic loop until APPROVED
+   - Log result, proceed to next phase
+4. Continue until all phases APPROVED or hard failure
+
+### Mode 2: Single Requirements (One Phase)
+
+When Dave gives you a specific REQUIREMENTS.md:
 
 1. Read REQUIREMENTS.md
-2. Clear any stale artifact files (A_TEAM_OUTPUT, B_TEAM_FEEDBACK, REFEREE_RULING)
-3. Initialize turn_log.md
-4. Start the loop: Invoke A-Team for Turn 1
-5. Continue until APPROVED or stop condition
+2. Clear any stale artifact files
+3. Run dialectic loop until APPROVED
+4. Log result, STOP
+
+---
+
+## Cost Optimization Notes
+
+The dialectic structure allows mixing model tiers:
+
+| Role | Suggested Model | Rationale |
+|------|-----------------|-----------|
+| **Orchestrator** | Haiku / GPT-3.5 / Bash | Just routing, no reasoning needed |
+| **A-Team** | Sonnet 4 / Gemini | Fast builder, makes mistakes (that's OK) |
+| **B-Team** | Sonnet 4 / Gemini | Adversarial verifier, catches A-Team BS |
+| **C-Team** (optional) | Opus / Claude 4.5 | Final arch review on APPROVED phases |
+
+The adversarial structure compensates for cheaper models. Escalate to expensive models only when needed.
 
 ---
 

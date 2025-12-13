@@ -877,15 +877,15 @@ class LlmcMcpServer:
             else Path(".")
         )
 
-        # Construct command
-        quoted_args = [shlex.quote(str(a)) for a in args]
-        full_cmd = f"{shlex.quote(cmd_path)} {' '.join(quoted_args)}"
+        # Construct command list for secure execution
+        # No shlex.quote needed when shell=False
+        cmd_list = [cmd_path] + [str(a) for a in args]
 
         try:
             result = subprocess.run(
-                full_cmd,
+                cmd_list,
                 check=False,
-                shell=True,
+                shell=False,
                 cwd=str(cwd),
                 capture_output=True,
                 text=True,

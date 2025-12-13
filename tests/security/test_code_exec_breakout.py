@@ -1,105 +1,62 @@
-
-import os
 import pytest
+import os
+import time
+import threading
 from unittest.mock import MagicMock
 from llmc_mcp.tools.code_exec import execute_code
+from llmc_mcp.isolation import is_isolated_environment
 
-# Mock isolation to allow the test to run
-@pytest.fixture(autouse=True)
-def mock_isolation(monkeypatch):
+def test_code_exec_exfiltration(monkeypatch):
+    """
+    VULN-001: Environment Variable Exfiltration
+    Demonstrates that execute_code running in-process allows reading
+    sensitive environment variables (API keys) of the host process.
+    """
+    is_isolated_environment.cache_clear()
+    monkeypatch.setenv("LLMC_MCP_API_KEY", "SUPER_SECRET_KEY_123")
     monkeypatch.setenv("LLMC_ISOLATED", "1")
-    monkeypatch.setenv("SECRET_API_KEY", "SUPER_SECRET_VALUE_12345")
-
-def test_code_exec_exfiltrates_env_vars():
-    """
-    CRITICAL VULNERABILITY: Information Disclosure
     
-    The 'execute_code' tool runs 'exec()' within the same process as the MCP server.
-    This allows the executed code to access the server's memory, including environment
-    variables that may contain API keys (Anthropic, OpenAI, etc.).
-    
-    Even if the server is in a Docker container (satisfying require_isolation),
-    the code still has full access to the container's environment.
-    """
-    
-    # Payload: Read environment variables
     payload = """
 import os
-print(f"EXFILTRATED: {os.environ.get('SECRET_API_KEY')}")
-_result_ = os.environ.get('SECRET_API_KEY')
+_result_ = os.environ.get("LLMC_MCP_API_KEY")
 """
     
-    # Mock tool caller
-    mock_caller = MagicMock()
-    
-    # Execute
     result = execute_code(
         code=payload,
-        tool_caller=mock_caller
+        tool_caller=MagicMock(),
+        timeout=1
     )
     
-    # Assertions
     assert result.success is True
-    assert "EXFILTRATED: SUPER_SECRET_VALUE_12345" in result.stdout
-    assert result.return_value == "SUPER_SECRET_VALUE_12345"
-    
-def test_code_exec_dos_infinite_loop():
-    """
-    CRITICAL VULNERABILITY: Denial of Service
-    
-    'execute_code' uses 'exec()' which blocks the Python interpreter.
-    """
-    
-    # Payload: Infinite loop
-    payload = "import time\ntime.sleep(2)\nprint('I slept')"
-    
-    mock_caller = MagicMock()
-    
-    # In this test environment, a special pytest hook blocks time.sleep.
-    # The fact that this hook triggers PROVES that the code is running in the
-    # same process as the test runner (and thus the MCP server).
-    # If it were properly sandboxed/subprocessed, this hook would not trigger.
-    try:
-        execute_code(
-            code=payload,
-            tool_caller=mock_caller,
-            timeout=1
-        )
-    except RuntimeError as e:
-        if "time.sleep blocked" in str(e):
-             # Vulnerability Confirmed: In-process execution detected
-             return
-        raise e
-    except Exception as e:
-         # Some other error?
-         pass
+    assert result.return_value == "SUPER_SECRET_KEY_123"
 
-    # If we get here, sleep worked (no hook) OR it finished fast.
-    # If it finished fast, check if it actually slept?
-    # For now, if we don't catch the RuntimeError, we assume the environment
-    # might be different, but we've documented the finding.
-
-
-def test_code_exec_file_write():
+def test_code_exec_blocks_main_thread(monkeypatch):
     """
-    HIGH VULNERABILITY: Arbitrary File Write
+    VULN-002: DoS via Main Thread Blocking
+    Demonstrates that execute_code blocks the main thread, ignoring the timeout
+    parameter (because it uses exec() instead of subprocess).
+    """
+    is_isolated_environment.cache_clear()
+    monkeypatch.setenv("LLMC_ISOLATED", "1")
     
-    Code running in the same process can write to the filesystem.
-    """
-    filename = "pwned.txt"
-    payload = f"""
-with open("{filename}", "w") as f:
-    f.write("HACKED")
+    start_time = time.time()
+    
+    payload = """
+import time
+time.sleep(2)
 """
     
-    mock_caller = MagicMock()
+    print("\n[Test] Executing sleep payload...")
+    result = execute_code(
+        code=payload,
+        tool_caller=MagicMock(),
+        timeout=1 
+    )
+    print(f"[Test] Execution finished. Result success: {result.success}, Error: {result.error}")
     
-    try:
-        result = execute_code(code=payload, tool_caller=mock_caller)
-        assert result.success is True
-        assert os.path.exists(filename)
-        with open(filename) as f:
-            assert f.read() == "HACKED"
-    finally:
-        if os.path.exists(filename):
-            os.remove(filename)
+    duration = time.time() - start_time
+    
+    # If it blocked, duration should be ~2s
+    # If it was properly isolated/async, it might be less or handle timeout differently
+    assert duration >= 2.0
+    assert result.error is None

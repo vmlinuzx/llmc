@@ -1,25 +1,24 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+import fnmatch
 import hashlib
 import json
 import logging
 import os
 from pathlib import Path
 import time
-import fnmatch
 
 # Import classification logic
 from llmc.routing.content_type import classify_slice
 
 from .config import (
     ensure_rag_storage,
+    get_default_domain,
+    get_path_overrides,
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
-    get_repository_domain,
-    get_default_domain,
-    get_path_overrides,
 )
 from .database import Database
 from .index_naming import resolve_index_name

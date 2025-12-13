@@ -1,6 +1,6 @@
-# Emilia Daily Report - 2025-12-12
+# Emilia Daily Report - 2025-12-13
 
-**Generated:** 23:42:59
+**Generated:** 00:24:33
 **Repository:** /home/vmlinux/src/llmc
 
 ## Summary
@@ -8,9 +8,9 @@
 | Demon | Status | P0 | P1 |
 |-------|--------|----|----|
 | gap | ✅ SUCCESS | 0 | 0 |
-| security | ✅ SUCCESS | 1 | 1 |
+| security | ✅ SUCCESS | 2 | 0 |
 
-**Total Issues:** P0=1, P1=1
+**Total Issues:** P0=2, P1=0
 
 ## ❌ VERDICT: CRITICAL ISSUES FOUND
 

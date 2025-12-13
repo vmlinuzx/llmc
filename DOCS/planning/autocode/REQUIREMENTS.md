@@ -1,138 +1,93 @@
-# REQUIREMENTS: Domain RAG Tech Docs — Phase 1
+# REQUIREMENTS: Domain RAG Tech Docs — Phase 6
 
-**SDD Source:** `DOCS/planning/SDD_Domain_RAG_Tech_Docs.md` → Section 7, Phase 1  
-**Branch:** `feature/domain-rag-tech-docs`  
-**Scope:** Foundation — Index naming + diagnostics only
+**SDD Source:** `DOCS/planning/SDD_Domain_RAG_Tech_Docs.md` → Section 7, Phase 6
+**Branch:** `feature/domain-rag-tech-docs`
+**Scope:** Extended Evaluation — nDCG and Golden Query Sets
 
 ---
 
 ## Objective
 
-Eliminate index collisions and make domain decisions observable during indexing.
+Implement graded relevance metrics (nDCG) and establish a golden query set for ongoing quality evaluation.
 
 ---
 
 ## Acceptance Criteria
 
-### AC-1: Deterministic Index Naming
+### AC-1: nDCG Metric Implementation
 
-**Create `tools/rag/index_naming.py`:**
+**Add to `tools/rag/metrics/retrieval.py`:**
 
 ```python
-def resolve_index_name(base: str, repo: str, sharing: str, suffix: str = "") -> str:
-    """Resolve final index name based on sharing strategy.
+def ndcg_at_k(results: list[list[float]], k: int = 10) -> float:
+    """Calculate nDCG@K across queries.
     
     Args:
-        base: Base index name (e.g., "emb_tech_docs")
-        repo: Repository name (e.g., "llmc")
-        sharing: "shared" or "per-repo"
-        suffix: Optional deployment suffix
+        results: List of result lists, where value is relevance score (0.0 to 1.0+)
+        k: Number of results to consider
         
     Returns:
-        Final index name (e.g., "emb_tech_docs_llmc")
+        nDCG@K score (0.0 to 1.0)
     """
-    return base if sharing == "shared" else f"{base}_{repo}{suffix}"
+    # ... implementation ...
 ```
 
-**Tests:** `tests/rag/test_index_naming.py`
-- `test_shared_mode_returns_base()` — sharing="shared" returns just base
-- `test_per_repo_mode_appends_repo()` — sharing="per-repo" returns `{base}_{repo}`
-- `test_suffix_appends()` — suffix is appended when provided
-- `test_empty_inputs()` — handles empty strings gracefully
+**Tests:** `tests/rag/test_retrieval_metrics.py`
+- `test_ndcg_at_k_perfect()` — Perfect ordering = 1.0
+- `test_ndcg_at_k_worst()` — Worst ordering < 1.0
+- `test_ndcg_at_k_empty()` — Empty results = 0.0
+
+### AC-2: Golden Query Set Schema & Loader
+
+**Create `tools/rag/eval/query_set.py`:**
+
+```python
+from pydantic import BaseModel
+
+class RelevanceJudgment(BaseModel):
+    doc_id: str
+    score: float  # 0.0=irrelevant, 1.0=relevant, 2.0=highly relevant
+
+class EvalQuery(BaseModel):
+    query_id: str
+    text: str
+    judgments: list[RelevanceJudgment]
+
+class GoldenQuerySet(BaseModel):
+    version: str
+    queries: list[EvalQuery]
+
+def load_query_set(path: str) -> GoldenQuerySet:
+    # Load and validate JSON
+    pass
+```
+
+**Tests:** `tests/rag/eval/test_query_set.py`
+- `test_load_valid_set()`
+- `test_schema_validation()`
+
+### AC-3: Tech Docs Golden Query Set
+
+**Create `tests/eval/tech_docs_queries.json`:**
+- Create a sample golden set with at least 3 queries relevant to LLMC tech docs (e.g., "how to configure enrichment", "install mcp").
+- Include graded relevance judgments (0, 1, 2).
 
 ---
 
-### AC-2: Structured Diagnostic Logs
+## Out of Scope (End of SDD)
 
-**During indexing, emit structured logs:**
-
-```
-INFO domain=tech_docs override="DOCS/**" index="emb_tech_docs_llmc" extractor="TechDocsExtractor" chunks=24 ms=712
-```
-
-**Required fields:**
-- `domain` — Resolved domain type
-- `override` — Which path pattern matched (or "extension" or "default")
-- `index` — Resolved index name from AC-1
-- `extractor` — Which extractor class was used
-- `chunks` — Number of chunks produced
-- `ms` — Time in milliseconds
-
-**Implementation location:** Modify the indexer to log this line for each file processed.
-
----
-
-### AC-3: CLI Flag `--show-domain-decisions`
-
-**Add flag to indexer CLI:**
-
-```bash
-llmc index --show-domain-decisions
-```
-
-**Output format (one line per file):**
-
-```
-INFO indexer: file=DOCS/API.md domain=tech_docs reason=path_override:DOCS/**
-INFO indexer: file=src/main.py domain=code reason=extension:.py
-INFO indexer: file=notes.txt domain=tech_docs reason=default_domain
-```
-
-**Reasons enum:**
-- `path_override:{pattern}` — Matched a path override pattern
-- `extension:{ext}` — Matched by file extension
-- `default_domain` — Fell back to default_domain setting
-- `global_default` — Fell back to repository.domain
-
----
-
-### AC-4: Config Schema Extension
-
-**Add to `llmc.toml` schema (can be stubbed for now):**
-
-```toml
-[repository]
-domain = "code"  # "code" | "tech_docs" | "legal" | "medical" | "mixed"
-default_domain = "tech_docs"
-
-[repository.path_overrides]
-"DOCS/**" = "tech_docs"
-"*.md" = "tech_docs"
-"*.py" = "code"
-```
-
-**For Phase 1:** Schema can be defined but not fully consumed. Indexer must at least parse and log the values.
-
----
-
-## Out of Scope (Phase 2+)
-
-- ❌ TechDocsExtractor implementation
-- ❌ Domain-specific embedding profiles  
-- ❌ Graph extraction
-- ❌ MCP resource exposure
-- ❌ Hybrid search/reranking
+- ❌ Automated judgment generation (LLM-as-a-Judge) - Future R&D
+- ❌ UI for query labeling
 
 ---
 
 ## Verification
 
 B-Team must verify:
-
-1. `tools/rag/index_naming.py` exists and has the function
-2. `tests/rag/test_index_naming.py` exists with 4+ tests
-3. Tests pass: `pytest tests/rag/test_index_naming.py -v`
-4. Indexer logs structured output when run
-5. `--show-domain-decisions` flag is recognized
-
----
-
-## Context Files
-
-If you need context on existing code patterns:
-- `tools/rag/` — Existing RAG tooling
-- `llmc.toml` — Current config format
-- `tests/rag/` — Existing test patterns
+1. `tools/rag/metrics/retrieval.py` has `ndcg_at_k`.
+2. `tools/rag/eval/query_set.py` exists and validates schema.
+3. `tests/eval/tech_docs_queries.json` exists with valid data.
+4. New tests pass.
 
 ---
 

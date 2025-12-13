@@ -86,8 +86,8 @@ def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
     if paths:
         collected.extend(Path(p) for p in paths)
     if use_stdin:
-        for line in sys.stdin:
-            line = line.strip()
+        for raw_line in sys.stdin:
+            line = raw_line.strip()
             if line:
                 collected.append(Path(line))
     return collected
@@ -224,11 +224,11 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
     except RuntimeError as err:
         # Surface enrichment gating failures (e.g. zero rows or zero attached entities)
         click.echo(str(err), err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from err
     except FileNotFoundError as err:
         # Missing index DB or other filesystem issues
         click.echo(str(err), err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from err
 
     graph.save(output_path)
     click.echo(f"Wrote graph JSON to {output_path}")
@@ -315,7 +315,7 @@ def enrich(
                 "Error: invalid --starvation-ratio value. Expected format HIGH:LOW (e.g. 5:1).",
                 err=True,
             )
-            raise SystemExit(1)
+            raise SystemExit(1) from None
     db_file = _db_path(repo_root, for_write=False)
     if not db_file.exists():
         click.echo("No index database found. Run `rag index` first.")
@@ -435,7 +435,7 @@ def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
         results = search_spans(phrase, limit=limit, debug=debug)
     except FileNotFoundError as err:
         click.echo(str(err))
-        raise SystemExit(1)
+        raise SystemExit(1) from err
     if as_json:
         payload = [
             {
@@ -643,7 +643,7 @@ def inspect(
         )
     except Exception as e:
         click.echo(f"Error inspecting entity: {e}", err=True)
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
     if as_json:
         click.echo(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))

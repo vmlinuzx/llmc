@@ -1,5 +1,0 @@
-[console_scripts]
-llmc-doctor = llmcwrapper.cli.llmc_doctor:main
-llmc-profile = llmcwrapper.cli.llmc_profile:main
-llmc-rag = llmcwrapper.cli.llmc_rag:main
-llmc-yolo = llmcwrapper.cli.llmc_yolo:main
