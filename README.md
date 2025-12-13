@@ -29,26 +29,33 @@ llmc-cli search "authentication middleware"
 llmc-cli tui
 ```
 
-**Current Release:** v0.6.5 "Zero Waste" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
+**Current Release:** v0.6.8 "DocumentationShmocumentation" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
 
-### What's New in v0.6.0 "Modular Mojo"
-- **Modular Embeddings:** You can now define multiple embedding **profiles** (e.g., `code` vs. `docs`) using different providers (Ollama, SentenceTransformers, Hash) in `llmc.toml`.
-- **Hardened CLI:** Critical bug fixes for `llmc-rag` and `llmc-rag-repo snapshot`.
-- **Better Telemetry:** Unified SQLite-backed telemetry for the Tool Envelope.
-- **Quality:** Massive codebase cleanup and new live integration tests.
+### What's New in v0.6.8
+- **Polyglot Support:** Now handles both **code** AND **technical documentation** with domain-aware parsing.
+- **MCP Write Capability:** Full bidirectional file I/O for Claude Desktop integration (23 tools exposed).
+- **Tech Docs Extractor:** Heading-aware chunking for Markdown, DITA, and RST documentation.
+- **Better Bootstrap Prompt:** Accurate tool listing, no more "documentation says X but reality is Y" confusion.
 
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.
 
-This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. It supports **Python, JavaScript, TypeScript, Go, Java, and Markdown** with full semantic parsing via TreeSitter. You should see between 70 and 95 percent reduction in token usage in a long session by using the LLMC. I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
+This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. It supports **Python, JavaScript, TypeScript, Go, Java, Markdown, and Technical Documentation** (API docs, man pages, config references) with full semantic parsing via TreeSitter. You should see between 70 and 95 percent reduction in token usage in a long session by using LLMC. I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
 
 
 Brief what this repo does: A small set of CLIs and services that keep the users different project repos indexed, enriched, and queryable via RAG designed to utilize local smaller agents to drive down LLM usage costs, and make big LLM's "smarter".
 
 
 Capabilities:
+
+- **Polyglot Domain Support:** Works with code AND documentation repositories.
+    - Code domains: Python, JavaScript, TypeScript, Go, Java with full TreeSitter parsing.
+    - Documentation domains: Technical docs, API references, man pages, config references with heading-aware chunking.
+    - Mixed repos: Automatically detects and routes content to appropriate extractors.
+    - Domain config: Set `[repository] domain = "code" | "tech_docs" | "mixed"` in `llmc.toml`.
+
 - Core RAG in sqlite engine: Local, file based RAG index that keeps a repo's code and docs searchable without calling an LLM.
-    - Index: Scans the repo, slices files into logical spans (functions, classes, top level blocks), and stores text plus metadata in a sqlite database with full text search tables.
+    - Index: Scans the repo, slices files into logical spans (functions, classes, headings, sections), and stores text plus metadata in a sqlite database with full text search tables.
     - Sync: Keeps the index up to date by applying incremental changes from git diffs or explicit file lists instead of re indexing everything.
     - Embeddings: Turns spans into vector embeddings using a configured embedding backend, caches them in sqlite, and skips recompute when the source text has not changed.
     - Enrichment (LLM call): Calls the configured enrichment backends to generate summaries, tags, and other metadata that make search and ranking smarter.
@@ -131,7 +138,8 @@ Capabilities:
 
 Limitations:
 
-- GraphRAG is strongest for Python and TypeScript: Full entity/relation extraction for Python and TS/JS; other languages get basic span indexing but not full graph relationships yet.
+- GraphRAG is strongest for Python and TypeScript: Full entity/relation extraction for Python and TS/JS; other languages and documentation get basic span indexing but not full graph relationships yet.
+- Tech docs support is new: Heading-aware chunking works well, but graph extraction for documentation (REFERENCES, REQUIRES edges) is still in development.
 - Index freshness is bounded by your daemon: If your daemon or service is not running regularly, LLMC will fall back to being conservative and not returning stale slices.
 - RAG Nav tools are opinionated: The system prefers "no answer" to "bad answer", which can feel strict if you are used to LLMs happily hallucinating from junk input.
 - Some config lives in code: Not every knob is exposed in llmc.toml or config files yet; some advanced settings still require code changes.
