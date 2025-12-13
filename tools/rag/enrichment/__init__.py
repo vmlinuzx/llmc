@@ -16,10 +16,10 @@ import re
 # Hoisted imports
 from typing import Any
 
-from .database import Database
-from .graph import GraphNeighbor, GraphStore
-from .types import SpanRecord
-from .workers import enrichment_plan, execute_enrichment
+from ..database import Database
+from ..graph import GraphNeighbor, GraphStore
+from ..types import SpanRecord
+from ..workers import enrichment_plan, execute_enrichment
 
 
 @dataclass

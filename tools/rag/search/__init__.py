@@ -8,7 +8,7 @@ from pathlib import Path
 import struct
 from typing import Any
 
-from .config import (
+from ..config import (
     embedding_model_dim,
     embedding_model_name,
     get_multi_route_config,
@@ -55,9 +55,9 @@ import logging
 
 from tools.rag.config import ConfigError  # Added import
 
-from .database import Database
-from .embeddings import HASH_MODELS, build_embedding_backend
-from .utils import find_repo_root
+from ..database import Database
+from ..embeddings import HASH_MODELS, build_embedding_backend
+from ..utils import find_repo_root
 
 logger = logging.getLogger(__name__)
 
@@ -233,7 +233,7 @@ def _enrich_debug_info(
         try:
             # We do a lazy load or manual parse to avoid huge overhead if possible,
             # but SchemaGraph.load is standard.
-            from .schema import SchemaGraph
+            from ..schema import SchemaGraph
 
             graph = SchemaGraph.load(graph_path)
 
@@ -288,7 +288,7 @@ def _enrich_debug_info(
                             else:
                                 e_start = int(suffix)
                                 e_end = e_start
-                        except:
+                        except Exception:
                             continue
 
                     if e_start is None:
