@@ -17,10 +17,22 @@ class TechDocsSpan:
     metadata: dict         # Includes anchor, doc_title, file_path, etc.
 
 class TechDocsExtractor:
-    """Extracts semantic spans from technical documentation."""
+    """Extracts semantic spans from technical documentation.
     
-    def __init__(self):
+    Respects heading hierarchy for chunking, with size ceiling to prevent
+    mega-chunks. Split priority:
+    1. H1/H2 boundaries (always split)
+    2. H3+ boundaries (split if approaching limit)
+    3. Paragraph boundaries (last resort for oversized sections)
+    """
+    
+    # Size limits
+    MAX_CHUNK_CHARS = 2500  # Target max chars per chunk
+    MIN_CHUNK_CHARS = 200   # Don't create tiny fragments
+    
+    def __init__(self, max_chunk_chars: int = 2500):
         self.markdown = mistune.create_markdown(renderer=None)
+        self.max_chunk_chars = max_chunk_chars
 
     def _slugify(self, text: str) -> str:
         # Lowercase, replace spaces with dashes, remove non-alphanumeric (except dashes)
@@ -139,7 +151,8 @@ class TechDocsExtractor:
             if node_type == 'heading':
                 # Yield previous chunk if it has content
                 if current_chunk_nodes:
-                     yield self._create_span(current_chunk_nodes, current_path_str, path, current_line, used_slugs)
+                     span = self._create_span(current_chunk_nodes, current_path_str, path, current_line, used_slugs)
+                     yield from self._maybe_split_span(span, used_slugs)
                      # Update line count
                      chunk_text = "".join(self._render_node(n) for n in current_chunk_nodes)
                      current_line += chunk_text.count('\n')
@@ -167,7 +180,59 @@ class TechDocsExtractor:
         
         # Yield final chunk
         if current_chunk_nodes:
-            yield self._create_span(current_chunk_nodes, current_path_str, path, current_line, used_slugs)
+            span = self._create_span(current_chunk_nodes, current_path_str, path, current_line, used_slugs)
+            yield from self._maybe_split_span(span, used_slugs)
+    
+    def _maybe_split_span(self, span: TechDocsSpan, used_slugs: set) -> Iterator[TechDocsSpan]:
+        """Split oversized spans while preserving section context."""
+        if len(span.content) <= self.max_chunk_chars:
+            yield span
+            return
+        
+        # Split on paragraph boundaries (double newline)
+        paragraphs = re.split(r'\n\n+', span.content)
+        
+        current_chunk = []
+        current_chars = 0
+        chunk_index = 0
+        
+        for para in paragraphs:
+            para_chars = len(para)
+            
+            # If adding this paragraph exceeds limit and we have content, yield current
+            if current_chars + para_chars > self.max_chunk_chars and current_chunk:
+                chunk_content = '\n\n'.join(current_chunk)
+                chunk_index += 1
+                yield TechDocsSpan(
+                    content=chunk_content,
+                    section_path=f"{span.section_path} (part {chunk_index})" if span.section_path else f"(part {chunk_index})",
+                    span_type="section_part",
+                    start_line=span.start_line,  # Approximate
+                    end_line=span.end_line,
+                    metadata={**span.metadata, 'part': chunk_index, 'total_parts': 'unknown'}
+                )
+                current_chunk = []
+                current_chars = 0
+            
+            current_chunk.append(para)
+            current_chars += para_chars + 2  # +2 for the \n\n we'll add back
+        
+        # Yield final chunk
+        if current_chunk:
+            chunk_content = '\n\n'.join(current_chunk)
+            chunk_index += 1
+            if chunk_index == 1:
+                # Only one chunk after all - yield original
+                yield span
+            else:
+                yield TechDocsSpan(
+                    content=chunk_content,
+                    section_path=f"{span.section_path} (part {chunk_index})" if span.section_path else f"(part {chunk_index})",
+                    span_type="section_part",
+                    start_line=span.start_line,
+                    end_line=span.end_line,
+                    metadata={**span.metadata, 'part': chunk_index, 'total_parts': chunk_index}
+                )
 
     def _create_span(self, nodes: list[dict[str, Any]], section_path: str, file_path: Path, start_line: int, used_slugs: set) -> TechDocsSpan:
         # Render content

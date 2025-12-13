@@ -477,8 +477,8 @@ log_level = "info"
 mode = "none"
 
 [mcp.tools]
-# Filesystem access roots - constrained to repo for MVP
-allowed_roots = ["/home/vmlinux/src/llmc"]
+# Filesystem access roots - all repos under src
+allowed_roots = ["/home/vmlinux/src"]
 enable_run_cmd = true  # M3: Command execution enabled
 run_cmd_allowlist = [
     "bash", "sh", "rg", "grep", "cat", "head", "tail",
