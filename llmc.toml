@@ -456,7 +456,7 @@ config_version = "v0"
 # Reference: https://www.anthropic.com/engineering/code-execution-with-mcp
 
 [mcp.code_execution]
-enabled = true  # Flip to true when ready for code execution mode
+enabled = false  # Disabled: was blocking write tools. Use classic mode for full capability.
 stubs_dir = ".llmc/stubs"  # Generated tool stubs for Claude to browse
 sandbox = "subprocess"  # "subprocess" | "docker" | "nsjail" (future)
 timeout = 30
@@ -464,6 +464,8 @@ max_output_bytes = 65536
 # Bootstrap tools exposed when code_execution.enabled = true
 # All other tools become importable stubs, not MCP-registered tools
 bootstrap_tools = ["list_dir", "read_file", "execute_code"]
+# HYBRID OPTION: Enable write tools without full classic mode (best of both worlds)
+# bootstrap_tools = ["list_dir", "read_file", "execute_code", "linux_fs_write", "linux_fs_edit", "run_cmd"]
 
 [mcp.server]
 # stdio transport - no host/port needed for Claude Desktop

@@ -129,3 +129,4 @@ DEADJOE
 # Local/temp directories - not for GitHub
 .trash/
 .kilocode/
+DOCS/planning/

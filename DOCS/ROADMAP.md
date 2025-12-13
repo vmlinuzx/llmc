@@ -44,6 +44,8 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 **Effort:** ~20-30 hours | **Difficulty:** 🟡 Medium (6/10)
 
+**See also:** `~/src/thunderdome/` - Dialectical autocoding orchestrator (separate project)
+
 ---
 
 ### ~~1.1 Ruthless MCP Testing Agent (RMTA)~~ ✅ DONE (Phase 1)
@@ -524,6 +526,97 @@ These are the “this would be awesome” items that are worth doing, but not at
 **Why R&D:** This is a proper machine learning / information retrieval research problem. The current hack works for obvious cases but will fail on nuanced queries. Need systematic experimentation.
 
 **Effort:** 20-40 hours research + implementation | **Difficulty:** 🔴 Hard (research)
+
+
+### 3.5.1 MCP Tool Exposure Architecture (R&D) 🔥 NEW
+
+**Status:** 🔴 Research Required  
+**Added:** 2025-12-13  
+**📄 AAR:** [`planning/AAR_MCP_WRITE_CAPABILITY_GAP.md`](planning/AAR_MCP_WRITE_CAPABILITY_GAP.md)
+
+**The Fundamental Tension:**
+
+LLMC has two MCP server modes with irreconcilable tradeoffs:
+
+| Mode | Tools Exposed | Token Cost | Write Works | Security |
+|------|---------------|------------|-------------|----------|
+| **Classic** (`enabled=false`) | 23 direct | Higher (~40KB context) | ✅ Yes | ⚠️ Open |
+| **Code Exec** (`enabled=true`) | 3 + stubs | Lower (~4KB) | ❌ No* | 🔒 Gated |
+
+*Unless `LLMC_ISOLATED=1` (container) which defeats the purpose of MCP→user-machine access.
+
+**Current "Fix" (0.6.8):**
+- Disabled code_execution mode entirely
+- Uses classic mode with full 23 tools
+- **This works but sacrifices 90% of the token savings that code_execution mode provides**
+
+**The Actual Problem:**
+
+1. **Anthropic's code_mode pattern** assumes tools are executed in a sandboxed subprocess
+2. **MCP's value proposition** is giving LLMs access to the user's actual system
+3. **These are philosophically incompatible** - you can't have both sandbox isolation AND real system access
+
+**Research Questions:**
+
+1. **Hybrid bootstrap_tools approach:**
+   - Which tools are truly essential as direct MCP tools? (read, write, run_cmd?)
+   - Which can safely be stub-gated? (RAG search, graph traversal, etc.)
+   - Can we get 80% token savings with 100% capability?
+
+2. **Security model for write tools:**
+   - Is `allowed_roots` sufficient? (currently sandboxes to repo dir)
+   - Should write tools require additional confirmation patterns?
+   - Can we provide "audit trail" without full isolation?
+
+3. **Alternative architectures:**
+   - **Capability tokens:** Tools require per-session approval, not env vars
+   - **Progressive disclosure:** Start with read-only, unlock write after first successful read
+   - **Contract-based:** Agent declares intent, system validates against policy before execution
+
+4. **Container trade-offs:**
+   - How much UX friction does container isolation add?
+   - Can we make `LLMC_ISOLATED=1` mode actually useful?
+   - Docker vs nsjail vs Firejail for MCP server?
+
+5. **Claude Desktop specific:**
+   - What's the actual threat model for MCP on user machines?
+   - Are we over-engineering security for a voluntary local install?
+   - Would Anthropic ever allow write-capable MCP tools in claude.ai?
+
+**Why This Matters:**
+
+The current situation is unsustainable:
+- Classic mode: Works but wastes tokens (23 tool definitions × ~1.8KB each = 41KB overhead)
+- Code exec mode: Saves tokens but breaks write capability (the thing users actually want)
+
+**Proposed Research Approach:**
+
+1. **Phase 1: Hybrid experiment** (4-8 hours)
+   - Add write tools to `bootstrap_tools` whitelist
+   - Fix handler registration in `_init_code_execution_mode()`
+   - Measure token savings vs classic (A/B test)
+
+2. **Phase 2: Security audit** (8-16 hours)
+   - Document actual attack vectors for MCP write tools
+   - Evaluate `allowed_roots` protection adequacy
+   - Propose additional safeguards if needed
+
+3. **Phase 3: Architecture proposal** (8-12 hours)
+   - Write ADR (Architecture Decision Record) for chosen approach
+   - Define migration path for existing users
+   - Update AGENTS.md with clear capability documentation
+
+**Effort:** 20-36 hours research + implementation | **Difficulty:** 🔴 Hard (8/10)
+
+**Why R&D, Not a Simple Fix:**
+
+Web Opus was right: _"You aren't going to fix this with a bullshit patch."_
+
+This is a fundamental architectural question about what MCP is for. The current code has both modes implemented but they represent two different philosophies:
+- **Classic:** "Give Claude full access to the repo"
+- **Code Exec:** "Claude can only observe, humans handle mutations"
+
+We need to decide which philosophy we're actually building for, and design accordingly.
 
 
 ### ~~3.5 Repo Cleanup & Dead Code Removal~~ ✅ DONE

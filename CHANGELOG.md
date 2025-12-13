@@ -2,6 +2,55 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.8] - "DocumentationShmocumentation" - 2025-12-13
+
+### Purple Flavor: **DocumentationShmocumentation**
+
+Claude was gaslighting itself AND us. First fix was documentation-only. Web Opus called bullshit by actually trying to use write tools. Real fix: disable code_execution mode.
+
+### Fixed
+
+- **MCP Write Tools Actually Exposed Now (AAR-MCP-001):**
+  - Root cause: `[mcp.code_execution] enabled = true` in llmc.toml
+  - This mode filters tools to only 3 bootstrap tools + `execute_code`
+  - All 23 tools including `linux_fs_write` were defined but never registered
+  - **Fix:** Changed `enabled = false` to use classic mode (full 23 tools)
+  - Updated bootstrap prompt to accurately list all available tools
+  - Removed misleading "legacy stubs" section that was a token-wasting trap
+  - See: `DOCS/planning/AAR_MCP_WRITE_CAPABILITY_GAP.md`
+
+### Changed
+
+- MCP server now runs in **classic mode** (23 tools) instead of code_execution mode (3 + stubs)
+- Bootstrap prompt completely rewritten for accuracy and clarity
+
+---
+
+## [0.6.7] - "Secure by Default" - 2025-12-12
+
+### Purple Flavor: **Secure by Default**
+
+A comprehensive security audit revealed that `shell=True` is the root of all evil. We purged it.
+
+### Security
+
+- **CRITICAL: Command Injection (VULN-001) Fixed:**
+  - `llmc/te/cli.py`: Removed `shell=True` from pass-through handler.
+  - Arguments are now passed as a list to `subprocess.run`, neutralizing injection attacks.
+  - Exploit PoC: `te ls "; rm -rf /"` now fails (safely).
+
+- **HIGH: Unsafe Shell Execution (VULN-002) Fixed:**
+  - `llmc_mcp/server.py`: Removed `shell=True` and `shlex` quoting from executable handler.
+  - Direct argument passing ensures `run_cmd` handles arguments as data, not code.
+
+### Added
+
+- **Regression Tests:**
+  - `tests/security/test_te_injection.py`: Verifies `te` CLI security.
+  - `tests/security/test_mcp_shell.py`: Verifies MCP server security.
+
+---
+
 ## [0.6.6] - "boxxy is alive" - 2025-12-12
 
 ### Purple Flavor: **boxxy is alive**
