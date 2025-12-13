@@ -32,7 +32,7 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 **Phases:**
 - [ ] Phase 1: Config schema (`[repository]` section, `domain` field)
-- [ ] Phase 2: TechDocsExtractor implementation
+- [x] Phase 2: TechDocsExtractor implementation ✅ (2025-12-13)
 - [ ] Phase 3: Enrichment integration
 - [ ] Phase 4: Graph extraction
 - [ ] Phase 5: Testing & validation on LLMC's own DOCS/
