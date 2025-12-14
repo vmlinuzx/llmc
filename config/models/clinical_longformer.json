@@ -1,0 +1,9 @@
+{
+  "model_name": "yikuan8/Clinical-Longformer",
+  "tokenizer_name": "yikuan8/Clinical-Longformer",
+  "max_seq_tokens": 4096,
+  "pooling": "mean",
+  "normalize": true,
+  "device_map": "auto",
+  "trust_remote_code": false
+}

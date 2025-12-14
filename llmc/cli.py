@@ -266,5 +266,28 @@ def monitor():
             time.sleep(0.1)
 
 
+@app.command()
+def route(
+    test: str = typer.Option(..., "--test", help="Path to test for routing decision"),
+    show_domain_decisions: bool = typer.Option(
+        False, "--show-domain-decisions", help="Show reasoning"
+    ),
+):
+    """Test routing logic for a file path."""
+    repo_root = Path(".").resolve()  # Assume CWD
+    try:
+        from tools.rag.routing import resolve_domain
+    except ImportError as e:
+        console.print(f"[bold red]Error importing routing logic:[/bold red] {e}")
+        return
+
+    domain, reason, detail = resolve_domain(Path(test), repo_root)
+
+    console.print(f"Domain: [bold green]{domain}[/bold green]")
+    if show_domain_decisions:
+        console.print(f"Reason: {reason}")
+        console.print(f"Detail: {detail}")
+
+
 if __name__ == "__main__":
     app()

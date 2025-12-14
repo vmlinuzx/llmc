@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-import fnmatch
 import hashlib
 import json
 import logging
@@ -11,11 +10,10 @@ import time
 
 # Import classification logic
 from llmc.routing.content_type import classify_slice
+from tools.rag.routing import is_format_allowed, resolve_domain
 
 from .config import (
     ensure_rag_storage,
-    get_default_domain,
-    get_path_overrides,
     index_path_for_write,
     rag_dir,
     spans_export_path as resolve_spans_export_path,
@@ -43,26 +41,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 EMBED_META = "embed_meta.json"
-
-
-def _resolve_domain(relative_path: Path, repo_root: Path) -> tuple[str, str, str]:
-    """
-    Resolve domain for a file path.
-    Returns: (domain, reason, detail)
-    """
-    str_path = str(relative_path)
-    overrides = get_path_overrides(repo_root)
-    
-    # 1. Path Overrides (including extensions defined as globs)
-    for pattern, domain in overrides.items():
-        if fnmatch.fnmatch(str_path, pattern):
-            if pattern.startswith("*."):
-                return domain, "extension", pattern
-            return domain, "path_override", pattern
-            
-    # 2. Default Domain
-    default_domain = get_default_domain(repo_root)
-    return default_domain, "default_domain", ""
 
 
 class IndexStats(dict):
@@ -204,6 +182,15 @@ def index_repo(
     try:
         for relative_path in files_iter:
             absolute_path = repo_root / relative_path
+
+            # Gating check (Phase 1: block HL7/CCDA)
+            domain, reason_type, reason_detail = resolve_domain(relative_path, repo_root)
+            if not is_format_allowed(domain, absolute_path, repo_root):
+                counts["skipped"] += 1
+                if show_domain_decisions:
+                    print(f"INFO indexer: file={relative_path} domain={domain} action=SKIP reason=gated_format")
+                continue
+
             lang = language_for_path(relative_path)
             if not lang:
                 counts["skipped"] += 1
@@ -232,8 +219,7 @@ def index_repo(
             populate_span_hashes(spans, source, lang)
             file_record = build_file_record(relative_path, lang, repo_root, source)
 
-            # Domain Resolution & Logging
-            domain, reason_type, reason_detail = _resolve_domain(relative_path, repo_root)
+            # Domain logging
             index_name = resolve_index_name(f"emb_{domain}", repo_root.name, "per-repo")
             
             if show_domain_decisions:
@@ -307,6 +293,16 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
                     db.delete_file(rel)
                 counts["deleted"] += 1
                 continue
+            
+            # Gating check
+            domain, _, _ = resolve_domain(rel, repo_root)
+            if not is_format_allowed(domain, absolute, repo_root):
+                counts["deleted"] += 1 # Effectively treated as not indexed
+                # Ensure it is removed from DB if it was there
+                with db.transaction():
+                    db.delete_file(rel)
+                continue
+
             lang = language_for_path(rel)
             if not lang:
                 counts["deleted"] += 1

@@ -586,3 +586,43 @@ enabled = true
 "node_modules/**" = 10  # shouldn't even be scanned but just in case
 "third_party/**" = 10
 
+
+# ==============================================================================
+# MEDICAL DOMAIN CONFIGURATION
+# ==============================================================================
+
+[repository]
+domain = "medical"
+medical_subtype = "clinical_note"
+institution = "default"
+default_domain = "medical"
+
+[repository.path_overrides]
+"notes/**"     = "medical"
+"labs/**"      = "medical"
+"radiology/**" = "medical"
+"discharge/**" = "medical"
+
+[medical.gated_formats]
+hl7  = { enabled = false, parser = "hl7apy", z_segment_map = "config/hl7_z_segments.toml" }
+ccda = { enabled = false, parser = "lxml", namespace = "urn:hl7-org:v3", narrative_policy = "prefer_discrete" }
+
+[embeddings.profiles.medical]
+provider = "ollama"
+model = "bge-m3"
+dimension = 1024
+capabilities = ["medical", "clinical", "multilingual"]
+local_only = true
+ollama_host = "http://athena:11434"
+
+[embeddings.routes.medical]
+profile = "medical"
+index = "emb_medical"
+sharing = "per-repo"
+index_name_suffix = "{institution}-{repo_id}"
+
+[embeddings.routes.medical_doc]
+profile = "medical_doc"
+index = "emb_medical_doc"
+sharing = "per-repo"
+index_name_suffix = "{institution}-{repo_id}"

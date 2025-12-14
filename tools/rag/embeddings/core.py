@@ -6,14 +6,14 @@ import hashlib
 import logging
 import math
 
-from .config import (
+from ..config import (
     embedding_model_dim,
     embedding_model_name,
     embedding_normalize,
     embedding_passage_prefix,
     embedding_query_prefix,
 )
-from .embedding_manager import EmbeddingManager
+from ..embedding_manager import EmbeddingManager
 
 logger = logging.getLogger(__name__)
 
