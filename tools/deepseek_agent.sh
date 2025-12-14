@@ -1,8 +1,13 @@
 #!/bin/bash
 # DeepSeek Agent Wrapper for Thunderdome
 # Usage: ./deepseek_agent.sh "Your prompt here"
+# Requires: DEEPSEEK_API_KEY environment variable
 
-DEEPSEEK_API_KEY="sk-5218a1d859184822a264582be7ed6bed"
+if [[ -z "${DEEPSEEK_API_KEY:-}" ]]; then
+    echo "ERROR: DEEPSEEK_API_KEY environment variable not set" >&2
+    exit 1
+fi
+
 MODEL="deepseek-chat"
 
 # Escape the prompt for JSON
