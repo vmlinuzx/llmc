@@ -791,7 +791,7 @@ class RAGService:
         print("👋 RAG service stopped")
 
     def _periodic_housekeeping(self):
-        """Run periodic maintenance tasks (log rotation, vacuum check)."""
+        """Run periodic maintenance tasks (log rotation, vacuum check, idle enrichment)."""
         try:
             if self._log_manager is not None:
                 rotation_interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
@@ -807,6 +807,112 @@ class RAGService:
                         print(f"🔄 Rotated {result['rotated_files']} log files")
         except Exception as e:
             print(f"  ⚠️  Housekeeping failed: {e}")
+        
+        # Idle enrichment - run enrichment when daemon is idle
+        self._run_idle_enrichment()
+    
+    def _run_idle_enrichment(self):
+        """Run batch enrichment during idle periods if configured."""
+        idle_cfg = self._daemon_cfg.get("idle_enrichment", {})
+        
+        # Check if enabled
+        if not idle_cfg.get("enabled", False):
+            return
+        
+        # Check interval
+        interval = int(idle_cfg.get("interval_seconds", 600))
+        now = time.time()
+        last_run = getattr(self, "_last_idle_enrichment", 0)
+        if now - last_run < interval:
+            return
+        
+        # Check dry-run mode
+        dry_run = idle_cfg.get("dry_run", False)
+        
+        # Get configuration
+        batch_size = int(idle_cfg.get("batch_size", 10))
+        code_first = idle_cfg.get("code_first", True)
+        max_daily_cost = float(idle_cfg.get("max_daily_cost_usd", 1.00))
+        
+        # Track daily cost (reset at midnight)
+        today = time.strftime("%Y-%m-%d")
+        if getattr(self, "_enrichment_cost_date", "") != today:
+            self._enrichment_cost_date = today
+            self._enrichment_daily_cost = 0.0
+        
+        if self._enrichment_daily_cost >= max_daily_cost:
+            return  # Cost limit reached for today
+        
+        print(f"\n🧠 Idle enrichment: Processing up to {batch_size} spans...")
+        
+        # Run enrichment for each registered repo
+        total_enriched = 0
+        total_cost = 0.0
+        
+        for repo_path in self.state.state["repos"]:
+            if not self.running:
+                break
+            
+            repo = Path(repo_path)
+            if not repo.exists():
+                continue
+            
+            try:
+                # Get database
+                index_path = index_path_for_write(repo)
+                db = Database(index_path)
+                
+                try:
+                    # Check if there's work to do
+                    pending = db.pending_enrichments(limit=1)
+                    if not pending:
+                        continue
+                    
+                    if dry_run:
+                        pending_count = len(db.pending_enrichments(limit=batch_size))
+                        print(f"  📋 [DRY-RUN] {repo.name}: Would enrich {pending_count} spans")
+                        continue
+                    
+                    # Build router and pipeline
+                    router = build_router_from_toml(repo)
+                    
+                    pipeline = EnrichmentPipeline(
+                        db=db,
+                        router=router,
+                        backend_factory=create_backend_from_spec,
+                        prompt_builder=build_enrichment_prompt,
+                        repo_root=repo,
+                        max_failures_per_span=self.tracker.max_failures,
+                        cooldown_seconds=0,
+                        code_first=code_first,
+                    )
+                    
+                    result = pipeline.process_batch(
+                        limit=batch_size,
+                        stop_check=lambda: not self.running,
+                    )
+                    
+                    if result.attempted > 0:
+                        total_enriched += result.succeeded
+                        # Estimate cost (rough: $0.15/1M tokens, ~500 tokens/span)
+                        estimated_cost = result.succeeded * 0.000075
+                        total_cost += estimated_cost
+                        print(f"  ✅ {repo.name}: Enriched {result.succeeded}/{result.attempted} spans (~${estimated_cost:.4f})")
+                    
+                finally:
+                    db.close()
+                    
+            except Exception as e:
+                print(f"  ⚠️  {repo.name}: Idle enrichment failed: {e}")
+        
+        # Update tracking
+        self._last_idle_enrichment = now
+        self._enrichment_daily_cost = getattr(self, "_enrichment_daily_cost", 0.0) + total_cost
+        
+        if total_enriched > 0:
+            print(f"  📊 Idle enrichment complete: {total_enriched} spans, ~${total_cost:.4f} (daily: ${self._enrichment_daily_cost:.4f}/${max_daily_cost:.2f})")
+        else:
+            print(f"  ℹ️  No spans pending enrichment")
 
     def run_loop_poll(self, interval: int):
         """Legacy polling service loop with idle throttling."""

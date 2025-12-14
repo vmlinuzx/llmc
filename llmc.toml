@@ -111,6 +111,21 @@ nice_level = 19                    # Process priority (0-19, higher = lower prio
 idle_backoff_max = 2               # Max multiplier when idle (2x = 60s with 30s interval)
 idle_backoff_base = 1.5            # Gradual ramp: 30s → 45s → 60s cap
 
+# ==============================================================================
+# IDLE ENRICHMENT - Run enrichment when daemon has nothing else to do
+# ==============================================================================
+# When the daemon is idle (no file changes to process), it can opportunistically
+# run enrichment batches to fill in missing summaries using configured chains.
+
+[daemon.idle_enrichment]
+enabled = true                     # Enable/disable idle enrichment
+batch_size = 10                    # Spans to enrich per idle cycle
+interval_seconds = 600             # Minimum seconds between enrichment runs
+preferred_chain = "code_enrichment_models"  # Which chain to use (matches [enrichment.routes])
+code_first = true                  # Prioritize code spans over docs
+max_daily_cost_usd = 1.00          # Stop enrichment if daily cost exceeds this (cloud backends)
+dry_run = false                    # If true, log what would be enriched but don't call LLM
+
 
 # ==============================================================================
 # DOCUMENTATION GENERATION (Docgen v2)
