@@ -1,0 +1,129 @@
+[
+  {
+    "id": "note_001",
+    "patient_id": "P-78901",
+    "date": "2024-03-15",
+    "author": "Dr. Smith",
+    "text": "CHIEF COMPLAINT: Chest pain for 2 days.\nHISTORY OF PRESENT ILLNESS: 45-year-old male presents with substernal chest pain radiating to left arm. Pain is 7/10, worse with exertion. Denies shortness of breath, denies nausea.\nPAST MEDICAL HISTORY: Hypertension, Type 2 diabetes. No history of myocardial infarction.\nMEDICATIONS: Lisinopril 10mg daily, Metformin 500mg BID.\nALLERGIES: Penicillin (rash).\nSOCIAL HISTORY: Smokes 1 pack per day for 20 years. Works as a construction manager.\nPHYSICAL EXAM: BP 150/95, HR 88, RR 16. Lungs clear to auscultation.\nASSESSMENT AND PLAN: Rule out acute coronary syndrome. Schedule stress test. Follow up in 1 week.",
+    "expected_sections": [
+      "CHIEF COMPLAINT",
+      "HISTORY OF PRESENT ILLNESS", 
+      "PAST MEDICAL HISTORY",
+      "MEDICATIONS",
+      "ALLERGIES",
+      "SOCIAL HISTORY",
+      "PHYSICAL EXAM",
+      "ASSESSMENT AND PLAN"
+    ],
+    "expected_negations": [
+      "shortness of breath",
+      "nausea",
+      "myocardial infarction"
+    ],
+    "expected_phi": [
+      "P-78901",
+      "Dr. Smith",
+      "45-year-old",
+      "construction manager"
+    ]
+  },
+  {
+    "id": "note_002", 
+    "patient_id": "P-78902",
+    "date": "2024-03-16",
+    "author": "Dr. Johnson",
+    "text": "CHIEF COMPLAINT: Follow-up for diabetes management.\nHISTORY OF PRESENT ILLNESS: Patient reports good adherence to medications. Blood glucose readings average 140 mg/dL. Denies polyuria, denies polydipsia.\nPAST MEDICAL HISTORY: Type 2 diabetes x 5 years, Hyperlipidemia.\nMEDICATIONS: Metformin 1000mg BID, Atorvastatin 20mg daily.\nALLERGIES: No known drug allergies.\nLABORATORY DATA: HbA1c 7.2%, LDL 110 mg/dL.\nASSESSMENT AND PLAN: Diabetes well controlled. Continue current regimen. Return in 3 months.",
+    "expected_sections": [
+      "CHIEF COMPLAINT",
+      "HISTORY OF PRESENT ILLNESS",
+      "PAST MEDICAL HISTORY",
+      "MEDICATIONS",
+      "ALLERGIES",
+      "LABORATORY DATA",
+      "ASSESSMENT AND PLAN"
+    ],
+    "expected_negations": [
+      "polyuria",
+      "polydipsia"
+    ],
+    "expected_phi": [
+      "P-78902", 
+      "Dr. Johnson"
+    ]
+  },
+  {
+    "id": "note_003",
+    "patient_id": "P-78903",
+    "date": "2024-03-17",
+    "author": "Dr. Williams",
+    "text": "CHIEF COMPLAINT: Annual physical examination.\nHISTORY OF PRESENT ILLNESS: 52-year-old female with no acute complaints. Denies fever, denies cough, denies weight loss.\nPAST MEDICAL HISTORY: Hypothyroidism, Osteoarthritis.\nMEDICATIONS: Levothyroxine 75mcg daily, Ibuprofen PRN.\nSOCIAL HISTORY: Non-smoker, occasional alcohol. Works as a teacher.\nFAMILY HISTORY: Mother with breast cancer, father with CAD.\nREVIEW OF SYSTEMS: Constitutional: negative. Cardiovascular: negative.\nPHYSICAL EXAM: Vital signs normal. HEENT unremarkable.\nASSESSMENT AND PLAN: Healthy. Recommend mammogram screening. Follow up in 1 year.",
+    "expected_sections": [
+      "CHIEF COMPLAINT",
+      "HISTORY OF PRESENT ILLNESS",
+      "PAST MEDICAL HISTORY",
+      "MEDICATIONS",
+      "SOCIAL HISTORY",
+      "FAMILY HISTORY",
+      "REVIEW OF SYSTEMS",
+      "PHYSICAL EXAM",
+      "ASSESSMENT AND PLAN"
+    ],
+    "expected_negations": [
+      "fever",
+      "cough", 
+      "weight loss"
+    ],
+    "expected_phi": [
+      "P-78903",
+      "Dr. Williams",
+      "52-year-old",
+      "teacher"
+    ]
+  },
+  {
+    "id": "note_004",
+    "patient_id": "P-78904",
+    "date": "2024-03-18",
+    "author": "Dr. Brown",
+    "text": "CHIEF COMPLAINT: Lower back pain.\nHISTORY OF PRESENT ILLNESS: 38-year-old male with acute lower back pain after lifting heavy box. Pain radiates to right leg. Denies bowel/bladder incontinence.\nPAST MEDICAL HISTORY: None significant.\nMEDICATIONS: Naproxen 500mg BID PRN.\nIMAGING: X-ray lumbar spine shows mild degenerative changes.\nASSESSMENT AND PLAN: Musculoskeletal strain. Prescribe physical therapy. Avoid heavy lifting.",
+    "expected_sections": [
+      "CHIEF COMPLAINT",
+      "HISTORY OF PRESENT ILLNESS",
+      "PAST MEDICAL HISTORY",
+      "MEDICATIONS",
+      "IMAGING",
+      "ASSESSMENT AND PLAN"
+    ],
+    "expected_negations": [
+      "bowel incontinence",
+      "bladder incontinence"
+    ],
+    "expected_phi": [
+      "P-78904",
+      "Dr. Brown",
+      "38-year-old"
+    ]
+  },
+  {
+    "id": "note_005",
+    "patient_id": "P-78905",
+    "date": "2024-03-19",
+    "author": "Dr. Davis",
+    "text": "CHIEF COMPLAINT: Medication refill.\nHISTORY OF PRESENT ILLNESS: Patient requests refill of asthma inhaler. Reports using albuterol 2 times last week. Denies nighttime symptoms.\nPAST MEDICAL HISTORY: Asthma, Allergic rhinitis.\nMEDICATIONS: Albuterol inhaler PRN, Fluticasone nasal spray.\nALLERGIES: Dust mites.\nASSESSMENT AND PLAN: Asthma well controlled. Refill medications. Return PRN.",
+    "expected_sections": [
+      "CHIEF COMPLAINT",
+      "HISTORY OF PRESENT ILLNESS",
+      "PAST MEDICAL HISTORY",
+      "MEDICATIONS",
+      "ALLERGIES",
+      "ASSESSMENT AND PLAN"
+    ],
+    "expected_negations": [
+      "nighttime symptoms"
+    ],
+    "expected_phi": [
+      "P-78905",
+      "Dr. Davis"
+    ]
+  }
+]
