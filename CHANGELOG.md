@@ -2,6 +2,44 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.6.9] - "Idle Hands" - 2025-12-14
+
+### Purple Flavor: **Idle Hands**
+
+The daemon now uses idle time productively. When there's nothing to index, it runs enrichment batches using your configured chains - including DeepSeek for cheap cloud fallback.
+
+### Added
+
+- **Idle Enrichment (`[daemon.idle_enrichment]`):**
+  - Daemon runs enrichment batches during idle periods
+  - Fully configurable: `enabled`, `batch_size`, `interval_seconds`
+  - Cost control: `max_daily_cost_usd` stops when limit reached  
+  - `code_first` prioritization option
+  - `dry_run` mode for testing without API calls
+
+- **DeepSeek Enrichment Backend:**
+  - Added DeepSeek as OpenAI-compatible enrichment provider
+  - Pricing: ~$0.14/M input tokens (vs $0.15 GPT-4o-mini)
+  - Uses `DEEPSEEK_API_KEY` environment variable
+  - Configured as `routing_tier = "70b"` fallback when local models fail
+
+- **Thunderdome Agent Wrapper:**
+  - `./tools/thunderdome_agent.sh` for autocode invocations
+  - Default backend changed to DeepSeek (cheaper than Gemini)
+  - `THUNDERDOME_BACKEND` env var: `gemini`, `deepseek`, or `auto`
+
+### Security
+
+- **API Key Removed from Git:** DeepSeek key was in `deepseek_agent.sh` - fixed to use env var
+- Security audit report: `tests/security/REPORTS/2025-12-14_Security_Audit.md`
+
+### Changed
+
+- Aider-LLMC SDD updated to progressive disclosure model (v1.1)
+- Moved Medical RAG SDD to `legacy/` (deprioritized)
+
+---
+
 ## [0.6.8] - "DocumentationShmocumentation" - 2025-12-13
 
 ### Purple Flavor: **DocumentationShmocumentation**

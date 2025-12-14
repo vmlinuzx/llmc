@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # Configuration
-BACKEND="${THUNDERDOME_BACKEND:-auto}"
+BACKEND="${THUNDERDOME_BACKEND:-deepseek}"
 TIMEOUT="${THUNDERDOME_TIMEOUT:-600}"
 LOG="${THUNDERDOME_LOG:-/dev/null}"
 
