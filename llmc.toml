@@ -352,6 +352,34 @@ routing_tier = "7b"
 timeout_seconds = 60
 enabled = true
 
+# ==============================================================================
+# DEEPSEEK - Cheap cloud fallback for enrichment ($0.14/M input, $0.28/M output)
+# ==============================================================================
+# DeepSeek API is OpenAI-compatible. Great for batch enrichment when local
+# models are busy or unavailable. Requires DEEPSEEK_API_KEY env var.
+
+[[enrichment.chain]]
+name = "deepseek-chat"
+chain = "code_enrichment_models"
+provider = "openai"  # Uses OpenAI-compatible adapter
+model = "deepseek-chat"
+url = "https://api.deepseek.com/v1"
+routing_tier = "70b"  # High tier - only used when local models fail
+timeout_seconds = 60
+enabled = true
+api_key_env = "DEEPSEEK_API_KEY"
+
+[[enrichment.chain]]
+name = "deepseek-chat-docs"
+chain = "document_routes"
+provider = "openai"  # Uses OpenAI-compatible adapter
+model = "deepseek-chat"
+url = "https://api.deepseek.com/v1"
+routing_tier = "70b"  # High tier - only used when local models fail
+timeout_seconds = 60
+enabled = true
+api_key_env = "DEEPSEEK_API_KEY"
+
 
 # ==============================================================================
 # INDEXING
