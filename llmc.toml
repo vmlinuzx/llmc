@@ -621,6 +621,16 @@ index = "emb_medical"
 sharing = "per-repo"
 index_name_suffix = "{institution}-{repo_id}"
 
+[embeddings.profiles.medical_doc]
+provider = "clinical-longformer"
+model = "yikuan8/Clinical-Longformer"
+dimension = 768  # Clinical-Longformer output dimension
+max_seq_tokens = 4096
+
+[embeddings.profiles.medical_doc.clinical_longformer]
+config_path = "config/models/clinical_longformer.json"
+max_seq_tokens = 4096
+
 [embeddings.routes.medical_doc]
 profile = "medical_doc"
 index = "emb_medical_doc"

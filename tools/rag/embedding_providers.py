@@ -202,6 +202,65 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 
 # ---------------------------------------------------------------------------
+# Clinical-Longformer provider (medical document embeddings)
+# ---------------------------------------------------------------------------
+
+try:
+    from tools.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
+    CLINICAL_LONGFORMER_AVAILABLE = True
+except ImportError:
+    CLINICAL_LONGFORMER_AVAILABLE = False
+    LongContextAdapter = None  # type: ignore[assignment]
+
+
+class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider for Clinical-Longformer model (medical documents)."""
+
+    def __init__(
+        self,
+        metadata: EmbeddingMetadata,
+        config_path: str | None = None,
+        max_seq_tokens: int = 4096,
+    ) -> None:
+        if not CLINICAL_LONGFORMER_AVAILABLE:
+            raise EmbeddingConfigError(
+                "Clinical-Longformer dependencies are not installed. "
+                "Install transformers and torch to use this provider."
+            )
+
+        super().__init__(metadata)
+        
+        self._config_path = config_path
+        self._max_seq_tokens = max_seq_tokens
+        self._adapter: LongContextAdapter | None = None
+        
+        logger.info(
+            "Configured ClinicalLongformerEmbeddingProvider (profile=%s, max_seq_tokens=%d)",
+            metadata.profile or "<default>",
+            max_seq_tokens,
+        )
+
+    def _ensure_adapter(self) -> None:
+        if self._adapter is None:
+            from pathlib import Path
+            config_path = self._config_path
+            if config_path is None:
+                # Default path
+                config_path = Path("config/models/clinical_longformer.json")
+            self._adapter = LongContextAdapter(Path(config_path))
+
+    def embed_passages(self, texts: Sequence[str]) -> list[list[float]]:
+        self._ensure_adapter()
+        if self._adapter is None:
+            raise EmbeddingError("Clinical-Longformer adapter not initialized")
+        return self._adapter.embed(texts)
+
+    def embed_queries(self, texts: Sequence[str]) -> list[list[float]]:
+        # For Clinical-Longformer, we use the same method for passages and queries
+        return self.embed_passages(texts)
+
+
+# ---------------------------------------------------------------------------
 # Ollama provider (local/remote HTTP API)
 # ---------------------------------------------------------------------------
 

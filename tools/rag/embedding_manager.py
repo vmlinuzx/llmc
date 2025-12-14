@@ -13,6 +13,7 @@ from .embedding_providers import (
     HashEmbeddingProvider,
     OllamaEmbeddingProvider,
     SentenceTransformerEmbeddingProvider,
+    ClinicalLongformerEmbeddingProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,7 @@ PROVIDER_REGISTRY: dict[str, type[EmbeddingProvider]] = {
     "hash": HashEmbeddingProvider,
     "sentence-transformer": SentenceTransformerEmbeddingProvider,
     "ollama": OllamaEmbeddingProvider,
+    "clinical-longformer": ClinicalLongformerEmbeddingProvider,
 }
 
 
@@ -115,6 +117,10 @@ def create_provider_from_config(
     if provider_cls is OllamaEmbeddingProvider:
         kwargs["api_base"] = provider_cfg.get("api_base", "http://localhost:11434")
         kwargs["timeout"] = int(provider_cfg.get("timeout", 60))
+    
+    if provider_cls is ClinicalLongformerEmbeddingProvider:
+        kwargs["config_path"] = provider_cfg.get("config_path")
+        kwargs["max_seq_tokens"] = int(provider_cfg.get("max_seq_tokens", 4096))
 
     provider = provider_cls(metadata=metadata, **kwargs)
     logger.info(
