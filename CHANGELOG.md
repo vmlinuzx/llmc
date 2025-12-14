@@ -23,11 +23,6 @@ The daemon now uses idle time productively. When there's nothing to index, it ru
   - Uses `DEEPSEEK_API_KEY` environment variable
   - Configured as `routing_tier = "70b"` fallback when local models fail
 
-- **Thunderdome Agent Wrapper:**
-  - `./tools/thunderdome_agent.sh` for autocode invocations
-  - Default backend changed to DeepSeek (cheaper than Gemini)
-  - `THUNDERDOME_BACKEND` env var: `gemini`, `deepseek`, or `auto`
-
 ### Security
 
 - **API Key Removed from Git:** DeepSeek key was in `deepseek_agent.sh` - fixed to use env var
