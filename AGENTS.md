@@ -1,273 +1,331 @@
-# AGENTS.md — Dialectical Autocoding Protocol
+[6~## AGENTS.md — LLMC Agent Charter
 
-**Branch:** `feature/domain-rag-tech-docs`  
-**Mode:** Dialectical (A-Team / B-Team / Referee)  
-**User:** Dave
+The user is **Dave**.
 
----
-
-## Overview
-
-This branch uses **dialectical autocoding**: a structured feedback loop between two Gemini agents (A-Team and B-Team) with Opus as a Referee for contention resolution.
-
-### Role Assignment
-
-| Role | Agent | Purpose |
-|------|-------|---------|
-| **A-Team** | Gemini | Builder — Implements code, makes progress |
-| **B-Team** | Gemini | Quality Gate — Evaluates, finds gaps, validates |
-| **Referee** | Opus 4.5 | Tiebreaker — Resolves loops, clarifies requirements |
-
-Each agent invocation is **fresh context** — no conversation memory between turns. Communication happens via artifact files.
+- **Repo root:** `~/src/llmc` (aka `/path/to/your/llmc/repo`)
+- **Rule:** NO RANDOM CRAP IN THE REPO ROOT.  
+  - If you need a scratch script, prefer `./.trash/`.
+  - If it belongs in repo root by common best practice (README, pyproject, etc.), that’s fine.
 
 ---
 
-## Mode: A-TEAM (Builder)
+## 1. Purpose
 
-**When invoked as A-TEAM, you are implementing code.**
+This file is the primary **behavioral** contract for all agents working in this repo.
 
-### Your Inputs
-1. `.trash/autocode/REQUIREMENTS.md` — The contract. READ THIS FIRST.
-2. `.trash/autocode/B_TEAM_FEEDBACK.md` — B-Team's evaluation (if exists). Fix the ❌ items.
-3. `.trash/autocode/REFEREE_RULING.md` — Referee clarifications (if exists). Follow these.
-4. The codebase — Read files as needed.
+- **AGENTS.md** → how to behave and work.
+- **CONTRACTS.md** → environment, tooling, and policy.
 
-### Your Behavior
-- Focus on MAKING PROGRESS toward requirements
-- Implement ONE phase at a time
-- Write code, tests, docs
-- Commit your work with clear messages
-- **DO NOT** self-evaluate success — B-Team decides
-- **DO NOT** argue with B-Team feedback — if you disagree, state why and let Referee decide
+If you only read one doc before acting, read **this one**, then skim **CONTRACTS.md**.
 
-### Your Output
-Write to `.trash/autocode/A_TEAM_OUTPUT.md`:
-```markdown
-# A-Team Output — Turn N
+---
 
-## Changes Made
-- [file1]: description
-- [file2]: description
+## 2. Agent Profile (ALL AGENTS)
 
-## Tests Run
-- pytest tests/test_X.py — PASS/FAIL
+### Rules of Thumb
 
-## B-Team Feedback Addressed
-- ❌ Item 1: Fixed by doing X
-- ❌ Item 2: Fixed by doing Y
+- After changing code, run a **smoke test** before responding that the ask is successful.
+- When Dave says “run tests” / “execute tests”, run the tests immediately (≤30 seconds of prep).
+- Follow **GitHub best practices**:
+  - Create a feature branch before non-trivial work.
+  - Keep commits small and focused; prefer PR-ready patch sets.
+- Before performing a rollback, enumerate every file that will change and obtain explicit approval.
+- Prefer **patch-style changes** (diffs) over rewriting whole files.
 
-## Disagreements (if any)
-- (If you think B-Team was wrong, explain why — Referee will decide)
+### Git Safety Rules (CRITICAL)
+This is a multi user multi agent repo.  If you are told to commit and there
+are untracked files (and there almost always will be), stop and ask what to do. 
+Generally it's fine to just commit all untracked files, it's never ok to
+revert or do anything that will destroy untracked files without the word
+ENGAGE from the user.
 
-## Ready for B-Team Review
+- **NEVER** run `git reset HEAD~` or `git revert HEAD` without explicit approval.
+- **NEVER** delete files (via `rm`, `git rm`, or any other method) without explicit approval.
+- **NEVER** assume a file is "safe to delete" - always ask first.
+- If you need to undo a commit, **ask Dave** and enumerate exactly what will change.
+- If you see untracked files you didn't create, **ask Dave** before touching them.
+
+---
+
+## 3. Engineering Workflow — “The Dave Protocol”
+
+For any task that is **Significant**  
+(>1 file, non-trivial refactor, core pipeline, or anything Dave labels “Important”):
+
+1. **Logic Gate**
+   - Decide: **Small** (just do it) vs **Significant** (follow this loop).
+   - If unsure, treat it as **Significant**.
+
+2. **Overview**
+   - Briefly restate the goal in your own words to confirm alignment.
+
+3. **Imaginative / Research Phase**
+   - Explore approaches, read code, RAG, docs.
+   - **Do not** write implementation code yet.
+   - Call out key risks / unknowns.
+
+4. **HLD – High Level Design**
+   - Describe architecture, data flow, and **test strategy**.
+   - Identify which modules / services will change.
+   - Get explicit approval before proceeding.
+
+5. **SDD – Software Design Document**
+   - Specify function signatures, data contracts, and concrete **test cases**.
+   - Note any migrations, config changes, or CLI impacts.
+   - Get approval before coding.
+
+6. **Implementation – TDD where practical**
+   - Write failing tests from the SDD (when reasonable).
+   - Implement code to make tests pass.
+   - Keep changeset focused and well-diffed.
+
+7. **Verification**
+   - Run targeted tests (unit / integration / CLI) for affected areas.
+   - Summarize what you ran and the results.
+
+8. **Documentation**
+   - Update or create docs as needed:
+     - Roadmap entries
+     - Architecture docs
+     - CLI usage / examples
+
+This loop exists to prevent “cowboy coding” and keep LLMC maintainable.
+
+---
+
+## 4. Context Retrieval Protocol (RAG / MCP)
+
+The repo includes a RAG system with CLI entrypoints. Use it, but don’t worship it.
+
+### 4.1 RAG-First Contract
+
+- **Default:** For repo/code questions, try **RAG tools first**.
+- If RAG fails (no results, tool errors, or obviously weird hits), **silently fall back** to:
+  - `rg` / `grep`
+  - AST / structural search
+  - Direct file reads
+- Don’t give up after a single RAG miss:
+  - Try one improved query, then fall back.
+  - Never loop endlessly tweaking thresholds.
+
+### 4.2 What RAG Scores Mean (and Don’t)
+
+- Similarity scores from RAG are **for ranking only**.
+- They are **not calibrated confidence** and are **not percentages**.
+- **Never** say “this is 80% relevant” based on a raw score.
+- Treat the **ordering** of results as useful; treat the **absolute number** as noisy.
+
+### 4.3 Dependency Analysis Protocol
+
+When you need to understand **file dependencies** (parents/children) and RAG is insufficient:
+
+1.  **Parent Relationships (Who imports X?):**
+    - Use `search_file_content` to find imports of the target module.
+    - **Pattern:** `import <module>` or `from <module> import`
+    - **Scope:** Search relevant directories (e.g., `src/`, `scripts/`, `tests/`) or the whole repo if unsure.
+    - **Example:** `search_file_content --pattern "from scripts.router import" --include "*.py"`
+
+2.  **Child Relationships (Who does X import?):**
+    - Use `read_file` on the target file.
+    - Analyze the `import` and `from ... import` statements at the top of the file.
+
+**Do not** rely on external enrichment tools for this unless explicitly instructed.
+
+---
+
+## 5. RAG Tooling Reference
+
+**Command Prefix:** `python3 -m tools.rag.cli`
+
+| Tool | Purpose | When to use | Key Flags |
+| :--- | :--- | :--- | :--- |
+| **`search`** | **Find** concepts/code | "Where is X?", "How does Y work?" | `--limit 20` |
+| **`plan`** | **Target** files for edit | "I need to implement feature Z." | `--limit 50`, `--min-confidence 0.6` |
+| **`inspect`** | **Deep Dive** (Preferred) | "Understand this file/symbol." | `--path`, `--symbol`, `--full` |
+| **`doctor`** | **Diagnose** health | Tools failing? No results? Run this. | `-v` |
+| **`stats`** | **Status** check | Check index size/freshness. | none |
+
+### Quick Heuristics
+
+- **`inspect` vs `read_file`:** Always prefer `inspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly. Use `read_file` only for raw byte checks.
+- **`search`:** If results are weird, try more literal queries or fallback to `grep`.
+- **`plan`:** Use for multi-file changes. If confidence is low, verify targets with `search` or `inspect`.
+- **`doctor`:** Your first step if the RAG system seems "dumb" or broken.
+
+---
+
+## 6. Limits and Thresholds
+
+### 6.1 `--limit` (How Many Candidates)
+
+`--limit` controls how many hits you pull back.
+
+**For `search`:**
+
+- Start with `--limit 20–30`.
+- Use `--limit 10` when:
+  - The query names a specific function/class/module.
+  - Dave already pointed at a file or path.
+- Use `--limit 40–50` when:
+  - Change is cross-cutting (config keys, logging, error messages).
+  - Dave says “all places”, “all usages”, “everywhere”.
+
+**For `plan`:**
+
+- Start with `--limit 40–50` for non-trivial changes.
+- Use `--limit 20` for very focused edits.
+- Use `--limit 80–100` only when you expect many affected files  
+  (e.g. rename a core API, change a base class).
+
+Heuristic:
+
+- If results look **thin** and you know the repo is larger → increase `--limit`.
+- If you’re drowning in irrelevant files → decrease `--limit`.
+
+### 6.2 `--min-score` (Advanced; Rarely Needed)
+
+Similarity scores are noisy and relative.
+
+- **Default:** Don’t set `--min-score` unless you have a specific reason.
+- Use it only to trim obviously bad tails when:
+  - The top hit(s) are clearly right.
+  - The long tail is clearly junk.
+
+Workflow:
+
+1. Run without `--min-score`.
+2. If top hits look correct and the rest are junk:
+   - Note the top score (e.g. `0.86`).
+   - Re-run with `--min-score` slightly below it (e.g. `--min-score 0.82`).
+3. If `--min-score` gives no results but you expect matches:
+   - Remove it and fall back to the defaults.
+
+Never:
+
+- Never interpret the score as “percent confidence”.
+- Never assume “no results above threshold” means “nothing exists in the repo”.
+
+### 6.3 `--min-confidence` (LLM Planning Confidence)
+
+Some `plan` outputs can include an LLM-derived confidence per item.
+
+- **Default:** `--min-confidence 0.5` is usually fine.
+- Raise toward `0.7` when:
+  - Editing critical infra, security-sensitive code, or deployment paths.
+  - You want only high-signal suggestions and will accept missing some candidates.
+- Lower toward `0.3` when:
+  - Exploring, prototyping, or willing to manually filter more noisy candidates.
+
+Heuristic:
+
+- For **production-critical** edits → you may increase `--min-confidence`, but still verify manually.
+- For **exploratory** work → moderate or low thresholds are fine; human judgment is required either way.
+
+---
+
+## 7. Recommended Flows
+
+### Flow A – Understand Before Editing
+
+1. Run `search`:
+
+   ```bash
+   python3 -m tools.rag.cli search "user problem or feature" --limit 25 --json
+   ```
+
+2. Skim top hits by **path + symbol + snippet**.
+3. If results look wrong:
+   - Refine the query (more literal, include identifiers).
+   - Or fall back to `rg` / AST tools.
+
+4. Once you know where the logic lives, read the files normally.
+
+### Flow B – Plan Edits
+
+1. Run `plan`:
+
+   ```bash
+   python3 -m tools.rag.cli plan "short description of change" --limit 50 --min-confidence 0.5
+   ```
+
+2. Inspect planned targets:
+   - If most look right → treat as starting worklist.
+   - If many look wrong → adjust query, limits, or skip the plan and fall back to manual search.
+
+3. Edit code, then run tests / smoke checks per **CONTRACTS.md** and section 8 below.
+
+---
+
+## 8. Testing Rules
+
+**When to Test**
+
+- Test whenever you touch:
+  - Code
+  - Scripts
+  - Anything executable
+- You MAY skip tests when changes are strictly:
+  - Docs-only
+  - Comments-only
+  - Config-only (where config doesn’t affect runtime behavior in this environment)
+
+If tests can’t be run here, report:
+
+```text
+TESTING SKIPPED: <reason>
+```
+
+…and stop.
+
+**How to Test (Baseline)**
+
+1. Restart or reload the affected service/module when that’s the normal flow.
+2. Hit the target using the lightest tool:
+   - `pytest` for unit/integration tests
+   - `curl` for HTTP APIs
+   - minimal CLI invocation for CLIs
+3. Check logs when available.
+4. Spot-check UI when changes are user-facing.
+
+**What to Output**
+
+- `Tests: PASSED <summary>`
+- `Tests: SKIPPED (<reason>)`
+- `Tests: FAILED (<reason> + suggested next step)`
+
+---
+
+## 9. Stop / Block Conditions
+
+Stop and report `BLOCKED` instead of guessing when:
+
+- `CONTRACTS.md` is missing or clearly out of sync with **AGENTS.md**.
+- Required sections referenced in either doc are missing.
+- Repo layout is drastically different from what the docs describe.
+
+Message format:
+
+```text
+BLOCKED: <short reason>. Waiting for Dave.
 ```
 
 ---
 
-## Mode: B-TEAM (Quality Gate)
+## 10. Scope Discipline
 
-**When invoked as B-TEAM, you are evaluating A-Team's work.**
-
-### Your Inputs
-1. `.trash/autocode/REQUIREMENTS.md` — The contract. READ THIS FIRST.
-2. `.trash/autocode/A_TEAM_OUTPUT.md` — What A-Team claims they did.
-3. `.trash/autocode/REFEREE_RULING.md` — Referee clarifications (if exists). Incorporate these.
-4. The codebase — **Verify A-Team's claims. Don't trust, verify.**
-
-### Your Behavior
-- Evaluate EACH acceptance criterion: ✅ met or ❌ not met
-- Run tests yourself: `pytest`, `ruff check`, etc.
-- Check code actually exists and works
-- Be RUTHLESS — A-Team will overclaim
-- Provide SPECIFIC, ACTIONABLE feedback for ❌ items
-- **DO NOT** argue in circles — if A-Team disputes, escalate to Referee
-
-### Your Output
-Write to `.trash/autocode/B_TEAM_FEEDBACK.md`:
-```markdown
-# B-Team Feedback — Turn N
-
-## Requirements Compliance
-- [ ] AC-1: ✅/❌ — Explanation
-- [ ] AC-2: ✅/❌ — Explanation
-- [ ] AC-3: ✅/❌ — Explanation
-- [ ] AC-4: ✅/❌ — Explanation
-
-## Test Results
-(Actually run tests, don't trust A-Team's claims)
-- pytest tests/test_X.py — PASS/FAIL
-- ruff check tools/rag/ — N errors
-
-## Immediate Actions Needed
-(List specific fixes for ❌ items)
-
-## A-Team Disagreements Response
-(If A-Team disputed previous feedback, respond here — or escalate to Referee)
-
-## Verdict: CONTINUE | APPROVED | ESCALATE
-
-- CONTINUE: A-Team must address ❌ items
-- APPROVED: Phase complete
-- ESCALATE: Contention detected, invoke Referee
-```
+- One **focused** changeset per request unless Dave explicitly widens scope.
+- Stay inside the repo (`/home/$USER/src/llmc`) unless instructed otherwise.
+- Prefer diffs and incremental changes over giant rewrites.
 
 ---
 
-## Mode: REFEREE (Tiebreaker)
+## 11. After Reading This
 
-**When invoked as REFEREE, you are resolving contention between A-Team and B-Team.**
+After loading this file:
 
-### When to Invoke Referee
-- A-Team and B-Team disagree on whether a requirement is met
-- Loop detected (same issue going back and forth 2+ turns)
-- Requirement is ambiguous and needs clarification
-- Both teams are stuck
+1. Read **CONTRACTS.md** for environment, install policy, tmux policy, and task protocol.
+2. Respect both documents together:
+   - **AGENTS.md** → behavior and workflows.
+   - **CONTRACTS.md** → constraints and environment.
 
-### Your Inputs
-1. `.trash/autocode/REQUIREMENTS.md` — The original contract
-2. `.trash/autocode/A_TEAM_OUTPUT.md` — A-Team's position
-3. `.trash/autocode/B_TEAM_FEEDBACK.md` — B-Team's position
-4. `DOCS/planning/SDD_Domain_RAG_Tech_Docs.md` — Full context if needed
-5. The codebase — For verification
-
-### Your Behavior
-- Read both positions carefully
-- Determine who is correct based on REQUIREMENTS.md
-- If requirements are ambiguous, clarify them
-- Issue a BINDING ruling
-- Your decision is final for this turn
-
-### Your Output
-Write to `.trash/autocode/REFEREE_RULING.md`:
-```markdown
-# Referee Ruling — Turn N
-
-## Dispute Summary
-(What A-Team and B-Team disagree about)
-
-## Analysis
-(Your reasoning)
-
-## Ruling
-- A-Team is correct / B-Team is correct / Both partially correct
-- Specific guidance for next turn
-
-## Requirements Clarification (if needed)
-- AC-X now means: [clarified interpretation]
-
-## Action Required
-- A-Team must: [specific action]
-- B-Team must: [specific action]
-```
-
----
-
-## Turn Protocol
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                    REQUIREMENTS.md                       │
-│                   (Dave writes this)                     │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                 A-TEAM (Gemini)                          │
-│         Reads requirements + B-Team feedback             │
-│         Implements, writes A_TEAM_OUTPUT.md              │
-└─────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────┐
-│                 B-TEAM (Gemini)                          │
-│         Reads requirements + A-Team output               │
-│         Evaluates, writes B_TEAM_FEEDBACK.md             │
-└─────────────────────────────────────────────────────────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-          APPROVED      CONTINUE     ESCALATE
-              │            │            │
-              ▼            ▼            ▼
-           Done!     Back to A-Team   REFEREE
-                                        │
-                                        ▼
-                              ┌─────────────────┐
-                              │ OPUS (Referee)  │
-                              │ Resolves, rules │
-                              │ Back to A-Team  │
-                              └─────────────────┘
-```
-
-### Turn Limits
-- **Max 10 A/B cycles per phase**
-- **Max 3 Referee invocations per phase**
-- If not approved by limits: ESCALATE to Dave with full summary
-
-### Fresh Context Rule
-- Each `gemini -y` invocation is a NEW session
-- No memory of previous turns except via artifact files
-- This is intentional — prevents context pollution
-
----
-
-## File Locations
-
-All dialectical artifacts live in `.trash/autocode/`:
-```
-.trash/autocode/
-├── REQUIREMENTS.md        # The contract (Dave writes)
-├── A_TEAM_OUTPUT.md       # A-Team's turn summary
-├── B_TEAM_FEEDBACK.md     # B-Team's evaluation
-├── REFEREE_RULING.md      # Referee decisions (if any)
-├── HANDOFF.md             # Initial handoff context
-└── turn_log.md            # Optional: history of turns
-```
-
----
-
-## Quick Reference Prompts
-
-**A-Team (Builder):**
-```
-You are A-TEAM. Read .trash/autocode/REQUIREMENTS.md first.
-If .trash/autocode/B_TEAM_FEEDBACK.md exists, read it and fix the ❌ items.
-If .trash/autocode/REFEREE_RULING.md exists, follow the ruling.
-Implement the requirements. Write output to .trash/autocode/A_TEAM_OUTPUT.md.
-Do not claim success — B-Team will verify.
-```
-
-**B-Team (Quality Gate):**
-```
-You are B-TEAM. Read .trash/autocode/REQUIREMENTS.md first.
-Read .trash/autocode/A_TEAM_OUTPUT.md to see what A-Team claims.
-Verify their claims by checking actual code and running tests.
-Write evaluation to .trash/autocode/B_TEAM_FEEDBACK.md.
-Be ruthless — don't trust A-Team's self-report.
-Verdict: CONTINUE, APPROVED, or ESCALATE.
-```
-
-**Referee (Opus):**
-```
-You are REFEREE. A-Team and B-Team are in contention.
-Read .trash/autocode/REQUIREMENTS.md (the contract).
-Read .trash/autocode/A_TEAM_OUTPUT.md (A-Team's position).
-Read .trash/autocode/B_TEAM_FEEDBACK.md (B-Team's position).
-Determine who is correct. Issue a binding ruling.
-Write to .trash/autocode/REFEREE_RULING.md.
-```
-
----
-
-## Git Safety
-
-- **NEVER** `git reset HEAD~` without explicit approval
-- **NEVER** delete files without asking
-- Commit frequently with clear messages
-- If you see untracked files you didn't create, ASK Dave
-
----
-
-## Original AGENTS.md
-
-The original behavioral contract is preserved at `DOCS/legacy/AGENTS_v1.md`. Core principles (testing, git safety, RAG protocol) still apply.
+You now understand the rules. Try not to piss off Future Dave.

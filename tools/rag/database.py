@@ -262,12 +262,32 @@ class Database:
         - Only inserts new or modified spans
 
         This preserves enrichments for unchanged code, saving 90%+ LLM calls!
+        
+        SAFETY: If new spans list is empty but existing spans exist, we preserve
+        the existing spans. This guards against silent extractor failures that
+        would otherwise nuke all enrichments for a file.
         """
         # Get existing span hashes for this file
         existing = self.conn.execute(
             "SELECT span_hash FROM spans WHERE file_id = ?", (file_id,)
         ).fetchall()
         existing_hashes = {row[0] for row in existing}
+        
+        # SAFETY GUARD: Don't delete existing spans if extractor returned empty
+        # This prevents silent extractor failures from nuking enrichments
+        if not spans and existing_hashes:
+            import sys
+            # Get file path for better logging
+            file_row = self.conn.execute(
+                "SELECT path FROM files WHERE id = ?", (file_id,)
+            ).fetchone()
+            file_path = file_row[0] if file_row else f"file_id={file_id}"
+            print(
+                f"⚠️  EXTRACTOR RETURNED 0 SPANS for {file_path} "
+                f"(preserving {len(existing_hashes)} existing spans)",
+                file=sys.stderr,
+            )
+            return  # Preserve existing spans, don't nuke them
 
         # New span hashes from the file
         new_hashes = {span.span_hash for span in spans}

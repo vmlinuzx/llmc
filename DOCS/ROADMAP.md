@@ -763,6 +763,109 @@ The GAP demon already implements the full autonomous loop:
 
 ---
 
+### 3.10 Distributed Parallel Enrichment (R&D) 🔥 NEW
+
+**Status:** 🔴 Research Required  
+**Added:** 2025-12-14
+
+**Problem:**
+The current enrichment pipeline is **synchronous and single-host**:
+- One span enriched at a time
+- One Ollama server at a time  
+- GPU sits idle between enrichment calls (model loading, network latency, DB writes)
+- Multiple GPU systems in the homelab (Athena, desktop, laptop) can't work together
+
+**Dave's Setup:**
+- **Athena** (Strix Halo): iGPU with 96GB unified memory, can handle multiple concurrent requests
+- **Desktop**: Dedicated GPU
+- **Laptop**: Another GPU available
+- Current utilization: ~40% on Athena during enrichment (lots of idle time)
+
+**Proposed Architecture:**
+
+```
+                 ┌─────────────────────────────────────────┐
+                 │           ENRICHMENT DISPATCHER         │
+                 │  (async queue, work stealing, backpressure)  │
+                 └───────────────┬─────────────────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        ▼                        ▼                        ▼
+   ┌─────────┐             ┌─────────┐             ┌─────────┐
+   │ Athena  │             │ Desktop │             │ Laptop  │
+   │ :11434  │             │ :11434  │             │ :11434  │
+   │ (2-3    │             │ (1      │             │ (1      │
+   │concurrent)│           │concurrent)│            │concurrent)│
+   └─────────┘             └─────────┘             └─────────┘
+```
+
+**Key Design Decisions:**
+
+1. **Async I/O:** Replace blocking `requests.post()` with `httpx.AsyncClient()` or `aiohttp`
+2. **Work Queue:** `asyncio.Queue` with configurable concurrency per host
+3. **Per-Host Concurrency:** Athena can handle 2-3 parallel requests, others 1
+4. **Backpressure:** Don't overload slow hosts, let faster hosts pull more work
+5. **Failure Isolation:** One host down shouldn't block the whole queue
+6. **Result Aggregation:** Spans complete out-of-order, batch DB commits
+
+**Configuration (llmc.toml):**
+```toml
+[enrichment.distributed]
+enabled = true
+max_concurrent_total = 5  # Global cap across all hosts
+
+[[enrichment.distributed.hosts]]
+url = "http://athena:11434"
+max_concurrent = 3  # This host can handle 3 parallel
+priority = 1        # Prefer this host
+
+[[enrichment.distributed.hosts]]
+url = "http://localhost:11434"
+max_concurrent = 1
+priority = 2
+
+[[enrichment.distributed.hosts]]
+url = "http://laptop:11434"
+max_concurrent = 1
+priority = 3
+```
+
+**Challenges:**
+
+1. **Core Architecture Change:** Current `EnrichmentPipeline` is inherently synchronous
+2. **DB Locking:** SQLite doesn't love concurrent writers (need WAL + careful transaction scope)
+3. **Ordering:** Results come back out-of-order; current logging assumes sequential
+4. **Error Handling:** Partial batch failures, retry logic, dead host detection
+5. **Observability:** Which host enriched what? How to track T/s per host?
+
+**Phased Implementation:**
+
+| Phase | Description | Effort | Difficulty |
+|-------|-------------|--------|------------|
+| 0 | Async refactor of OllamaBackend (httpx) | 8-12h | 🟡 Medium |
+| 1 | Multi-host config + dispatcher | 12-16h | 🟡 Medium |
+| 2 | Per-host concurrency + backpressure | 8-12h | 🟡 Medium |
+| 3 | Result aggregation + batch commits | 8-12h | 🔴 Hard |
+| 4 | Monitoring + per-host metrics | 4-8h | 🟢 Easy |
+
+**Total Effort:** 40-60 hours | **Difficulty:** 🔴 Hard (7/10)
+
+**Why R&D:**
+This goes against the core design assumption of "one enrichment at a time". The refactor touches:
+- `tools/rag/service.py` - Main loop
+- `tools/rag/enrichment_pipeline.py` - Pipeline orchestration
+- `tools/rag/backends/ollama_backend.py` - HTTP client
+- `tools/rag/database.py` - Transaction scope
+- `llmc.toml` - New config schema
+
+**Success Criteria:**
+- [ ] 2-3x enrichment throughput on Athena alone (via concurrency)
+- [ ] N hosts working in parallel without stepping on each other
+- [ ] Graceful degradation when hosts go offline
+- [ ] Per-host T/s metrics visible in TUI/logs
+
+---
+
 ### 3.9 Architecture Polish & Tech Debt (P3)
 
 **Status:** 🟡 Backlog  

@@ -28,6 +28,16 @@ The daemon now uses idle time productively. When there's nothing to index, it ru
 - **API Key Removed from Git:** DeepSeek key was in `deepseek_agent.sh` - fixed to use env var
 - Security audit report: `tests/security/REPORTS/2025-12-14_Security_Audit.md`
 
+### Fixed
+
+- **CRITICAL: Silent Extractor Failure Nukes Enrichments (VULN-RAG-001):**
+  - Bug: When `TechDocsExtractor` returned empty (e.g., mistune not installed), `replace_spans(file_id, [])` would **delete all existing spans** for that file
+  - Impact: 111 files had 0 spans including `AGENTS.md`, `CHANGELOG.md`, `DOCS/ROADMAP.md`
+  - Root cause: No guard against empty span replacement wiping existing data
+  - **Fix:** `replace_spans()` now preserves existing spans when new list is empty, logs ⚠️ warning
+  - **Repair:** Added `scripts/repair_orphan_files.py` to reindex orphaned files
+  - Result: 412 spans recovered from 111 affected files
+
 ### Changed
 
 - Aider-LLMC SDD updated to progressive disclosure model (v1.1)
