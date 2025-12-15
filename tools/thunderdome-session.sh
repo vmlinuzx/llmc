@@ -72,12 +72,12 @@ tmux send-keys -t "$SESSION_NAME:0.1" "tail -f turn_log.jsonl" Enter
 
 # AGENT pane - ready to receive commands
 tmux send-keys -t "$SESSION_NAME:0.2" "# AGENT PANE - Orchestrator will spawn agents here" Enter
-tmux send-keys -t "$SESSION_NAME:0.2" "# Or manually run: aider --model deepseek" Enter
+tmux send-keys -t "$SESSION_NAME:0.2" "# Or manually run: gemini -y 'prompt'" Enter
 
 # ORCHESTRATOR pane - start orchestrator with protocol
 tmux send-keys -t "$SESSION_NAME:0.0" "./tools/thunderdome_orchestrator.sh" Enter
 
-# Wait for aider to start, then inject the initial message
+# Wait for agent to start, then inject the initial message
 sleep 3
 if [[ -f /tmp/thunderdome_init_msg.txt ]]; then
     tmux send-keys -t "$SESSION_NAME:0.0" "$(cat /tmp/thunderdome_init_msg.txt)" Enter
@@ -94,7 +94,7 @@ echo "  Layout: ORCHESTRATOR + LOG (left) | AGENT (right)"
 echo "  Mouse mode: ENABLED"
 echo ""
 echo "  Dispatch agents with:"
-echo "    ./tools/dispatch.sh agent 'aider --model deepseek'"
+echo "    ./tools/dispatch.sh agent 'gemini -y prompt'"
 echo "    ./tools/dispatch.sh agent 'pytest tests/'"
 echo ""
 echo "  Attaching..."

@@ -13,7 +13,7 @@ usage() {
     echo "Dispatches command to the AGENT pane."
     echo ""
     echo "Examples:"
-    echo "  $0 'aider --model deepseek'           # Start aider"
+    echo "  $0 'gemini -y \"Fix the bug\"'           # Run gemini agent"
     echo "  $0 'pytest tests/ -v'                  # Run tests"
     echo "  $0 agent 'gemini -y \"Fix the bug\"'   # Run gemini"
     echo ""

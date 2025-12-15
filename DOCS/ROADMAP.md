@@ -322,6 +322,8 @@ llmc-cli rag search "model"  # Should return results, not 0
 - ✅ CLI: `llmc debug autodoc generate` and `llmc debug autodoc status`
 - ✅ 100% test pass rate (33 tests)
 
+**⚠️ CURRENT STATE (2025-12-14):** Only stub backend implemented. The shell backend (`scripts/docgen_stub.py`) generates placeholder docs, not real LLM-generated documentation. Need to implement `backend = "llm"` option that uses enrichment chain (qwen3:14b+ with reasoning).
+
 ### ~~1.8 System Friendliness (Idle Loop Throttling)~~ ✅ DONE
 
 **Completed:** Dec 2025 - Implemented in `tools/rag/service.py`

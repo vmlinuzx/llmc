@@ -40,7 +40,6 @@ The daemon now uses idle time productively. When there's nothing to index, it ru
 
 ### Changed
 
-- Aider-LLMC SDD updated to progressive disclosure model (v1.1)
 - Moved Medical RAG SDD to `legacy/` (deprioritized)
 
 ---

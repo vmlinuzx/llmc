@@ -3,7 +3,7 @@
 # THUNDERDOME ORCHESTRATOR AGENT
 # ==============================================================================
 #
-# Wrapper that launches aider with the Thunderdome protocol pre-loaded.
+# Wrapper that launches an agent with the Thunderdome protocol pre-loaded.
 # Uses the same pattern as rem_ruthless_testing_agent.sh
 #
 # Usage:
@@ -19,7 +19,7 @@ REPO_ROOT="${LLMC_TARGET_REPO:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 PROTOCOL_FILE="/home/vmlinux/src/thunderdome/DIALECTICAL_AUTOCODING1.3.md"
 
 # Model selection
-MODEL="${THUNDERDOME_MODEL:-deepseek}"
+MODEL="${THUNDERDOME_MODEL:-gemini-2.5-pro}"
 
 # Colors
 CYAN='\033[0;36m'
@@ -99,7 +99,7 @@ main() {
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
 
-    echo -e "${CYAN}Launching aider TUI...${NC}"
+    echo -e "${CYAN}Launching agent...${NC}"
     echo ""
 
     # Create the initial message
@@ -113,9 +113,8 @@ main() {
     # Save message to temp file for send-keys
     echo "$init_msg" > /tmp/thunderdome_init_msg.txt
 
-    # Launch aider with real TTY (no pipe!)
-    # The thunderdome-session.sh will send the initial message via tmux send-keys
-    aider --model "$MODEL" --yes --no-auto-commits
+    # Launch gemini with context
+    gemini -y "$init_msg"
 }
 
 main "$@"
