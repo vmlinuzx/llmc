@@ -1,6 +1,0 @@
-setuptools>=68.0.0
-tree_sitter==0.20.1
-tree_sitter_languages==1.9.1
-click>=8.1.7
-jsonschema>=4.23.0
-sentence-transformers>=3.0.0
