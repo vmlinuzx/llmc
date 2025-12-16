@@ -62,9 +62,15 @@ def test_relative_path_normalization(tmp_path):
         "valid/../../../etc/passwd",
         "./././../../../etc/passwd",
         "valid/./../../etc/passwd",
+        # Extended tricky paths to verify normalization
+        "valid/..//..//etc/passwd",
+        "valid/../../../../../../../../../../etc/passwd",
+        "./.././../etc/passwd",
+        "valid/./.././../../etc/passwd",
     ]
     
     for path in tricky_paths:
+        # Verify that the path is blocked after normalization
         with pytest.raises(ValueError, match="outside repository root|Invalid path resolution"):
             validate_source_path(repo_root, Path(path))
 
