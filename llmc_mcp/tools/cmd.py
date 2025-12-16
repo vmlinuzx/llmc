@@ -36,62 +36,45 @@ class ExecResult:
     error: str | None = None
 
 
-# Default blacklist - safe read-only commands
-DEFAULT_BLACKLIST: list[str] = [
-    # Empty - sandbox provides real security
-    # This is for soft behavioral nudges only
-]
+# Default blacklist - empty. Docker container provides real security.
+# This is just asking nicely. An LLM could write their own sed if you blocked it.
+DEFAULT_BLACKLIST: list[str] = []
 
 
 def validate_command(
     cmd_parts: list[str],
-    blacklist: list[str],
-    allowlist: list[str] | None = None,
-    host_mode: bool = False,
+    blacklist: list[str] | None = None,
 ) -> str:
     """
-    Validate command against security lists.
+    Validate command against blacklist.
+
+    The blacklist is just asking nicely - not real security.
+    Real security is:
+        - Docker mode: Container isolation
+        - Hybrid mode: You trust it
+
+    If you give an LLM bash, they can do anything anyway.
 
     Args:
         cmd_parts: Parsed command parts (first element is binary)
-        blacklist: List of blocked binary names
-        allowlist: List of allowed binary names (if provided, overrides blacklist logic)
-        host_mode: If True, enforce stricter validation including hard-block list
+        blacklist: Soft block list (empty by default)
 
     Returns:
         The binary name if allowed
 
     Raises:
-        CommandSecurityError: If binary not allowed
+        CommandSecurityError: If binary is blacklisted
     """
     if not cmd_parts:
         raise CommandSecurityError("Empty command")
 
     binary = cmd_parts[0]
-
-    # Extract just the binary name (handle paths like /usr/bin/python)
     binary_name = Path(binary).name
 
-    # Hard-block list for dangerous commands (always blocked in host_mode)
-    HARD_BLOCK_LIST = ["bash", "sh", "python", "python3", "pip", "sudo", "rm", "mv", "cp", "chmod"]
-
-    if host_mode and binary_name in HARD_BLOCK_LIST:
+    if blacklist and binary_name in blacklist:
         raise CommandSecurityError(
-            f"Binary '{binary_name}' is hard-blocked for security. "
-            f"Hard-blocked commands: {HARD_BLOCK_LIST}"
+            f"Binary '{binary_name}' is blacklisted. Blocked: {blacklist}"
         )
-
-    # Allowlist mode (takes precedence over blacklist)
-    if allowlist is not None:
-        if binary_name not in allowlist:
-            raise CommandSecurityError(
-                f"Binary '{binary_name}' is not in allowlist. Allowed: {allowlist}"
-            )
-        return binary_name
-
-    # Blacklist mode (default)
-    if binary_name in blacklist:
-        raise CommandSecurityError(f"Binary '{binary_name}' is blacklisted. Blocked: {blacklist}")
 
     return binary_name
 
@@ -100,7 +83,6 @@ def run_cmd(
     command: str,
     cwd: Path | str,
     blacklist: list[str] | None = None,
-    allowlist: list[str] | None = None,
     host_mode: bool = False,
     timeout: int = 30,
     env: dict[str, str] | None = None,
@@ -108,14 +90,17 @@ def run_cmd(
     """
     Execute a shell command with security constraints.
 
-    SECURITY: Requires isolated environment (Docker, K8s, nsjail) unless host_mode=True.
+    SECURITY:
+        - Docker mode (host_mode=False): Requires container isolation
+        - Hybrid mode (host_mode=True): You trust it, runs on host
+
+    Blacklist is just asking nicely. If you give an LLM bash, they can do anything.
 
     Args:
         command: Shell command string to execute
         cwd: Working directory for execution
-        blacklist: List of blocked binary names (uses DEFAULT_BLACKLIST if None)
-        allowlist: List of allowed binary names (if provided, overrides blacklist logic)
-        host_mode: If True, skip isolation requirement and enforce strict allowlist
+        blacklist: Soft block list (empty by default, just asking nicely)
+        host_mode: If True, skip isolation requirement
         timeout: Max execution time in seconds
         env: Optional environment variables to set
 
@@ -145,7 +130,6 @@ def run_cmd(
             error="Empty command",
         )
 
-    blocked = blacklist if blacklist is not None else DEFAULT_BLACKLIST
     cwd_path = Path(cwd).resolve() if isinstance(cwd, str) else cwd.resolve()
 
     # Parse command to validate binary
@@ -160,15 +144,10 @@ def run_cmd(
             error=f"Invalid command syntax: {e}",
         )
 
-    # Validate command based on mode
+    # Validate command (blacklist is soft nudge only)
     try:
-        binary_name = validate_command(
-            cmd_parts,
-            blocked,
-            allowlist=allowlist,
-            host_mode=host_mode
-        )
-        logger.debug(f"Running allowed command: {binary_name}")
+        binary_name = validate_command(cmd_parts, blacklist=blacklist)
+        logger.debug(f"Running command: {binary_name}")
     except CommandSecurityError as e:
         return ExecResult(
             success=False,

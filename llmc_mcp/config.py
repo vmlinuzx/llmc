@@ -46,12 +46,9 @@ class McpToolsConfig:
 
     allowed_roots: list[str] = field(default_factory=lambda: ["."])
     enable_run_cmd: bool = False
-    run_cmd_blacklist: list[str] = field(
-        default_factory=list  # Empty blacklist - sandbox provides security
-    )
-    run_cmd_allowlist: list[str] = field(
-        default_factory=lambda: ["ls", "cat", "rg", "grep", "find", "head", "tail", "wc", "sort", "uniq", "git"]
-    )
+    # Blacklist is just asking nicely - not real security.
+    # Real security: Docker (untrusted) or host_mode (trusted).
+    run_cmd_blacklist: list[str] = field(default_factory=list)
     executables: dict[str, str] = field(default_factory=dict)
     read_timeout: int = 10
     exec_timeout: int = 30
@@ -295,7 +292,6 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.tools.allowed_roots = tools.get("allowed_roots", cfg.tools.allowed_roots)
         cfg.tools.enable_run_cmd = tools.get("enable_run_cmd", cfg.tools.enable_run_cmd)
         cfg.tools.run_cmd_blacklist = tools.get("run_cmd_blacklist", cfg.tools.run_cmd_blacklist)
-        cfg.tools.run_cmd_allowlist = tools.get("run_cmd_allowlist", cfg.tools.run_cmd_allowlist)
         cfg.tools.executables = tools.get("executables", cfg.tools.executables)
         cfg.tools.read_timeout = tools.get("read_timeout", cfg.tools.read_timeout)
         cfg.tools.exec_timeout = tools.get("exec_timeout", cfg.tools.exec_timeout)

@@ -1597,16 +1597,14 @@ class LlmcMcpServer:
                 # If RAG fails, fall through to normal grep
                 logger.debug(f"Smart grep RAG fallback failed: {e}")
 
-        # Determine execution mode params
+        # Determine execution mode
         host_mode = (self.config.mode == "hybrid")
-        allowlist = self.config.tools.run_cmd_allowlist if host_mode else None
 
-        # Normal command execution
+        # Execute command (blacklist is soft nudge, host_mode skips isolation)
         result = run_cmd(
             command=command,
             cwd=cwd,
             blacklist=self.config.tools.run_cmd_blacklist,
-            allowlist=allowlist,
             host_mode=host_mode,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )

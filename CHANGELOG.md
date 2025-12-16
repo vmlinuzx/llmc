@@ -2,6 +2,59 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.7.0] - "Trust Issues" - 2025-12-16
+
+### Purple Flavor: **Trust Issues**
+
+Security is binary: either you trust it (hybrid mode), or you don't (Docker). All that allowlist/blacklist complexity was just security theater. We stripped it down to the essentials.
+
+### Added
+
+- **MCP Hybrid Mode (`mode = "hybrid"`):**
+  - New operational mode for trusted MCP clients (e.g., Claude Desktop)
+  - Directly exposes write tools (`linux_fs_write`, `linux_fs_edit`, `run_cmd`) without Docker
+  - ~76% token reduction vs classic mode (7 tools vs 27)
+  - Configurable via `[mcp.hybrid]` section in `llmc.toml`
+  - `promoted_tools` - which tools to expose directly
+  - `include_execute_code` - optionally include sandbox tool
+  - `bootstrap_budget_warning` - alert if toolset gets too big
+
+- **Centralized Handler Registry:**
+  - `_get_handler_for_tool()` in `server.py` for clean mode dispatch
+  - Eliminates duplicate handler mappings across modes
+
+### Changed
+
+- **Simplified run_cmd Security Model:**
+  - Removed `run_cmd_allowlist` - pointless if you trust it
+  - Removed `run_cmd_hard_block` - same reason
+  - Kept `run_cmd_blacklist` as soft nudge only (empty by default)
+  - **Philosophy:** If you give an LLM bash, they can do anything anyway. Real security is Docker (untrusted) or hybrid (trusted).
+
+- **Security is now a binary trust decision:**
+  - `mode = "classic"` or `mode = "code_execution"` → Docker required
+  - `mode = "hybrid"` → You trust it, runs on host
+
+### Fixed
+
+- **Removed 11.7MB PostScript file from git:**
+  - `llmc/commands/typer` was an accidental ImageMagick dump
+  - Repo size: 17MB → 6MB
+  - Added `*.ps` and `*.eps` to .gitignore
+
+### Security
+
+- Claude Desktop has per-tool approval UI - that's your first gate
+- Docker isolation is the real security for untrusted clients
+- Hybrid mode is explicit opt-in: you're saying "I trust this"
+
+### Documentation
+
+- Updated SDD: `DOCS/planning/SDD_MCP_Hybrid_Mode.md`
+- Research validation: `DOCS/research/MCP_Hybrid_Mode_Deliverables.md`
+
+---
+
 ## [0.6.9] - "Idle Hands" - 2025-12-14
 
 ### Purple Flavor: **Idle Hands**

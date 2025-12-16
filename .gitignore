@@ -131,3 +131,7 @@ DEADJOE
 .kilocode/
 DOCS/planning/
 .aider*
+
+# Accidental PostScript/image files
+*.ps
+*.eps

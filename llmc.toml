@@ -523,12 +523,12 @@ mode = "none"
 # Filesystem access roots - all repos under src
 allowed_roots = ["/home/vmlinux/src"]
 enable_run_cmd = true  # M3: Command execution enabled
-run_cmd_allowlist = [
-    "bash", "sh", "rg", "grep", "cat", "head", "tail",
-    "ls", "find", "wc", "sort", "uniq",
-    "python", "python3", "pip",
-    "git"
-]
+
+# Blacklist is just asking nicely - not real security.
+# Real security: Docker (untrusted) vs hybrid mode (trusted).
+# If you give an LLM bash, they can do anything anyway.
+# run_cmd_blacklist = []  # Empty by default
+
 # Custom executable tools (exposed as named tools)
 # executables = { my_script = "scripts/my_script.sh", deploy = "scripts/deploy.sh" }
 
