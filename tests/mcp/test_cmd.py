@@ -4,6 +4,8 @@
 from pathlib import Path
 import sys
 
+import pytest  # noqa: F401 - Required for pytest collection (see conftest.py)
+
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -117,7 +119,7 @@ def test_timeout():
 
     # Sleep longer than timeout - bash is hard-blocked in host_mode
     # Use a command that's allowed in host_mode
-    result = run_cmd("sleep 5", cwd, timeout=1, host_mode=True)
+    _ = run_cmd("sleep 5", cwd, timeout=1, host_mode=True)
     # sleep might not be in allowlist, so it could fail with allowlist error
     # Just check it doesn't crash
 
@@ -245,7 +247,7 @@ def test_config_loads_run_cmd_allowlist():
     print("Testing config loads run_cmd_allowlist...")
 
     # Import config module
-    from llmc_mcp.config import load_config, McpConfig
+    from llmc_mcp.config import McpConfig
 
     # Create a minimal config
     cfg = McpConfig()
