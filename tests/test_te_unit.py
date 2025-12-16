@@ -86,6 +86,13 @@ class TestConfig:
         finally:
             del os.environ["TE_AGENT_ID"]
 
+    def test_passthrough_timeout_config(self):
+        """Test that passthrough timeout is loaded from config."""
+        from llmc.te.config import get_te_config
+
+        cfg = get_te_config()
+        assert cfg.passthrough_timeout_seconds == 30
+
 
 class TestStore:
     """Test in-memory handle store."""
