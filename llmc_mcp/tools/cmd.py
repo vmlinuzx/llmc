@@ -46,19 +46,23 @@ DEFAULT_BLACKLIST: list[str] = [
 def validate_command(
     cmd_parts: list[str],
     blacklist: list[str],
+    allowlist: list[str] | None = None,
+    host_mode: bool = False,
 ) -> str:
     """
-    Validate command against blacklist.
+    Validate command against security lists.
 
     Args:
         cmd_parts: Parsed command parts (first element is binary)
         blacklist: List of blocked binary names
+        allowlist: List of allowed binary names (if provided, overrides blacklist logic)
+        host_mode: If True, enforce stricter validation including hard-block list
 
     Returns:
         The binary name if allowed
 
     Raises:
-        CommandSecurityError: If binary not in blacklist
+        CommandSecurityError: If binary not allowed
     """
     if not cmd_parts:
         raise CommandSecurityError("Empty command")
@@ -68,6 +72,24 @@ def validate_command(
     # Extract just the binary name (handle paths like /usr/bin/python)
     binary_name = Path(binary).name
 
+    # Hard-block list for dangerous commands (always blocked in host_mode)
+    HARD_BLOCK_LIST = ["bash", "sh", "python", "python3", "pip", "sudo", "rm", "mv", "cp", "chmod"]
+
+    if host_mode and binary_name in HARD_BLOCK_LIST:
+        raise CommandSecurityError(
+            f"Binary '{binary_name}' is hard-blocked for security. "
+            f"Hard-blocked commands: {HARD_BLOCK_LIST}"
+        )
+
+    # Allowlist mode (takes precedence over blacklist)
+    if allowlist is not None:
+        if binary_name not in allowlist:
+            raise CommandSecurityError(
+                f"Binary '{binary_name}' is not in allowlist. Allowed: {allowlist}"
+            )
+        return binary_name
+
+    # Blacklist mode (default)
     if binary_name in blacklist:
         raise CommandSecurityError(f"Binary '{binary_name}' is blacklisted. Blocked: {blacklist}")
 
@@ -78,36 +100,41 @@ def run_cmd(
     command: str,
     cwd: Path | str,
     blacklist: list[str] | None = None,
+    allowlist: list[str] | None = None,
+    host_mode: bool = False,
     timeout: int = 30,
     env: dict[str, str] | None = None,
 ) -> ExecResult:
     """
     Execute a shell command with security constraints.
-    
-    SECURITY: Requires isolated environment (Docker, K8s, nsjail).
+
+    SECURITY: Requires isolated environment (Docker, K8s, nsjail) unless host_mode=True.
 
     Args:
         command: Shell command string to execute
         cwd: Working directory for execution
         blacklist: List of blocked binary names (uses DEFAULT_BLACKLIST if None)
+        allowlist: List of allowed binary names (if provided, overrides blacklist logic)
+        host_mode: If True, skip isolation requirement and enforce strict allowlist
         timeout: Max execution time in seconds
         env: Optional environment variables to set
 
     Returns:
         ExecResult with stdout, stderr, exit_code
     """
-    # SECURITY: Only allow execution in isolated environments
-    from llmc_mcp.isolation import require_isolation
-    try:
-        require_isolation("run_cmd")
-    except RuntimeError as e:
-        return ExecResult(
-            success=False,
-            stdout="",
-            stderr=str(e),
-            exit_code=-1,
-            error=str(e),
-        )
+    # SECURITY: Only allow execution in isolated environments unless host_mode=True
+    if not host_mode:
+        from llmc_mcp.isolation import require_isolation
+        try:
+            require_isolation("run_cmd")
+        except RuntimeError as e:
+            return ExecResult(
+                success=False,
+                stdout="",
+                stderr=str(e),
+                exit_code=-1,
+                error=str(e),
+            )
     
     if not command or not command.strip():
         return ExecResult(
@@ -133,9 +160,14 @@ def run_cmd(
             error=f"Invalid command syntax: {e}",
         )
 
-    # Validate against blacklist
+    # Validate command based on mode
     try:
-        binary_name = validate_command(cmd_parts, blocked)
+        binary_name = validate_command(
+            cmd_parts,
+            blocked,
+            allowlist=allowlist,
+            host_mode=host_mode
+        )
         logger.debug(f"Running allowed command: {binary_name}")
     except CommandSecurityError as e:
         return ExecResult(
