@@ -1,113 +1,135 @@
-import unittest
 import json
-from unittest.mock import MagicMock, AsyncMock, patch
-from dataclasses import dataclass
+import pytest
+from unittest.mock import MagicMock, patch, AsyncMock
 
 from llmc_agent.agent import Agent
-from llmc_agent.config import Config
+from llmc_agent.config import AgentConfig
+from llmc_agent.tools import ToolRegistry, Tool, ToolTier
 
-# Mock response class for OllamaBackend
-@dataclass
-class MockResponse:
-    content: str
-    tokens_prompt: int
-    tokens_completion: int
-    model: str
-    tool_calls: list = None
+from llmc_agent.backends.base import GenerateResponse, GenerateRequest # Import GenerateResponse
 
-class TestAgentContextOverflow(unittest.IsolatedAsyncioTestCase):
+# Define a large string to simulate context overflow
+VERY_LARGE_STRING = "A" * 50_000
 
-    async def test_context_overflow(self):
-        # 1. Setup
-        # Create config with small context budget
-        config = Config()
-        config.agent.context_budget = 100
-        config.agent.response_reserve = 10
-        config.agent.model = "test-model"
-        config.ollama.url = "http://localhost:11434"
-        config.ollama.timeout = 30
-        config.ollama.temperature = 0.0
-        config.ollama.num_ctx = 2048
-        config.rag.enabled = False
-        config.rag.include_summary = False
+class TestAgentContextOverflow:
 
-        # Mock count_tokens to return 1 token per char
-        with patch("llmc_agent.agent.count_tokens", side_effect=len) as mock_count_tokens:
-            
-            agent = Agent(config)
-            
-            # Mock the backend
-            agent.ollama = AsyncMock()
-            
-            # Define tool call
-            tool_call = {
-                "function": {
-                    "name": "read_file",
-                    "arguments": {"path": "file.txt"}
-                },
-                "id": "call_123"
+    @pytest.fixture
+    def agent_config(self):
+        """Fixture for agent configuration with a small context budget."""
+        # Create a mock config object with the necessary attributes
+        mock_ollama_config = MagicMock()
+        mock_ollama_config.url = "http://localhost:11434"
+        mock_ollama_config.timeout = 300
+        mock_ollama_config.temperature = 0.0
+        mock_ollama_config.num_ctx = 4096 # Standard context window size
+
+        mock_rag_config = MagicMock()
+        mock_rag_config.enabled = False # Disable RAG for this test
+
+        config = AgentConfig()
+        config.ollama = mock_ollama_config
+        config.rag = mock_rag_config
+        config.context_budget = 4000  # Set a small context budget for the agent
+        config.agent = MagicMock() # Mock agent section
+        config.agent.model = "mock_model"
+        config.agent.response_reserve = 1024 # Standard response reserve
+
+        return config
+
+    # Patch OllamaBackend and ToolRegistry at the class level
+    @patch('llmc_agent.agent.OllamaBackend')
+    @patch('llmc_agent.tools.ToolRegistry')
+    @pytest.mark.asyncio # Mark the test as async
+    async def test_unbounded_tool_output_context_overflow(
+        self,
+        MockToolRegistry, # This is the mocked class
+        MockOllamaBackend, # This is the mocked class
+        agent_config
+    ):
+        """
+        Tests that a large tool output causes context overflow by not being truncated
+        before being sent back to the LLM.
+        """
+        # Create instances of the mocked classes
+        mock_ollama_backend_instance = MockOllamaBackend.return_value
+        mock_tool_registry_instance = MockToolRegistry.return_value
+
+        def _verbose_tool_func():
+            return VERY_LARGE_STRING
+
+        # Create a Tool instance
+        mock_verbose_tool = Tool(
+            name="verbose_tool",
+            description="Returns a very large string.",
+            tier=ToolTier.WALK, # Or any appropriate tier
+            function=_verbose_tool_func,
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": []
             }
+        )
 
-            # Define side effects for generate_with_tools
-            # Iteration 1: Return tool call
-            # Iteration 2: Return final answer
-            agent.ollama.generate_with_tools.side_effect = [
-                MockResponse(
-                    content="", 
-                    tokens_prompt=10, 
-                    tokens_completion=10, 
-                    model="test-model", 
-                    tool_calls=[tool_call]
-                ),
-                MockResponse(
-                    content="Final Answer", 
-                    tokens_prompt=10, 
-                    tokens_completion=10, 
-                    model="test-model", 
-                    tool_calls=[]
-                )
-            ]
-
-            # Mock tools registry
-            agent.tools = MagicMock()
-            agent.tools.to_ollama_tools.return_value = []
-            agent.tools.get_tools_for_tier.return_value = []
-            agent.tools.is_tool_available.return_value = True
-            
-            # Mock the tool itself
-            mock_tool = MagicMock()
-            mock_tool.name = "read_file"
-            # Return 500 chars, which is > context_budget (100)
-            large_output = "A" * 500
-            mock_tool.function = AsyncMock(return_value=large_output)
-            
-            agent.tools.get_tool.return_value = mock_tool
-
-            # 2. Execution
-            await agent.ask_with_tools("Check this")
-
-            # 3. Verification
-            # Check the second call to generate_with_tools
-            self.assertEqual(agent.ollama.generate_with_tools.call_count, 2)
-            
-            # Get arguments of the second call
-            call_args = agent.ollama.generate_with_tools.call_args_list[1]
-            request = call_args[0][0] # First arg is request object
-            
-            # Calculate total tokens in messages
-            total_tokens = 0
-            for msg in request.messages:
-                content = msg.get("content")
-                if content:
-                    total_tokens += len(content)
-            
-            # Assert failure condition: total tokens > context budget
-            # This confirms the gap exists
-            self.assertGreater(
-                total_tokens, 
-                config.agent.context_budget, 
-                f"Total tokens {total_tokens} should exceed budget {config.agent.context_budget} to confirm gap"
+        # Configure the mocked tool registry instance
+        mock_tool_registry_instance.get_tool.side_effect = lambda name: mock_verbose_tool if name == "verbose_tool" else None
+        mock_tool_registry_instance.get_tools_for_tier.return_value = [mock_verbose_tool]
+        mock_tool_registry_instance.unlock_tier = MagicMock() # Mock the unlock_tier method
+        
+        # Configure the mocked OllamaBackend instance's generate_with_tools method
+        mock_ollama_backend_instance.generate_with_tools = AsyncMock(side_effect=[
+            # First call to generate_with_tools: LLM requests to use verbose_tool
+            GenerateResponse(
+                content="",
+                tokens_prompt=100,
+                tokens_completion=50,
+                model="mock_model",
+                finish_reason="tool_calls",
+                tool_calls=[{"function": {"name": "verbose_tool", "arguments": {}}}],
+            ),
+            # Second call to generate_with_tools: LLM processes tool output
+            GenerateResponse(
+                content="Some final response after processing the verbose tool output.",
+                tokens_prompt=200,
+                tokens_completion=100,
+                model="mock_model",
+                finish_reason="stop",
+                tool_calls=[],
             )
+        ])
 
-if __name__ == "__main__":
-    unittest.main()
+        # Initialize the agent (it will use the patched classes)
+        agent = Agent(config=agent_config)
+
+        # 2. Call agent.ask_with_tools, which should trigger the tool call
+        await agent.ask_with_tools("Please use the verbose tool to give me some information.")
+
+        # 3. Assertions
+        # The generate_with_tools method should have been called twice
+        assert mock_ollama_backend_instance.generate_with_tools.call_count == 2
+
+        # Get the messages from the second call to generate_with_tools
+        # This is where the tool output would be passed back to the LLM
+        second_call_args, _ = mock_ollama_backend_instance.generate_with_tools.call_args_list[1]
+        messages_sent_to_llm = second_call_args[0].messages # Access messages attribute of GenerateRequest
+
+        # Find the tool output message in the list
+        tool_output_message = None
+        for message in messages_sent_to_llm:
+            if message.get("role") == "tool": # Check for tool role
+                tool_output_message = message
+                break
+
+        assert tool_output_message is not None, "Tool output message not found in the second LLM call."
+        
+        # Assert that the content of the tool output message is the full, untruncated string
+        assert tool_output_message["content"] == json.dumps(VERY_LARGE_STRING) # Tool output is json dumped
+        assert len(json.loads(tool_output_message["content"])) == len(VERY_LARGE_STRING)
+        assert len(json.loads(tool_output_message["content"])) == 50_000
+
+        # Further assert that the content length is significantly larger than the context budget
+        # This explicitly demonstrates the overflow
+        # Note: The context budget here is for the agent, not directly for the LLM backend's message list length
+        # The key assertion is that the original large string is passed without truncation.
+        # The prompt assembly part of the agent is responsible for respecting the context budget,
+        # but the SDD states the tool output is appended directly without checking size.
+        # So we assert that the raw tool output length is still the large length.

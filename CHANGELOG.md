@@ -2,6 +2,48 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.7.1] - "Spring Cleaning" - 2025-12-16
+
+### Purple Flavor: **Spring Cleaning**
+
+107 orphaned test reports cluttering `tests/REPORTS/`. Inconsistent naming. No cleanup mechanism. Testing agents scattered across `tools/`. Time to bring order to the chaos.
+
+### Added
+
+- **Thunderdome Directory (`thunderdome/`):**
+  - Portable testing infrastructure, separate from target repo artifacts
+  - `agents/emilia.sh` - Orchestrator with `--repo` flag for cross-repo testing
+  - `agents/demons/` - Individual testing demons (Rem, etc.)
+  - `lib/common.sh` - Shared helpers (logging, repo detection, report paths)
+  - `prompts/` - Canonical agent prompts extracted from embedded heredocs
+  - `scripts/migrate_reports.sh` - One-time cleanup utility
+
+- **Report Rotation System:**
+  - `tests/REPORTS/current/` - Active test run
+  - `tests/REPORTS/previous/` - One generation back (auto-rotated by Emilia)
+  - `tests/REPORTS/archive/` - Historical reports (107 files migrated)
+  - Emilia automatically rotates on each run: clears `previous/`, moves `current/` → `previous/`
+
+- **Standardized Report Naming:**
+  - Format: `{agent}_{scope}_{YYYY-MM-DD}.md`
+  - Examples: `emilia_daily_2025-12-16.md`, `rem_testing_2025-12-16.md`
+
+### Changed
+
+- **Testing Agents Accept `--repo` Flag:**
+  - All agents can now target any repository explicitly
+  - Falls back to: env var `LLMC_TARGET_REPO` → git root → pwd
+  - Reports stay in target repo, not in thunderdome tooling
+
+### Removed
+
+- **107 Stale Reports Archived:**
+  - Moved to `tests/REPORTS/archive/`
+  - Includes 24 MCP test reports from `mcp/` subdirectory
+  - Clean slate for new standardized reporting
+
+---
+
 ## [0.7.0] - "Trust Issues" - 2025-12-16
 
 ### Purple Flavor: **Trust Issues**

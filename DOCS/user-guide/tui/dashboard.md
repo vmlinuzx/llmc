@@ -266,7 +266,7 @@ cp llmc.toml.bak.20251204_154000 llmc.toml
 
 ## Roadmap
 
-See [`DOCS/planning/config_tui_sdd.md`](../planning/config_tui_sdd.md) for full design document.
+See [`DOCS/legacy/planning_dec2025/config_tui_sdd.md`](../../legacy/planning_dec2025/config_tui_sdd.md) for full design document.
 
 ### Phase 2 - Safe Editing (Next Sprint)
 - Duplicate chain UI
@@ -291,7 +291,7 @@ See [`DOCS/planning/config_tui_sdd.md`](../planning/config_tui_sdd.md) for full 
 
 When adding features to the TUI:
 
-1. **Update the SDD** first (`DOCS/planning/config_tui_sdd.md`)
+1. **Update the SDD** first (`DOCS/legacy/planning_dec2025/config_tui_sdd.md`)
 2. **Add validation logic** to `ConfigManager.validate()`
 3. **Add operations** to `ChainOperations` if needed
 4. **Create Textual screens** in `tui.py`
@@ -302,4 +302,4 @@ When adding features to the TUI:
 
 **Status:** MVP Complete (Phase 1)  
 **Next Milestone:** Phase 2 - Safe Editing  
-**See Also:** [Config TUI SDD](../planning/config_tui_sdd.md)
+**See Also:** [Config TUI SDD](../../legacy/planning_dec2025/config_tui_sdd.md)
