@@ -21,7 +21,7 @@ These are the things that make the current LLMC stack feel solid and intentional
 **Goal:** Extend LLMC beyond code to handle technical documentation repositories with domain-aware chunking, embeddings, and enrichment.
 
 **📄 Design:** [`legacy/SDD_Domain_RAG_Tech_Docs.md`](legacy/SDD_Domain_RAG_Tech_Docs.md)  
-**📄 Research:** [`legacy/research/Extending LLMC to Domain-Specific Documents Research Finding.md`](legacy/research/Extending%20LLMC%20to%20Domain-Specific%20Documents%20Research%20Finding.md), [`legacy/research/Extending RAG to Non-Code Domains.md`](legacy/research/Extending%20RAG%20to%20Non-Code%20Domains.md)
+**📄 Research:** [`../research/Extending LLMC to Domain-Specific Documents Research Finding.md`](../research/Extending%20LLMC%20to%20Domain-Specific%20Documents%20Research%20Finding.md), [`../research/Extending RAG to Non-Code Domains.md`](../research/Extending%20RAG%20to%20Non-Code%20Domains.md)
 
 **Key Changes:**
 - New `[repository]` config section with `domain = \"code\" | \"tech_docs\" | \"legal\" | \"medical\" | \"mixed\"`
