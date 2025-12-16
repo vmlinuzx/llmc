@@ -93,8 +93,11 @@ class LLMCScreen(Screen):
 
     def action_goto_nav(self) -> None:
         """Switch to code navigation screen."""
-        # TODO: Implement NavigateScreen
-        self.notify("Navigate screen coming soon", severity="information")
+        try:
+            from llmc.tui.screens.navigate import NavigateScreen
+            self.app.switch_screen(NavigateScreen())
+        except ImportError:
+            self.notify("Navigate screen not available", severity="warning")
 
     def action_goto_docs(self) -> None:
         """Switch to docs generation screen."""
