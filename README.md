@@ -29,13 +29,13 @@ llmc-cli search "authentication middleware"
 llmc-cli tui
 ```
 
-**Current Release:** v0.6.8 "DocumentationShmocumentation" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
+**Current Release:** v0.7.0 "Trust Issues" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
 
-### What's New in v0.6.8
-- **Polyglot Support:** Now handles both **code** AND **technical documentation** with domain-aware parsing.
-- **MCP Write Capability:** Full bidirectional file I/O for Claude Desktop integration (23 tools exposed).
-- **Tech Docs Extractor:** Heading-aware chunking for Markdown, DITA, and RST documentation.
-- **Better Bootstrap Prompt:** Accurate tool listing, no more "documentation says X but reality is Y" confusion.
+### What's New in v0.7.0
+- **MCP Hybrid Mode:** Trusted clients (Claude Desktop) get direct host access without Docker overhead. ~76% token reduction vs classic mode.
+- **Simplified Security Model:** Binary trust decision—container for untrusted, host for trusted. Command allowlists are theater; container isolation is real security.
+- **Defense Against Prompt Injection:** Even if an LLM is tricked by poisoned external content, container mode keeps execution sandboxed.
+- **RAG is Inherently Safer:** Searches YOUR local code, not external web content. No external data = no external injection vector.
 
 
 Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.
@@ -92,6 +92,13 @@ Capabilities:
     - JSON envelopes: Returns structured JSON with spans, paths, scores, and freshness flags instead of dumping big blobs of text.
     - Safety constraints: Follows explicit policies about what paths can be read, what repos can be touched, and what side effects are allowed.
     - Agent friendly defaults: Designs tools to be composable, so agents can chain a few calls to explore code, plan refactors, or answer questions.
+
+- **MCP Security Model:** Defense-in-depth against prompt injection and malicious agents.
+    - **Container Isolation:** Untrusted LLM clients run in Docker/K8s/nsjail. Even if an LLM is tricked by poisoned external content (e.g., compromised documentation with hidden instructions), code execution stays sandboxed.
+    - **Hybrid Mode for Trusted Clients:** Claude Desktop and other trusted clients can run in `hybrid` mode with direct host access—no container overhead, full write capability.
+    - **Binary Trust Decision:** Security isn't command allowlists (that's theater). If you give an LLM bash, they can do anything. Real security is choosing container vs. host access.
+    - **RAG is Inherently Safer:** Unlike tools that fetch external web content, LLMC's RAG searches YOUR local indexed code. No external data means no external prompt injection vector.
+    - **New in v0.7.0:** "Trust Issues" release simplified the security model. Configure via `[mcp] mode = "hybrid"` or `mode = "classic"` in `llmc.toml`.
 
 - Router, LLM chains, and enrichment control: The layer that decides which model to use for which job.
     - Model registry: Lets you configure multiple model backends (local Qwen, remote MiniMax, etc.) with URLs, timeouts, and options.
