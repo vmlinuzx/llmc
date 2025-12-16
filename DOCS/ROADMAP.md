@@ -530,22 +530,21 @@ These are the “this would be awesome” items that are worth doing, but not at
 **Effort:** 20-40 hours research + implementation | **Difficulty:** 🔴 Hard (research)
 
 
-### 3.5.1 MCP Tool Exposure Architecture (R&D) 🔥 NEW
+### ~~3.5.1 MCP Tool Exposure Architecture~~ ✅ DONE
 
-**Status:** 🔴 Research Required  
-**Added:** 2025-12-13  
-**📄 AAR:** [`planning/AAR_MCP_WRITE_CAPABILITY_GAP.md`](planning/AAR_MCP_WRITE_CAPABILITY_GAP.md)
+**Completed:** 2025-12-16 (v0.7.0 "Trust Issues")  
+**📄 SDD:** [`planning/SDD_MCP_Hybrid_Mode.md`](planning/SDD_MCP_Hybrid_Mode.md)  
+**📄 AAR:** [`planning/legacy/AAR_MCP_WRITE_CAPABILITY_GAP.md`](planning/legacy/AAR_MCP_WRITE_CAPABILITY_GAP.md)
 
-**The Fundamental Tension:**
+**Resolution:** Implemented MCP Hybrid Mode (`mode = "hybrid"`)
 
-LLMC has two MCP server modes with irreconcilable tradeoffs:
+| Mode | Tools | Token Cost | Write | Security |
+|------|-------|------------|-------|----------|
+| **Classic** | 27 direct | ~10.5KB | ✅ Yes | Docker required |
+| **Code Exec** | 4 bootstrap | ~1.9KB | ❌ No | Docker required |
+| **Hybrid** ✨ | 6-7 promoted | ~2.5KB | ✅ Yes | Trusted (no Docker) |
 
-| Mode | Tools Exposed | Token Cost | Write Works | Security |
-|------|---------------|------------|-------------|----------|
-| **Classic** (`enabled=false`) | 23 direct | Higher (~40KB context) | ✅ Yes | ⚠️ Open |
-| **Code Exec** (`enabled=true`) | 3 + stubs | Lower (~4KB) | ❌ No* | 🔒 Gated |
-
-*Unless `LLMC_ISOLATED=1` (container) which defeats the purpose of MCP→user-machine access.
+**Key Insight:** Security is binary - either you trust it (hybrid) or you don't (Docker). Command allowlists/blocklists are theater. If you give an LLM bash, they can do anything.
 
 **Current "Fix" (0.6.8):**
 - Disabled code_execution mode entirely
@@ -889,6 +888,32 @@ Collection of architectural improvements identified during code review. System w
 | **Create ARCHITECTURE.md** | Document package overview, data flows, config reference, MCP integration | Medium-High | Missing entirely |
 
 **Why P3:** System is functional. These are quality-of-life improvements that don't affect runtime behavior. Tackle opportunistically or when touching related code.
+
+---
+
+### 3.11 Chat Session RAG (R&D) 💡 IDEA
+
+**Status:** 🔵 Backlog (way at the back)  
+**Added:** 2025-12-16
+
+**Observation:** OpenAI and Anthropic's chat search both suck. They're basically keyword matching on titles, not semantic search over actual content.
+
+**Idea:** Use LLMC's existing chunking/enrichment/embedding pipeline for chat history:
+- Index past conversations (chunked by turns or topics)
+- Semantic search: "That conversation where we discussed X"
+- Inject relevant context from past sessions into bx agent
+
+**Why It Would Work:**
+- Same tech stack as code RAG: SQLite + embeddings + enrichment
+- Conversations are just text spans with timestamps
+- Could even link to code spans discussed ("when we fixed the MCP bug")
+
+**Why It's Way Back:**
+- Core RAG for code still has plenty of improvements to make
+- Requires agent persistence story first
+- Nice to have, not need to have
+
+**Effort:** Unknown (R&D) | **Difficulty:** 🟡 Medium (conceptually simple, integration work)
 
 ---
 
