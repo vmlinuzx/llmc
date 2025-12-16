@@ -1,91 +1,78 @@
-# REQUIREMENTS: Quickstart Guide
+# REQUIREMENTS: Master Index
 
-**SDD Source:** DOCS/planning/SDD_Documentation_Architecture_2.0.md → Phase 2.2
-**Target Document:** DOCS/getting-started/quickstart.md
-**Audience:** New users who have just installed LLMC.
+**SDD Source:** `DOCS/planning/SDD_Documentation_Architecture_2.0.md` → Phase 2.3
+**Target Document:** `DOCS/index.md`
+**Audience:** All users (New, Power Users, Operators, Contributors)
 
 ---
 
 ## Objective
 
-Create a concise, 5-minute tutorial that guides a new user from their first interaction with the CLI to a successful semantic search. The goal is instant gratification and verification that the system works.
+Create the master entry point for the entire documentation suite, providing clear navigation paths for different user personas (learners, doers, operators, understanders) based on the Diátaxis framework.
 
 ---
 
 ## Acceptance Criteria
 
-### AC-1: Prerequisites Check
-
+### AC-1: Header and Welcome
 **Location:** Top of file
+- Title: "LLMC Documentation"
+- Tagline: "The Large Language Model Compressor" (or current project tagline)
+- Brief, welcoming introduction.
 
-[Specific content requirements:]
-- Briefly mention that LLMC must be installed.
-- Link to `installation.md` for those who haven't installed it.
-- Verify installation with `llmc-cli --version`.
+### AC-2: "Start Here" Callout
+**Location:** Prominent section (near top)
+- Explicit link to `getting-started/index.md` for new users.
+- Can be part of a "Quick Links" or standalone alert.
 
-### AC-2: Initialize a Repository
+### AC-3: Main Sections (Diátaxis)
+**Location:** Body
+- **Getting Started** (Tutorials): Links to `getting-started/`
+- **User Guide** (How-to): Links to `user-guide/`
+- **Operations** (Ops): Links to `operations/`
+- **Architecture** (Explanations): Links to `architecture/`
+- **Reference** (Reference): Links to `reference/`
+- **Development** (Contributors): Links to `development/`
 
-**Location:** Section "Step 1: Add a Repository"
+*For each section:*
+- Icon/Emoji (e.g., 🎓, 📖, 🔧, 🏗️, 📚, 👩‍💻)
+- Brief description of what to find there.
+- 3-5 key sub-links (e.g., Installation, Configuration, Daemon).
 
-[Specific content requirements:]
-- Command: `llmc-cli repo add <path>` (use current directory `.` or a safe example).
-- Explain briefly what this does (registers the directory for tracking).
-- Sample output block showing success message.
+### AC-4: Planning Section
+**Location:** Below main sections
+- Link to `planning/`
+- Description: "Roadmap, SDDs, and Project Management"
 
-### AC-3: Create the Index
-
-**Location:** Section "Step 2: Index Your Code"
-
-[Specific content requirements:]
-- Command: `llmc-cli index`
-- Explain that this parses code and generates embeddings.
-- Note that the first run might take a moment depending on repo size.
-- Sample output block showing progress/completion.
-
-### AC-4: Execute First Search
-
-**Location:** Section "Step 3: Search"
-
-[Specific content requirements:]
-- Command: `llmc-cli search "query"`
-- Provide a generic query likely to work in most repos (e.g., "how do I configure this" or similar, or just "file handling").
-- Explain the output structure (file path, relevance score, snippet).
-- Sample output block showing a realistic result.
-
-### AC-5: What's Next
-
-**Location:** Bottom of file
-
-[Specific content requirements:]
-- Link to `../user-guide/cli-reference.md` (CLI Reference).
-- Link to `../user-guide/configuration.md` (Configuration).
-- Link to `concepts.md` (Core Concepts).
+### AC-5: Version & External Links
+**Location:** Footer
+- Current version info (if available/static)
+- Links to GitHub Repo, Issue Tracker, etc.
 
 ---
 
 ## Style Requirements
 
-- Voice: Direct, instructional, encouraging.
-- Tense: Imperative ("Run this command", "Type this").
-- Terminology: Use "Repository" for the code being indexed, "Index" for the database of embeddings.
-- Length: Keep it under 500 words. Speed is key.
+- **Voice:** Welcoming, professional, clear.
+- **Structure:** Clean navigation, use of lists and tables for readability.
+- **Terminology:** Use "LLMC" for the tool. Use Diátaxis terms (Tutorials, Guides, Reference, Explanation) where helpful to explain the section's purpose.
 
 ---
 
 ## Out of Scope
 
-- ❌ configuring `llmc.toml` (defaults should work).
-- ❌ explaining RAG architecture in depth.
-- ❌ troubleshooting complex errors.
+- ❌ Detailed content for sub-pages (just links).
+- ❌ Generating the sub-pages themselves (unless they don't exist, but focus is index).
 
 ---
 
 ## Verification
 
 B-Team must verify:
-1. All commands are copy-pasteable.
-2. Output examples look realistic.
-3. Links to other docs use relative paths correctly.
+1. All 6 main sections + Planning are present.
+2. Links point to the correct directories/files.
+3. Formatting is clean (Markdown).
+4. "Start Here" is obvious.
 
 ---
 
