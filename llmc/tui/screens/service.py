@@ -5,6 +5,8 @@ Maps to: llmc service start/stop/restart/status/logs
          llmc service repo add/remove/list
 """
 
+import json
+import os
 from pathlib import Path
 import subprocess
 import threading
@@ -194,25 +196,65 @@ class ServiceScreen(LLMCScreen):
             table = self.query_one("#repos-table", DataTable)
             table.clear()
             
-            # Get registered repos from config
-            repo_root = getattr(self.app, 'repo_root', Path.cwd())
+            repos = self._get_registered_repos()
             
-            # For now, just show the current repo
-            # TODO: Read from actual config
-            status = "Active"
-            spans = "?"
-            
-            try:
-                from tools.rag_nav.tool_handlers import _load_graph
-                nodes, _ = _load_graph(repo_root)
-                spans = str(len(nodes))
-            except Exception:
+            if not repos:
+                # Could optionally show a placeholder or empty state
                 pass
-            
-            table.add_row(str(repo_root), status, spans)
+
+            for repo_path_str in repos:
+                repo_path = Path(repo_path_str)
+                status = "Active"
+                spans = "?"
+
+                # Try to get stats
+                stats = self._get_repo_stats(repo_path)
+                if stats:
+                    spans = str(stats.get("spans", "?"))
+
+                table.add_row(str(repo_path), status, spans)
             
         except Exception as e:
             self.notify(f"Error loading repos: {e}", severity="error")
+
+    def _get_registered_repos(self) -> list[str]:
+        """Get list of registered repositories."""
+        # Try importing ServiceState
+        try:
+            from tools.rag.service import ServiceState
+            return ServiceState().state.get("repos", [])
+        except ImportError:
+            # Fallback to reading file directly
+            return self._read_repos_from_file()
+        except Exception:
+            return []
+
+    def _read_repos_from_file(self) -> list[str]:
+        """Read repos from state file directly (fallback)."""
+        state_override = os.environ.get("LLMC_RAG_SERVICE_STATE")
+        if state_override:
+            state_file = Path(os.path.expanduser(state_override)).resolve()
+        else:
+            state_file = Path.home() / ".llmc" / "rag-service.json"
+
+        if state_file.exists():
+            try:
+                data = json.loads(state_file.read_text())
+                return data.get("repos", [])
+            except Exception:
+                pass
+        return []
+
+    def _get_repo_stats(self, repo_path: Path) -> dict | None:
+        """Get basic stats for a repo."""
+        try:
+            from tools.rag.doctor import run_rag_doctor
+            report = run_rag_doctor(repo_path)
+            return report.get("stats")
+        except ImportError:
+            return None
+        except Exception:
+            return None
 
     def _start_log_stream(self) -> None:
         """Start streaming service logs."""
