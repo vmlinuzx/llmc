@@ -114,6 +114,21 @@ class McpCodeExecutionConfig:
 
 
 @dataclass
+class HybridConfig:
+    """Hybrid mode settings (Phase 1 - MCP Hybrid Bootstrap Mode)."""
+
+    promoted_tools: list[str] = field(default_factory=lambda: [
+        "linux_fs_write", "linux_fs_edit", "run_cmd"
+    ])
+    include_execute_code: bool = True
+    bootstrap_budget_warning: int = 15000
+
+    def validate(self) -> None:
+        if self.bootstrap_budget_warning <= 0:
+            raise ValueError("bootstrap_budget_warning must be positive")
+
+
+@dataclass
 class McpObservabilityConfig:
     """Observability settings (M4)."""
 
@@ -146,6 +161,7 @@ class McpConfig:
 
     enabled: bool = True
     config_version: str = "v0"
+    mode: str = "classic"  # 'classic' | 'hybrid' | 'code_execution'
     server: McpServerConfig = field(default_factory=McpServerConfig)
     auth: McpAuthConfig = field(default_factory=McpAuthConfig)
     tools: McpToolsConfig = field(default_factory=McpToolsConfig)
@@ -153,9 +169,12 @@ class McpConfig:
     limits: McpLimitsConfig = field(default_factory=McpLimitsConfig)
     observability: McpObservabilityConfig = field(default_factory=McpObservabilityConfig)
     code_execution: McpCodeExecutionConfig = field(default_factory=McpCodeExecutionConfig)
+    hybrid: HybridConfig = field(default_factory=HybridConfig)
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
 
     def validate(self) -> None:
+        if self.mode not in ("classic", "hybrid", "code_execution"):
+            raise ValueError(f"Invalid mode: {self.mode}")
         self.server.validate()
         self.auth.validate()
         self.tools.validate()
@@ -163,6 +182,7 @@ class McpConfig:
         self.limits.validate()
         self.observability.validate()
         self.code_execution.validate()
+        self.hybrid.validate()
 
 
 def _get_nested(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -181,6 +201,10 @@ def _apply_env_overrides(cfg: McpConfig) -> McpConfig:
     # LLMC_MCP_ENABLED
     if os.getenv("LLMC_MCP_ENABLED"):
         cfg.enabled = os.getenv("LLMC_MCP_ENABLED", "").lower() in ("1", "true", "yes")
+
+    # LLMC_MCP_MODE
+    if os.getenv("LLMC_MCP_MODE"):
+        cfg.mode = os.getenv("LLMC_MCP_MODE", cfg.mode)
 
     # LLMC_MCP_LOG_LEVEL
     if os.getenv("LLMC_MCP_LOG_LEVEL"):
@@ -251,6 +275,7 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         # Top-level
         cfg.enabled = mcp_data.get("enabled", cfg.enabled)
         cfg.config_version = mcp_data.get("config_version", cfg.config_version)
+        cfg.mode = mcp_data.get("mode", cfg.mode)
 
         # Server
         srv = mcp_data.get("server", {})
@@ -322,6 +347,14 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         )
         cfg.code_execution.bootstrap_tools = code_exec.get(
             "bootstrap_tools", cfg.code_execution.bootstrap_tools
+        )
+
+        # Hybrid Mode (Phase 1 - Hybrid Bootstrap Mode)
+        hybrid = mcp_data.get("hybrid", {})
+        cfg.hybrid.promoted_tools = hybrid.get("promoted_tools", cfg.hybrid.promoted_tools)
+        cfg.hybrid.include_execute_code = hybrid.get("include_execute_code", cfg.hybrid.include_execute_code)
+        cfg.hybrid.bootstrap_budget_warning = hybrid.get(
+            "bootstrap_budget_warning", cfg.hybrid.bootstrap_budget_warning
         )
 
     # Apply ENV overrides (highest precedence)

@@ -22,7 +22,6 @@ import inspect
 import json
 import logging
 from pathlib import Path
-import shlex
 import subprocess
 import sys
 import time
@@ -30,7 +29,7 @@ from typing import Any, cast
 
 from llmc_mcp.config import McpConfig, load_config
 from llmc_mcp.observability import ObservabilityContext, setup_logging
-from llmc_mcp.prompts import BOOTSTRAP_PROMPT
+from llmc_mcp.prompts import BOOTSTRAP_PROMPT, HYBRID_MODE_PROMPT
 
 try:
     from mcp.server import Server
@@ -623,13 +622,21 @@ class LlmcMcpServer:
 
     def __init__(self, config: McpConfig):
         self.config = config
-        self.server = Server("llmc-mcp", instructions=BOOTSTRAP_PROMPT)
+        
+        # Select prompt based on mode
+        prompt = BOOTSTRAP_PROMPT
+        if config.mode == "hybrid":
+            prompt = HYBRID_MODE_PROMPT
+            
+        self.server = Server("llmc-mcp", instructions=prompt)
 
         # Initialize observability (M4)
         self.obs = ObservabilityContext(config.observability)
 
-        # Check for code execution mode (Phase 2)
-        if config.code_execution.enabled:
+        # Initialize based on mode
+        if config.mode == "hybrid":
+            self._init_hybrid_mode()
+        elif config.mode == "code_execution" or config.code_execution.enabled:
             self._init_code_execution_mode()
         else:
             self._init_classic_mode()
@@ -718,6 +725,111 @@ class LlmcMcpServer:
         }
 
         logger.info(f"Code execution mode: {len(self.tools)} bootstrap tools registered")
+
+    def _init_hybrid_mode(self):
+        """
+        Initialize hybrid mode - bootstrap tools + promoted write tools.
+
+        Achieves ~76% token reduction vs classic while preserving write capability.
+        No sandbox isolation required (uses application-level security).
+        """
+        # Base bootstrap (always included)
+        base_tools = {"read_file", "list_dir"}
+
+        # Promoted tools from config (write capability)
+        promoted = set(self.config.hybrid.promoted_tools)
+        # Default: ["linux_fs_write", "linux_fs_edit", "run_cmd"]
+
+        # Optional execute_code (still requires isolation)
+        if self.config.hybrid.include_execute_code:
+            promoted.add("execute_code")
+
+        # Always include bootstrap tool
+        all_tools = base_tools | promoted
+
+        # Filter TOOLS list to only include selected tools
+        self.tools = [t for t in TOOLS if t.name in all_tools]
+
+        # Add execute_code tool if included
+        if self.config.hybrid.include_execute_code:
+            self.tools.append(EXECUTE_CODE_TOOL)
+
+        # Add bootstrap instruction tool
+        self.tools.append(BOOTSTRAP_TOOL)
+
+        # Register handlers for all enabled tools
+        self.tool_handlers = {}
+        for tool_name in all_tools:
+            handler = self._get_handler_for_tool(tool_name)
+            if handler:
+                self.tool_handlers[tool_name] = handler
+            else:
+                logger.warning(f"No handler for tool '{tool_name}' - skipping")
+
+        # Add bootstrap handler
+        self.tool_handlers["00_INIT"] = self._handle_bootstrap
+
+        # Bootstrap budget check
+        import json
+        total_chars = sum(len(json.dumps(t.inputSchema)) for t in self.tools)
+        if total_chars > self.config.hybrid.bootstrap_budget_warning:
+            logger.warning(
+                f"Bootstrap toolset exceeds recommended size ({total_chars} chars > "
+                f"{self.config.hybrid.bootstrap_budget_warning}). Consider removing tools."
+            )
+
+        logger.info(f"Hybrid mode: {len(self.tools)} tools registered ({total_chars} chars)")
+
+    def _get_handler_for_tool(self, tool_name: str) -> Callable | None:
+        """Centralized handler registry for all tools."""
+        HANDLER_REGISTRY = {
+            # Navigation (always safe)
+            "read_file": self._handle_read_file,
+            "list_dir": self._handle_list_dir,
+            "stat": self._handle_stat,
+
+            # Write tools (secured by allowed_roots)
+            "linux_fs_write": self._handle_fs_write,
+            "linux_fs_edit": self._handle_fs_edit,
+            "linux_fs_mkdir": self._handle_fs_mkdir,
+            "linux_fs_move": self._handle_fs_move,
+            "linux_fs_delete": self._handle_fs_delete,
+
+            # Shell (secured by allowlist)
+            "run_cmd": self._handle_run_cmd,
+
+            # Code exec (isolation-gated)
+            "execute_code": self._handle_execute_code,
+
+            # RAG (read-only, safe)
+            "rag_search": self._handle_rag_search,
+            "rag_search_enriched": self._handle_rag_search_enriched,
+            "rag_where_used": self._handle_rag_where_used,
+            "rag_lineage": self._handle_rag_lineage,
+            "inspect": self._handle_inspect,
+            "rag_stats": self._handle_rag_stats,
+            "rag_plan": self._handle_rag_plan,
+
+            # Metrics
+            "get_metrics": self._handle_get_metrics,
+
+            # Tool envelope
+            "te_run": self._handle_te_run,
+
+            # Repository
+            "repo_read": self._handle_repo_read,
+            "rag_query": self._handle_rag_query,
+
+            # LinuxOps
+            "linux_proc_list": self._handle_proc_list,
+            "linux_proc_kill": self._handle_proc_kill,
+            "linux_sys_snapshot": self._handle_sys_snapshot,
+            "linux_proc_start": self._handle_proc_start,
+            "linux_proc_send": self._handle_proc_send,
+            "linux_proc_read": self._handle_proc_read,
+            "linux_proc_stop": self._handle_proc_stop,
+        }
+        return HANDLER_REGISTRY.get(tool_name)
 
     async def _handle_execute_code(self, args: dict) -> list[TextContent]:
         """
@@ -829,7 +941,10 @@ class LlmcMcpServer:
 
     async def _handle_bootstrap(self, args: dict) -> list[TextContent]:
         """Return bootstrap prompt for LLM cold start."""
-        return [TextContent(type="text", text=BOOTSTRAP_PROMPT)]
+        prompt = BOOTSTRAP_PROMPT
+        if self.config.mode == "hybrid":
+            prompt = HYBRID_MODE_PROMPT
+        return [TextContent(type="text", text=prompt)]
 
     def _register_dynamic_executables(self):
         """Register custom executables defined in config."""
@@ -1482,11 +1597,17 @@ class LlmcMcpServer:
                 # If RAG fails, fall through to normal grep
                 logger.debug(f"Smart grep RAG fallback failed: {e}")
 
+        # Determine execution mode params
+        host_mode = (self.config.mode == "hybrid")
+        allowlist = self.config.tools.run_cmd_allowlist if host_mode else None
+
         # Normal command execution
         result = run_cmd(
             command=command,
             cwd=cwd,
             blacklist=self.config.tools.run_cmd_blacklist,
+            allowlist=allowlist,
+            host_mode=host_mode,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )
 

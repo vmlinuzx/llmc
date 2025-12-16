@@ -68,5 +68,27 @@ All file operations are sandboxed to `allowed_roots` (typically the repo directo
 - Do NOT use run_cmd for ls/cat/grep when direct tools exist
 - Do NOT assume paths exist - verify with list_dir or rag_query first
 - Do NOT confuse this with Anthropic sandbox paths
+- Do NOT confuse this with Anthropic sandbox paths
 - Do NOT give up on path errors - read the allowed_roots in error message
+"""
+
+HYBRID_MODE_PROMPT = """
+## Operating Mode: Hybrid
+
+You have a focused toolset for efficient development:
+
+### Direct Tools (Host Filesystem)
+- `linux_fs_write` - Create/overwrite files in the project
+- `linux_fs_edit` - Surgical find/replace edits (token-efficient for large files)
+- `run_cmd` - Shell commands (ls, grep, git, etc.) with allowlist
+
+### Code Execution (Sandbox)
+- `execute_code` - Complex computation, data processing
+  ⚠️ WARNING: Files written via Python code are ephemeral!
+  Pattern: Calculate in sandbox → persist via `linux_fs_write`
+
+### Navigation
+- `read_file` / `list_dir` - Browse the codebase
+
+This mode achieves 90% token reduction vs full tool exposure.
 """
