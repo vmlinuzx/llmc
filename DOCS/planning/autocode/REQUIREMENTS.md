@@ -1,93 +1,96 @@
-# REQUIREMENTS: Phase 1 - Move Existing Docs
+# REQUIREMENTS: Installation Guide
 
-**SDD Source:** DOCS/planning/SDD_Documentation_Architecture_2.0.md → Phase 1
-**Target Document:** DOCS/ (Restructuring)
-**Audience:** A-Team (Executor), B-Team (Verifier)
+**SDD Source:** DOCS/planning/SDD_Documentation_Architecture_2.0.md → Phase 2.1
+**Target Document:** DOCS/getting-started/installation.md
+**Audience:** End users, Developers, System Administrators
 
 ---
 
 ## Objective
 
-Move existing documentation files from the flat `DOCS/` structure into the new Diátaxis-based hierarchy (`user-guide/`, `architecture/`, `operations/`, etc.) to improve discoverability and organization. This phase focuses on filesystem operations and link updates, not rewriting content.
+Provide clear, step-by-step instructions for installing LLMC on supported systems. This guide covers the automatic installation script, manual pip installation, and developer setup, ensuring users can get the CLI running quickly.
 
 ---
 
 ## Acceptance Criteria
 
-### AC-1: User Guide Migration
+### AC-1: System Requirements
 
-**Location:** `DOCS/user-guide/`
+**Location:** DOCS/getting-started/installation.md, "Prerequisites" section
 
-The following files must be moved to their new locations:
-- `CLI_REFERENCE.md` → `user-guide/cli-reference.md`
-- `LLMC_USER_GUIDE.md` → `user-guide/overview.md`
-- `Docgen_User_Guide.md` → `user-guide/docgen.md`
-- `Remote_LLM_Providers_Usage.md` → `user-guide/enrichment/providers.md`
-- `CONFIG_TUI.md` → `user-guide/tui/dashboard.md`
-- `TE_ANALYTICS.md` → `user-guide/tool-envelope.md`
-- `RUTA_User_Guide.md` → `user-guide/ruta.md`
+- **OS:** Linux (primary), macOS (supported). Windows (WSL2 recommended).
+- **Python:** 3.10+ recommended (Project supports >=3.9).
+- **Tools:** Git, pip, venv (recommended).
+- **Hardware:** Minimal requirements (disk space for RAG index).
 
-### AC-2: Operations & Architecture Migration
+### AC-2: Quick Install (Recommended)
 
-**Location:** `DOCS/operations/` and `DOCS/architecture/`
+**Location:** DOCS/getting-started/installation.md, "Quick Install" section
 
-The following files must be moved/merged:
-- `RAG_Doctor_User_Guide.md` → `operations/troubleshooting.md`
-- `ROUTING.md` → `architecture/routing.md`
-- `HLD_TUI_AGENT.md` → `architecture/tui-agent.md`
-- `MCP_DESIGN_DECISIONS.md` → `architecture/mcp-decisions.md` (Note: SDD says security-model.md, Plan says mcp-decisions.md. Using mcp-decisions.md for now as distinct file, merge happens later).
-- `RAG_Enrichment_Hardening.md` → `architecture/enrichment-hardening.md`
+- Provide the one-line `curl` installation command from `README.md`.
+- Briefly explain what the script does (installs dependencies, sets up environment).
 
-### AC-3: Development & Planning Migration
+### AC-3: Manual Installation (Pip)
 
-**Location:** `DOCS/development/` and `DOCS/planning/`
+**Location:** DOCS/getting-started/installation.md, "Manual Installation" section
 
-The following files must be moved:
-- `TUI_STYLE_GUIDE.md` → `development/tui-style.md`
-- `ROADMAP.md` → `planning/roadmap.md`
-- `ROADMAP_COMPLETED.md` → `planning/completed.md`
-- `SDD_Event_Driven_RAG_Service.md` → `planning/sdd/SDD_Event_Driven_RAG_Service.md`
-- Any other `DOCS/planning/SDD_*.md` → `planning/sdd/`
+- Document installation via `pip` using the git repository URL (since PyPI status is unconfirmed/repo-based).
+- Explain the `[rag,tui,agent]` extras and what they enable.
+- **Critical:** Advise using a virtual environment.
 
-### AC-4: Archive (Legacy)
+### AC-4: Developer Installation
 
-**Location:** `DOCS/legacy/`
+**Location:** DOCS/getting-started/installation.md, "Developer Setup" section
 
-The following files must be moved to legacy:
-- `CLI_UX_Progressive_Disclosure.md`
-- `MIGRATION_UNIFIED_CLI.md`
-- `notes.md`
-- `DOCUMENTATION_PLAN.md` → `planning/archive/`
+- Steps to clone the repository.
+- Steps to install in editable mode (`pip install -e .`).
+- Installing dev dependencies (if any specific ones are highlighted, otherwise standard extras).
 
-### AC-5: Link Integrity
+### AC-5: Verification
 
-- All relative links in moved files (e.g., `[Link](../other.md)`) must be updated to reflect the new depth.
-- `DOCS/index.md` must link to the new locations (or section indexes).
+**Location:** DOCS/getting-started/installation.md, "Verify Installation" section
+
+- Command: `llmc-cli --version`.
+- Expected output example.
+- Command: `llmc-cli doctor` or similar simple check if available (using `repo register` or `help` as basic smoke test).
+
+### AC-6: Troubleshooting
+
+**Location:** DOCS/getting-started/installation.md, "Troubleshooting" section
+
+- **PATH issues:** "command not found" -> adding `~/.local/bin` to PATH.
+- **Permission errors:** avoiding `sudo` with pip, using venv.
+- **Dependency conflicts:** standard advice.
 
 ---
 
 ## Style Requirements
 
-- **Command:** Use `git mv` to preserve history.
-- **Paths:** Relative paths in links must be correct.
-- **Content:** Do not rewrite content body, only links.
+- **Voice:** Direct, instructional.
+- **Tense:** Imperative ("Run this command", "Install Python").
+- **Terminology:**
+  - "LLMC": The project/system.
+  - "llmc-cli": The main command-line tool.
+  - "RAG": Retrieval-Augmented Generation (context).
+- **Formatting:** All commands in code blocks. Shell prompts (`$`) used to distinguish user input.
 
 ---
 
 ## Out of Scope
 
-- ❌ Writing new content for placeholders.
-- ❌ Splitting `LLMC_USER_GUIDE.md` (deferred to Phase 2).
-- ❌ Merging content (unless simple rename).
+- ❌ Detailed configuration (covered in Configuration Guide).
+- ❌ Usage tutorials (covered in User Guide).
+- ❌ Deep architectural details.
 
 ---
 
 ## Verification
 
 B-Team must verify:
-1. `ls DOCS/*.md` shows only `index.md`.
-2. All target files exist in new locations.
-3. `grep -r "](\.\./" DOCS/` checks for broken relative links (excluding planning archives if applicable).
+1. The `curl` command matches the repository source.
+2. The `pip` install command correctly targets the git repo and extras.
+3. System requirements align with `pyproject.toml`.
+4. No generic "Insert text here" placeholders.
 
 ---
 
