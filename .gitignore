@@ -135,3 +135,9 @@ DOCS/planning/
 # Accidental PostScript/image files
 *.ps
 *.eps
+
+# Local power tools (thunderdome copies, ruthless agents, etc.)
+tools/
+
+# Runtime artifacts
+artifacts/
