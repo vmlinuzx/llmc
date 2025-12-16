@@ -4,6 +4,9 @@ Security tests for path traversal vulnerabilities.
 These tests verify that malicious path inputs are properly blocked.
 """
 
+import pytest
+from pathlib import Path
+from llmc_mcp.tools.fs import validate_path, PathSecurityError
 
 
 def test_path_traversal_basic():
@@ -32,7 +35,7 @@ def test_symlink_traversal():
     pass
 
 
-def test_relative_path_normalization():
+def test_relative_path_normalization(tmp_path):
     """Test that paths are normalized before validation."""
     tricky_paths = [
         "valid/../../../etc/passwd",
@@ -40,9 +43,15 @@ def test_relative_path_normalization():
         "valid/./../../etc/passwd",
     ]
     
-    for _path in tricky_paths:
-        # TODO: Verify these are blocked after normalization
-        pass
+    # Setup allowed root
+    allowed_roots = [str(tmp_path)]
+
+    for path_str in tricky_paths:
+        # Construct path relative to tmp_path to simulate attack
+        full_path = tmp_path / path_str
+
+        with pytest.raises(PathSecurityError, match="outside allowed roots"):
+            validate_path(str(full_path), allowed_roots)
 
 
 def test_null_byte_injection():
