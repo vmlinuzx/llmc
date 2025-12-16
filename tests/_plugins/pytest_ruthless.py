@@ -54,6 +54,12 @@ def _block_requests():
 @contextlib.contextmanager
 def _patched_sleep():
     orig = time.sleep
+    added_stash = False
+
+    # Stash original sleep for child processes (multiprocessing inherits patched version)
+    if not hasattr(time, "_original_sleep"):
+        time._original_sleep = orig
+        added_stash = True
 
     def _deny_sleep(secs):
         raise RuntimeError(
@@ -65,6 +71,8 @@ def _patched_sleep():
         yield
     finally:
         time.sleep = orig
+        if added_stash and hasattr(time, "_original_sleep"):
+            del time._original_sleep
 
 
 def pytest_runtest_setup(item):

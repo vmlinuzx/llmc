@@ -16,8 +16,8 @@ def test_router_promote_once_false_should_return_none():
         failure_type="parse", current_tier="7b", metrics={}, settings=settings, promote_once=False
     )
 
-    # BUG: Currently returns "nano" but should return None
-    # When promote_once=False, we should NOT promote at all
+    # When promote_once=False, we should NOT promote at all.
+    # This test verifies the fix for a previous bug where it returned "nano".
     print(f"Next tier with promote_once=False: {next_tier}")
     assert next_tier is None, f"Expected None but got {next_tier}"
 
@@ -100,6 +100,6 @@ def test_router_fallback_logic():
         promote_once=False,
     )
 
-    # BUG: Currently returns "nano" but should return None
+    # This checks that even for unknown failures, promote_once=False returns None.
     print(f"Unknown failure with promote_once=False: {next_tier}")
     assert next_tier is None

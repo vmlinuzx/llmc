@@ -1,5 +1,6 @@
 import importlib.util
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -54,28 +55,31 @@ def test_smoke_fails_on_zero_chunks_mocked(tmp_path) -> None:
 
 def test_smoke_real_files() -> None:
     """Test with real sample docs created in fixtures"""
-    sample_dir = "tests/fixtures/sample_docs"
+    # Use absolute path relative to this test file, not CWD
+    test_dir = Path(__file__).parent.parent.parent  # tests/rag/ci -> tests/rag -> tests
+    sample_dir = test_dir / "fixtures" / "sample_docs"
+
     # Check if mistune is available before running
     if not importlib.util.find_spec("mistune"):
         pytest.skip("mistune not installed")
 
-    # Ensure we use the REAL module here, not the mock from previous tests (patch.dict handles cleanup)
-    # But just in case sys.modules caching issues? patch.dict undoes changes.
-    
-    passed, results = run_extractor_smoke(sample_dir)
-    assert passed
+    passed, results = run_extractor_smoke(str(sample_dir))
+    assert passed, f"Expected passed=True but got {passed}, results={results}"
     assert len(results) >= 2
     assert all(c > 0 for c in results.values())
 
 
 def test_deterministic_chunks() -> None:
     """Same input = same chunk count"""
-    sample_dir = "tests/fixtures/sample_docs"
+    # Use absolute path relative to this test file, not CWD
+    test_dir = Path(__file__).parent.parent.parent  # tests/rag/ci -> tests/rag -> tests
+    sample_dir = str(test_dir / "fixtures" / "sample_docs")
+
     if not importlib.util.find_spec("mistune"):
         pytest.skip("mistune not installed")
 
     passed1, results1 = run_extractor_smoke(sample_dir)
     passed2, results2 = run_extractor_smoke(sample_dir)
     
-    assert passed1
+    assert passed1, f"First run failed: {results1}"
     assert results1 == results2

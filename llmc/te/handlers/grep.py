@@ -110,19 +110,24 @@ def _run_rg(
     timeout_ms: int,
 ) -> GrepResult:
     """Run ripgrep and return parsed results."""
-    cmd = ["rg", "--line-number", "--no-heading", "--color=never"]
-
-    # Add pattern
-    cmd.append(pattern)
+    cmd = ["rg", "--line-number", "--no-heading", "--color=never", "-e", pattern]
 
     # Add path if specified, else workspace
+    target_path_str: str
     if path:
-        target = Path(path)
-        if not target.is_absolute():
-            target = workspace / target
-        cmd.append(str(target))
+        target = (workspace / path).resolve()
+        if not str(target).startswith(str(workspace.resolve())):
+            return GrepResult(
+                matches=[],
+                total_count=0,
+                raw_output="",
+                error="Path is outside the workspace",
+            )
+        target_path_str = str(target)
     else:
-        cmd.append(str(workspace))
+        target_path_str = str(workspace)
+
+    cmd.extend(["--", target_path_str])
 
     try:
         result = subprocess.run(

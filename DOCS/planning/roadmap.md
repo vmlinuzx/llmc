@@ -16,26 +16,26 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ### 1.0 Domain RAG – Technical Documentation Support (P0)
 
-**Status:** 🟡 In Progress
+**Status:** 🟡 In Progress (Core parsing done, enrichment/graph pending)
 
 **Goal:** Extend LLMC beyond code to handle technical documentation repositories with domain-aware chunking, embeddings, and enrichment.
 
-**📄 Design:** [`planning/SDD_Domain_RAG_Tech_Docs.md`](planning/SDD_Domain_RAG_Tech_Docs.md)  
+**📄 Design:** [`legacy/SDD_Domain_RAG_Tech_Docs.md`](legacy/SDD_Domain_RAG_Tech_Docs.md)
 **📄 Research:** [`legacy/research/Extending LLMC to Domain-Specific Documents Research Finding.md`](legacy/research/Extending%20LLMC%20to%20Domain-Specific%20Documents%20Research%20Finding.md), [`legacy/research/Extending RAG to Non-Code Domains.md`](legacy/research/Extending%20RAG%20to%20Non-Code%20Domains.md)
 
 **Key Changes:**
-- New `[repository]` config section with `domain = "code" | "tech_docs" | "legal" | "medical" | "mixed"`
+- New `[repository]` config section with `domain = \"code\" | \"tech_docs\" | \"legal\" | \"medical\" | \"mixed\"`
 - `TechDocsExtractor` for heading-aware Markdown/DITA/RST chunking
 - Section path prepending for context preservation
 - Tech docs enrichment prompts (parameters, warnings, prereqs)
 - Graph edges: `REFERENCES`, `REQUIRES`, `WARNS_ABOUT`
 
 **Phases:**
-- [ ] Phase 1: Config schema (`[repository]` section, `domain` field)
-- [x] Phase 2: TechDocsExtractor implementation ✅ (2025-12-13)
-- [ ] Phase 3: Enrichment integration
-- [ ] Phase 4: Graph extraction
-- [ ] Phase 5: Testing & validation on LLMC's own DOCS/
+- [x] Phase 1: Config schema (`[repository]` section, `domain` field) ✅
+- [x] Phase 2: TechDocsExtractor implementation ✅ (2025-12-13, tests fixed 2025-12-16)
+- [ ] Phase 3: Tech docs enrichment prompts + chain config
+- [ ] Phase 4: Graph edges (REFERENCES, REQUIRES, WARNS_ABOUT)
+- [ ] Phase 5: CI smoke tests + validation on LLMC's own DOCS/
 
 **Why This Matters:**
 - Same 70-95% token savings for documentation repos

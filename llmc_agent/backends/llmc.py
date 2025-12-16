@@ -103,6 +103,7 @@ class LLMCBackend:
             result = subprocess.run(
                 [
                     "llmc-cli", "analytics", "search",
+                    "--",
                     query,
                     "--limit", str(limit),
                     "--json",
@@ -188,6 +189,7 @@ class LLMCBackend:
                     "-i",  # case insensitive
                     "-C", "2",  # 2 lines context
                     "--max-count", str(limit * 3),  # get more, then dedupe
+                    "--",
                     query,
                 ],
                 capture_output=True,
@@ -243,7 +245,7 @@ class LLMCBackend:
         """Most basic fallback: just list matching files."""
         try:
             result = subprocess.run(
-                ["rg", "-l", "-i", query, "."],
+                ["rg", "-l", "-i", "--", query, "."],
                 capture_output=True,
                 text=True,
                 timeout=5,
