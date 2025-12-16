@@ -4,7 +4,10 @@ Security tests for path traversal vulnerabilities.
 These tests verify that malicious path inputs are properly blocked.
 """
 
-
+import os
+from pathlib import Path
+import pytest
+from llmc_mcp.tools.fs import validate_path, PathSecurityError
 
 def test_path_traversal_basic():
     """Test basic directory traversal attempts are blocked."""
@@ -25,11 +28,29 @@ def test_path_traversal_basic():
         pass  # Placeholder
 
 
-def test_symlink_traversal():
+def test_symlink_traversal(tmp_path):
     """Test that symlinks can't be used for traversal."""
-    # TODO: Create symlink pointing outside repo
-    # Verify it's blocked
-    pass
+    # Setup allowed root and external secret
+    allowed_root = tmp_path / "allowed"
+    allowed_root.mkdir()
+
+    secret_file = tmp_path / "secret.txt"
+    secret_file.write_text("TOP SECRET")
+
+    roots = [str(allowed_root)]
+
+    try:
+        # Create symlink pointing outside repo
+        symlink = allowed_root / "link_to_secret"
+        symlink.symlink_to(secret_file)
+
+        # Verify it's blocked
+        with pytest.raises(PathSecurityError, match="outside allowed roots"):
+            validate_path(str(symlink), roots)
+
+    except OSError:
+        # Skip if symlinks are not supported on this platform
+        pytest.skip("Symlinks not supported on this platform")
 
 
 def test_relative_path_normalization():
