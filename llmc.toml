@@ -449,6 +449,7 @@ auto_rotation_interval = 0
 
 [tool_envelope]
 enabled = false  # Disabled: causing friction with duplicate searches + grep
+passthrough_timeout_seconds = 30
 
 [tool_envelope.workspace]
 root = "/home/vmlinux/src/llmc"

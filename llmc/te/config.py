@@ -78,6 +78,9 @@ class TeConfig:
     cat_preview_lines: int = 50
     cat_max_output_chars: int = 30_000
 
+    # Passthrough defaults
+    passthrough_timeout_seconds: int = 30
+
     # Agent budgets
     agent_budgets: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_AGENT_BUDGETS))
 
@@ -113,6 +116,7 @@ def get_te_config(repo_root: Path | None = None) -> TeConfig:
         grep_timeout_ms=grep.get("timeout_ms", 5_000),
         cat_preview_lines=cat.get("preview_lines", 50),
         cat_max_output_chars=cat.get("max_output_chars", 30_000),
+        passthrough_timeout_seconds=te_cfg.get("passthrough_timeout_seconds", 30),
         agent_budgets={**DEFAULT_AGENT_BUDGETS, **budgets},
     )
 

@@ -385,7 +385,11 @@ def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = 
 
 
 def _handle_passthrough(
-    command: str, args: list[str], repo_root: Path, json_mode: bool = False
+    command: str,
+    args: list[str],
+    repo_root: Path,
+    json_mode: bool = False,
+    timeout: int = 30,
 ) -> int:
     """
     Pass-through handler for unknown commands.
@@ -404,7 +408,7 @@ def _handle_passthrough(
                 shell=False,
                 capture_output=True,
                 text=True,
-                timeout=30,  # TODO: make configurable
+                timeout=timeout,
                 check=False,
             )
 
@@ -435,7 +439,7 @@ def _handle_passthrough(
             error = None
 
         except subprocess.TimeoutExpired:
-            msg = f"command timed out after 30s: {full_cmd}"
+            msg = f"command timed out after {timeout}s: {full_cmd}"
             if json_mode:
                 import json
 
@@ -540,7 +544,13 @@ def main() -> int:
         if not cmd_args:
             print("[TE] run requires a command", file=sys.stderr)
             return 1
-        return _handle_passthrough(cmd_args[0], cmd_args[1:], repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            cmd_args[0],
+            cmd_args[1:],
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
+        )
 
     if command == "repo":
         # Map 'te repo read ...' to 'cat ...' for now (MVP)
@@ -554,13 +564,23 @@ def main() -> int:
                 root = cmd_args[root_idx]
                 path = cmd_args[path_idx]
                 full_path = str(Path(root) / path)
-                return _handle_passthrough("cat", [full_path], repo_root, json_mode=json_mode)
+                return _handle_passthrough(
+                    "cat",
+                    [full_path],
+                    repo_root,
+                    json_mode=json_mode,
+                    timeout=cfg.passthrough_timeout_seconds,
+                )
             except (ValueError, IndexError):
                 print("[TE] repo read requires --root and --path", file=sys.stderr)
                 return 1
         # Fallback for other repo commands
         return _handle_passthrough(
-            "python3", ["-m", "tools.rag_repo.cli_entry"] + cmd_args, repo_root, json_mode=json_mode
+            "python3",
+            ["-m", "tools.rag_repo.cli_entry"] + cmd_args,
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
         )
 
     if command == "rag":
@@ -582,18 +602,34 @@ def main() -> int:
                 if json_mode:
                     new_args.append("--json")
 
-                return _handle_passthrough("python3", new_args, repo_root, json_mode=json_mode)
+                return _handle_passthrough(
+                    "python3",
+                    new_args,
+                    repo_root,
+                    json_mode=json_mode,
+                    timeout=cfg.passthrough_timeout_seconds,
+                )
             except (ValueError, IndexError):
                 print("[TE] rag query requires --q", file=sys.stderr)
                 return 1
         # Fallback
         return _handle_passthrough(
-            "python3", ["-m", "tools.rag.cli"] + cmd_args, repo_root, json_mode=json_mode
+            "python3",
+            ["-m", "tools.rag.cli"] + cmd_args,
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
         )
 
     # If -i/--raw is set, OR command is unknown, OR tool is disabled → passthrough
     if args.raw or not is_enriched or not tool_enabled:
-        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            command,
+            cmd_args,
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
+        )
 
     if command == "grep":
         return _handle_grep(cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode)
@@ -602,13 +638,25 @@ def main() -> int:
         # Phase 1 - not yet implemented, fall back to pass-through
         if not json_mode:
             print("[TE] cat enrichment not yet implemented, using pass-through", file=sys.stderr)
-        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            command,
+            cmd_args,
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
+        )
 
     elif command == "find":
         # Phase 1 - not yet implemented, fall back to pass-through
         if not json_mode:
             print("[TE] find enrichment not yet implemented, using pass-through", file=sys.stderr)
-        return _handle_passthrough(command, cmd_args, repo_root, json_mode=json_mode)
+        return _handle_passthrough(
+            command,
+            cmd_args,
+            repo_root,
+            json_mode=json_mode,
+            timeout=cfg.passthrough_timeout_seconds,
+        )
 
     # Should never reach here
     return 1
