@@ -876,6 +876,7 @@ Collection of architectural improvements identified during code review. System w
 
 | Item | Description | Effort | Notes |
 |------|-------------|--------|-------|
+| **🔥 Break Import Cycle: rag ↔ rag_nav** | Create `tools/rag/contracts.py` with shared dataclasses/protocols/enums. Both modules import contracts, neither imports the other. No DB, no logging, no config. | Medium | **Do this first** - cycles compound like interest |
 | **Defer Heavy Imports** | Move `DocgenOrchestrator`, `Database` imports inside functions in `llmc/commands/docs.py` to prevent import-time failures when `[rag]` extras not installed | Low | Prevents CLI crashes for users without optional deps |
 | **Type Discipline in RAG** | Fix `no-any-return`, `Union/None` path errors in `tools/rag/indexer.py`, `inspector.py`, `enrichment_pipeline.py` | Medium-High | Run `mypy --strict tools/rag/` for baseline |
 | **Startup Health Checks** | Add venv/mcp presence check in CLI entry | Low | Warning, not blocker |
@@ -888,6 +889,8 @@ Collection of architectural improvements identified during code review. System w
 | **Create ARCHITECTURE.md** | Document package overview, data flows, config reference, MCP integration | Medium-High | Missing entirely |
 
 **Why P3:** System is functional. These are quality-of-life improvements that don't affect runtime behavior. Tackle opportunistically or when touching related code.
+
+**Exception:** The import cycle fix (🔥) is worth doing proactively - it's the kind of debt that makes every future refactor feel like defusing a bomb.
 
 ---
 
