@@ -223,3 +223,51 @@ def check_rag_freshness(
     
     # File is indexed and fresh
     return (True, f"RAG index fresh ({file_sha256[:8]}...)")
+
+
+def validate_source_path(repo_root: Path, relative_path: Path) -> Path:
+    """Validate source path security.
+
+    Ensures that:
+    1. Path does not contain traversal sequences (handled by resolve logic)
+    2. Path resolves to a file strictly within the repo root (symlink check)
+    3. Path is not absolute (unless it starts with repo_root)
+
+    Args:
+        repo_root: Absolute path to repository root
+        relative_path: Path relative to repo root
+
+    Returns:
+        Resolved absolute source path
+
+    Raises:
+        ValueError: If path is insecure or outside repo
+    """
+    # Check for absolute paths - we treat input as relative to repo_root
+    if relative_path.is_absolute():
+        raise ValueError(f"Absolute paths not allowed: {relative_path}")
+
+    # Check for null bytes
+    if '\x00' in str(relative_path):
+        raise ValueError("Null byte in path")
+
+    # Resolve root once
+    resolved_root = repo_root.resolve()
+
+    # Construct and resolve candidate path
+    try:
+        # resolve() handles '..' and symlinks
+        candidate_path = (resolved_root / relative_path).resolve()
+    except Exception as e:
+        raise ValueError(f"Invalid path resolution: {e}")
+
+    # Verify strict containment
+    try:
+        candidate_path.relative_to(resolved_root)
+    except ValueError:
+        raise ValueError(
+            f"Path traversal detected: {relative_path} resolves to {candidate_path}, "
+            f"which is outside repository root {resolved_root}"
+        )
+
+    return candidate_path
