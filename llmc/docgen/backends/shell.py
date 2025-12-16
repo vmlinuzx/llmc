@@ -176,7 +176,11 @@ def load_shell_backend(
         raise ValueError("Missing 'shell.script' in docgen configuration")
     
     # Resolve script path (relative to repo root)
-    script_path = repo_root / script_str
+    script_path = (repo_root / script_str).resolve()
+
+    # Security: ensure script is within repo root
+    if not str(script_path).startswith(str(repo_root.resolve())):
+        raise ValueError(f"Docgen script is outside the repository root: {script_path}")
     
     if not script_path.exists():
         raise ValueError(f"Docgen script not found: {script_path}")

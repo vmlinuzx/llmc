@@ -263,6 +263,15 @@ def execute_code(
             error=str(e),
         )
     
+    # SECURITY: Simple heuristic to block obviously malicious code
+    if "import os" in code or "import subprocess" in code:
+        return CodeExecResult(
+            success=False,
+            stdout="",
+            stderr="Blocked for security reasons: os and subprocess imports are not allowed.",
+            error="Blocked for security reasons: os and subprocess imports are not allowed.",
+        )
+    
     # Prepare execution namespace
     # Inject _call_tool into builtins so imported stubs can find it
     import builtins

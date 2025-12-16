@@ -579,6 +579,8 @@ EXECUTE_CODE_TOOL = Tool(
     name="execute_code",
     description="""Execute Python code with access to ALL LLMC tools via stubs.
 
+**SECURITY WARNING: This tool executes arbitrary Python code provided by the LLM. It is HIGHLY recommended to only enable this tool in a securely isolated environment (e.g., a Docker container).**
+
 WORKFLOW:
 1. Use list_dir('<repo_root>/.llmc/stubs/') to see available tools
 2. Use read_file to check any stub's function signature
@@ -1598,14 +1600,11 @@ class LlmcMcpServer:
                 logger.debug(f"Smart grep RAG fallback failed: {e}")
 
         # Determine execution mode
-        host_mode = (self.config.mode == "hybrid")
-
         # Execute command (blacklist is soft nudge, host_mode skips isolation)
         result = run_cmd(
             command=command,
             cwd=cwd,
             blacklist=self.config.tools.run_cmd_blacklist,
-            host_mode=host_mode,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )
 

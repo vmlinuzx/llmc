@@ -83,7 +83,6 @@ def run_cmd(
     command: str,
     cwd: Path | str,
     blacklist: list[str] | None = None,
-    host_mode: bool = False,
     timeout: int = 30,
     env: dict[str, str] | None = None,
 ) -> ExecResult:
@@ -91,8 +90,7 @@ def run_cmd(
     Execute a shell command with security constraints.
 
     SECURITY:
-        - Docker mode (host_mode=False): Requires container isolation
-        - Hybrid mode (host_mode=True): You trust it, runs on host
+        - All commands are executed in an isolated environment.
 
     Blacklist is just asking nicely. If you give an LLM bash, they can do anything.
 
@@ -100,26 +98,24 @@ def run_cmd(
         command: Shell command string to execute
         cwd: Working directory for execution
         blacklist: Soft block list (empty by default, just asking nicely)
-        host_mode: If True, skip isolation requirement
         timeout: Max execution time in seconds
         env: Optional environment variables to set
 
     Returns:
         ExecResult with stdout, stderr, exit_code
     """
-    # SECURITY: Only allow execution in isolated environments unless host_mode=True
-    if not host_mode:
-        from llmc_mcp.isolation import require_isolation
-        try:
-            require_isolation("run_cmd")
-        except RuntimeError as e:
-            return ExecResult(
-                success=False,
-                stdout="",
-                stderr=str(e),
-                exit_code=-1,
-                error=str(e),
-            )
+    # SECURITY: Only allow execution in isolated environments
+    from llmc_mcp.isolation import require_isolation
+    try:
+        require_isolation("run_cmd")
+    except RuntimeError as e:
+        return ExecResult(
+            success=False,
+            stdout="",
+            stderr=str(e),
+            exit_code=-1,
+            error=str(e),
+        )
     
     if not command or not command.strip():
         return ExecResult(
