@@ -68,7 +68,7 @@ Guides for developers working on the LLMC codebase.
 
 ---
 
-## 📋 Planning
+## 📋 [Planning](planning/index.md)
 
 Roadmaps, design documents (SDDs), and project management.
 - [Roadmap](planning/roadmap.md)
@@ -93,6 +93,6 @@ Roadmaps, design documents (SDDs), and project management.
 
 - **GitHub Repository:** [vmlinuzx/llmc](https://github.com/vmlinuzx/llmc)
 - **Issue Tracker:** [Report a Bug](https://github.com/vmlinuzx/llmc/issues)
-- **Releases:** [CHANGELOG](/CHANGELOG.md)
+- **Releases:** [CHANGELOG](../CHANGELOG.md)
 
 *Documentation Version: v0.7.0*

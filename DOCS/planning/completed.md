@@ -7,3 +7,4 @@
   - ✅ Implemented "Operations" suite: Daemon, MCP Integration.
   - ✅ Created automated doc generators for CLI, Config, and MCP Tools.
   - ✅ Restored/Verified CLI wrapper scripts (`llmc-rag-service`, etc.) to match documentation contracts.
+  - ✅ Phase 2.3: Created Master Index (`DOCS/index.md`) with Diátaxis navigation.
