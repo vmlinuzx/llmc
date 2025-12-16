@@ -101,8 +101,8 @@ class LLMCScreen(Screen):
 
     def action_goto_docs(self) -> None:
         """Switch to docs generation screen."""
-        # TODO: Implement DocsScreen
-        self.notify("Docs screen coming soon", severity="information")
+        from llmc.tui.screens.docs import DocsScreen
+        self.app.switch_screen(DocsScreen())
 
     def action_goto_ruta(self) -> None:
         """Switch to RUTA testing screen."""
