@@ -1,0 +1,105 @@
+site_name: LLMC Documentation
+site_description: LLM Cost Compression through Intelligent RAG
+site_url: https://llmc.dev/docs/
+repo_url: https://github.com/yourusername/llmc
+repo_name: llmc
+
+docs_dir: DOCS
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - tags
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Core Concepts: getting-started/concepts.md
+  - User Guide:
+    - user-guide/index.md
+    - Configuration: user-guide/configuration.md
+    - CLI Reference: user-guide/cli-reference.md
+    - Search: user-guide/search/index.md
+    - Enrichment: user-guide/enrichment/providers.md
+    - Docgen: user-guide/docgen.md
+    - TUI: user-guide/tui/dashboard.md
+  - Operations:
+    - operations/index.md
+    - Daemon: operations/daemon.md
+    - MCP Integration: operations/mcp-integration.md
+    - Troubleshooting: operations/troubleshooting.md
+  - Architecture:
+    - architecture/index.md
+    - Routing: architecture/routing.md
+    - Security: architecture/mcp-decisions.md
+    - TUI Agent: architecture/tui-agent.md
+  - Reference:
+    - CLI Commands: reference/cli/index.md
+    - Config Schema: reference/config/llmc-toml.md
+    - MCP Tools: reference/mcp-tools/index.md
+  - Development:
+    - development/index.md
+    - TUI Style Guide: development/tui-style.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/yourusername/llmc

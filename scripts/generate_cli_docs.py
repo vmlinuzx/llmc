@@ -1,68 +1,85 @@
 #!/usr/bin/env python3
+"""Generate CLI reference documentation from --help output."""
 import subprocess
 import os
 import sys
+from datetime import datetime
 
-# Map command names to output files
-COMMANDS = {
-    "llmc-rag-repo": "llmc-rag-repo.md",
-    "llmc-rag-service": "llmc-rag-service.md",
-    "llmc-rag-daemon": "llmc-rag-daemon.md",
-    # llmc-mcp might need to be run as a module if not in path, but let's try module first for all
-    "tools.rag_repo.cli": "llmc-rag-repo.md",
-    "tools.rag.service": "llmc-rag-service.md", 
-    "tools.rag_daemon.main": "llmc-rag-daemon.md",
-    "llmc_mcp.server": "llmc-mcp.md"
-}
-
-# We will prefer running as module to avoid PATH issues
-MODULE_MAP = {
-    "llmc-rag-repo": "tools.rag_repo.cli",
-    "llmc-rag-service": "tools.rag.service", # Note: service is usually a script wrapper around tools.rag.service or similar
-    "llmc-rag-daemon": "tools.rag_daemon.main",
-    "llmc-mcp": "llmc_mcp.cli" # Guessing the module path
-}
+# CLI entry points from pyproject.toml [project.scripts]
+CLI_COMMANDS = [
+    ("llmc-cli", "llmc.main", "Primary CLI for LLMC operations"),
+    ("llmc-mcp", "llmc_mcp.cli", "MCP server for Claude Desktop integration"),
+    ("te", "llmc.te.cli", "Tool Envelope - intelligent command wrapper"),
+    ("llmc-chat", "llmc_agent.cli", "Chat agent CLI (also: bx)"),
+    ("mcgrep", "llmc.mcgrep", "Semantic grep with RAG context"),
+]
 
 OUTPUT_DIR = "DOCS/reference/cli"
 
-def run_help(module_name):
+
+def run_help(command_name):
+    """Run command --help and capture output."""
     try:
-        cmd = [sys.executable, "-m", module_name, "--help"]
-        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-        return result.stdout
+        result = subprocess.run(
+            [command_name, "--help"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout
+        return f"Command exited with code {result.returncode}\n{result.stderr}"
+    except FileNotFoundError:
+        return f"Command '{command_name}' not found in PATH"
+    except subprocess.TimeoutExpired:
+        return "Command timed out"
     except Exception as e:
-        return f"Error generating docs: {e}"
+        return f"Error: {e}"
+
 
 def main():
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR)
-
-    # Let's verify module paths by looking at the file structure if needed.
-    # I'll stick to the ones I saw in the file list earlier.
-    # tools.rag_repo.cli -> Yes
-    # tools.rag_daemon.main -> Yes
-    # tools.rag.service -> Wait, list showed llmc/tools/rag/service? No, tools/rag/service.py?
-    # Let's double check content.
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    modules = [
-        ("tools.rag_repo.cli", "llmc-rag-repo.md"),
-        ("tools.rag_daemon.main", "llmc-rag-daemon.md"),
-        ("tools.rag.cli", "llmc-rag-cli.md"), # Adding the main rag CLI
-        ("llmc_mcp.cli", "llmc-mcp.md")
+    index_lines = [
+        "# CLI Reference",
+        "",
+        f"_Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
+        "",
+        "## Available Commands",
+        "",
+        "| Command | Description |",
+        "|---------|-------------|",
     ]
-
-    for module, filename in modules:
-        print(f"Generating docs for {module}...")
-        help_text = run_help(module)
+    
+    for cmd_name, module, description in CLI_COMMANDS:
+        index_lines.append(f"| [`{cmd_name}`]({cmd_name}.md) | {description} |")
+    
+    index_lines.extend(["", "---", ""])
+    
+    for cmd_name, module, description in CLI_COMMANDS:
+        print(f"Generating docs for {cmd_name}...")
+        help_text = run_help(cmd_name)
         
+        filename = f"{cmd_name}.md"
         filepath = os.path.join(OUTPUT_DIR, filename)
+        
         with open(filepath, "w") as f:
-            f.write(f"# {filename.replace('.md', '')} Reference\n\n")
-            f.write(f"Generated from `{module} --help`\n\n")
+            f.write(f"# {cmd_name}\n\n")
+            f.write(f"{description}\n\n")
+            f.write(f"**Module:** `{module}`\n\n")
+            f.write("## Usage\n\n")
             f.write("```text\n")
             f.write(help_text)
             f.write("```\n")
-        print(f"Wrote {filepath}")
+        
+        print(f"  Wrote {filepath}")
+    
+    # Write index
+    index_path = os.path.join(OUTPUT_DIR, "index.md")
+    with open(index_path, "w") as f:
+        f.write("\n".join(index_lines))
+    print(f"Wrote {index_path}")
+
 
 if __name__ == "__main__":
     main()

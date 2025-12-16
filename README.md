@@ -109,6 +109,18 @@ llmc-cli tui
 
 ---
 
+## 📚 Documentation
+
+Full documentation is available in the [`DOCS/`](DOCS/index.md) directory:
+
+- **[Getting Started](DOCS/getting-started/installation.md)** — Installation and quickstart
+- **[User Guide](DOCS/user-guide/configuration.md)** — Configuration and daily usage
+- **[Operations](DOCS/operations/daemon.md)** — Running the daemon and MCP integration
+- **[Architecture](DOCS/architecture/index.md)** — System design and internals
+- **[Reference](DOCS/reference/cli/index.md)** — CLI, config, and MCP tool reference
+
+---
+
 ## 📜 History
 
 Originally created by David Carroll (the worst paragliding pilot in the TX Panhandle) after burning through his weekly API limits in days. This tool was born from the necessity to code more while spending less.

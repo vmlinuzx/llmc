@@ -2,6 +2,44 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.7.3] - "Documentation 2.0" - 2025-12-16
+
+### Purple Flavor: **Documentation 2.0**
+
+Complete overhaul of LLMC documentation architecture. Diátaxis-based structure, comprehensive reference docs, and automated doc generation.
+
+### Added
+
+- **Documentation Architecture 2.0:**
+  - Diátaxis structure: getting-started/, user-guide/, operations/, architecture/, reference/, development/
+  - 20+ docs migrated to proper locations
+  - All critical P0/P1 docs written: installation, quickstart, concepts, daemon, MCP integration
+
+- **Automated Doc Generation:**
+  - `scripts/generate_cli_docs.py` - Auto-generates CLI reference from `--help`
+  - `scripts/generate_config_docs.py` - Auto-generates config reference from `llmc.toml`
+  - `scripts/generate_mcp_docs.py` - Auto-generates MCP tool reference from server.py
+  - `make docs` - One command to regenerate all reference docs
+
+- **MkDocs Configuration:**
+  - `mkdocs.yml` with Material theme, Mermaid diagrams, dark mode
+  - Full navigation structure for docs site
+  - `make docs-serve` for local preview
+
+- **Comprehensive Configuration Guide:**
+  - Complete `DOCS/user-guide/configuration.md` (533 lines)
+  - All sections documented: embeddings, routing, enrichment, daemon, MCP, tool_envelope
+  - Privacy warnings on sensitive settings
+  - Example configurations (minimal, cloud fallback)
+
+### Changed
+
+- **README:** Added Documentation section with links to all major doc areas
+- **Makefile:** Added `docs`, `docs-serve`, `docs-build` targets
+- **All python references:** Changed `python` to `python3` in Makefile
+
+---
+
 ## [0.7.2] - "Architecture Polish" - 2025-12-16
 
 ### Purple Flavor: **Architecture Polish**

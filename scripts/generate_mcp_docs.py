@@ -1,67 +1,96 @@
 #!/usr/bin/env python3
-import sys
+"""Generate MCP tool reference documentation from tool definitions."""
 import os
-import json
+import sys
+from datetime import datetime
 
 # Add project root to path
 sys.path.insert(0, os.getcwd())
 
-try:
-    from llmc_mcp.server import TOOLS
-except ImportError as e:
-    print(f"Error importing tools: {e}")
-    sys.exit(1)
-
 OUTPUT_FILE = "DOCS/reference/mcp-tools/index.md"
 
+
 def main():
-    md_lines = []
-    md_lines.append("# MCP Tool Reference")
-    md_lines.append("\nReference documentation for all available MCP tools.\n")
+    try:
+        from llmc_mcp.server import TOOLS
+    except ImportError as e:
+        print(f"Error importing TOOLS from llmc_mcp.server: {e}")
+        print("Make sure llmc is installed: pip install -e '.[rag]'")
+        sys.exit(1)
     
-    # Sort tools by name
-    tools = sorted(TOOLS, key=lambda x: x.name)
+    lines = [
+        "# MCP Tool Reference",
+        "",
+        f"_Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
+        "",
+        f"LLMC exposes **{len(TOOLS)} tools** via the Model Context Protocol.",
+        "",
+        "## Tool Categories",
+        "",
+        "| Category | Tools |",
+        "|----------|-------|",
+    ]
     
-    for tool in tools:
-        md_lines.append(f"## `{tool.name}`")
-        md_lines.append(f"{tool.description}\n")
+    # Categorize tools by prefix
+    categories = {}
+    for tool in TOOLS:
+        prefix = tool.name.split("_")[0] if "_" in tool.name else "other"
+        categories.setdefault(prefix, []).append(tool)
+    
+    for cat, tools in sorted(categories.items()):
+        tool_names = ", ".join(f"`{t.name}`" for t in tools)
+        lines.append(f"| {cat} | {tool_names} |")
+    
+    lines.extend(["", "---", ""])
+    
+    # Document each tool
+    for tool in sorted(TOOLS, key=lambda x: x.name):
+        lines.append(f"## `{tool.name}`")
+        lines.append("")
+        lines.append(tool.description)
+        lines.append("")
         
-        md_lines.append("### Arguments")
         schema = tool.inputSchema
         props = schema.get("properties", {})
-        required = schema.get("required", [])
+        required = set(schema.get("required", []))
         
-        if not props:
-            md_lines.append("_No arguments._")
-        else:
-            md_lines.append("| Name | Type | Required | Description |")
-            md_lines.append("|---|---|---|---|")
+        if props:
+            lines.append("### Parameters")
+            lines.append("")
+            lines.append("| Name | Type | Required | Description |")
+            lines.append("|------|------|----------|-------------|")
             
             for prop_name, prop_data in props.items():
                 prop_type = prop_data.get("type", "any")
-                is_req = "Yes" if prop_name in required else "No"
+                is_req = "✓" if prop_name in required else ""
                 desc = prop_data.get("description", "-")
                 
-                # Check for enums
+                # Add enum info
                 if "enum" in prop_data:
-                    desc += f" Allowed: `{prop_data['enum']}`"
-                    
-                # Check for defaults
-                if "default" in prop_data:
-                    desc += f" (Default: `{prop_data['default']}`)"
+                    desc += f" Values: `{prop_data['enum']}`"
                 
-                md_lines.append(f"| `{prop_name}` | `{prop_type}` | {is_req} | {desc} |")
+                # Add default
+                if "default" in prop_data:
+                    desc += f" (default: `{prop_data['default']}`)"
+                
+                lines.append(f"| `{prop_name}` | `{prop_type}` | {is_req} | {desc} |")
+            lines.append("")
+        else:
+            lines.append("_No parameters_")
+            lines.append("")
         
-        md_lines.append("\n---\n")
-
+        lines.append("---")
+        lines.append("")
+    
+    # Write output
     output_dir = os.path.dirname(OUTPUT_FILE)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
+    os.makedirs(output_dir, exist_ok=True)
+    
     with open(OUTPUT_FILE, "w") as f:
-        f.write("\n".join(md_lines))
-        
-    print(f"Wrote {OUTPUT_FILE}")
+        f.write("\n".join(lines))
+    
+    print(f"Wrote {OUTPUT_FILE} ({len(TOOLS)} tools documented)")
+
 
 if __name__ == "__main__":
     main()

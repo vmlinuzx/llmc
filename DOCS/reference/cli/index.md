@@ -1,7 +1,15 @@
 # CLI Reference
 
-- [llmc-rag-repo](llmc-rag-repo.md) - Manage repositories
-- [llmc-rag-service](llmc-rag-service.md) - Manage the daemon service
-- [llmc-rag-daemon](llmc-rag-daemon.md) - Low-level daemon control
-- [llmc-mcp](llmc-mcp.md) - MCP Server
-- [llmc-rag-cli](llmc-rag-cli.md) - Low-level RAG operations (search, index, enrich)
+_Generated: 2025-12-16 16:04_
+
+## Available Commands
+
+| Command | Description |
+|---------|-------------|
+| [`llmc-cli`](llmc-cli.md) | Primary CLI for LLMC operations |
+| [`llmc-mcp`](llmc-mcp.md) | MCP server for Claude Desktop integration |
+| [`te`](te.md) | Tool Envelope - intelligent command wrapper |
+| [`llmc-chat`](llmc-chat.md) | Chat agent CLI (also: bx) |
+| [`mcgrep`](mcgrep.md) | Semantic grep with RAG context |
+
+---

@@ -1,63 +1,119 @@
 #!/usr/bin/env python3
-import sys
-import tomli
+"""Generate config reference documentation from llmc.toml."""
 import os
+import sys
+from datetime import datetime
 
-SOURCE_TOML = "llmc/llmc.toml"
+try:
+    import tomli
+except ImportError:
+    import tomllib as tomli
+
+SOURCE_TOML = "llmc.toml"  # Repo root, not llmc/llmc.toml
 OUTPUT_FILE = "DOCS/reference/config/llmc-toml.md"
 
-def generate_table(data, prefix=""):
-    lines = []
-    lines.append("| Key | Type | Example | Description |")
-    lines.append("|---|---|---|---|")
+
+def format_value(value):
+    """Format a value for display."""
+    if isinstance(value, str):
+        if len(value) > 60:
+            return f'"{value[:57]}..."'
+        return f'"{value}"'
+    elif isinstance(value, list):
+        if len(value) > 3:
+            return f"[{', '.join(map(str, value[:3]))}... ({len(value)} items)]"
+        return str(value)
+    elif isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+def extract_sections(config, prefix=""):
+    """Recursively extract config sections."""
+    sections = []
     
-    for key, value in data.items():
+    for key, value in config.items():
         full_key = f"{prefix}.{key}" if prefix else key
         
         if isinstance(value, dict):
-            # Recursively generate for sections
-            # But first print the section header if we want?
-            # Actually, let's just flatten the keys or link to sections.
-            # For simplicity, let's just document the nested keys.
-            lines.extend(generate_table(value, full_key)[2:]) # Skip header of recursive call
-        else:
-            val_type = type(value).__name__
-            val_str = str(value)
-            if len(val_str) > 50:
-                val_str = val_str[:47] + "..."
-            lines.append(f"| `{full_key}` | {val_type} | `{val_str}` | - |")
-            
-    return lines
+            # Check if it's a table or has nested values
+            has_nested_dicts = any(isinstance(v, dict) for v in value.values())
+            if has_nested_dicts:
+                sections.extend(extract_sections(value, full_key))
+            else:
+                # It's a leaf table - document its keys
+                sections.append((full_key, value))
+        elif isinstance(value, list) and value and isinstance(value[0], dict):
+            # Array of tables
+            sections.append((f"[[{full_key}]]", value[0]))
+        # Skip scalar values at top level
+    
+    return sections
+
 
 def main():
     if not os.path.exists(SOURCE_TOML):
-        print(f"Error: {SOURCE_TOML} not found.")
+        print(f"Error: {SOURCE_TOML} not found. Run from repo root.")
         sys.exit(1)
-        
+    
     with open(SOURCE_TOML, "rb") as f:
         config = tomli.load(f)
-        
-    md_lines = []
-    md_lines.append("# llmc.toml Configuration Reference")
-    md_lines.append("\nGenerated from `llmc/llmc.toml` default values.\n")
     
-    # Iterate top-level sections
-    for section, content in config.items():
-        md_lines.append(f"## [{section}]")
-        if isinstance(content, dict):
-            md_lines.extend(generate_table(content))
-        else:
-             md_lines.append(f"Global key: `{section}` = {content}")
-        md_lines.append("\n")
-
-    output_dir = os.path.dirname(OUTPUT_FILE)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    with open(OUTPUT_FILE, "w") as f:
-        f.write("\n".join(md_lines))
+    lines = [
+        "# llmc.toml Reference",
+        "",
+        f"_Generated from `{SOURCE_TOML}` on {datetime.now().strftime('%Y-%m-%d %H:%M')}_",
+        "",
+        "This is an auto-generated reference of all configuration keys.",
+        "For a human-friendly guide, see [Configuration Guide](../../user-guide/configuration.md).",
+        "",
+        "---",
+        "",
+    ]
+    
+    # Document top-level sections
+    for section_name in sorted(config.keys()):
+        section = config[section_name]
+        lines.append(f"## [{section_name}]")
+        lines.append("")
         
+        if isinstance(section, dict):
+            # Find scalar values in this section
+            scalars = {k: v for k, v in section.items() if not isinstance(v, (dict, list))}
+            if scalars:
+                lines.append("| Key | Type | Value |")
+                lines.append("|-----|------|-------|")
+                for k, v in scalars.items():
+                    lines.append(f"| `{k}` | `{type(v).__name__}` | `{format_value(v)}` |")
+                lines.append("")
+            
+            # Find nested tables
+            for k, v in section.items():
+                if isinstance(v, dict):
+                    lines.append(f"### [{section_name}.{k}]")
+                    lines.append("")
+                    lines.append("| Key | Type | Value |")
+                    lines.append("|-----|------|-------|")
+                    for sk, sv in v.items():
+                        if not isinstance(sv, dict):
+                            lines.append(f"| `{sk}` | `{type(sv).__name__}` | `{format_value(sv)}` |")
+                    lines.append("")
+        elif isinstance(section, list):
+            lines.append(f"_Array of {len(section)} entries_")
+            lines.append("")
+        else:
+            lines.append(f"Value: `{format_value(section)}`")
+            lines.append("")
+    
+    # Write output
+    output_dir = os.path.dirname(OUTPUT_FILE)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    with open(OUTPUT_FILE, "w") as f:
+        f.write("\n".join(lines))
+    
     print(f"Wrote {OUTPUT_FILE}")
+
 
 if __name__ == "__main__":
     main()

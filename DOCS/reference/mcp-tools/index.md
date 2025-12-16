@@ -1,307 +1,373 @@
 # MCP Tool Reference
 
-Reference documentation for all available MCP tools.
+_Generated: 2025-12-16 16:04_
+
+LLMC exposes **27 tools** via the Model Context Protocol.
+
+## Tool Categories
+
+| Category | Tools |
+|----------|-------|
+| get | `get_metrics` |
+| linux | `linux_proc_list`, `linux_proc_kill`, `linux_sys_snapshot`, `linux_proc_start`, `linux_proc_send`, `linux_proc_read`, `linux_proc_stop`, `linux_fs_write`, `linux_fs_mkdir`, `linux_fs_move`, `linux_fs_delete`, `linux_fs_edit` |
+| list | `list_dir` |
+| other | `stat`, `inspect` |
+| rag | `rag_search`, `rag_query`, `rag_search_enriched`, `rag_where_used`, `rag_lineage`, `rag_stats`, `rag_plan` |
+| read | `read_file` |
+| repo | `repo_read` |
+| run | `run_cmd` |
+| te | `te_run` |
+
+---
 
 ## `get_metrics`
+
 Get MCP server metrics (call counts, latencies, errors). Requires observability enabled.
 
-### Arguments
-_No arguments._
+_No parameters_
 
 ---
 
 ## `inspect`
+
 Deep inspection of a file or symbol: snippet, graph relationships, and enrichment data.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | No | File path (relative to repo root) |
-| `symbol` | `string` | No | Symbol name (e.g. 'MyClass.method') |
-| `include_full_source` | `boolean` | No | Include full file source code (use sparingly) (Default: `False`) |
-| `max_neighbors` | `integer` | No | Max related entities to return per category (Default: `3`) |
+|------|------|----------|-------------|
+| `path` | `string` |  | File path (relative to repo root) |
+| `symbol` | `string` |  | Symbol name (e.g. 'MyClass.method') |
+| `include_full_source` | `boolean` |  | Include full file source code (use sparingly) (default: `False`) |
+| `max_neighbors` | `integer` |  | Max related entities to return per category (default: `3`) |
 
 ---
 
 ## `linux_fs_delete`
+
 Delete a file or directory.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | Path to delete |
-| `recursive` | `boolean` | No | Required for directories (Default: `False`) |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | Path to delete |
+| `recursive` | `boolean` |  | Required for directories (default: `False`) |
 
 ---
 
 ## `linux_fs_edit`
+
 Surgical text replacement in a file. Finds and replaces exact text matches.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | File to edit |
-| `old_text` | `string` | Yes | Text to find |
-| `new_text` | `string` | Yes | Replacement text |
-| `expected_replacements` | `integer` | No | Expected match count (Default: `1`) |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | File to edit |
+| `old_text` | `string` | ✓ | Text to find |
+| `new_text` | `string` | ✓ | Replacement text |
+| `expected_replacements` | `integer` |  | Expected match count (default: `1`) |
 
 ---
 
 ## `linux_fs_mkdir`
+
 Create a directory (and parent directories if needed).
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | Directory path to create |
-| `exist_ok` | `boolean` | No | - (Default: `True`) |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | Directory path to create |
+| `exist_ok` | `boolean` |  | - (default: `True`) |
 
 ---
 
 ## `linux_fs_move`
+
 Move or rename a file or directory.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `source` | `string` | Yes | Source path |
-| `dest` | `string` | Yes | Destination path |
+|------|------|----------|-------------|
+| `source` | `string` | ✓ | Source path |
+| `dest` | `string` | ✓ | Destination path |
 
 ---
 
 ## `linux_fs_write`
+
 Write or append text to a file. Supports atomic writes and SHA256 precondition checks.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | File path to write |
-| `content` | `string` | Yes | Text content to write |
-| `mode` | `string` | No | - Allowed: `['rewrite', 'append']` (Default: `rewrite`) |
-| `expected_sha256` | `string` | No | If set, verify file hash before write |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | File path to write |
+| `content` | `string` | ✓ | Text content to write |
+| `mode` | `string` |  | - Values: `['rewrite', 'append']` (default: `rewrite`) |
+| `expected_sha256` | `string` |  | If set, verify file hash before write |
 
 ---
 
 ## `linux_proc_kill`
+
 Send signal to a process. Safety guards prevent killing PID 1 or MCP server.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `pid` | `integer` | Yes | Process ID to signal |
-| `signal` | `string` | No | Signal to send (default TERM) Allowed: `['TERM', 'KILL', 'INT', 'HUP', 'STOP', 'CONT']` (Default: `TERM`) |
+|------|------|----------|-------------|
+| `pid` | `integer` | ✓ | Process ID to signal |
+| `signal` | `string` |  | Signal to send (default TERM) Values: `['TERM', 'KILL', 'INT', 'HUP', 'STOP', 'CONT']` (default: `TERM`) |
 
 ---
 
 ## `linux_proc_list`
+
 List running processes with CPU/memory usage. Returns bounded results sorted by CPU.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `max_results` | `integer` | No | Maximum processes to return (1-5000, default 200) (Default: `200`) |
-| `user` | `string` | No | Optional username filter |
+|------|------|----------|-------------|
+| `max_results` | `integer` |  | Maximum processes to return (1-5000, default 200) (default: `200`) |
+| `user` | `string` |  | Optional username filter |
 
 ---
 
 ## `linux_proc_read`
+
 Read output from a managed process with timeout.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `proc_id` | `string` | Yes | Process ID |
-| `timeout_ms` | `integer` | No | Max wait time in ms (default 1000, max 10000) (Default: `1000`) |
+|------|------|----------|-------------|
+| `proc_id` | `string` | ✓ | Process ID |
+| `timeout_ms` | `integer` |  | Max wait time in ms (default 1000, max 10000) (default: `1000`) |
 
 ---
 
 ## `linux_proc_send`
+
 Send input to a managed process. Newline appended automatically.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `proc_id` | `string` | Yes | Process ID from proc_start |
-| `input` | `string` | Yes | Text to send to the process |
+|------|------|----------|-------------|
+| `proc_id` | `string` | ✓ | Process ID from proc_start |
+| `input` | `string` | ✓ | Text to send to the process |
 
 ---
 
 ## `linux_proc_start`
+
 Start an interactive process/REPL. Returns proc_id for subsequent send/read/stop.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `command` | `string` | Yes | Command to run (e.g. 'python -i', 'bash', 'node') |
-| `cwd` | `string` | No | Working directory (optional) |
-| `initial_read_timeout_ms` | `integer` | No | Time to wait for initial output (default 1000) (Default: `1000`) |
+|------|------|----------|-------------|
+| `command` | `string` | ✓ | Command to run (e.g. 'python -i', 'bash', 'node') |
+| `cwd` | `string` |  | Working directory (optional) |
+| `initial_read_timeout_ms` | `integer` |  | Time to wait for initial output (default 1000) (default: `1000`) |
 
 ---
 
 ## `linux_proc_stop`
+
 Stop a managed process and clean up.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `proc_id` | `string` | Yes | Process ID to stop |
-| `signal` | `string` | No | Signal to send (default TERM) Allowed: `['TERM', 'KILL', 'INT', 'HUP']` (Default: `TERM`) |
+|------|------|----------|-------------|
+| `proc_id` | `string` | ✓ | Process ID to stop |
+| `signal` | `string` |  | Signal to send (default TERM) Values: `['TERM', 'KILL', 'INT', 'HUP']` (default: `TERM`) |
 
 ---
 
 ## `linux_sys_snapshot`
+
 Get system resource snapshot: CPU, memory, disk usage, and load average.
 
-### Arguments
-_No arguments._
+_No parameters_
 
 ---
 
 ## `list_dir`
+
 List contents of a directory. Returns files and subdirectories.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | Absolute or relative path to directory |
-| `max_entries` | `integer` | No | Maximum entries to return (default 1000) (Default: `1000`) |
-| `include_hidden` | `boolean` | No | Include hidden files (starting with .) (Default: `False`) |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | Absolute or relative path to directory |
+| `max_entries` | `integer` |  | Maximum entries to return (default 1000) (default: `1000`) |
+| `include_hidden` | `boolean` |  | Include hidden files (starting with .) (default: `False`) |
 
 ---
 
 ## `rag_lineage`
+
 Trace symbol dependency lineage (upstream/downstream).
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | `string` | Yes | Symbol name to trace |
-| `direction` | `string` | No | Trace direction: upstream (what calls this) or downstream (what this calls) Allowed: `['upstream', 'downstream', 'callers', 'callees']` (Default: `downstream`) |
-| `limit` | `integer` | No | Max results to return (default 50) (Default: `50`) |
+|------|------|----------|-------------|
+| `symbol` | `string` | ✓ | Symbol name to trace |
+| `direction` | `string` |  | Trace direction: upstream (what calls this) or downstream (what this calls) Values: `['upstream', 'downstream', 'callers', 'callees']` (default: `downstream`) |
+| `limit` | `integer` |  | Max results to return (default 50) (default: `50`) |
 
 ---
 
 ## `rag_plan`
+
 Analyze query routing and retrieval plan without executing search. Shows how LLMC would handle the query.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `query` | `string` | Yes | Query to analyze |
-| `detail_level` | `string` | No | Level of detail in response (default: summary) Allowed: `['summary', 'full']` (Default: `summary`) |
+|------|------|----------|-------------|
+| `query` | `string` | ✓ | Query to analyze |
+| `detail_level` | `string` |  | Level of detail in response (default: summary) Values: `['summary', 'full']` (default: `summary`) |
 
 ---
 
 ## `rag_query`
+
 Query the RAG system via the Tool Envelope.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `query` | `string` | Yes | The search query |
-| `k` | `integer` | No | Number of results to return (default 5) |
-| `index` | `string` | No | Specific index to query (optional) |
-| `filters` | `object` | No | Metadata filters (optional) |
+|------|------|----------|-------------|
+| `query` | `string` | ✓ | The search query |
+| `k` | `integer` |  | Number of results to return (default 5) |
+| `index` | `string` |  | Specific index to query (optional) |
+| `filters` | `object` |  | Metadata filters (optional) |
 
 ---
 
 ## `rag_search`
+
 Search LLMC RAG index for relevant code/docs. Returns ranked snippets with provenance.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `query` | `string` | Yes | Natural language query or code concept to search for |
-| `scope` | `string` | No | Search scope: repo (code), docs, or both Allowed: `['repo', 'docs', 'both']` (Default: `repo`) |
-| `limit` | `integer` | No | Max results to return (1-20) (Default: `5`) |
+|------|------|----------|-------------|
+| `query` | `string` | ✓ | Natural language query or code concept to search for |
+| `scope` | `string` |  | Search scope: repo (code), docs, or both Values: `['repo', 'docs', 'both']` (default: `repo`) |
+| `limit` | `integer` |  | Max results to return (1-20) (default: `5`) |
 
 ---
 
 ## `rag_search_enriched`
+
 Advanced RAG search with graph-based relationship enrichment. Supports multiple enrichment modes for semantic + relationship-aware retrieval.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `query` | `string` | Yes | Natural language query or code concept to search for |
-| `limit` | `integer` | No | Max results to return (1-20) (Default: `5`) |
-| `enrich_mode` | `string` | No | Enrichment strategy: vector (semantic only), graph (relationships), hybrid (both), auto (intelligent routing) Allowed: `['vector', 'graph', 'hybrid', 'auto']` (Default: `auto`) |
-| `graph_depth` | `integer` | No | Relationship traversal depth (0-3). Higher values find more distant relationships (Default: `1`) |
-| `include_features` | `boolean` | No | Include enrichment quality metrics in response meta (Default: `False`) |
+|------|------|----------|-------------|
+| `query` | `string` | ✓ | Natural language query or code concept to search for |
+| `limit` | `integer` |  | Max results to return (1-20) (default: `5`) |
+| `enrich_mode` | `string` |  | Enrichment strategy: vector (semantic only), graph (relationships), hybrid (both), auto (intelligent routing) Values: `['vector', 'graph', 'hybrid', 'auto']` (default: `auto`) |
+| `graph_depth` | `integer` |  | Relationship traversal depth (0-3). Higher values find more distant relationships (default: `1`) |
+| `include_features` | `boolean` |  | Include enrichment quality metrics in response meta (default: `False`) |
 
 ---
 
 ## `rag_stats`
+
 Get statistics about the RAG graph and enrichment coverage.
 
-### Arguments
-_No arguments._
+_No parameters_
 
 ---
 
 ## `rag_where_used`
+
 Find where a symbol is used (callers, imports) across the codebase.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `symbol` | `string` | Yes | Symbol name to find usages of |
-| `limit` | `integer` | No | Max results to return (default 50) (Default: `50`) |
+|------|------|----------|-------------|
+| `symbol` | `string` | ✓ | Symbol name to find usages of |
+| `limit` | `integer` |  | Max results to return (default 50) (default: `50`) |
 
 ---
 
 ## `read_file`
+
 Read contents of a file. Returns text content with metadata.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | Absolute or relative path to file |
-| `max_bytes` | `integer` | No | Maximum bytes to read (default 1MB) (Default: `1048576`) |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | Absolute or relative path to file |
+| `max_bytes` | `integer` |  | Maximum bytes to read (default 1MB) (default: `1048576`) |
 
 ---
 
 ## `repo_read`
+
 Read a file from a repository via the Tool Envelope.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `root` | `string` | Yes | Root path of the repository |
-| `path` | `string` | Yes | Relative path to the file |
-| `max_bytes` | `integer` | No | Maximum bytes to read (optional) |
+|------|------|----------|-------------|
+| `root` | `string` | ✓ | Root path of the repository |
+| `path` | `string` | ✓ | Relative path to the file |
+| `max_bytes` | `integer` |  | Maximum bytes to read (optional) |
 
 ---
 
 ## `run_cmd`
+
 Execute a shell command with blacklist validation and timeout. Only approved binaries can run.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `command` | `string` | Yes | Shell command to execute (blocked commands will be rejected) |
-| `timeout` | `integer` | No | Max execution time in seconds (default 30) (Default: `30`) |
+|------|------|----------|-------------|
+| `command` | `string` | ✓ | Shell command to execute (blocked commands will be rejected) |
+| `timeout` | `integer` |  | Max execution time in seconds (default 30) (default: `30`) |
 
 ---
 
 ## `stat`
+
 Get file or directory metadata (size, timestamps, permissions).
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `path` | `string` | Yes | Absolute or relative path |
+|------|------|----------|-------------|
+| `path` | `string` | ✓ | Absolute or relative path |
 
 ---
 
 ## `te_run`
+
 Execute a shell command through the Tool Envelope (TE) wrapper. Returns structured JSON output.
 
-### Arguments
+### Parameters
+
 | Name | Type | Required | Description |
-|---|---|---|---|
-| `args` | `array` | Yes | Command arguments (e.g. ['grep', 'pattern', 'file']) |
-| `cwd` | `string` | No | Optional working directory (must be within allowed roots) |
-| `timeout` | `number` | No | Execution timeout in seconds |
+|------|------|----------|-------------|
+| `args` | `array` | ✓ | Command arguments (e.g. ['grep', 'pattern', 'file']) |
+| `cwd` | `string` |  | Optional working directory (must be within allowed roots) |
+| `timeout` | `number` |  | Execution timeout in seconds |
 
 ---

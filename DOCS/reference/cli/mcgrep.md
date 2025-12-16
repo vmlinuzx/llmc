@@ -1,34 +1,35 @@
-# llmc-mcp
+# mcgrep
 
-MCP server for Claude Desktop integration
+Semantic grep with RAG context
 
-**Module:** `llmc_mcp.cli`
+**Module:** `llmc.mcgrep`
 
 ## Usage
 
 ```text
                                        
- Usage: llmc-mcp [OPTIONS] COMMAND     
+ Usage: mcgrep [OPTIONS] COMMAND       
  [ARGS]...                             
                                        
- LLMC MCP Server management CLI        
+ Semantic grep for code. Private.      
+ Local. No cloud.                      
                                        
 ╭─ Options ───────────────────────────╮
 │ --help          Show this message   │
 │                 and exit.           │
 ╰─────────────────────────────────────╯
 ╭─ Commands ──────────────────────────╮
-│ start      Start the MCP daemon.    │
-│ stop       Stop the MCP daemon.     │
-│ restart    Restart the MCP daemon.  │
-│ status     Show daemon status.      │
-│ logs       Show daemon logs.        │
-│ show-key   Display the API key for  │
-│            connecting to the        │
-│            daemon.                  │
-│ health     Quick health check (for  │
-│            scripts, exit code 0 =   │
-│            healthy).                │
+│ search   Semantic search over your  │
+│          codebase.                  │
+│ watch    Start background indexer   │
+│          (alias for 'llmc service   │
+│          start').                   │
+│ status   Check index health and     │
+│          freshness.                 │
+│ init     Register the current       │
+│          directory with LLMC.       │
+│ stop     Stop the background        │
+│          indexer.                   │
 ╰─────────────────────────────────────╯
 
 ```
