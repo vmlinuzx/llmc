@@ -4,6 +4,9 @@ Security tests for path traversal vulnerabilities.
 These tests verify that malicious path inputs are properly blocked.
 """
 
+import pytest
+from pathlib import Path
+from llmc.docgen.gating import resolve_doc_path
 
 
 def test_path_traversal_basic():
@@ -45,7 +48,7 @@ def test_relative_path_normalization():
         pass
 
 
-def test_null_byte_injection():
+def test_null_byte_injection(tmp_path):
     """Test null byte injection in paths is blocked."""
     null_byte_paths = [
         "valid.txt\x00../../../../etc/passwd",
@@ -53,8 +56,8 @@ def test_null_byte_injection():
     ]
     
     for _path in null_byte_paths:
-        # TODO: Verify null bytes are rejected
-        pass
+        with pytest.raises(ValueError, match="embedded null"):
+            resolve_doc_path(tmp_path, Path(_path))
 
 
 def test_absolute_path_outside_repo():
