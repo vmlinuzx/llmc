@@ -43,14 +43,11 @@ llmc-cli service status
 
 Output example:
 ```text
-Status: 🟢 running (PID 12345)
-Repos tracked: 2
+✅ Service: RUNNING (PID 12345)
 
-  📁 llmc
-     Path: /home/user/src/llmc
-     Spans: 450
-     Enriched: 448
-     Embedded: 448
+📂 Registered repos: 2
+   • /home/user/src/llmc
+     ✅ 45 files, 450 spans | Enriched: 100% | Embedded: 100% | Quality: ✅ 95%
 ```
 
 ---
@@ -110,13 +107,17 @@ If you need to access the raw log files:
 
 ### Health Checks
 
-To verify that the daemon can connect to your LLM provider (e.g., Ollama):
+To perform a comprehensive health check of the system (including LLM connectivity, RAG index integrity, and service status):
 
 ```bash
-llmc-cli service health
+llmc debug doctor
 ```
 
-This checks connectivity to the endpoints defined in your configuration.
+To check the service status and see a summary of tracked repositories:
+
+```bash
+llmc-cli service status
+```
 
 ---
 
