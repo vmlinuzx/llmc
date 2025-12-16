@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-_Generated: 2025-12-16 16:04_
+_Generated: 2025-12-16 16:14_
 
 LLMC exposes **27 tools** via the Model Context Protocol.
 

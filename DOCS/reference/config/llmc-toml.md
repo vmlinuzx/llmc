@@ -1,6 +1,6 @@
 # llmc.toml Reference
 
-_Generated from `llmc.toml` on 2025-12-16 16:04_
+_Generated from `llmc.toml` on 2025-12-16 16:14_
 
 This is an auto-generated reference of all configuration keys.
 For a human-friendly guide, see [Configuration Guide](../../user-guide/configuration.md).
