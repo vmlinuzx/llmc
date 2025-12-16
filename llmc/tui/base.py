@@ -106,8 +106,11 @@ class LLMCScreen(Screen):
 
     def action_goto_ruta(self) -> None:
         """Switch to RUTA testing screen."""
-        # TODO: Implement RUTAScreen
-        self.notify("RUTA screen coming soon", severity="information")
+        try:
+            from llmc.tui.screens.ruta import RUTAScreen
+            self.app.switch_screen(RUTAScreen())
+        except ImportError as e:
+            self.notify(f"RUTA screen not available: {e}", severity="warning")
 
     def action_goto_analytics(self) -> None:
         """Switch to analytics screen."""
