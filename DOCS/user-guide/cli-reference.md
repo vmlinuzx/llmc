@@ -798,6 +798,6 @@ llmc service logs --lines 100
 
 ## See Also
 
-- [SDD: Unified CLI v2](../planning/SDD_Unified_CLI_v2.md) - Design document
+- [SDD: Unified CLI v2](../legacy/planning_dec2025/SDD_Unified_CLI_v2.md) - Design document
 - [AGENTS.md](../../AGENTS.md) - Agent protocols and workflows
-- [ROADMAP.md](../ROADMAP.md) - Project roadmap
+- [ROADMAP.md](../planning/roadmap.md) - Project roadmap
