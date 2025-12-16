@@ -1,84 +1,146 @@
 # RAG Daemon Operations
 
-The **RAG Daemon** (`llmc-rag-daemon`) is the heartbeat of LLMC. It runs in the background to ensure your repository indexes stay fresh and synchronized with your code.
+The LLMC RAG Daemon (`llmc-rag-service`) is a background process responsible for keeping your semantic index fresh. It monitors registered repositories for changes, enriches new code with LLM-generated summaries, and updates the vector database.
 
-## 1. Architecture
+For most users, the daemon is managed via the unified `llmc-cli`.
 
-The daemon operates as a **Scheduler + Worker** model:
-- **Scheduler**: Wakes up every few seconds (the "tick") to check if any registered repositories need work.
-- **Workers**: Executes tasks like `index`, `embed`, or `enrich` in a thread pool.
+---
 
-It is typically managed by the **Service Wrapper** (`llmc-rag-service`), which handles PID files, logging, and backgrounding.
+## Daemon Management
 
-## 2. Managing the Service
+The daemon runs as a user-level background service. It is designed to be lightweight (~0% CPU when idle) and event-driven.
 
-We recommend using the `llmc-rag-service` CLI for day-to-day operations.
+### Starting the Daemon
 
-### Start
+To start the daemon:
+
 ```bash
-# Start in the background (daemon mode)
-llmc-rag-service start --interval 300 --daemon
-
-# Start in the foreground (for debugging)
-llmc-rag-service start
+llmc-cli service start
 ```
 
-### Stop
+This command will:
+1.  Check if any repositories are registered.
+2.  Install a systemd user unit (`llmc-rag.service`) if available.
+3.  Start the service in the background.
+
+**Note:** If `systemd` is not available (e.g., inside some Docker containers or on macOS without launchd integration), it will fall back to a detached background process.
+
+### Stopping the Daemon
+
+To stop the service:
+
 ```bash
-llmc-rag-service stop
+llmc-cli service stop
 ```
 
-### Status
+### Checking Status
+
+To check if the service is running and view the status of tracked repositories:
+
 ```bash
-llmc-rag-service status
+llmc-cli service status
 ```
-Output:
+
+Output example:
 ```text
-Service is running (PID 12345)
-Managed repos:
-  - /home/user/src/llmc
-  - /home/user/src/webapp
+Status: 🟢 running (PID 12345)
+Repos tracked: 2
+
+  📁 llmc
+     Path: /home/user/src/llmc
+     Spans: 450
+     Enriched: 448
+     Embedded: 448
 ```
 
-## 3. Configuration
+---
 
-The daemon is configured via `~/.llmc/rag-daemon.yml`. If this file doesn't exist, it uses safe defaults.
+## Configuration
 
-**Key Settings:**
+The daemon is configured via the `[daemon]` section of your global `llmc.toml` (usually in the root of your workspace or project).
 
-```yaml
-# How often (seconds) to check for file changes
-tick_interval: 300
+### Key Settings
 
-# Max concurrent jobs (indexing/embedding)
-concurrency: 2
+```toml
+[daemon]
+# Service Mode: "event" (inotify) or "poll" (legacy)
+mode = "event"
 
-# Where to store logs and state
-log_dir: "~/.llmc/logs"
-state_db: "~/.llmc/rag-service.json"
+# Event-Driven Settings
+debounce_seconds = 2.0             # Wait 2s after last file change before processing
+housekeeping_interval = 300        # Run maintenance (vacuum, logs) every 5 minutes
+
+# Idle Enrichment (runs when no file changes are detected)
+[daemon.idle_enrichment]
+enabled = true
+batch_size = 10
+interval_seconds = 600             # Minimum 10 minutes between idle runs
+max_daily_cost_usd = 1.00          # Budget cap for cloud models
 ```
 
-To see the *effective* configuration (defaults + file overrides):
+### Modes
+
+-   **Event Mode (`mode = "event"`):** Uses `inotify` to watch for file system events. This is the recommended mode as it uses negligible CPU when idle.
+-   **Poll Mode (`mode = "poll"`):** Periodically scans the file system. Use this only if `inotify` is unavailable or if you are on a file system that doesn't support events (e.g., some network mounts).
+
+---
+
+## Logging & Monitoring
+
+### Viewing Logs
+
+To view the service logs in real-time:
+
 ```bash
-llmc-rag-daemon config --json
+llmc-cli service logs -f
 ```
 
-## 4. Troubleshooting
+This wraps `journalctl` (on systemd systems) or `tail -f` (on others).
 
-### Daemon Doctor
-Run the doctor command to check for permissions, path issues, or configuration errors.
+### Log Locations
+
+If you need to access the raw log files:
+
+-   **Systemd (Linux):** Managed by journald.
+    ```bash
+    journalctl --user -u llmc-rag.service
+    ```
+-   **File Fallback:** `~/.llmc/logs/rag-daemon/rag-service.log`
+-   **Structured Logs:** `logs/` directory in your project root (if configured in `[logging]`).
+
+### Health Checks
+
+To verify that the daemon can connect to your LLM provider (e.g., Ollama):
+
 ```bash
-llmc-rag-daemon doctor
+llmc-cli service health
 ```
 
-### Logs
-Logs are written to `~/.llmc/logs/rag-daemon.log`.
-- **INFO**: Normal cycle updates ("Synced 5 files").
-- **ERROR**: Job failures or crashes.
+This checks connectivity to the endpoints defined in your configuration.
 
-### Clearing Failures
-If a repo gets stuck in a failure loop (e.g., due to a syntax error crashing the indexer), you can clear its failure state:
+---
+
+## Service Integration
+
+### Linux (Systemd)
+
+On Linux systems with `systemd`, the daemon automatically installs a user service unit at:
+`~/.config/systemd/user/llmc-rag.service`
+
+**Auto-start on Login:**
+
+To ensure the daemon starts automatically when you log in:
 
 ```bash
-llmc-rag-service clear-failures --repo /path/to/repo
+llmc-cli service enable
 ```
+
+To disable auto-start:
+
+```bash
+llmc-cli service disable
+```
+
+### macOS / Other
+
+On macOS or systems without `systemd`, the `llmc-cli service start` command uses a fallback mechanism (process forking). Currently, native `launchd` integration is not automatically installed by the CLI, but the fallback mode is sufficient for most session-based usage.
