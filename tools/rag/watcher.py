@@ -19,6 +19,8 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+import pathspec
+
 # inotify support (Linux only)
 try:
     import pyinotify
@@ -55,21 +57,25 @@ class FileFilter:
     
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root
-        self._gitignore_patterns: list[str] = []
+        self.spec = None
         self._load_gitignore()
     
     def _load_gitignore(self) -> None:
         """Load .gitignore patterns from repo root."""
         gitignore_path = self.repo_root / '.gitignore'
+        patterns = []
         if gitignore_path.exists():
             try:
                 with open(gitignore_path, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if line and not line.startswith('#'):
-                            self._gitignore_patterns.append(line)
+                    patterns = list(f)
             except Exception:
                 pass  # Ignore gitignore parse errors
+
+        try:
+            self.spec = pathspec.PathSpec.from_lines('gitwildmatch', patterns)
+        except Exception:
+            # Fallback to empty spec if something goes wrong
+            self.spec = pathspec.PathSpec.from_lines('gitwildmatch', [])
     
     def should_ignore(self, path: Path) -> bool:
         """Return True if path should be ignored."""
@@ -79,17 +85,15 @@ class FileFilter:
             if part in ALWAYS_IGNORE:
                 return True
         
-        # Check gitignore patterns (simplified - not full gitignore spec)
-        try:
-            rel_path = path.relative_to(self.repo_root)
-            rel_str = str(rel_path)
-            for pattern in self._gitignore_patterns:
-                if fnmatch.fnmatch(rel_str, pattern):
+        # Check gitignore patterns
+        if self.spec:
+            try:
+                rel_path = path.relative_to(self.repo_root)
+                # pathspec works best with string paths
+                if self.spec.match_file(rel_path.as_posix()):
                     return True
-                if fnmatch.fnmatch(path.name, pattern):
-                    return True
-        except ValueError:
-            pass  # Path not relative to repo root
+            except ValueError:
+                pass  # Path not relative to repo root
         
         return False
 
