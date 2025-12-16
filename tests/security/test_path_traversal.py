@@ -4,6 +4,9 @@ Security tests for path traversal vulnerabilities.
 These tests verify that malicious path inputs are properly blocked.
 """
 
+import pytest
+from pathlib import Path
+from llmc.docgen.gating import resolve_doc_path
 
 
 def test_path_traversal_basic():
@@ -57,17 +60,18 @@ def test_null_byte_injection():
         pass
 
 
-def test_absolute_path_outside_repo():
+def test_absolute_path_outside_repo(tmp_path):
     """Test absolute paths outside repo are rejected."""
+    repo_root = tmp_path
     absolute_paths = [
         "/etc/passwd",
         "/root/.ssh/id_rsa",
         "/tmp/evil",
     ]
     
-    for _path in absolute_paths:
-        # TODO: Verify absolute paths outside repo are blocked
-        pass
+    for path_str in absolute_paths:
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            resolve_doc_path(repo_root, Path(path_str))
 
 
 # Example of a complete security test pattern
