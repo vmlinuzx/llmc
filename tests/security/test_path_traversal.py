@@ -51,6 +51,18 @@ def test_symlink_traversal(tmp_path):
     with pytest.raises(ValueError, match="outside repository root"):
         validate_source_path(repo_root, Path("evil_link.py"))
 
+    # Test symlinked directory
+    outside_dir = tmp_path / "outside_dir"
+    outside_dir.mkdir()
+    symlink_dir = repo_root / "evil_dir_link"
+    try:
+        os.symlink(outside_dir, symlink_dir)
+    except OSError:
+        pytest.skip("Symlinks not supported on this platform")
+
+    with pytest.raises(ValueError, match="outside repository root"):
+        validate_source_path(repo_root, Path("evil_dir_link"))
+
 
 def test_relative_path_normalization(tmp_path):
     """Test that paths are normalized before validation."""
