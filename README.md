@@ -1,155 +1,130 @@
-# LLMC - The Large Language Model Compressor
+<div align="center">
+  <img src="DOCS/grace/grace1.png" alt="LLMC Logo" width="100%" />
 
-**Stop burning money on LLM tokens.** Get 70-95% cost reduction through local RAG and intelligent routing.
+  # LLMC: Large Language Model Compressor
 
-## Install (One Line)
+  **Stop burning money on LLM tokens.**
+  <br>
+  Get 70-95% cost reduction through local RAG, intelligent routing, and containerized security.
 
-```bash
-curl -sSL https://raw.githubusercontent.com/vmlinuzx/llmc/main/install.sh | bash
+  [![PyPI version](https://badge.fury.io/py/llmcwrapper.svg)](https://badge.fury.io/py/llmcwrapper)
+  [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+  [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+  [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
+
+</div>
+
+---
+
+## ⚡ What is LLMC?
+
+LLMC is a **local-first RAG (Retrieval Augmented Generation) engine** and intelligent router designed to drastically reduce the cost of using Large Language Models with your codebase.
+
+Instead of sending your entire codebase to Claude or GPT-4, LLMC indexes your code locally, finds the exact relevant snippets (functions, classes, docs), and sends **only what matters**.
+
+```mermaid
+graph LR
+    A[User Query] --> B(LLMC Router);
+    B --> C{Local Index};
+    C -->|Search| D[Relevant Context];
+    D -->|Trim & Pack| E[Optimized Prompt];
+    E --> F[LLM API];
+    F --> G[Answer];
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style E fill:#bfb,stroke:#333,stroke-width:2px
 ```
 
-Or if you prefer pip:
+## 🚀 Quick Start
+
+Get up and running in seconds.
+
+### 1. Install
 ```bash
+# One-line install
+curl -sSL https://raw.githubusercontent.com/vmlinuzx/llmc/main/install.sh | bash
+
+# Or via pip
 pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
 ```
 
-## Quick Start
-
+### 2. Index Your Code
 ```bash
-# Go to your project
 cd /path/to/your/project
-
-# Register it with LLMC
 llmc-cli repo register .
+```
 
-# Search your codebase (no LLM needed!)
+### 3. Save Money
+```bash
+# Search without using ANY tokens
 llmc-cli search "authentication middleware"
 
-# Launch the dashboard
+# Launch the visual dashboard
 llmc-cli tui
 ```
 
-**Current Release:** v0.7.0 "Trust Issues" | [Full CLI Reference](DOCS/CLI_REFERENCE.md)
+---
 
-### What's New in v0.7.0
-- **MCP Hybrid Mode:** Trusted clients (Claude Desktop) get direct host access without Docker overhead. ~76% token reduction vs classic mode.
-- **Simplified Security Model:** Binary trust decision—container for untrusted, host for trusted. Command allowlists are theater; container isolation is real security.
-- **Defense Against Prompt Injection:** Even if an LLM is tricked by poisoned external content, container mode keeps execution sandboxed.
-- **RAG is Inherently Safer:** Searches YOUR local code, not external web content. No external data = no external injection vector.
+## ✨ Key Features
 
+| Feature | Description |
+| :--- | :--- |
+| **💸 Massive Savings** | Reduces token usage by 70-95% by sending only relevant context. |
+| **🔒 Security First** | **New in v0.7.0:** "Hybrid Mode" for trusted clients (host access) vs. Container Isolation for untrusted LLMs. |
+| **🧠 Polyglot RAG** | Smart parsing (TreeSitter) for Python, TS, JS, Go, Java, and technical docs. |
+| **🕸️ GraphRAG** | Understands your code structure (imports, calls, inheritance) to find related files automatically. |
+| **🖥️ TUI Dashboard** | A beautiful terminal UI to monitor indexing, search results, and costs in real-time. |
+| **🔌 MCP Support** | Full Model Context Protocol server to integrate seamlessly with Claude Desktop. |
 
-Originally created by David Carroll, the worst paragliding pilot in the TX Panhandle 8 years running when he crashed out after burning through his weekly limits on his subscriptions, and decided to find a way to lower usage. This is it.
+---
 
-This project was originally just me wanting to learn how to set a RAG up because I kept getting crushed by token usage in Claude when using Desktop Commander. Then I thought.. I can do better, so I started reading research papers, and things just got out of hand. The system is built to create massive token, context, and inference savings while working with an LLM in a repo. It supports **Python, JavaScript, TypeScript, Go, Java, Markdown, and Technical Documentation** (API docs, man pages, config references) with full semantic parsing via TreeSitter. You should see between 70 and 95 percent reduction in token usage in a long session by using LLMC. I can feel when I'm not using it because LLM's work much slower, context poison themselves more, context window fills much faster, etc.
+## 🔍 Deep Dive
 
+<details>
+<summary><strong>🛠️ Core RAG Engine</strong></summary>
 
-Brief what this repo does: A small set of CLIs and services that keep the users different project repos indexed, enriched, and queryable via RAG designed to utilize local smaller agents to drive down LLM usage costs, and make big LLM's "smarter".
+*   **Local SQLite Index:** Stores text + metadata without external dependencies.
+*   **Smart Embeddings:** Caches embeddings to avoid re-computing unchanged files.
+*   **Context Trimmer:** Packs the most relevant spans into a fixed token budget.
+*   **Enrichment:** Uses small local models to tag and summarize code for better retrieval.
 
+</details>
 
-Capabilities:
+<details>
+<summary><strong>🛡️ Security & MCP</strong></summary>
 
-- **Polyglot Domain Support:** Works with code AND documentation repositories.
-    - Code domains: Python, JavaScript, TypeScript, Go, Java with full TreeSitter parsing.
-    - Documentation domains: Technical docs, API references, man pages, config references with heading-aware chunking.
-    - Mixed repos: Automatically detects and routes content to appropriate extractors.
-    - Domain config: Set `[repository] domain = "code" | "tech_docs" | "mixed"` in `llmc.toml`.
+*   **Hybrid Mode:** Trusted clients get direct host access (~76% cheaper than docker overhead).
+*   **Container Isolation:** Untrusted inputs run in Docker/nsjail.
+*   **Defense in Depth:** Even if an LLM is "jailbroken" by prompt injection, it can't escape the container.
 
-- Core RAG in sqlite engine: Local, file based RAG index that keeps a repo's code and docs searchable without calling an LLM.
-    - Index: Scans the repo, slices files into logical spans (functions, classes, headings, sections), and stores text plus metadata in a sqlite database with full text search tables.
-    - Sync: Keeps the index up to date by applying incremental changes from git diffs or explicit file lists instead of re indexing everything.
-    - Embeddings: Turns spans into vector embeddings using a configured embedding backend, caches them in sqlite, and skips recompute when the source text has not changed.
-    - Enrichment (LLM call): Calls the configured enrichment backends to generate summaries, tags, and other metadata that make search and ranking smarter.
-    - Planner/context trimmer: Takes a query plus candidate spans and packs the best ones into a fixed context budget so prompts stay small and relevant.
-    - Search CLI: Provides command line commands to run semantic and keyword search, where used, lineage search, stats, and benchmarks directly against the local index.
-    - Analytics and benchmarks: Offers simple checks so you can sanity check embedding quality, ranking behavior, and index health.
+</details>
 
-- Schema graph and GraphRAG: Builds and uses a code level graph so LLMC can see how things are wired together.
-    - Schema extraction: Parses code into entities (functions, classes, modules, etc.), captures relationships like calls, imports, extends, etc., then writes a graph manifest file under .llmc.
-    - Graph store: Keeps an in memory adjacency map so tools can walk neighbors, limit hops, and filter edges quickly.
-    - Graph aware query enrichment: Detects when a query is about a symbol or module, finds the relevant entities, and pulls in their graph neighbors as extra context for RAG.
-    - Nav metadata: Tracks graph version, last built commit, and freshness stamps so other tools can see if the graph is fresh enough to trust.
+<details>
+<summary><strong>📊 Analytics & Routing</strong></summary>
 
-- RAG Nav and freshness routing: High level tools that sit in front of RAG and decide when and how to use the index.
-    - Freshness envelopes: Tracks how fresh slices are compared to the current repo, and refuses to return stale slices instead of lying to LLMs.
-    - Fallback logic: When RAG is too stale or missing, recommends falling back to live repo reads or direct file inspection instead of pretending everything is fine.
-    - Status reporting: Exposes per repo freshness, coverage, and error counts so you can see when something is broken or drifting.
-    - Graph aware RAG tools: Implements search, where used, and lineage with both index and graph knowledge so answers include both content and structure.
+*   **Intelligent Failover:** Cascades from Local → Cheap Cloud → Premium Models.
+*   **Cost Tracking:** Hard budget caps to prevent surprise bills.
+*   **Rate Limiting:** Automatic token bucket throttling for API providers.
 
-- Daemon and service layer: Background workers that keep things fresh without you having to babysit.
-    - llmc service: Human facing CLI for registering repos, starting/stopping refresh loops, and checking status from the shell.
-    - llmc-rag-daemon: Lower level scheduler loop that walks registered repos and runs index/embed/enrich work according to config.
-    - Failure store: Keeps track of failed jobs in a sqlite db so you can inspect, debug, and clear them instead of silently dropping errors.
-    - Tick and doctor commands: Let you run one off checks or a single scheduler tick to debug without committing to a full daemon loop.
+</details>
 
-- Repo registry and workspace safety: Helps LLMC know which repos exist and where their workspaces live.
-    - Repo registry: Stores a list of repos, their normalized paths, and basic metadata in a small yaml file under ~/.llmc.
-    - Workspace helpers: Uses a workspace helper module to map repos to .llmc directories safely, and to avoid unsafe path traversal.
-    - Snapshot and clean helpers: Offers commands to snapshot and clean workspaces, with force flags and clear error codes to avoid footguns.
-    - Doctor paths: Shows what paths are allowed or blocked for a workspace, making it easier to debug weird path issues.
+---
 
-- Desktop Commander and MCP integration: Lets other tools treat LLMC as a safe, documented set of RAG and graph tools.
-    - Tool manifest: Documents tools like search, where used, lineage, and status so agents know how to call them and what to expect back.
-    - JSON envelopes: Returns structured JSON with spans, paths, scores, and freshness flags instead of dumping big blobs of text.
-    - Safety constraints: Follows explicit policies about what paths can be read, what repos can be touched, and what side effects are allowed.
-    - Agent friendly defaults: Designs tools to be composable, so agents can chain a few calls to explore code, plan refactors, or answer questions.
+## 📜 History
 
-- **MCP Security Model:** Defense-in-depth against prompt injection and malicious agents.
-    - **Container Isolation:** Untrusted LLM clients run in Docker/K8s/nsjail. Even if an LLM is tricked by poisoned external content (e.g., compromised documentation with hidden instructions), code execution stays sandboxed.
-    - **Hybrid Mode for Trusted Clients:** Claude Desktop and other trusted clients can run in `hybrid` mode with direct host access—no container overhead, full write capability.
-    - **Binary Trust Decision:** Security isn't command allowlists (that's theater). If you give an LLM bash, they can do anything. Real security is choosing container vs. host access.
-    - **RAG is Inherently Safer:** Unlike tools that fetch external web content, LLMC's RAG searches YOUR local indexed code. No external data means no external prompt injection vector.
-    - **New in v0.7.0:** "Trust Issues" release simplified the security model. Configure via `[mcp] mode = "hybrid"` or `mode = "classic"` in `llmc.toml`.
+Originally created by David Carroll (the worst paragliding pilot in the TX Panhandle) after burning through his weekly API limits in days. This tool was born from the necessity to code more while spending less.
 
-- Router, LLM chains, and enrichment control: The layer that decides which model to use for which job.
-    - Model registry: Lets you configure multiple model backends (local Qwen, remote MiniMax, etc.) with URLs, timeouts, and options.
-    - Enrichment chains: Defines chains of models to use for enrichment, including fallback chains when one model fails or times out.
-    - Latin 1 safety: Supports enforcing latin 1 safe enrichment so weird unicode or binary junk does not poison the index.
-    - Cost awareness: Encourages using small, cheap models for most work and reserving bigger, slower models for special or complex chains.
+---
 
-- Remote LLM Provider Support: Production-grade support for commercial API providers with reliability patterns.
-    - Multi-provider support: Works with Gemini, OpenAI, Anthropic Claude, Groq, and any OpenAI-compatible API.
-    - Intelligent failover: Configure tiered cascades (local → cheap cloud → premium) for maximum reliability and cost efficiency.
-    - Rate limiting: Token bucket implementation respects RPM and TPM limits automatically, preventing quota violations.
-    - Circuit breaker: Fails fast after repeated errors, with automatic recovery testing.
-    - Cost tracking: Track daily and monthly API spending with hard budget caps to prevent surprise bills.
-    - Retry middleware: Exponential backoff with jitter for transient failures (timeouts, 429s, 5xx errors).
-    - See [Remote LLM Providers Usage Guide](DOCS/Remote_LLM_Providers_Usage.md) for detailed configuration and examples.
+## 🤝 Contributing
 
-- Docgen v2: Deterministic, RAG-aware documentation generation for your codebase.
-    - SHA256 idempotence: Skip unchanged files automatically using content hashing.
-    - RAG integration: Only generate docs for indexed files, prevent stale documentation.
-    - Graph context: Include entity relationships and enrichment data in generated docs.
-    - Flexible backends: Shell scripts, LLM APIs, HTTP services, or MCP integration.
-    - CLI commands: `llmc docs generate` and `llmc docs status` for easy workflows.
-    - Atomic writes: Safe concurrent operation with file locks and atomic file updates.
-    - See [Docgen User Guide](DOCS/Docgen_User_Guide.md) for setup and usage instructions.
+We welcome PRs! Please check `CONTRIBUTING.md` before starting.
 
-- TUI and console UX: A second monitor experience for watching LLMC do its thing.
-    - Textual TUI app: Full screen TUI that lives on a second monitor and shows live panels for system state.
-    - Monitor screen: Shows repo status, graph stats, enrichment counts, and daemon health at a glance.
-    - Search screen: Lets you type a query and run RAG Nav search, where used, and lineage and inspect structured results.
-    - Inspector screen: Shows source for a symbol or file plus enriched metadata and graph neighbors in a split view.
-    - Config screen: Displays key RAG and router config values so you can see which models and settings are active.
-    - Rich console dashboard: Offers a lighter weight console dashboard for quick monitoring without the full TUI.
+1.  Fork the repo
+2.  Create your feature branch (`git checkout -b feature/amazing-feature`)
+3.  Commit your changes (`git commit -m 'Add some amazing feature'`)
+4.  Push to the branch (`git push origin feature/amazing-feature`)
+5.  Open a Pull Request
 
-- Testing, QA, and dev helpers: Guardrails that keep this pile of scripts from quietly rotting.
-    - Test plan docs: Written test plans that spell out what should be covered by unit and integration tests across the stack.
-    - Python test suite: Unit and integration tests for core RAG logic, repo tooling, freshness, adapters, and scripts.
-    - Dev utilities: Helpers for safe rewrites, quality baselines, and focused CLI checks when refactoring.
-    - Quality scripts: Small scripts that exercise critical paths like freshness envelopes and core search paths from the shell.
+---
 
-- Misc utilities and experiments: One off tools that make it easier to use or inspect the system.
-    - Context zip packaging: Bundles the important parts of a repo's .llmc directory plus relevant config and test artifacts into a zip for remote debugging or pairing with another tool.
-    - Log cleaning and compression: Cleans or compresses old logs so LLMC can run for long periods without filling disks.
-    - Prototype web server: Early experiments for exposing LLMC via HTTP; currently considered experimental and not part of the main product surface.
-
-Limitations:
-
-- GraphRAG is strongest for Python and TypeScript: Full entity/relation extraction for Python and TS/JS; other languages and documentation get basic span indexing but not full graph relationships yet.
-- Tech docs support is new: Heading-aware chunking works well, but graph extraction for documentation (REFERENCES, REQUIRES edges) is still in development.
-- Index freshness is bounded by your daemon: If your daemon or service is not running regularly, LLMC will fall back to being conservative and not returning stale slices.
-- RAG Nav tools are opinionated: The system prefers "no answer" to "bad answer", which can feel strict if you are used to LLMs happily hallucinating from junk input.
-- Some config lives in code: Not every knob is exposed in llmc.toml or config files yet; some advanced settings still require code changes.
-- Prototype features are present: Some old experiments (like the web server) still live in the repo but are not wired into the main CLIs by default.
-- There is a little logic to not enrich the same chunk, but the enrichment logic can still be wasteful across a number of runs.  I have the solution for that, but haven't implemented it yet.
-
+_Current Release: v0.7.0 "Trust Issues"_

@@ -632,135 +632,26 @@ We need to decide which philosophy we're actually building for, and design accor
 **Summary:** Implemented `RemoteBackend`, adapters for major providers, circuit breakers, rate limiting, and cost tracking.
 
 
-### 3.7 RUTA - Ruthless User Testing Agent (P3)
+### ~~3.7 RUTA & Testing Demon Army~~ → THUNDERDOME
 
-**Goal:** Automated end-to-end user flow testing through multi-agent simulation, property-based testing, and metamorphic relations.
+**Status:** 🚚 Moved to separate repository
 
-**📄 Design:** [`planning/SDD_RUTA_Ruthless_User_Testing_Agent.md`](planning/SDD_RUTA_Ruthless_User_Testing_Agent.md)
+All multi-agent testing infrastructure (RUTA, Emilia, Testing Demons, Dialectical Autocoding) has been extracted to the **Thunderdome** project.
 
-**Problem:**
-- Manual testing catches obvious bugs, but subtle issues slip through (example: "model" search bug)
-- Need automated detection of:
-  - Tool usage correctness and capability mismatches
-  - Semantically weird failures (queries that should work but silently fail)
-  - Environment lies (claiming tools are available when they're broken/blocked)
-  - User flow regressions across releases
+**📦 Repository:** `~/src/thunderdome/`
 
-**Solution:**
-RUTA uses simulated end users to exercise LLMC through **real public interfaces** (CLI, MCP, TUI, HTTP) and then judges the results:
+This includes:
+- RUTA (Ruthless User Testing Agent)
+- Emilia (Testing Orchestrator)
+- All demon agents (Security, GAP, Performance, Chaos, etc.)
+- Dialectical Autocoding protocols
+- Agent dispatch infrastructure
 
-1. **User Executor Agent** - simulated user completing realistic tasks
-2. **Trace Recorder** - captures all tool calls, prompts, responses, metrics
-3. **Judge Agent** - evaluates runs against properties and metamorphic relations
-4. **Property/Metamorphic Relation Engine (PMRE)** - defines expectations like:
-   - "Adding word 'model' to search must not reduce results to zero"
-   - "Word order swap should give similar results (Jaccard >= 0.5)"
-   - "Tool X must be used for scenario Y"
-5. **Incident Reports** - structured P0-P3 findings with evidence from traces
-
-**Architecture:**
-- Scenario definitions in YAML (`tests/usertests/*.yaml`)
-- JSONL trace logs with tool calls, latencies, errors
-- JSON + Markdown reports for CI and human review
-- CLI: `llmc usertest run --suite <name>`
-
-**Phased Implementation:**
-
-| Phase | Description | Difficulty | Effort | Status |
-|-------|-------------|------------|--------|--------|
-| 0 | Trace recorder + artifact plumbing | 🟢 Easy (3/10) | 4-8h | ✅ Done |
-| 1 | Scenario schema + manual runner | 🟡 Medium (4/10) | 6-10h | ✅ Done |
-| 2 | User Executor Agent | 🟡 Medium (6/10) | 12-16h | ✅ Done |
-| 3 | Judge Agent + basic properties | 🟡 Medium (7/10) | 14-20h | ✅ Done |
-| 4 | Metamorphic testing (PMRE) | 🟡 Medium (7/10) | 14-20h | ✅ Done |
-| 5 | CI integration + gates | 🟡 Medium (5/10) | 8-12h | |
-| 6 | Advanced scenario generation | 🔴 Hard (8/10) | 20-30h | |
-
-**Total Effort:** 78-116 hours (10-14 days)
-
-**Success Criteria:**
-- ✅ Automated detection of "model search" class bugs before production
-- ✅ CI fails on P0 incidents (configurable thresholds)
-- ✅ Rich incident reports with trace evidence
-- ✅ Metamorphic relations for search, enrichment, tool usage
-- ✅ No internal API dependencies (tests use same paths as users)
-
-**Why P3:** 
-- Powerful for regression prevention and quality gates
-- Requires significant upfront investment in agent infrastructure
-- Current manual testing + existing test suite provides baseline coverage
-- Best value when system stabilizes and user flows are well-established
-
-**Complements:**
-- **Ruthless Security Agent** - security posture and sandbox boundaries
-- **Ruthless System Testing Agent** - core functional tests and internal APIs
-- **RUTA** - end-to-end user flows and semantic correctness
-
----
-
-### 3.8 Testing Demon Army (P2)
-
-**Goal:** Autonomous testing infrastructure that finds, documents, and fixes issues with minimal human intervention.
-
-**Architecture:**
-
-```
-                     ┌─────────────────────┐
-                     │      EMILIA         │
-                     │ (Testing Saint /    │
-                     │   Orchestrator)     │
-                     └──────────┬──────────┘
-                                │
-        ┌───────────┬───────────┼───────────┬───────────┐
-        ▼           ▼           ▼           ▼           ▼
-   ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-   │Security │ │  GAP    │ │  Perf   │ │  Chaos  │ │  Deps   │
-   │ Demon   │ │ Demon   │ │ Demon   │ │ Demon   │ │ Demon   │
-   │ (Rem)   │ │ (Rem)   │ │ (NEW)   │ │ (NEW)   │ │ (NEW)   │
-   └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘
-```
-
-**Emilia (Orchestrator):**
-- Schedules demon runs (daily/on-commit)
-- Triages findings by severity
-- Dispatches SDD creation for P0/P1 issues
-- Spawns fixer subagents for automated remediation
-- Generates daily summary reports
-- CLI: `llmc test orchestrate` or `tools/emilia_testing_saint.sh`
-
-**Current Demons (✅ Implemented):**
-
-| Demon | Purpose | Location |
-|-------|---------|----------|
-| **Rem (Security)** | RCE, injection, sandbox escapes | `tools/rem_ruthless_security_agent.sh` |
-| **Rem (Testing)** | Functional/behavioral tests | `tools/rem_ruthless_testing_agent.sh` |
-| **Rem (GAP)** | Untested code, missing coverage | `tools/rem_ruthless_gap_agent.sh` |
-| **MCP Tester** | MCP protocol stress testing | `tools/ruthless_mcp_tester.sh` |
-| **Performance** | Benchmarks, slowdowns, memory leaks | `tools/rem_performance_demon.sh` |
-| **Chaos** | Random failures, timeouts, OOM | `tools/rem_chaos_demon.sh` |
-| **Dependency** | CVE scanning, pip-audit | `tools/rem_dependency_demon.sh` |
-| **Documentation** | Stale docs, broken links | `tools/rem_documentation_demon.sh` |
-| **Config** | Fuzz llmc.toml, edge cases | `tools/rem_config_demon.sh` |
-| **Concurrency** | Race conditions, deadlocks | `tools/rem_concurrency_demon.sh` |
-| **Upgrade** | Migration paths, schema changes | `tools/rem_upgrade_demon.sh` |
-
-**Key Innovation:**
-The GAP demon already implements the full autonomous loop:
-1. **Find** problem → 2. **Create SDD** → 3. **Spawn subagents** → 4. **Write tests/fixes** → 5. **Verify**
-
-**Phased Implementation:**
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 0 | Core demons (Security, Testing, GAP) | ✅ Done |
-| 1 | Emilia orchestrator shell script | ✅ Done |
-| 2 | Performance + Chaos demons | ✅ Done |
-| 3 | Dependency + Config demons | ✅ Done |
-| 4 | Documentation + Concurrency + Upgrade demons | ✅ Done |
-| 5 | Daily CI integration | |
-| 6 | Slack/Discord notifications | |
-
-**Effort:** 4-8 hours per demon | **Total:** 40-60 hours for full army
+**Why Separate:**
+- Testing agents are repo-agnostic (can test any project, not just LLMC)
+- Reduces LLMC repo size and complexity
+- Allows independent versioning and development
+- Thunderdome can orchestrate tests across multiple repos
 
 ---
 
@@ -867,30 +758,28 @@ This goes against the core design assumption of "one enrichment at a time". The 
 
 ---
 
-### 3.9 Architecture Polish & Tech Debt (P3)
+### ~~3.9 Architecture Polish & Tech Debt~~ ✅ DONE (2025-12-16)
 
-**Status:** 🟡 Backlog  
-**Added:** 2025-12-12
+**Status:** ✅ Complete  
+**Added:** 2025-12-12 | **Completed:** 2025-12-16
 
-Collection of architectural improvements identified during code review. System works, but these would improve maintainability.
+Collection of architectural improvements identified during code review.
 
-| Item | Description | Effort | Notes |
-|------|-------------|--------|-------|
-| **🔥 Break Import Cycle: rag ↔ rag_nav** | Create `tools/rag/contracts.py` with shared dataclasses/protocols/enums. Both modules import contracts, neither imports the other. No DB, no logging, no config. | Medium | **Do this first** - cycles compound like interest |
-| **Defer Heavy Imports** | Move `DocgenOrchestrator`, `Database` imports inside functions in `llmc/commands/docs.py` to prevent import-time failures when `[rag]` extras not installed | Low | Prevents CLI crashes for users without optional deps |
-| **Type Discipline in RAG** | Fix `no-any-return`, `Union/None` path errors in `tools/rag/indexer.py`, `inspector.py`, `enrichment_pipeline.py` | Medium-High | Run `mypy --strict tools/rag/` for baseline |
-| **Startup Health Checks** | Add venv/mcp presence check in CLI entry | Low | Warning, not blocker |
-| **Dev Dependencies** | Add `types-toml` to dev deps, consider `shellingham` explicit | Low | Clears mypy stubs |
-| **MCP Test Environment** | Add Makefile target or tox env for `llmc_mcp/` tests with proper deps | Medium | No tests currently in `llmc_mcp/` |
-| **Path Safety Consolidation** | Extract `_normalize_path()` from `inspector.py` to shared `llmc/security.py` | Medium | Pattern exists, needs reuse |
-| **Event Schema Versioning** | Define `EVENT_SCHEMA_VERSION` and golden JSONL fixtures | Medium | Protects downstream consumers |
-| **Clean egg-info Artifacts** | Delete stale `llmcwrapper.egg-info/` dirs (gitignore exists, just need cleanup) | Low | `rm -rf llmcwrapper.egg-info llmcwrapper/llmcwrapper.egg-info` |
-| **Import Hygiene in docs.py** | Exception chaining (`raise ... from err`), ruff auto-fixes | Low | Polish |
-| **Create ARCHITECTURE.md** | Document package overview, data flows, config reference, MCP integration | Medium-High | Missing entirely |
+| Item | Status | Notes |
+|------|--------|-------|
+| ~~Break Import Cycle: rag ↔ rag_nav~~ | ✅ | Renamed `graph.py` → `graph_store.py` to avoid shadowing by `graph/` package |
+| ~~Defer Heavy Imports~~ | ✅ | `DocgenOrchestrator`, `Database` now imported inside functions in `llmc/commands/docs.py` |
+| ~~Dev Dependencies~~ | ✅ | Added `types-toml`, `types-requests`, `mypy`, `ruff`, `pytest-cov` to `[project.optional-dependencies.dev]` |
+| ~~Path Safety Consolidation~~ | ✅ | Created `llmc/security.py` with `normalize_path()` and `PathSecurityError`. `inspector.py` now imports from there. |
+| ~~Clean egg-info Artifacts~~ | ✅ | No stale artifacts found |
+| Type Discipline in RAG | 🔴 Backlog | Run `mypy --strict tools/rag/` for baseline |
+| Startup Health Checks | 🔴 Backlog | Add venv/mcp presence check in CLI entry |
+| MCP Test Environment | 🔴 Backlog | Add Makefile target for `llmc_mcp/` tests |
+| Event Schema Versioning | 🔴 Backlog | Define `EVENT_SCHEMA_VERSION` |
+| Import Hygiene in docs.py | 🔴 Backlog | Exception chaining |
+| ~~Create ARCHITECTURE.md~~ | ✅ | See `DOCS/ARCHITECTURE.md` |
 
-**Why P3:** System is functional. These are quality-of-life improvements that don't affect runtime behavior. Tackle opportunistically or when touching related code.
-
-**Exception:** The import cycle fix (🔥) is worth doing proactively - it's the kind of debt that makes every future refactor feel like defusing a bomb.
+**Summary:** Completed the high-impact items (import cycle, deferred imports, security consolidation, dev deps). Remaining items are pure polish.
 
 ---
 

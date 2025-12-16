@@ -2,6 +2,41 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.7.2] - "Architecture Polish" - 2025-12-16
+
+### Purple Flavor: **Architecture Polish**
+
+Knocked out the tech debt backlog. Import cycles gone, heavy imports deferred, security utilities consolidated, dev deps formalized. The codebase breathes easier now.
+
+### Added
+
+- **`llmc/security.py`:** Shared security module with `normalize_path()` and `PathSecurityError`. Extracted from `tools/rag/inspector.py` for reuse across codebase.
+
+- **`DOCS/ARCHITECTURE.md`:** Comprehensive architecture doc covering package structure, data flows, configuration, design decisions, and module dependencies.
+
+- **Dev Dependencies (`[project.optional-dependencies.dev]`):**
+  - `pytest>=7.4.0`, `pytest-cov>=4.1.0`
+  - `mypy>=1.8.0`, `types-toml>=0.10.0`, `types-requests>=2.31.0`
+  - `ruff>=0.1.0`
+
+### Changed
+
+- **Renamed `graph.py` → `graph_store.py`:** The `graph/` package was shadowing the `graph.py` module, breaking imports of `GraphStore` and `GraphNeighbor`. Renamed the module to avoid the shadow.
+
+- **Deferred Heavy Imports in `llmc/commands/docs.py`:** `DocgenOrchestrator` and `Database` now imported inside functions. CLI loads without `[rag]` extras installed.
+
+- **Updated Roadmap:**
+  - Marked RUTA & Testing Demon Army as moved to Thunderdome (`~/src/thunderdome/`)
+  - Marked Architecture Polish (3.9) as complete
+
+### Fixed
+
+- **Import Cycle `rag ↔ rag_nav`:** Breaking the cycle was simpler than expected - the issue was `graph.py` being shadowed by `graph/` directory. Rename fixed it.
+
+- **Pre-existing Test Failures:** Fixed `test_enrichment*.py` and `test_graph*.py` tests that were failing due to the import shadow.
+
+---
+
 ## [0.7.1] - "Spring Cleaning" - 2025-12-16
 
 ### Purple Flavor: **Spring Cleaning**

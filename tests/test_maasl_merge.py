@@ -10,7 +10,7 @@ import threading
 import pytest
 
 from llmc_mcp.merge_meta import GraphPatch, MergeResult, get_merge_engine
-from tools.rag.graph import GraphStore
+from tools.rag.graph_store import GraphStore
 
 
 @pytest.fixture

@@ -1,16 +1,22 @@
 """
 CLI commands for documentation generation.
+
+Heavy imports (DocgenOrchestrator, Database) are deferred to function-level
+to prevent import-time failures when [rag] extras are not installed.
 """
 
 import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import toml
 import typer
 
 from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docgen_backend
-from llmc.docgen.orchestrator import DocgenOrchestrator
-from tools.rag.database import Database
+
+if TYPE_CHECKING:
+    from llmc.docgen.orchestrator import DocgenOrchestrator
+    from tools.rag.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +69,16 @@ def generate(
         typer.echo("💡 Run `llmc index` first to index the repository", err=True)
         raise typer.Exit(1)
     
+    # Deferred import to allow CLI to load without [rag] extras
+    from tools.rag.database import Database
     db = Database(db_path)
     
     # Get config settings
     output_dir = get_output_dir(toml_data)
     require_rag_fresh = get_require_rag_fresh(toml_data)
+    
+    # Deferred import to allow CLI to load without [rag] extras
+    from llmc.docgen.orchestrator import DocgenOrchestrator
     
     # Create orchestrator
     orchestrator = DocgenOrchestrator(
@@ -161,9 +172,11 @@ def status():
             break
 
     if not db_path:
-        typer.echo(f"❌ RAG database not found", err=True)
+        typer.echo("❌ RAG database not found", err=True)
         raise typer.Exit(1)
     
+    # Deferred import to allow CLI to load without [rag] extras
+    from tools.rag.database import Database
     db = Database(db_path)
     
     # Get stats
@@ -188,7 +201,7 @@ def status():
     typer.echo(f"Coverage:         {doc_count}/{total_files} ({100*doc_count//max(total_files,1)}%)")
 
 
-def _discover_all_files(db: Database) -> list[Path]:
+def _discover_all_files(db: "Database") -> list[Path]:
     """Discover all files in RAG database.
     
     Args:

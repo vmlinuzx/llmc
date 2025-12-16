@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmcwrapper"
-version = "0.7.0"
+version = "0.7.2"
 description = "LLM cost compression through intelligent RAG and multi-tier routing"
 authors = [{name="LLMC Core"}]
 readme = "README.md"
@@ -44,6 +44,14 @@ agent = [
   "httpx>=0.27.0",    # Ollama client
   "click>=8.1.7",     # CLI framework
   # rich already a core dep
+]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "mypy>=1.8.0",
+  "types-toml>=0.10.0",
+  "types-requests>=2.31.0",
+  "ruff>=0.1.0",
 ]
 
 [tool.setuptools]
