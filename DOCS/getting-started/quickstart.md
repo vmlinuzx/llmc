@@ -1,83 +1,86 @@
-# Quickstart Guide
+# Quickstart: 5 Minutes to Search
 
-This guide will walk you through setting up LLMC to index a single repository and perform your first semantic search.
+This guide will get you from zero to your first semantic search in under 5 minutes.
 
-**Prerequisite**: You must have [installed LLMC](installation.md).
+## Prerequisites
+
+Ensure you have installed LLMC.
+
+```bash
+llmc-cli --version
+# Output: llmc-cli 0.1.0
+```
+
+If you haven't installed it yet, check the [Installation Guide](installation.md).
 
 ---
 
-## 1. Register a Repository
+## Step 1: Add a Repository
 
-Tell LLMC which repository you want to index. You can use the `llmc` repo itself as a test case.
-
-```bash
-# Register the current directory (assuming you are in llmc root)
-llmc-rag-repo add $(pwd)
-```
-
-This creates a hidden `.llmc/` directory in the target repo to store local configuration and the RAG index.
-
-## 2. Start the Service
-
-The RAG service handles indexing, embedding, and enrichment in the background.
+First, tell LLMC which code you want to search. Navigate to your project's root directory and register it.
 
 ```bash
-# Register the repo with the service (tells the daemon to watch it)
-llmc-rag-service register $(pwd)
-
-# Start the service in the background
-llmc-rag-service start --daemon
+cd /path/to/your/project
+llmc-cli repo add .
 ```
 
-You can check if it's running:
-```bash
-llmc-rag-service status
+**Expected Output:**
+```text
+✓ Added repository: /path/to/your/project
+  Name: project-name
+  Type: python (detected)
 ```
 
-## 3. Monitor Indexing
+## Step 2: Index Your Code
 
-The indexing process takes a few minutes depending on the repo size. It involves:
-1.  **Scanning** files.
-2.  **Slicing** code into functions and classes.
-3.  **Embedding** text for vector search.
-4.  **Enriching** code with LLM-generated summaries.
-
-You can watch the progress using the TUI:
+Now, generate the index. This process parses your code, splits it into chunks, and generates vector embeddings for semantic search.
 
 ```bash
-llmc-tui
+llmc-cli index
 ```
 
-Look for the "Pending" counts dropping to zero.
+**Expected Output:**
+```text
+Indexing project-name...
+[====================] 100% Parsing files
+[====================] 100% Generating embeddings
+✓ Indexing complete. 142 files processed in 4.2s.
+```
 
-## 4. Run Your First Search
+## Step 3: Search
 
-Once the index is populated, you can ask questions about the codebase.
-
-**Using the CLI:**
+You are ready to search. Unlike `grep`, you can use natural language queries.
 
 ```bash
-# Search for concepts
-python -m tools.rag.cli search --repo $(pwd) "how does the scheduler work"
+llmc-cli search "how is the database configured?"
 ```
 
-**Using the TUI:**
+**Expected Output:**
+```text
+Found 3 relevant results:
 
-1.  Launch `llmc-tui`.
-2.  Navigate to the **Search** tab (press `2`).
-3.  Type your query and press Enter.
+1. src/config/database.py (Score: 0.89)
+----------------------------------------
+def get_db_connection():
+    """Establishes connection using env vars."""
+    return psycopg2.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER")
+    )
 
-## 5. View "Where Used" (Graph)
-
-LLMC also builds a dependency graph. You can check where specific symbols are used.
-
-```bash
-# Find usages of a class or function
-python -m tools.rag.cli where-used --repo $(pwd) "RAGService"
+2. src/main.py (Score: 0.72)
+----------------------------------------
+# Initialize database on startup
+db = get_db_connection()
+migrate(db)
 ```
 
-## Next Steps
+---
 
-- **[Core Concepts](concepts.md)**: Learn about what's happening under the hood.
-- **[Configuration](../user-guide/configuration.md)**: Customize embedding models and enrichment providers.
-- **[MCP Integration](../operations/mcp-integration.md)**: Connect LLMC to Claude Desktop.
+## What's Next?
+
+Now that you have the basics running:
+
+*   **[Core Concepts](concepts.md):** Understand how LLMC "reads" your code.
+*   **[CLI Reference](../user-guide/cli-reference.md):** Explore advanced commands.
+*   **[Configuration](../user-guide/configuration.md):** Customize how LLMC indexes your files.

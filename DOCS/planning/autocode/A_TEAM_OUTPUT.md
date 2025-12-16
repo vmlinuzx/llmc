@@ -1,34 +1,30 @@
-# Phase 2.1 Output: Installation Guide
+# A-Team Output: Phase 2.2
 
-**Date:** 2025-12-16
-**Author:** A-Team
-**Phase:** 2.1 — Installation Guide
+## Scope
+- **Phase:** 2.2 Quickstart Guide
+- **Target:** `DOCS/getting-started/quickstart.md`
+- **Goal:** Create a 5-minute guide for first-time users.
 
----
+## Work Completed
 
-## Sections Written/Revised
+### Files Created
+1.  `DOCS/planning/autocode/REQUIREMENTS.md` (Requirements definition)
+2.  `DOCS/getting-started/quickstart.md` (Target documentation)
 
-1. **Prerequisites:** Added Python 3.10+ and OS requirements.
-2. **Quick Install:** Documented the `curl` installer script method.
-3. **Manual Installation:** detailed `pip` install from git with `[rag,tui,agent]` extras.
-4. **Developer Setup:** Added steps for cloning and editable install.
-5. **Verification:** Added `llmc-cli --version` check.
-6. **Troubleshooting:** Covered PATH issues and managed environment errors.
+### Content Sections
+- **Prerequisites:** Verification of install.
+- **Step 1:** `repo add` command with example output.
+- **Step 2:** `index` command with progress bar example.
+- **Step 3:** `search` command with natural language query example.
+- **Next Steps:** Relative links to Concepts, CLI Reference, and Config.
 
-## Files Created/Modified
+### Terminology Decisions
+- Standardized on "Repository" for the codebase being tracked.
+- Standardized on "Index" for the embedding/vector process.
 
-- `DOCS/planning/autocode/REQUIREMENTS.md` (Created)
-- `DOCS/getting-started/installation.md` (Overwritten/Created)
-
-## Terminology & Decisions
-
-- **Package Name:** Clarified that while the PyPI/Project name is `llmcwrapper`, the installed binary is `llmc-cli`.
-- **Python Version:** Recommended 3.10+ for best compatibility, though `pyproject.toml` allows >=3.9.
-- **Install Method:** Prioritized the `curl` script as "Quick Install" per README, but provided robust `pip` instructions for power users.
-
-## Blockers / Questions
-
-- None.
+## Status
+- ✅ Draft Complete
+- ❌ No Blockers
 
 ---
-SUMMARY: Wrote complete installation guide covering script, pip, and dev methods, matching 0.7.0 requirements.
+SUMMARY: Created Requirements and Quickstart Guide covering repo add, index, and search with realistic output examples.

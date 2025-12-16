@@ -1,96 +1,91 @@
-# REQUIREMENTS: Installation Guide
+# REQUIREMENTS: Quickstart Guide
 
-**SDD Source:** DOCS/planning/SDD_Documentation_Architecture_2.0.md → Phase 2.1
-**Target Document:** DOCS/getting-started/installation.md
-**Audience:** End users, Developers, System Administrators
+**SDD Source:** DOCS/planning/SDD_Documentation_Architecture_2.0.md → Phase 2.2
+**Target Document:** DOCS/getting-started/quickstart.md
+**Audience:** New users who have just installed LLMC.
 
 ---
 
 ## Objective
 
-Provide clear, step-by-step instructions for installing LLMC on supported systems. This guide covers the automatic installation script, manual pip installation, and developer setup, ensuring users can get the CLI running quickly.
+Create a concise, 5-minute tutorial that guides a new user from their first interaction with the CLI to a successful semantic search. The goal is instant gratification and verification that the system works.
 
 ---
 
 ## Acceptance Criteria
 
-### AC-1: System Requirements
+### AC-1: Prerequisites Check
 
-**Location:** DOCS/getting-started/installation.md, "Prerequisites" section
+**Location:** Top of file
 
-- **OS:** Linux (primary), macOS (supported). Windows (WSL2 recommended).
-- **Python:** 3.10+ recommended (Project supports >=3.9).
-- **Tools:** Git, pip, venv (recommended).
-- **Hardware:** Minimal requirements (disk space for RAG index).
+[Specific content requirements:]
+- Briefly mention that LLMC must be installed.
+- Link to `installation.md` for those who haven't installed it.
+- Verify installation with `llmc-cli --version`.
 
-### AC-2: Quick Install (Recommended)
+### AC-2: Initialize a Repository
 
-**Location:** DOCS/getting-started/installation.md, "Quick Install" section
+**Location:** Section "Step 1: Add a Repository"
 
-- Provide the one-line `curl` installation command from `README.md`.
-- Briefly explain what the script does (installs dependencies, sets up environment).
+[Specific content requirements:]
+- Command: `llmc-cli repo add <path>` (use current directory `.` or a safe example).
+- Explain briefly what this does (registers the directory for tracking).
+- Sample output block showing success message.
 
-### AC-3: Manual Installation (Pip)
+### AC-3: Create the Index
 
-**Location:** DOCS/getting-started/installation.md, "Manual Installation" section
+**Location:** Section "Step 2: Index Your Code"
 
-- Document installation via `pip` using the git repository URL (since PyPI status is unconfirmed/repo-based).
-- Explain the `[rag,tui,agent]` extras and what they enable.
-- **Critical:** Advise using a virtual environment.
+[Specific content requirements:]
+- Command: `llmc-cli index`
+- Explain that this parses code and generates embeddings.
+- Note that the first run might take a moment depending on repo size.
+- Sample output block showing progress/completion.
 
-### AC-4: Developer Installation
+### AC-4: Execute First Search
 
-**Location:** DOCS/getting-started/installation.md, "Developer Setup" section
+**Location:** Section "Step 3: Search"
 
-- Steps to clone the repository.
-- Steps to install in editable mode (`pip install -e .`).
-- Installing dev dependencies (if any specific ones are highlighted, otherwise standard extras).
+[Specific content requirements:]
+- Command: `llmc-cli search "query"`
+- Provide a generic query likely to work in most repos (e.g., "how do I configure this" or similar, or just "file handling").
+- Explain the output structure (file path, relevance score, snippet).
+- Sample output block showing a realistic result.
 
-### AC-5: Verification
+### AC-5: What's Next
 
-**Location:** DOCS/getting-started/installation.md, "Verify Installation" section
+**Location:** Bottom of file
 
-- Command: `llmc-cli --version`.
-- Expected output example.
-- Command: `llmc-cli doctor` or similar simple check if available (using `repo register` or `help` as basic smoke test).
-
-### AC-6: Troubleshooting
-
-**Location:** DOCS/getting-started/installation.md, "Troubleshooting" section
-
-- **PATH issues:** "command not found" -> adding `~/.local/bin` to PATH.
-- **Permission errors:** avoiding `sudo` with pip, using venv.
-- **Dependency conflicts:** standard advice.
+[Specific content requirements:]
+- Link to `../user-guide/cli-reference.md` (CLI Reference).
+- Link to `../user-guide/configuration.md` (Configuration).
+- Link to `concepts.md` (Core Concepts).
 
 ---
 
 ## Style Requirements
 
-- **Voice:** Direct, instructional.
-- **Tense:** Imperative ("Run this command", "Install Python").
-- **Terminology:**
-  - "LLMC": The project/system.
-  - "llmc-cli": The main command-line tool.
-  - "RAG": Retrieval-Augmented Generation (context).
-- **Formatting:** All commands in code blocks. Shell prompts (`$`) used to distinguish user input.
+- Voice: Direct, instructional, encouraging.
+- Tense: Imperative ("Run this command", "Type this").
+- Terminology: Use "Repository" for the code being indexed, "Index" for the database of embeddings.
+- Length: Keep it under 500 words. Speed is key.
 
 ---
 
 ## Out of Scope
 
-- ❌ Detailed configuration (covered in Configuration Guide).
-- ❌ Usage tutorials (covered in User Guide).
-- ❌ Deep architectural details.
+- ❌ configuring `llmc.toml` (defaults should work).
+- ❌ explaining RAG architecture in depth.
+- ❌ troubleshooting complex errors.
 
 ---
 
 ## Verification
 
 B-Team must verify:
-1. The `curl` command matches the repository source.
-2. The `pip` install command correctly targets the git repo and extras.
-3. System requirements align with `pyproject.toml`.
-4. No generic "Insert text here" placeholders.
+1. All commands are copy-pasteable.
+2. Output examples look realistic.
+3. Links to other docs use relative paths correctly.
 
 ---
 
