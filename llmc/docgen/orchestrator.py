@@ -11,6 +11,7 @@ from llmc.docgen.gating import (
     compute_file_sha256,
     resolve_doc_path,
     should_skip_sha_gate,
+    validate_source_path,
 )
 from llmc.docgen.graph_context import build_graph_context
 from llmc.docgen.types import DocgenBackend, DocgenResult
@@ -66,8 +67,19 @@ class DocgenOrchestrator:
         """
         logger.info(f"Processing {relative_path}")
         
-        # Resolve paths
-        source_path = self.repo_root / relative_path
+        # Validate source path security
+        try:
+            source_path = validate_source_path(self.repo_root, relative_path)
+        except ValueError as e:
+            logger.warning(f"Security validation failed for {relative_path}: {e}")
+            return DocgenResult(
+                status="skipped",
+                sha256="",
+                output_markdown=None,
+                reason=f"Security validation failed: {e}"
+            )
+
+        # Resolve output path
         doc_path = resolve_doc_path(self.repo_root, relative_path, self.output_dir)
         
         # Check source file exists
