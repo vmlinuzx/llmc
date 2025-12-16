@@ -219,6 +219,7 @@ def register(
     path: str = typer.Argument(..., help="Path to repository to register"),
     skip_index: bool = typer.Option(False, "--no-index", help="Skip initial indexing"),
     skip_enrich: bool = typer.Option(False, "--no-enrich", help="Skip initial enrichment"),
+    interactive: bool = typer.Option(False, "--interactive", "-i", help="Run interactive configuration wizard"),
 ):
     """
     Register a repository with LLMC.
@@ -238,6 +239,10 @@ def register(
     if not repo_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
+
+    if interactive:
+        from llmc.commands.wizard import run_wizard
+        run_wizard(repo_path)
     
     console.print(f"[bold]🚀 Registering {repo_path.name} with LLMC[/bold]")
     

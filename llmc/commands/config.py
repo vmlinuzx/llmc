@@ -2,17 +2,48 @@
 """
 Config command - Interactive configuration management.
 
-Provides a TUI for editing enrichment chains and routes in llmc.toml.
+Provides:
+- wizard: Interactive setup wizard
+- edit: TUI for editing enrichment chains
 """
 
 from pathlib import Path
-
 import typer
-
 from llmc.core import find_repo_root
 
+app = typer.Typer(
+    help="Configuration management: wizard, edit, validation.",
+    no_args_is_help=True,
+)
 
-def main(
+@app.command("wizard")
+def wizard(
+    models_only: bool = typer.Option(False, "--models-only", help="Only configure models (updates existing config)"),
+):
+    """
+    Run interactive configuration wizard.
+
+    Guides you through:
+    1. connecting to Ollama
+    2. selecting models
+    3. setting up embeddings
+    4. generating llmc.toml
+    """
+    from llmc.commands.wizard import run_wizard
+
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        # If not in a repo, maybe we are running init?
+        # But config wizard usually implies we want to configure the current repo.
+        # Fallback to current directory if find_repo_root fails
+        repo_root = Path.cwd()
+
+    run_wizard(repo_path=repo_root, models_only=models_only)
+
+
+@app.command("edit")
+def edit(
     config_path: Path = typer.Option(
         None,
         "--config-path",
@@ -61,6 +92,5 @@ def main(
         traceback.print_exc()
         raise typer.Exit(1)
 
-
 if __name__ == "__main__":
-    typer.run(main)
+    app()

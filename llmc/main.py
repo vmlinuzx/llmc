@@ -46,7 +46,7 @@ app = typer.Typer(
 # ============================================================================
 # CORE COMMANDS (Top-level essentials)
 # ============================================================================
-app.command(name="config")(config_commands.main)
+app.add_typer(config_commands.app, name="config")
 app.command(name="tui")(tui)
 app.command(name="init")(repo_commands.init)
 
