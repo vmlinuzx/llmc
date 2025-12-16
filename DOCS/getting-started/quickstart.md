@@ -34,6 +34,7 @@ llmc-cli repo add .
 ## Step 2: Index Your Code
 
 Now, generate the index. This process parses your code, splits it into chunks, and generates vector embeddings for semantic search.
+This may take a few seconds for small repos or several minutes for large codebases.
 
 ```bash
 llmc-cli index
