@@ -573,6 +573,16 @@ retention_days = 0  # 0 = keep forever
 [rag]
 enabled = true
 
+[scoring]
+code_boost = 0.08
+doc_penalty = -0.06
+test_penalty = -0.08
+exact_match_boost = 0.20
+stem_match_boost = 0.15
+partial_match_boost = 0.05
+enable_intent_detection = true
+# code_extensions and doc_extensions use defaults if omitted
+
 # ==============================================================================
 # Profiles
 # ==============================================================================
