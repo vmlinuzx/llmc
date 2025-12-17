@@ -62,7 +62,7 @@ def normalize_path(repo_root: Path, target: str) -> Path:
     # Security: Check for traversal attempts (../)
     full_path = (repo_root / target).resolve()
     try:
-        full_path.relative_to(repo_root.resolve())
+        relative_path = full_path.relative_to(repo_root.resolve())
     except ValueError:
         raise PathSecurityError(
             f"Path '{target}' escapes repository boundary via traversal. "
@@ -70,7 +70,7 @@ def normalize_path(repo_root: Path, target: str) -> Path:
         )
 
     if full_path.exists():
-        return Path(target)
+        return relative_path
 
     # 2. Fuzzy Suffix Match
     # Find files in repo that end with the target string
