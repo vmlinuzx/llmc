@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.fs import SafeFS
-from tools.rag_repo.policy import PathPolicyError, PathSafetyPolicy
+from llmc.rag_repo.fs import SafeFS
+from llmc.rag_repo.policy import PathPolicyError, PathSafetyPolicy
 
 
 def test_copy_and_move_inside_base(tmp_path: Path) -> None:

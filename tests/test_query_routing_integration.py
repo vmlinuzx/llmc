@@ -1,7 +1,7 @@
 import struct
 
-from tools.rag.database import Database
-from tools.rag.search import search_spans
+from llmc.rag.database import Database
+from llmc.rag.search import search_spans
 
 
 def create_dummy_embedding(val: float, dim: int = 64) -> bytes:
@@ -112,7 +112,7 @@ enable_query_routing = true
     # Mock `build_embedding_backend` to return a backend that ALWAYS returns [0.1...] for any query.
     # This ensures dot product is perfect.
 
-    from tools.rag import search
+    from llmc.rag import search
 
     class MockBackend:
         def embed_queries(self, texts):

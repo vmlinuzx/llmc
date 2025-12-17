@@ -1,4 +1,4 @@
-from tools.rag.ci.config_lint import lint_config
+from llmc.rag.ci.config_lint import lint_config
 
 
 def test_valid_config_passes(tmp_path) -> None:

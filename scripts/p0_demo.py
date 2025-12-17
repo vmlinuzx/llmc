@@ -2,7 +2,7 @@
 import argparse
 import os
 
-from tools.rag import tool_rag_lineage, tool_rag_search, tool_rag_where_used
+from llmc.rag import tool_rag_lineage, tool_rag_search, tool_rag_where_used
 
 
 def main() -> None:

@@ -3,7 +3,7 @@ import sqlite3
 
 import pytest
 
-from tools.rag.db_fts import RagDbNotFound, _column_map, _detect_fts_table, _open_db
+from llmc.rag.db_fts import RagDbNotFound, _column_map, _detect_fts_table, _open_db
 
 
 def test_open_db_not_found(tmp_path):

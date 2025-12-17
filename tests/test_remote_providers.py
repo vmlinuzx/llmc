@@ -20,7 +20,7 @@ sys.path.insert(0, str(repo_root))
 def test_backoff_calculation():
     """Test exponential backoff with jitter."""
     print("\n1. Testing exponential backoff calculation...")
-    from tools.rag.enrichment_reliability import calculate_backoff_delay
+    from llmc.rag.enrichment_reliability import calculate_backoff_delay
 
     # Test basic exponential growth
     delay0 = calculate_backoff_delay(0, base_seconds=1.0, jitter_pct=0.0)
@@ -45,7 +45,7 @@ def test_backoff_calculation():
 def test_rate_limiter():
     """Test token bucket rate limiter."""
     print("\n2. Testing rate limiter...")
-    from tools.rag.enrichment_reliability import RateLimitConfig, RateLimiter
+    from llmc.rag.enrichment_reliability import RateLimitConfig, RateLimiter
 
     config = RateLimitConfig(
         requests_per_minute=10,
@@ -79,7 +79,7 @@ def test_rate_limiter():
 def test_circuit_breaker():
     """Test circuit breaker state machine."""
     print("\n3. Testing circuit breaker...")
-    from tools.rag.enrichment_reliability import CircuitBreaker, CircuitBreakerConfig
+    from llmc.rag.enrichment_reliability import CircuitBreaker, CircuitBreakerConfig
 
     config = CircuitBreakerConfig(
         failure_threshold=3,
@@ -119,7 +119,7 @@ def test_circuit_breaker():
 def test_cost_tracker():
     """Test cost tracking with budget caps."""
     print("\n4. Testing cost tracker...")
-    from tools.rag.enrichment_reliability import (
+    from llmc.rag.enrichment_reliability import (
         CostTracker,
         CostTrackerConfig,
         PricingInfo,
@@ -163,7 +163,7 @@ def test_cost_tracker():
 def test_provider_registry():
     """Test provider configuration registry."""
     print("\n5. Testing provider registry...")
-    from tools.rag.enrichment_config import PROVIDERS, get_provider_metadata
+    from llmc.rag.enrichment_config import PROVIDERS, get_provider_metadata
 
     # Check known providers exist
     assert "ollama" in PROVIDERS
@@ -185,8 +185,8 @@ def test_provider_registry():
 def test_backend_factory():
     """Test backend factory can create adapters."""
     print("\n6. Testing backend factory...")
-    from tools.rag.config_enrichment import EnrichmentBackendSpec
-    from tools.rag.enrichment_factory import create_backend_from_spec
+    from llmc.rag.config_enrichment import EnrichmentBackendSpec
+    from llmc.rag.enrichment_factory import create_backend_from_spec
 
     # Test Ollama (should work without API key)
     spec = EnrichmentBackendSpec(
@@ -213,7 +213,7 @@ def test_backend_factory():
 def test_adapter_exports():
     """Test that all adapters are properly exported."""
     print("\n7. Testing adapter exports...")
-    from tools.rag.enrichment_adapters import (
+    from llmc.rag.enrichment_adapters import (
         AnthropicBackend,
         GeminiBackend,
         OllamaBackend,

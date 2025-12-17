@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from llmc.commands.rag import search as search_command
-from tools.rag.search import SpanSearchResult
+from llmc.rag.search import SpanSearchResult
 
 
 def test_search_command_uses_correct_attributes():

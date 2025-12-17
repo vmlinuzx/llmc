@@ -17,8 +17,8 @@ import pytest
 # Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tools.rag.database import Database
-from tools.rag_nav.tool_handlers import tool_rag_search, tool_rag_where_used
+from llmc.rag.database import Database
+from llmc.rag_nav.tool_handlers import tool_rag_search, tool_rag_where_used
 
 
 class TestEnrichmentDataIntegrationSuccess:

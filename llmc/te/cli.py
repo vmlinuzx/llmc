@@ -587,7 +587,7 @@ def main() -> int:
         # Map 'te rag query ...' to 'python3 -m tools.rag.cli search ...'
         if cmd_args and cmd_args[0] == "query":
             # Map --q to search query
-            new_args = ["-m", "tools.rag.cli", "search"]
+            new_args = ["-m", "llmc.rag.cli", "search"]
             try:
                 q_idx = cmd_args.index("--q") + 1
                 query = cmd_args[q_idx]
@@ -615,7 +615,7 @@ def main() -> int:
         # Fallback
         return _handle_passthrough(
             "python3",
-            ["-m", "tools.rag.cli"] + cmd_args,
+            ["-m", "llmc.rag.cli"] + cmd_args,
             repo_root,
             json_mode=json_mode,
             timeout=cfg.passthrough_timeout_seconds,

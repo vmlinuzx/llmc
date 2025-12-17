@@ -22,8 +22,8 @@ SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from tools.rag.config import index_path_for_read
-from tools.rag.database import Database
+from llmc.rag.config import index_path_for_read
+from llmc.rag.database import Database
 
 
 def migrate_fts5_index(repo_root: Path) -> None:

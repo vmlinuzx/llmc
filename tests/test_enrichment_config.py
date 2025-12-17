@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from tools.rag.config_enrichment import (
+from llmc.rag.config_enrichment import (
     EnrichmentBackendSpec,
     EnrichmentConfig,
     filter_chain_for_tier,
@@ -264,7 +264,7 @@ erp_product = "default"
 
     def test_load_config_arbitrary_max_tier_accepted(tmp_path: Path) -> None:
         """Verify arbitrary max_tier is accepted (Routing Tier Freedom)."""
-        from tools.rag.config_enrichment import load_enrichment_config
+        from llmc.rag.config_enrichment import load_enrichment_config
 
         repo_root = tmp_path
         llmc = repo_root / "llmc.toml"
@@ -292,7 +292,7 @@ def test_load_config_invalid_on_failure_raises(tmp_path: Path) -> None:
     """Verify invalid on_failure raises EnrichmentConfigError."""
     import pytest
 
-    from tools.rag.config_enrichment import EnrichmentConfigError
+    from llmc.rag.config_enrichment import EnrichmentConfigError
 
     repo_root = tmp_path
     llmc = repo_root / "llmc.toml"

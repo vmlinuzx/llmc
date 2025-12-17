@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from tools.rag_repo.logging import warn_skip
+from llmc.rag_repo.logging import warn_skip
 
 
 def test_warn_skip_emits_warning(caplog) -> None:

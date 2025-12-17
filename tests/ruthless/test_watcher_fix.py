@@ -13,16 +13,16 @@ def test_watcher_import_no_pyinotify():
         # We need to reload or import checking logic
         # Since we modified the code to handle ImportError, we can just try importing
         try:
-            from tools.rag import watcher
+            from llmc.rag import watcher
             assert not watcher.INOTIFY_AVAILABLE
             # Verify _InotifyHandler exists and is a class
             assert isinstance(watcher._InotifyHandler, type)
             # Verify it inherits from the dummy ProcessEvent (which is just object or the local class)
             # If pyinotify is None, ProcessEvent should be the local dummy
             assert watcher.ProcessEvent.__name__ == "ProcessEvent"
-            assert watcher.ProcessEvent.__module__ == "tools.rag.watcher"
+            assert watcher.ProcessEvent.__module__ == "llmc.rag.watcher"
         except ImportError:
-            pytest.fail("tools.rag.watcher raised ImportError")
+            pytest.fail("llmc.rag.watcher raised ImportError")
         except AttributeError as e:
-            pytest.fail(f"tools.rag.watcher raised AttributeError: {e}")
+            pytest.fail(f"llmc.rag.watcher raised AttributeError: {e}")
 

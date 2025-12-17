@@ -11,7 +11,7 @@ import sys
 repo_root = Path(__file__).parent.parent
 sys.path.insert(0, str(repo_root))
 
-from tools.rag.search import search_spans
+from llmc.rag.search import search_spans
 
 # Test 1: Direct search
 print("="*60)
@@ -37,7 +37,7 @@ print("="*60)
 print("TEST 2: Config hot-reload (edit llmc.toml)")
 print("="*60)
 
-from tools.rag.config import load_config
+from llmc.rag.config import load_config
 
 config_file = repo_root / "llmc.toml"
 original = config_file.read_text()

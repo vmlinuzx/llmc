@@ -23,8 +23,8 @@ except ImportError:
 from datetime import UTC, datetime
 from pathlib import Path
 
-from tools.rag.config import index_path_for_read
-from tools.rag.quality_check import RULE_VERSION, classify_quality
+from llmc.rag.config import index_path_for_read
+from llmc.rag.quality_check import RULE_VERSION, classify_quality
 
 
 class QualityChecker:

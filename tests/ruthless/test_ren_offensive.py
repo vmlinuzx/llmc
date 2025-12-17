@@ -7,7 +7,7 @@ import pytest
 # Import targets
 # Note: Imports might fail if the structure is different, catching import errors in tests is good practice
 try:
-    from tools.rag.config_enrichment import EnrichmentProviderConfig
+    from llmc.rag.config_enrichment import EnrichmentProviderConfig
 except ImportError:
     EnrichmentProviderConfig = None
 

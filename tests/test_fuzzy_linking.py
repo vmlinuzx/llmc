@@ -2,7 +2,7 @@ import textwrap
 
 # We will create tools.rag.locator later
 try:
-    from tools.rag.locator import identify_symbol_at_line
+    from llmc.rag.locator import identify_symbol_at_line
 except ImportError:
     pass
 

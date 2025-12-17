@@ -1,6 +1,6 @@
 import pytest
-from tools.rag.search.reranker import should_rerank, rerank_results
-from tools.rag.telemetry import get_counter, reset_counters, RERANKER_INVOCATIONS_TOTAL
+from llmc.rag.search.reranker import should_rerank, rerank_results
+from llmc.rag.telemetry import get_counter, reset_counters, RERANKER_INVOCATIONS_TOTAL
 
 def setup_function():
     reset_counters()

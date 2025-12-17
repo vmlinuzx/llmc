@@ -1,6 +1,6 @@
 import math
 
-from tools.rag.embeddings import (
+from llmc.rag.embeddings import (
     EmbeddingSpec,
     HashEmbeddingBackend,
     ManagerEmbeddingBackend,

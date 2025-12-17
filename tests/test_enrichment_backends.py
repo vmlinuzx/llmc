@@ -4,7 +4,7 @@ from typing import Any
 
 import pytest
 
-from tools.rag.enrichment_backends import BackendCascade, BackendError
+from llmc.rag.enrichment_backends import BackendCascade, BackendError
 
 
 class _FakeBackend:

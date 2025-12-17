@@ -3,22 +3,22 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools.rag.search import search_spans
+from llmc.rag.search import search_spans
 
 
 @pytest.fixture
 def mock_dependencies():
     with (
-        patch("tools.rag.search.find_repo_root") as mock_root,
-        patch("tools.rag.search.index_path_for_read") as mock_index_path,
-        patch("tools.rag.search.Database") as mock_db_cls,
-        patch("tools.rag.search.build_embedding_backend") as mock_backend_cls,
-        patch("tools.rag.search.load_config") as mock_load_config,
-        patch("tools.rag.search.create_router") as mock_create_router,
-        patch("tools.rag.search.resolve_route") as mock_resolve,
-        patch("tools.rag.search.get_multi_route_config") as mock_get_multi,
+        patch("llmc.rag.search.find_repo_root") as mock_root,
+        patch("llmc.rag.search.index_path_for_read") as mock_index_path,
+        patch("llmc.rag.search.Database") as mock_db_cls,
+        patch("llmc.rag.search.build_embedding_backend") as mock_backend_cls,
+        patch("llmc.rag.search.load_config") as mock_load_config,
+        patch("llmc.rag.search.create_router") as mock_create_router,
+        patch("llmc.rag.search.resolve_route") as mock_resolve,
+        patch("llmc.rag.search.get_multi_route_config") as mock_get_multi,
         patch(
-            "tools.rag.search.is_query_routing_enabled", return_value=True
+            "llmc.rag.search.is_query_routing_enabled", return_value=True
         ),
     ):
         # Setup basic mocks

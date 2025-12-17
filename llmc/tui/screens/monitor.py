@@ -16,7 +16,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Static
 
 from llmc.tui.screens.config import ConfigScreen
-from tools.rag.analytics import QueryTracker
+from llmc.rag.analytics import QueryTracker
 
 
 class MonitorScreen(Screen):
@@ -206,7 +206,7 @@ class MonitorScreen(Screen):
                 base_cmd = [str(script_path)]
             else:
                 # Fallback to module invocation; behaviour should match the script wrapper.
-                base_cmd = [sys.executable, "-m", "tools.rag.service"]
+                base_cmd = [sys.executable, "-m", "llmc.rag.service"]
 
             cmd = base_cmd + ["logs", "-f", "-n", str(self._max_log_lines)]
             self._log_proc = subprocess.Popen(
@@ -358,7 +358,7 @@ class MonitorScreen(Screen):
         }
 
         try:
-            from tools.rag_nav.tool_handlers import _load_graph
+            from llmc.rag_nav.tool_handlers import _load_graph
 
             index_db = repo_root / ".rag" / "index_v2.db"
             if index_db.exists():

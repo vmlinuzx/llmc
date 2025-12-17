@@ -1,5 +1,5 @@
-from tools.rag_nav.enrichment import EnrichmentSnippet
-from tools.rag_nav.models import EnrichmentData, SearchItem, SearchResult, Snippet, SnippetLocation
+from llmc.rag_nav.enrichment import EnrichmentSnippet
+from llmc.rag_nav.models import EnrichmentData, SearchItem, SearchResult, Snippet, SnippetLocation
 
 
 def test_enrichment_data_structure():
@@ -41,7 +41,7 @@ class MockStore:
 
 def test_enrichment_attachment():
     """Test attaching enrichment to search result."""
-    from tools.rag_nav.enrichment import attach_enrichments_to_search_result
+    from llmc.rag_nav.enrichment import attach_enrichments_to_search_result
 
     item = SearchItem(file="test.py", snippet=Snippet("code", SnippetLocation("test.py", 1, 1)))
     res = SearchResult(query="test", items=[item])

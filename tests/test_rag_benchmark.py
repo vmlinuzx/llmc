@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tools.rag.benchmark import (
+from llmc.rag.benchmark import (
     CASES,
     BenchmarkCase,
     _cosine,
@@ -312,7 +312,7 @@ class TestBenchmarkCasesConstant:
 class TestRunEmbeddingBenchmark:
     """Test the run_embedding_benchmark function."""
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_basic(self, mock_build_backend):
         """Test basic benchmark execution."""
         # Create mock backend
@@ -339,7 +339,7 @@ class TestRunEmbeddingBenchmark:
         assert isinstance(results["avg_positive_score"], float)
         assert isinstance(results["avg_negative_score"], float)
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_perfect_accuracy(self, mock_build_backend):
         """Test benchmark with perfect accuracy."""
         # Create mock backend that returns higher similarity for positives
@@ -364,7 +364,7 @@ class TestRunEmbeddingBenchmark:
         # Should have high accuracy
         assert results["top1_accuracy"] > 0.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_zero_accuracy(self, mock_build_backend):
         """Test benchmark with zero accuracy."""
         # Create mock backend that returns higher similarity for negatives
@@ -388,7 +388,7 @@ class TestRunEmbeddingBenchmark:
         # Should have some accuracy (depends on which is "best")
         assert 0.0 <= results["top1_accuracy"] <= 1.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_calls_backend_methods(self, mock_build_backend):
         """Test that benchmark calls backend methods correctly."""
         mock_backend = Mock()
@@ -404,7 +404,7 @@ class TestRunEmbeddingBenchmark:
         # Should call embed_passages for each case
         assert mock_backend.embed_passages.called
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_calculates_margins(self, mock_build_backend):
         """Test margin calculation."""
         mock_backend = Mock()
@@ -429,7 +429,7 @@ class TestRunEmbeddingBenchmark:
         # (0.9 - 0.2) = 0.7
         assert results["avg_margin"] > 0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_handles_backend_failure(self, mock_build_backend):
         """Test handling of backend failure."""
         mock_backend = Mock()
@@ -440,11 +440,11 @@ class TestRunEmbeddingBenchmark:
         with pytest.raises(Exception):
             run_embedding_benchmark()
 
-    @patch("tools.rag.benchmark.build_backend")
+    @patch("llmc.rag.benchmark.build_backend")
     def test_run_embedding_benchmark_no_cases(self, mock_build_backend):
         """Test benchmark behavior with no cases."""
         # Temporarily replace CASES with empty tuple
-        with patch("tools.rag.benchmark.CASES", tuple()):
+        with patch("llmc.rag.benchmark.CASES", tuple()):
             mock_backend = Mock()
             mock_backend.embed_queries = Mock(return_value=[])
             mock_backend.embed_passages = Mock(return_value=[])
@@ -457,7 +457,7 @@ class TestRunEmbeddingBenchmark:
             assert results["top1_accuracy"] == 0.0
             assert results["avg_margin"] == 0.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_calculates_average_scores(self, mock_build_backend):
         """Test average positive and negative score calculation."""
         mock_backend = Mock()
@@ -480,7 +480,7 @@ class TestRunEmbeddingBenchmark:
         # Average negative should be (0.1 + 0.2) / 2 = 0.15
         assert results["avg_positive_score"] > results["avg_negative_score"]
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_return_types(self, mock_build_backend):
         """Test that benchmark returns correct types."""
         mock_backend = Mock()
@@ -494,7 +494,7 @@ class TestRunEmbeddingBenchmark:
         for key, value in results.items():
             assert isinstance(value, float), f"{key} is not a float: {type(value)}"
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_run_embedding_benchmark_single_case(self, mock_build_backend):
         """Test benchmark with single benchmark case."""
         # Replace CASES with single case
@@ -507,7 +507,7 @@ class TestRunEmbeddingBenchmark:
             ),
         )
 
-        with patch("tools.rag.benchmark.CASES", single_case):
+        with patch("llmc.rag.benchmark.CASES", single_case):
             mock_backend = Mock()
             mock_backend.embed_queries = Mock(return_value=[[1.0, 0.0]])
             mock_backend.embed_passages = Mock(return_value=[[0.9, 0.0], [0.1, 0.0]])
@@ -521,7 +521,7 @@ class TestRunEmbeddingBenchmark:
 class TestBenchmarkEdgeCases:
     """Test edge cases and error handling."""
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_empty_positives(self, mock_build_backend):
         """Test benchmark with case having no positives."""
         empty_case = (
@@ -533,7 +533,7 @@ class TestBenchmarkEdgeCases:
             ),
         )
 
-        with patch("tools.rag.benchmark.CASES", empty_case):
+        with patch("llmc.rag.benchmark.CASES", empty_case):
             mock_backend = Mock()
             mock_backend.embed_queries = Mock(return_value=[[1.0, 0.0]])
             mock_backend.embed_passages = Mock(return_value=[[0.1, 0.0]])
@@ -544,7 +544,7 @@ class TestBenchmarkEdgeCases:
             # Should handle empty positives gracefully
             assert results["cases"] == 1.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_empty_negatives(self, mock_build_backend):
         """Test benchmark with case having no negatives."""
         empty_case = (
@@ -556,7 +556,7 @@ class TestBenchmarkEdgeCases:
             ),
         )
 
-        with patch("tools.rag.benchmark.CASES", empty_case):
+        with patch("llmc.rag.benchmark.CASES", empty_case):
             mock_backend = Mock()
             mock_backend.embed_queries = Mock(return_value=[[1.0, 0.0]])
             mock_backend.embed_passages = Mock(return_value=[[0.9, 0.0]])
@@ -567,7 +567,7 @@ class TestBenchmarkEdgeCases:
             # Should handle empty negatives gracefully
             assert results["cases"] == 1.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_all_equal_scores(self, mock_build_backend):
         """Test benchmark when all candidates have equal scores."""
         equal_case = (
@@ -576,7 +576,7 @@ class TestBenchmarkEdgeCases:
             ),
         )
 
-        with patch("tools.rag.benchmark.CASES", equal_case):
+        with patch("llmc.rag.benchmark.CASES", equal_case):
             mock_backend = Mock()
             mock_backend.embed_queries = Mock(return_value=[[1.0, 0.0]])
             # All candidates have same score
@@ -589,7 +589,7 @@ class TestBenchmarkEdgeCases:
             assert results["cases"] == 1.0
             assert 0.0 <= results["top1_accuracy"] <= 1.0
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_very_large_vectors(self, mock_build_backend):
         """Test benchmark with very large embedding vectors."""
         mock_backend = Mock()
@@ -610,7 +610,7 @@ class TestBenchmarkEdgeCases:
         assert results["cases"] > 0
         assert not math.isnan(results["top1_accuracy"])
 
-    @patch("tools.rag.benchmark.build_embedding_backend")
+    @patch("llmc.rag.benchmark.build_embedding_backend")
     def test_benchmark_with_very_small_vectors(self, mock_build_backend):
         """Test benchmark with very small embedding vectors."""
         mock_backend = Mock()

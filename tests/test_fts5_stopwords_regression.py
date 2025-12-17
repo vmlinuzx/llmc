@@ -12,8 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag.database import Database
-from tools.rag.types import FileRecord, SpanRecord
+from llmc.rag.database import Database
+from llmc.rag.types import FileRecord, SpanRecord
 
 # Critical ML/AI domain keywords that were being filtered by default FTS5 stopwords
 # These keywords appear in our test enrichments

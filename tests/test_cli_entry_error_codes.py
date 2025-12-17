@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from tools.rag_repo import cli_entry
+from llmc.rag_repo import cli_entry
 
 
 def test_cli_error_code_for_bad_workspace(tmp_path, capsys) -> None:

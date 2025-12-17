@@ -1,5 +1,5 @@
 import pytest
-from tools.rag.telemetry import (
+from llmc.rag.telemetry import (
     increment_counter,
     get_counter,
     reset_counters,

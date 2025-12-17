@@ -84,7 +84,7 @@ def rag_search(
         # Config reloads automatically every time (no caching)
 
         # Direct import - module stays loaded between calls
-        from tools.rag.search import search_spans
+        from llmc.rag.search import search_spans
 
         results = search_spans(
             query.strip(),
@@ -170,7 +170,7 @@ def rag_search_enriched(
 
         # For now, we'll use the existing search_spans with debug=True to get graph data
         # In future phases, we'll add proper mode selection and enrichment orchestration
-        from tools.rag.search import search_spans
+        from llmc.rag.search import search_spans
 
         # Enable debug mode to get graph enrichment
         use_debug = (enrich_mode in ["graph", "hybrid", "auto"]) or include_features

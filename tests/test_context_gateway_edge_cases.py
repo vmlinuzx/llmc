@@ -14,9 +14,9 @@ from unittest.mock import Mock, patch
 
 def mock_compute_route(repo_root: Path, status):
     """Helper to mock compute_route with status."""
-    from tools.rag_nav.gateway import compute_route
+    from llmc.rag_nav.gateway import compute_route
 
-    with patch("tools.rag_nav.gateway.load_status") as mock_load:
+    with patch("llmc.rag_nav.gateway.load_status") as mock_load:
         mock_load.return_value = status
         return compute_route(repo_root)
 
@@ -369,7 +369,7 @@ class TestComputeRouteEdgeCases:
         status.index_state = "fresh"
         status.last_indexed_commit = "abc123"
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "abc123"  # Match
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -382,7 +382,7 @@ class TestComputeRouteEdgeCases:
         status.index_state = "fresh"
         status.last_indexed_commit = "abc123"
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "def456"  # Mismatch
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -395,7 +395,7 @@ class TestComputeRouteEdgeCases:
         status.index_state = "fresh"
         status.last_indexed_commit = "abc123"
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = None  # Git HEAD not found
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -408,7 +408,7 @@ class TestComputeRouteEdgeCases:
         status.index_state = "fresh"
         status.last_indexed_commit = None
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "abc123"
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -421,7 +421,7 @@ class TestComputeRouteEdgeCases:
         status.index_state = "FRESH"  # Uppercase
         status.last_indexed_commit = "abc123"
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "abc123"
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -453,13 +453,13 @@ class TestComputeRouteEdgeCases:
 
     def test_compute_route_returns_route_decision(self, tmp_path: Path):
         """Test that compute_route returns RouteDecision."""
-        from tools.rag_nav.gateway import RouteDecision
+        from llmc.rag_nav.gateway import RouteDecision
 
         status = Mock()
         status.index_state = "fresh"
         status.last_indexed_commit = "abc123"
 
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "abc123"
 
             route = mock_compute_route(Path("/tmp"), status)
@@ -470,12 +470,12 @@ class TestComputeRouteEdgeCases:
 
     def test_compute_route_with_load_status_exception(self, tmp_path: Path):
         """Test compute_route when load_status raises exception."""
-        from tools.rag_nav.gateway import compute_route
+        from llmc.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 
-        with patch("tools.rag_nav.metadata.load_status", side_effect=Exception("Load failed")):
+        with patch("llmc.rag_nav.metadata.load_status", side_effect=Exception("Load failed")):
             route = compute_route(repo_root)
             assert route.freshness_state == "UNKNOWN"
             assert not route.use_rag
@@ -487,7 +487,7 @@ class TestComputeRouteEdgeCases:
 
     def test_compute_route_git_error_handling(self, tmp_path: Path):
         """Test compute_route when git command fails."""
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             # Simulate git command failure
             mock_git.side_effect = Exception("Git error")
 
@@ -737,12 +737,12 @@ class TestGatewayPerformance:
         """Test that compute_route performs well."""
         import time
 
-        from tools.rag_nav.gateway import compute_route
+        from llmc.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 
-        with patch("tools.rag_nav.metadata.load_status") as mock_load:
+        with patch("llmc.rag_nav.metadata.load_status") as mock_load:
             mock_load.return_value = None
 
             start = time.time()
@@ -754,7 +754,7 @@ class TestGatewayPerformance:
 
     def test_compute_route_with_git(self, tmp_path: Path):
         """Test compute_route with actual git repo."""
-        from tools.rag_nav.gateway import compute_route
+        from llmc.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -770,7 +770,7 @@ class TestGatewayPerformance:
             ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
         )
 
-        with patch("tools.rag_nav.metadata.load_status") as mock_load:
+        with patch("llmc.rag_nav.metadata.load_status") as mock_load:
             mock_load.return_value = None
 
             compute_route(repo_root)
@@ -780,7 +780,7 @@ class TestGatewayPerformance:
         """Test concurrent compute_route calls."""
         import threading
 
-        from tools.rag_nav.gateway import compute_route
+        from llmc.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -806,7 +806,7 @@ class TestGatewayErrorRecovery:
 
     def test_recover_from_status_load_failure(self, tmp_path: Path):
         """Test recovery when status file is corrupt."""
-        from tools.rag_nav.gateway import compute_route
+        from llmc.rag_nav.gateway import compute_route
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -816,7 +816,7 @@ class TestGatewayErrorRecovery:
         status_file.parent.mkdir(parents=True)
         status_file.write_text("corrupt json")
 
-        with patch("tools.rag_nav.metadata.load_status") as mock_load:
+        with patch("llmc.rag_nav.metadata.load_status") as mock_load:
             mock_load.side_effect = Exception("Parse error")
 
             # Should handle and return default route
@@ -825,7 +825,7 @@ class TestGatewayErrorRecovery:
 
     def test_recover_from_git_failure(self, tmp_path: Path):
         """Test recovery when git command fails."""
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.side_effect = Exception("Git failed")
 
             status = Mock()

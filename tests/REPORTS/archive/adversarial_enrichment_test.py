@@ -18,7 +18,7 @@ def test_enrichment_router_edge_cases():
     # Test 1: Invalid EnrichmentSliceView construction
     print("Test 1: Invalid EnrichmentSliceView construction")
     try:
-        from tools.rag.enrichment_router import EnrichmentSliceView
+        from llmc.rag.enrichment_router import EnrichmentSliceView
 
         # Test with None span_hash
         try:
@@ -71,8 +71,8 @@ def test_enrichment_router_edge_cases():
     # Test 2: EnrichmentRouteDecision edge cases
     print("\nTest 2: EnrichmentRouteDecision edge cases")
     try:
-        from tools.rag.config_enrichment import EnrichmentBackendSpec
-        from tools.rag.enrichment_router import EnrichmentRouteDecision, EnrichmentSliceView
+        from llmc.rag.config_enrichment import EnrichmentBackendSpec
+        from llmc.rag.enrichment_router import EnrichmentRouteDecision, EnrichmentSliceView
 
         # Test with None backend
         try:
@@ -126,7 +126,7 @@ def test_enrichment_router_edge_cases():
     # Test 3: Database schema validation
     print("\nTest 3: Database schema validation")
     try:
-        from tools.rag.enrichment_router import EnrichmentRouterMetricsEvent
+        from llmc.rag.enrichment_router import EnrichmentRouterMetricsEvent
 
         # Test with invalid metrics event
         try:

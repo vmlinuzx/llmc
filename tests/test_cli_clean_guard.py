@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.cli import clean_workspace
+from llmc.rag_repo.cli import clean_workspace
 
 
 def test_clean_workspace_requires_force(tmp_path: Path) -> None:

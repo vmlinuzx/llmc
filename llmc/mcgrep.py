@@ -51,7 +51,7 @@ def _format_source_indicator(source: str, freshness: str) -> str:
 
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
     """Core search logic."""
-    from tools.rag_nav.tool_handlers import tool_rag_search
+    from llmc.rag_nav.tool_handlers import tool_rag_search
     
     try:
         repo_root = find_repo_root()
@@ -163,7 +163,7 @@ def status():
     """
     Check index health and freshness.
     """
-    from tools.rag.doctor import run_rag_doctor
+    from llmc.rag.doctor import run_rag_doctor
     
     try:
         repo_root = find_repo_root()

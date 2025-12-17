@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tools.rag_repo.cli import main
+from llmc.rag_repo.cli import main
 
 # Create a ruthless test for the new repo CLI features
 

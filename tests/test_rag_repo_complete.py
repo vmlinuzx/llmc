@@ -6,13 +6,13 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
-from tools.rag_repo.config import load_tool_config
-from tools.rag_repo.inspect_repo import inspect_repo
-from tools.rag_repo.models import RegistryEntry, RepoInspection, ToolConfig
-from tools.rag_repo.notifier import notify_refresh, notify_refresh_all
-from tools.rag_repo.registry import RegistryAdapter
-from tools.rag_repo.utils import canonical_repo_path, generate_repo_id
-from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
+from llmc.rag_repo.config import load_tool_config
+from llmc.rag_repo.inspect_repo import inspect_repo
+from llmc.rag_repo.models import RegistryEntry, RepoInspection, ToolConfig
+from llmc.rag_repo.notifier import notify_refresh, notify_refresh_all
+from llmc.rag_repo.registry import RegistryAdapter
+from llmc.rag_repo.utils import canonical_repo_path, generate_repo_id
+from llmc.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 
 # ==============================================================================
 # 7. Repo Registration Tool Tests

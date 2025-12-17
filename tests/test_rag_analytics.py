@@ -17,7 +17,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tools.rag.analytics import (
+from llmc.rag.analytics import (
     AnalyticsSummary,
     QueryRecord,
     QueryTracker,
@@ -669,8 +669,8 @@ class TestFormatAnalytics:
 class TestRunAnalytics:
     """Test run_analytics function."""
 
-    @patch("tools.rag.analytics.QueryTracker")
-    @patch("tools.rag.analytics.format_analytics")
+    @patch("llmc.rag.analytics.QueryTracker")
+    @patch("llmc.rag.analytics.format_analytics")
     def test_run_analytics_success(self, mock_format, mock_tracker_class):
         """Test run_analytics with existing database."""
         with tempfile.TemporaryDirectory() as tmpdir:

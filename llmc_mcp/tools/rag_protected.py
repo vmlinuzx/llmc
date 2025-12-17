@@ -18,7 +18,7 @@ logger = logging.getLogger("llmc-mcp.rag.protected")
 
 
 def enrich_spans_protected(
-    db,  # Database instance (from tools.rag.database)
+    db,  # Database instance (from llmc.rag.database)
     repo_root: Path,
     llm_call: Callable[[dict[str, Any]], dict[str, Any]],
     limit: int = 32,
@@ -50,7 +50,7 @@ def enrich_spans_protected(
     Raises:
         DbBusyError: If database is locked and retries exhausted
     """
-    from tools.rag.enrichment import enrich_spans
+    from llmc.rag.enrichment import enrich_spans
     
     # Create resource descriptor for MAASL lock
     resource = ResourceDescriptor(

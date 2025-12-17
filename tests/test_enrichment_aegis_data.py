@@ -18,10 +18,10 @@ from typing import Any
 
 import pytest
 
-from tools.rag.database import Database
-from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
-from tools.rag.indexer import index_repo
-from tools.rag.workers import enrichment_plan
+from llmc.rag.database import Database
+from llmc.rag.enrichment import EnrichmentBatchResult, batch_enrich
+from llmc.rag.indexer import index_repo
+from llmc.rag.workers import enrichment_plan
 
 AEGIS_REPO_PATH = Path("/home/vmlinux/srcwpsg/aegis")
 
@@ -110,8 +110,8 @@ def test_enrich_aegis_repository_basic(tmp_path: Path) -> None:
         stats = index_repo(include_paths=None, since=None)
 
         # Get the actual DB path that was created
-        from tools.rag.config import index_path_for_write
-        from tools.rag.utils import find_repo_root
+        from llmc.rag.config import index_path_for_write
+        from llmc.rag.utils import find_repo_root
 
         db_path = index_path_for_write(find_repo_root())
 
@@ -357,8 +357,8 @@ def test_enrich_aegis_data_integrity(tmp_path: Path) -> None:
     original_cwd = os.getcwd()
     try:
         os.chdir(test_repo)
-        from tools.rag.config import index_path_for_write
-        from tools.rag.utils import find_repo_root
+        from llmc.rag.config import index_path_for_write
+        from llmc.rag.utils import find_repo_root
 
         db_path = index_path_for_write(find_repo_root())
         index_repo(include_paths=None, since=None)

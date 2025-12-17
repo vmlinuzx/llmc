@@ -8,7 +8,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 # Import RAG configuration tools
-from tools.rag.config import (
+from llmc.rag.config import (
     embedding_device_preference,
     embedding_gpu_max_retries,
     embedding_gpu_min_free_mb,
@@ -24,8 +24,8 @@ from tools.rag.config import (
     load_rerank_weights,
 )
 
-# We might need to call find_repo_root from tools.rag.utils
-from tools.rag.utils import find_repo_root
+# We might need to call find_repo_root from llmc.rag.utils
+from llmc.rag.utils import find_repo_root
 
 
 class ConfigScreen(Screen):

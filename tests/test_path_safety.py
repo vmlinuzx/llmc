@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.utils import PathTraversalError, safe_subpath
+from llmc.rag_repo.utils import PathTraversalError, safe_subpath
 
 
 def test_safe_subpath_allows_normal_relative(tmp_path: Path) -> None:

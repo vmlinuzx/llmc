@@ -17,9 +17,9 @@ import sys
 # Add project root to path to import internal modules
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tools.rag.phi.detector import PHIMatch
-from tools.rag.relation.clinical_re import ClinicalRelationExtractor
-from tools.rag.search import search_spans
+from llmc.rag.phi.detector import PHIMatch
+from llmc.rag.relation.clinical_re import ClinicalRelationExtractor
+from llmc.rag.search import search_spans
 from llmc.core import find_repo_root
 
 

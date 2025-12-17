@@ -15,7 +15,7 @@ import yaml
 # Legacy RAG repo API surface; skip these integration edge-case tests when the
 # older names are not available in the current implementation.
 try:
-    from tools.rag_repo.utils import (  # type: ignore[attr-defined]
+    from llmc.rag_repo.utils import (  # type: ignore[attr-defined]
         PathTraversalError,
         validate_repo_paths,
     )
@@ -691,7 +691,7 @@ class TestPathSafety:
 
     def test_path_normalization(self):
         """Test path normalization (resolve, .., . handling)."""
-        from tools.rag_repo.utils import safe_subpath
+        from llmc.rag_repo.utils import safe_subpath
 
         # Test cases
         test_cases = [

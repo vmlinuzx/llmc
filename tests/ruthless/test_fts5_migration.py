@@ -1,6 +1,6 @@
 
 from scripts.migrate_fts5_no_stopwords import migrate_fts5_index
-from tools.rag.database import Database
+from llmc.rag.database import Database
 
 
 def test_fts5_migration(tmp_path):

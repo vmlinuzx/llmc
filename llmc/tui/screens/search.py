@@ -306,7 +306,7 @@ class SearchScreen(LLMCScreen):
             cmd = [
                 "python3",
                 "-m",
-                "tools.rag.cli",
+                "llmc.rag.cli",
                 "search",
                 query,
                 "--limit",

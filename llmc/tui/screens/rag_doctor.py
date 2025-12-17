@@ -21,7 +21,7 @@ from textual.widgets import (
     TabPane,
 )
 
-from tools.rag.doctor import run_rag_doctor
+from llmc.rag.doctor import run_rag_doctor
 
 
 class RAGDoctorScreen(Screen):

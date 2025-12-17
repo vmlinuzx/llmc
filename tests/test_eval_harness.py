@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools.rag.eval.routing_eval import evaluate_routing
-from tools.rag.search import SpanSearchResult
+from llmc.rag.eval.routing_eval import evaluate_routing
+from llmc.rag.search import SpanSearchResult
 
 
 @pytest.fixture
@@ -31,10 +31,10 @@ def mock_dataset(tmp_path):
     return p
 
 
-@patch("tools.rag.eval.routing_eval.load_config")
-@patch("tools.rag.eval.routing_eval.find_repo_root")
-@patch("tools.rag.eval.routing_eval.search_spans")
-@patch("tools.rag.eval.routing_eval.create_router")
+@patch("llmc.rag.eval.routing_eval.load_config")
+@patch("llmc.rag.eval.routing_eval.find_repo_root")
+@patch("llmc.rag.eval.routing_eval.search_spans")
+@patch("llmc.rag.eval.routing_eval.create_router")
 def test_evaluate_routing(
     mock_create_router, mock_search, mock_find_root, mock_load_config, mock_dataset
 ):

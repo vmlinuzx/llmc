@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.rag_repo.tmpfs import SafeTmp
+from llmc.rag_repo.tmpfs import SafeTmp
 
 
 def test_safetmp_make_and_cleanup(tmp_path: Path) -> None:

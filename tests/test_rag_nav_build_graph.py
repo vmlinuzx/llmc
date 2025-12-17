@@ -6,8 +6,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.rag_nav.metadata import load_status  # type: ignore  # noqa: E402
-from tools.rag_nav.tool_handlers import (  # type: ignore  # noqa: E402
+from llmc.rag_nav.metadata import load_status  # type: ignore  # noqa: E402
+from llmc.rag_nav.tool_handlers import (  # type: ignore  # noqa: E402
     _graph_path,  # type: ignore[attr-defined]
     build_graph_for_repo,
 )

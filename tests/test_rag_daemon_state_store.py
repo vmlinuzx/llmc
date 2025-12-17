@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from tools.rag_daemon.models import RepoState
-from tools.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.models import RepoState
+from llmc.rag_daemon.state_store import StateStore
 
 
 def test_state_store_round_trip_tmpdir(tmp_path: Path) -> None:

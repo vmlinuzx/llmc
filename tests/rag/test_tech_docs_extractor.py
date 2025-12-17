@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from tools.rag.extractors.tech_docs import TechDocsExtractor, TechDocsSpan
+from llmc.rag.extractors.tech_docs import TechDocsExtractor, TechDocsSpan
 
 @pytest.fixture
 def extractor():

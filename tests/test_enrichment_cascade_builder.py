@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 import scripts.qwen_enrich_batch as qeb
-from tools.rag.enrichment_backends import BackendCascade
+from llmc.rag.enrichment_backends import BackendCascade
 
 
 class _FakeOllamaAdapter:

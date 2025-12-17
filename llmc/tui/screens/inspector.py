@@ -10,7 +10,7 @@ from textual.containers import Container, ScrollableContainer, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Input, Label, Static
 
-from tools.rag.inspector import InspectionResult, inspect_entity
+from llmc.rag.inspector import InspectionResult, inspect_entity
 
 
 class InspectorScreen(Screen):

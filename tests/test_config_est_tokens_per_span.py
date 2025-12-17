@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.rag.config import (
+from llmc.rag.config import (
     DEFAULT_EST_TOKENS_PER_SPAN,
     get_est_tokens_per_span,
 )

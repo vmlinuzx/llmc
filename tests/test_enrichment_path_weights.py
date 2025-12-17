@@ -8,7 +8,7 @@ from llmc.enrichment import (
     get_path_weight,
     load_path_weight_map,
 )
-from tools.rag.types import SpanWorkItem
+from llmc.rag.types import SpanWorkItem
 
 
 def test_path_weight_single_match() -> None:

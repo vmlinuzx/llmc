@@ -4,19 +4,19 @@ import struct
 import pytest
 
 from llmc.routing import router as routing_router
-from tools.rag.config import (
+from llmc.rag.config import (
     ConfigError,
     ConfigWarningFilter,
     get_route_for_slice_type,
     resolve_route,
 )
-from tools.rag.database import Database
-from tools.rag.indexer import index_repo
-from tools.rag.workers import execute_embeddings, execute_enrichment
+from llmc.rag.database import Database
+from llmc.rag.indexer import index_repo
+from llmc.rag.workers import execute_embeddings, execute_enrichment
 
 
 def clear_config_warning_filter():
-    logger = logging.getLogger("tools.rag.config")
+    logger = logging.getLogger("llmc.rag.config")
     for f in logger.filters:
         if isinstance(f, ConfigWarningFilter):
             f.seen.clear()
@@ -370,7 +370,7 @@ enable_query_routing = true
 
     # Mock embedding backend so the test does not depend on real embedding
     # configuration or external models.
-    from tools.rag import search
+    from llmc.rag import search
 
     class MockBackend:
         def __init__(self, dim: int = 64) -> None:
@@ -397,7 +397,7 @@ enable_query_routing = true
     with caplog.at_level(logging.DEBUG):
         # The query should classify as "code", but fall back to "docs" because
         # [embeddings.routes.code] and [embeddings.profiles.code_jina] are missing.
-        from tools.rag.search import search_spans
+        from llmc.rag.search import search_spans
 
         search_spans(query, limit=1, repo_root=repo_root)
 

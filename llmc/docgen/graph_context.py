@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def build_graph_context(
     repo_root: Path,
     relative_path: Path,
-    db: Any,  # Database type from tools.rag.database
+    db: Any,  # Database type from llmc.rag.database
     cached_graph: dict | None = None,
 ) -> str:
     """Build deterministic graph context for a file.

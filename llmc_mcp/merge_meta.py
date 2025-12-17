@@ -88,7 +88,7 @@ class MergeEngine:
     def apply_patch(
         self,
         patch: GraphPatch,
-        graph_store,  # GraphStore instance from tools.rag.graph
+        graph_store,  # GraphStore instance from llmc.rag.graph
         agent_id: str = "unknown",
         session_id: str = "unknown",
         operation_mode: str = "interactive",
@@ -173,7 +173,7 @@ class MergeEngine:
                             existing.metadata[key] = value
                 else:
                     # New node - add it
-                    from tools.rag.schema import Entity
+                    from llmc.rag.schema import Entity
                     
                     # Extract core Entity fields
                     entity = Entity(

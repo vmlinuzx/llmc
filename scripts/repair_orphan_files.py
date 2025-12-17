@@ -19,10 +19,10 @@ from pathlib import Path
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from tools.rag.config import index_path_for_write
-from tools.rag.database import Database
-from tools.rag.utils import find_repo_root
-from tools.rag.indexer import sync_paths
+from llmc.rag.config import index_path_for_write
+from llmc.rag.database import Database
+from llmc.rag.utils import find_repo_root
+from llmc.rag.indexer import sync_paths
 
 
 def find_orphan_files(db: Database) -> list[str]:

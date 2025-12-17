@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
-from tools.rag.schema import Entity
-from tools.rag_nav.tool_handlers import _attach_enrichment_to_entity
+from llmc.rag.schema import Entity
+from llmc.rag_nav.tool_handlers import _attach_enrichment_to_entity
 
 
 def make_entity():

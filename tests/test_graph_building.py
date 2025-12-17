@@ -14,8 +14,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def test_graph_node_coverage():
     """Test that graph includes all indexed files"""
-    from tools.rag.graph_store import GraphStore
-    from tools.rag.schema import SchemaGraph
+    from llmc.rag.graph_store import GraphStore
+    from llmc.rag.schema import SchemaGraph
 
     # Create a temporary graph file
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -60,8 +60,8 @@ def test_graph_node_coverage():
 
 def test_graph_edge_construction():
     """Test that edges are created for references"""
-    from tools.rag.graph_store import GraphStore
-    from tools.rag.schema import SchemaGraph
+    from llmc.rag.graph_store import GraphStore
+    from llmc.rag.schema import SchemaGraph
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         graph_data = {
@@ -114,8 +114,8 @@ def test_graph_edge_construction():
 
 def test_graph_self_consistency():
     """Test that graph references only known entities"""
-    from tools.rag.graph_store import GraphStore
-    from tools.rag.schema import SchemaGraph
+    from llmc.rag.graph_store import GraphStore
+    from llmc.rag.schema import SchemaGraph
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         # Graph with dangling reference
@@ -166,7 +166,7 @@ def test_graph_self_consistency():
 
 def test_graph_corrupt_handling():
     """Test handling of corrupt or missing graph file"""
-    from tools.rag.graph_store import GraphStore
+    from llmc.rag.graph_store import GraphStore
 
     # Test 1: Missing file
     print("Test 1: Missing graph file")
@@ -205,7 +205,7 @@ def test_graph_corrupt_handling():
     try:
         print("\nTest 3: Valid JSON but invalid schema")
         try:
-            from tools.rag.schema import SchemaGraph
+            from llmc.rag.schema import SchemaGraph
 
             graph = SchemaGraph.load(Path(invalid_path))
             print("  Result: Loaded with defaults")

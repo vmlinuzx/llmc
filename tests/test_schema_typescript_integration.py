@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 import tempfile
 
-from tools.rag.schema import build_schema_graph
+from llmc.rag.schema import build_schema_graph
 
 
 def test_typescript_repo_integration():

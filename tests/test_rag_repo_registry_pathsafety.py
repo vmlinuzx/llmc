@@ -34,7 +34,7 @@ def _names(entries) -> list[str]:
 
 
 def test_registry_workspace_validation(tmp_path: Path) -> None:
-    from tools.rag_repo import registry as reg
+    from llmc.rag_repo import registry as reg
 
     base = tmp_path / "repos"
     base.mkdir()

@@ -3,7 +3,7 @@ import struct
 
 import pytest
 
-from tools.rag.search import _score_candidates
+from llmc.rag.search import _score_candidates
 
 
 def _pack_vector(vec):

@@ -4,7 +4,7 @@ import sqlite3
 
 import pytest
 
-from tools.rag import tool_rag_lineage, tool_rag_search, tool_rag_where_used
+from llmc.rag import tool_rag_lineage, tool_rag_search, tool_rag_where_used
 
 
 def _mk_repo(tmp: Path) -> Path:

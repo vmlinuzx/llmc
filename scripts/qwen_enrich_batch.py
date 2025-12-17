@@ -40,28 +40,28 @@ estimate_nesting_depth = _router_mod.estimate_nesting_depth
 estimate_tokens_from_text = _router_mod.estimate_tokens_from_text
 expected_output_tokens = _router_mod.expected_output_tokens
 
-_cfg_mod = importlib.import_module("tools.rag.config")
+_cfg_mod = importlib.import_module("llmc.rag.config")
 get_est_tokens_per_span = _cfg_mod.get_est_tokens_per_span
 index_path_for_write = _cfg_mod.index_path_for_write
 
-_enrich_router_mod = importlib.import_module("tools.rag.enrichment_router")
+_enrich_router_mod = importlib.import_module("llmc.rag.enrichment_router")
 build_router_from_toml = _enrich_router_mod.build_router_from_toml
 EnrichmentSliceView = _enrich_router_mod.EnrichmentSliceView
 
 if TYPE_CHECKING:
-    from tools.rag.config_enrichment import (
+    from llmc.rag.config_enrichment import (
         EnrichmentBackendSpec as EnrichmentBackendSpecT,
         EnrichmentConfig as EnrichmentConfigT,
         filter_chain_for_tier,
         load_enrichment_config,
         select_chain,
     )
-    from tools.rag.enrichment_backends import (
+    from llmc.rag.enrichment_backends import (
         BackendAdapter as BackendAdapterT,
         BackendCascade as BackendCascadeT,
     )
 else:
-    _cfg_enrich_mod = importlib.import_module("tools.rag.config_enrichment")
+    _cfg_enrich_mod = importlib.import_module("llmc.rag.config_enrichment")
     EnrichmentBackendSpec = _cfg_enrich_mod.EnrichmentBackendSpec
     EnrichmentConfig = _cfg_enrich_mod.EnrichmentConfig
     EnrichmentConfigError = _cfg_enrich_mod.EnrichmentConfigError
@@ -70,20 +70,20 @@ else:
     select_chain = _cfg_enrich_mod.select_chain
 
     # Router integration (SDD v2.1)
-    _router_enrich_mod = importlib.import_module("tools.rag.enrichment_router")
+    _router_enrich_mod = importlib.import_module("llmc.rag.enrichment_router")
     EnrichmentRouter = _router_enrich_mod.EnrichmentRouter
     EnrichmentSliceView = _router_enrich_mod.EnrichmentSliceView
     EnrichmentRouteDecision = _router_enrich_mod.EnrichmentRouteDecision
     build_router_from_toml = _router_enrich_mod.build_router_from_toml
-_db_mod = importlib.import_module("tools.rag.database")
+_db_mod = importlib.import_module("llmc.rag.database")
 Database = _db_mod.Database
 
-_backends_mod = importlib.import_module("tools.rag.enrichment_backends")
+_backends_mod = importlib.import_module("llmc.rag.enrichment_backends")
 BackendAdapter = _backends_mod.BackendAdapter
 BackendCascade = _backends_mod.BackendCascade
 BackendError = _backends_mod.BackendError
 
-_workers_mod = importlib.import_module("tools.rag.workers")
+_workers_mod = importlib.import_module("llmc.rag.workers")
 enrichment_plan = _workers_mod.enrichment_plan
 validate_enrichment = _workers_mod.validate_enrichment
 
@@ -99,7 +99,7 @@ except Exception:  # pragma: no cover - llmc integration is optional for non-LLM
     load_path_weight_map = None  # type: ignore[assignment]
 
 try:
-    _service_mod = importlib.import_module("tools.rag.service")
+    _service_mod = importlib.import_module("llmc.rag.service")
     FailureTracker = getattr(_service_mod, "FailureTracker", None)
 except Exception:  # pragma: no cover - failure cache optional
     FailureTracker = None

@@ -7,11 +7,11 @@ from unittest.mock import Mock, patch
 
 import yaml
 
-from tools.rag_daemon.models import DaemonConfig, RepoState
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_daemon.scheduler import Scheduler
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.workers import WorkerPool
+from llmc.rag_daemon.models import DaemonConfig, RepoState
+from llmc.rag_daemon.registry import RegistryClient
+from llmc.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.workers import WorkerPool
 
 UTC = UTC
 

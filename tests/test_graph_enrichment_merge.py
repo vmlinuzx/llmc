@@ -6,9 +6,9 @@ from unittest.mock import patch
 # we can mock or reference them to define the test structure.
 # Ideally these imports would work once the code is written.
 try:
-    from tools.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
-    from tools.rag.schema import Entity, SchemaGraph
-    from tools.rag_nav.tool_handlers import build_enriched_schema_graph
+    from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+    from llmc.rag.schema import Entity, SchemaGraph
+    from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
 except ImportError:
     pass  # Allow test collection to fail gracefully if modules don't exist yet
 
@@ -52,7 +52,7 @@ class TestGraphEnrichment:
 
     def test_entity_has_metadata_field(self):
         """Test 3.1: Entity schema update."""
-        from tools.rag.schema import Entity
+        from llmc.rag.schema import Entity
 
         e = Entity(
             id="test",
@@ -68,7 +68,7 @@ class TestGraphEnrichment:
 
     def test_load_enrichment_data_valid(self, tmp_path):
         """Test 1.2: Load from valid DB."""
-        from tools.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+        from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -90,7 +90,7 @@ class TestGraphEnrichment:
 
     def test_load_enrichment_data_missing_db(self, tmp_path):
         """Test 1.1: Load from non-existent DB."""
-        from tools.rag.enrichment_db_helpers import load_enrichment_data
+        from llmc.rag.enrichment_db_helpers import load_enrichment_data
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -107,8 +107,8 @@ class TestGraphEnrichment:
 
         # 2. Mock base graph building
         # We'll patch the internal builder to return a known graph
-        from tools.rag.schema import Entity, SchemaGraph
-        from tools.rag_nav.tool_handlers import build_enriched_schema_graph
+        from llmc.rag.schema import Entity, SchemaGraph
+        from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
 
         base_entity = Entity(
             id="func_1",
@@ -122,7 +122,7 @@ class TestGraphEnrichment:
         base_graph = SchemaGraph(repo=str(repo_root), entities=[base_entity], relations=[])
 
         # 3. Setup Enrichment DB
-        from tools.rag.enrichment_db_helpers import EnrichmentRecord
+        from llmc.rag.enrichment_db_helpers import EnrichmentRecord
 
         record = EnrichmentRecord(
             span_hash="hash_func_1",
@@ -137,11 +137,11 @@ class TestGraphEnrichment:
         # 4. Run Enrichment
         # We patch the 'structural' builder to return our object
         with patch(
-            "tools.rag_nav.tool_handlers._build_base_structural_schema_graph",
+            "llmc.rag_nav.tool_handlers._build_base_structural_schema_graph",
             return_value=base_graph,
         ):
             # And we assume _save_schema_graph works or we can mock it to verify output
-            with patch("tools.rag_nav.tool_handlers._save_schema_graph") as mock_save:
+            with patch("llmc.rag_nav.tool_handlers._save_schema_graph") as mock_save:
                 result_graph = build_enriched_schema_graph(repo_root)
 
                 # 5. Assertions
@@ -158,8 +158,8 @@ class TestGraphEnrichment:
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
 
-        from tools.rag.schema import Entity, SchemaGraph
-        from tools.rag_nav.tool_handlers import build_enriched_schema_graph
+        from llmc.rag.schema import Entity, SchemaGraph
+        from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
 
         base_entity = Entity(
             id="func_2",
@@ -173,7 +173,7 @@ class TestGraphEnrichment:
         base_graph = SchemaGraph(repo=str(repo_root), entities=[base_entity], relations=[])
 
         # DB has record for DIFFERENT hash
-        from tools.rag.enrichment_db_helpers import EnrichmentRecord
+        from llmc.rag.enrichment_db_helpers import EnrichmentRecord
 
         record = EnrichmentRecord(
             span_hash="hash_func_1",
@@ -185,9 +185,9 @@ class TestGraphEnrichment:
         self.create_test_enrichment_db(repo_root, [record])
 
         with patch(
-            "tools.rag_nav.tool_handlers._build_base_structural_schema_graph",
+            "llmc.rag_nav.tool_handlers._build_base_structural_schema_graph",
             return_value=base_graph,
         ):
-            with patch("tools.rag_nav.tool_handlers._save_schema_graph"):
+            with patch("llmc.rag_nav.tool_handlers._save_schema_graph"):
                 result_graph = build_enriched_schema_graph(repo_root)
                 assert result_graph.entities[0].metadata == {}

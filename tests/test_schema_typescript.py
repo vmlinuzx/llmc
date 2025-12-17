@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from tools.rag.schema import (
+from llmc.rag.schema import (
     extract_schema_from_file,
 )
 

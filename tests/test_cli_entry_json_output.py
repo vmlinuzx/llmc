@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from tools.rag_repo import cli_entry
+from llmc.rag_repo import cli_entry
 
 
 def test_cli_json_output(tmp_path, capsys) -> None:

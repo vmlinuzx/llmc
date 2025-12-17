@@ -5,9 +5,9 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.rag_nav.gateway import compute_route  # type: ignore  # noqa: E402
-from tools.rag_nav.metadata import save_status  # type: ignore  # noqa: E402
-from tools.rag_nav.models import IndexStatus  # type: ignore  # noqa: E402
+from llmc.rag_nav.gateway import compute_route  # type: ignore  # noqa: E402
+from llmc.rag_nav.metadata import save_status  # type: ignore  # noqa: E402
+from llmc.rag_nav.models import IndexStatus  # type: ignore  # noqa: E402
 
 
 def test_compute_route_no_status(tmp_path: Path) -> None:
@@ -50,7 +50,7 @@ def test_compute_route_fresh_with_matching_head(tmp_path: Path, monkeypatch) -> 
     )
     save_status(repo_root, status)
 
-    from tools.rag_nav import gateway
+    from llmc.rag_nav import gateway
 
     monkeypatch.setattr(gateway, "_detect_git_head", lambda _: "abc123")
 
@@ -73,7 +73,7 @@ def test_compute_route_fresh_with_mismatched_head(tmp_path: Path, monkeypatch) -
     )
     save_status(repo_root, status)
 
-    from tools.rag_nav import gateway
+    from llmc.rag_nav import gateway
 
     monkeypatch.setattr(gateway, "_detect_git_head", lambda _: "deadbeef")
 

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.cli import resolve_export_dir, resolve_workspace_from_cli
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_repo.cli import resolve_export_dir, resolve_workspace_from_cli
+from llmc.rag_repo.utils import PathTraversalError
 
 
 def test_cli_helpers_e2e_ok(tmp_path: Path) -> None:

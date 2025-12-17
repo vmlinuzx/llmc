@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.rag.database import Database
-from tools.rag.types import FileRecord, SpanRecord
+from llmc.rag.database import Database
+from llmc.rag.types import FileRecord, SpanRecord
 
 
 def _make_db(tmp_path: Path) -> Database:

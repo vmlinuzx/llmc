@@ -5,15 +5,15 @@ from typing import Annotated, Any, cast
 import typer
 
 from llmc.core import find_repo_root
-from tools.rag.config import get_est_tokens_per_span, index_path_for_read
-from tools.rag.database import Database
-from tools.rag.doctor import run_rag_doctor as run_doctor
+from llmc.rag.config import get_est_tokens_per_span, index_path_for_read
+from llmc.rag.database import Database
+from llmc.rag.doctor import run_rag_doctor as run_doctor
 
 # Imports from existing tools
-from tools.rag.indexer import index_repo as run_index_repo
-from tools.rag.inspector import inspect_entity as run_inspect_entity
-from tools.rag.planner import generate_plan as run_generate_plan
-from tools.rag.search import search_spans as run_search_spans
+from llmc.rag.indexer import index_repo as run_index_repo
+from llmc.rag.inspector import inspect_entity as run_inspect_entity
+from llmc.rag.planner import generate_plan as run_generate_plan
+from llmc.rag.search import search_spans as run_search_spans
 
 
 def index(
@@ -220,8 +220,8 @@ def sync(
     stdin: Annotated[bool, typer.Option("--stdin", help="Read paths from stdin")] = False,
 ):
     """Incrementally update spans for selected files."""
-    from tools.rag.indexer import sync_paths
-    from tools.rag.utils import git_changed_paths
+    from llmc.rag.indexer import sync_paths
+    from llmc.rag.utils import git_changed_paths
 
     repo_root = find_repo_root()
 
@@ -301,9 +301,9 @@ def enrich(
     """Preview or execute enrichment tasks (summary/tags)."""
     from llmc.core import load_config
     from llmc.enrichment import FileClassifier, load_path_weight_map
-    from tools.rag.database import Database as RagDatabase
-    from tools.rag.types import SpanWorkItem
-    from tools.rag.workers import (
+    from llmc.rag.database import Database as RagDatabase
+    from llmc.rag.types import SpanWorkItem
+    from llmc.rag.workers import (
         default_enrichment_callable,
         enrichment_plan,
         execute_enrichment,
@@ -428,7 +428,7 @@ def embed(
     dim: Annotated[int, typer.Option(help="Embedding dimension (0 uses model default)")] = 0,
 ):
     """Preview or execute embedding jobs for spans."""
-    from tools.rag.workers import embedding_plan, execute_embeddings
+    from llmc.rag.workers import embedding_plan, execute_embeddings
 
     repo_root = find_repo_root()
     db_file = index_path_for_read(repo_root)
@@ -473,7 +473,7 @@ def graph(
     ] = None,
 ):
     """Build a schema graph for the current repository."""
-    from tools.rag.schema import build_graph_for_repo as schema_build_graph_for_repo
+    from llmc.rag.schema import build_graph_for_repo as schema_build_graph_for_repo
 
     repo_root = find_repo_root()
 
@@ -631,7 +631,7 @@ def export(
     ] = None,
 ):
     """Export all RAG data to tar.gz archive."""
-    from tools.rag.export_data import run_export
+    from llmc.rag.export_data import run_export
 
     repo_root = find_repo_root()
     output_path = Path(output) if output else None
@@ -648,7 +648,7 @@ def benchmark(
     ] = 0.1,
 ):
     """Run a lightweight embedding quality benchmark."""
-    from tools.rag.benchmark import run_embedding_benchmark
+    from llmc.rag.benchmark import run_embedding_benchmark
 
     metrics = run_embedding_benchmark()
     success = (
@@ -688,7 +688,7 @@ def nav_search(
     json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Semantic/structural search using graph when fresh, else local fallback."""
-    from tools.rag import tool_rag_search
+    from llmc.rag import tool_rag_search
 
     repo_root = find_repo_root()
 
@@ -734,7 +734,7 @@ def nav_where_used(
     json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Find where a symbol is used (callers, importers)."""
-    from tools.rag import tool_rag_where_used
+    from llmc.rag import tool_rag_where_used
 
     repo_root = find_repo_root()
 
@@ -758,7 +758,7 @@ def nav_lineage(
     json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
 ):
     """Show symbol lineage (parents, children, dependencies)."""
-    from tools.rag import tool_rag_lineage
+    from llmc.rag import tool_rag_lineage
 
     repo_root = find_repo_root()
 

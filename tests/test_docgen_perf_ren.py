@@ -9,7 +9,7 @@ import pytest
 # Try to import Database, if fails, skip tests
 try:
     sys.path.append('.')
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     HAS_DATABASE = True
 except ImportError:
     HAS_DATABASE = False
@@ -52,7 +52,7 @@ def large_graph_file(tmp_path):
     
     return graph_path
 
-@pytest.mark.skipif(not HAS_DATABASE, reason="tools.rag.database not available")
+@pytest.mark.skipif(not HAS_DATABASE, reason="llmc.rag.database not available")
 def test_graph_context_performance(tmp_path, large_graph_file):
     """Test that graph loading performance is acceptable."""
     # Mock database

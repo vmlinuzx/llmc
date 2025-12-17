@@ -1,4 +1,4 @@
-from tools.rag.metrics.retrieval import mean_reciprocal_rank, ndcg_at_k, recall_at_k
+from llmc.rag.metrics.retrieval import mean_reciprocal_rank, ndcg_at_k, recall_at_k
 
 
 def test_mrr_first_position() -> None:

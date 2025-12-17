@@ -7,8 +7,8 @@ from unittest.mock import Mock
 
 import yaml
 
-from tools.rag_repo.cli import _cmd_add
-from tools.rag_repo.registry import RegistryAdapter
+from llmc.rag_repo.cli import _cmd_add
+from llmc.rag_repo.registry import RegistryAdapter
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -28,7 +28,7 @@ def test_add_new_repo_creates_workspace(tmp_path: Path) -> None:
         registry_path.write_text("{}\n")
 
         # Create tool config
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -88,7 +88,7 @@ def test_add_existing_repo_is_idempotent(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -160,7 +160,7 @@ def test_add_repo_preserves_existing_configs(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -199,7 +199,7 @@ def test_add_repo_multiple_times_same_registry(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -242,7 +242,7 @@ def test_add_repo_different_paths_same_repo(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -289,7 +289,7 @@ def test_add_repo_workspace_initialization(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -343,7 +343,7 @@ def test_add_repo_creates_registry_entry(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -392,7 +392,7 @@ def test_add_with_custom_profile(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -427,7 +427,7 @@ def test_add_repo_json_output(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -472,7 +472,7 @@ def test_add_non_existent_repo_fails(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -511,7 +511,7 @@ def test_add_creates_directory_structure(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,
@@ -557,7 +557,7 @@ def test_add_idempotency_with_registry_changes(tmp_path: Path) -> None:
         registry_path = home / "registry.yml"
         registry_path.write_text("{}\n")
 
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=registry_path,

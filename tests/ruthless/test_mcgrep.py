@@ -92,7 +92,7 @@ class TestMcgrepSearch:
         # Should fail because query is required
         assert result.returncode != 0 or "missing" in result.stderr.lower() or "query" in result.stderr.lower()
 
-    @patch("tools.rag_nav.tool_handlers.tool_rag_search")
+    @patch("llmc.rag_nav.tool_handlers.tool_rag_search")
     @patch("llmc.mcgrep.find_repo_root")
     def test_search_formats_results_correctly(self, mock_find_root, mock_search, tmp_path):
         """Search results should be formatted with file:line and snippets."""

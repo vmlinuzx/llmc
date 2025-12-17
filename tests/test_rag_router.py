@@ -14,7 +14,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tools.rag_router import (
+from llmc.rag_router import (
     QueryAnalysis,
     RAGRouter,
     RoutingDecision,

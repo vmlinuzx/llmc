@@ -9,11 +9,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from tools.rag_daemon.models import DaemonConfig
-from tools.rag_daemon.scheduler import Scheduler
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.workers import WorkerPool
-from tools.rag_repo.cli import _cmd_add
+from llmc.rag_daemon.models import DaemonConfig
+from llmc.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.workers import WorkerPool
+from llmc.rag_repo.cli import _cmd_add
 
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,7 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def test_e2e_daemon_tick_with_dummy_runner(tmp_path: Path) -> None:
     """End-to-end test: daemon tick with dummy job runner."""
     # Import RegistryAdapter locally as it's used here
-    from tools.rag_repo.registry import RegistryAdapter
+    from llmc.rag_repo.registry import RegistryAdapter
 
     with tempfile.TemporaryDirectory() as home:
         home = Path(home)
@@ -55,7 +55,7 @@ sys.exit(0)
         (repo_root / "README.md").write_text("# Test Repo")
 
         # Register repo
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -90,7 +90,7 @@ sys.exit(0)
         (
             RegistryAdapter(cfg.registry_path) if hasattr(RegistryAdapter, "__init__") else None
         )
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.registry import RegistryClient
 
         registry_client = RegistryClient.from_config(cfg)
         state_store = StateStore(cfg.state_store_path)
@@ -146,7 +146,7 @@ exit 0
         (repo3 / "README.md").write_text("Repo 3")
 
         # Register all repos
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -164,8 +164,8 @@ exit 0
             _cmd_add(args, tool_config, None)
 
         # Create daemon
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -225,7 +225,7 @@ exit 1
         (repo_root / "README.md").write_text("# Test Repo")
 
         # Register repo
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -242,8 +242,8 @@ exit 1
         _cmd_add(args, tool_config, None)
 
         # Create daemon
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -303,7 +303,7 @@ exit 0
         (repo_root / "README.md").write_text("# Test Repo")
 
         # Register repo
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -320,8 +320,8 @@ exit 0
         _cmd_add(args, tool_config, None)
 
         # First run to set state
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -392,7 +392,7 @@ exit 0
         (repo_root / "README.md").write_text("# Test Repo")
 
         # Register repo
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -409,8 +409,8 @@ exit 0
         _cmd_add(args, tool_config, None)
 
         # First daemon instance
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -476,7 +476,7 @@ exit 0
             repos.append(repo)
 
         # Register all repos
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -494,8 +494,8 @@ exit 0
             _cmd_add(args, tool_config, None)
 
         # Create daemon with max 2 concurrent jobs
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,
@@ -556,7 +556,7 @@ exit 0
             (repo_root / "README.md").write_text("# My Repo")
 
             # Use default config path (~/.llmc/rag-daemon.yml)
-            from tools.rag_repo.config import ToolConfig
+            from llmc.rag_repo.config import ToolConfig
 
             tool_config = ToolConfig(
                 registry_path=temp_home / ".llmc" / "repos.yml",
@@ -567,7 +567,7 @@ exit 0
             tool_config.registry_path.parent.mkdir(parents=True, exist_ok=True)
 
             # Add repo
-            from tools.rag_repo.cli import _cmd_add
+            from llmc.rag_repo.cli import _cmd_add
 
             args = Mock(
                 path=str(repo_root),
@@ -579,7 +579,7 @@ exit 0
             _cmd_add(args, tool_config, None)
 
             # Verify repo was added
-            from tools.rag_repo.registry import RegistryAdapter
+            from llmc.rag_repo.registry import RegistryAdapter
 
             registry = RegistryAdapter(tool_config)
             entries = registry.load_all()
@@ -603,7 +603,7 @@ def test_e2e_daemon_shutdown_flag(tmp_path: Path) -> None:
         # This test would require a running daemon which is complex in pytest
         # Instead, we verify the control surface logic
 
-        from tools.rag_daemon.control import read_control_events
+        from llmc.rag_daemon.control import read_control_events
 
         control_dir = home / "control"
         control_dir.mkdir()
@@ -647,7 +647,7 @@ exit 0
         (repo_root / "src" / "main.py").write_text("print('hello')")
 
         # Step 3: Add repo
-        from tools.rag_repo.config import ToolConfig
+        from llmc.rag_repo.config import ToolConfig
 
         tool_config = ToolConfig(
             registry_path=home / "registry.yml",
@@ -666,8 +666,8 @@ exit 0
         assert result == 0
 
         # Step 4: Start daemon
-        from tools.rag_daemon.models import DaemonConfig
-        from tools.rag_daemon.registry import RegistryClient
+        from llmc.rag_daemon.models import DaemonConfig
+        from llmc.rag_daemon.registry import RegistryClient
 
         cfg = DaemonConfig(
             tick_interval_seconds=60,

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.fs import SafeFS
-from tools.rag_repo.policy import PathPolicyError, PathSafetyPolicy
+from llmc.rag_repo.fs import SafeFS
+from llmc.rag_repo.policy import PathPolicyError, PathSafetyPolicy
 
 
 def test_safefs_readonly_blocks_write(tmp_path: Path) -> None:

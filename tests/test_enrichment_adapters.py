@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 import scripts.qwen_enrich_batch as qeb
-from tools.rag.enrichment_backends import BackendError
+from llmc.rag.enrichment_backends import BackendError
 
 
 def _make_args() -> SimpleNamespace:

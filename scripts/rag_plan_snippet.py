@@ -12,8 +12,8 @@ import argparse
 from pathlib import Path
 import sys
 
-from tools.rag.config import index_path_for_read
-from tools.rag.planner import generate_plan
+from llmc.rag.config import index_path_for_read
+from llmc.rag.planner import generate_plan
 
 
 def load_query(args: argparse.Namespace) -> str:

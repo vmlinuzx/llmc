@@ -25,8 +25,8 @@ except ImportError:
 
 # Import LLMC core modules
 try:
-    from tools.rag_nav.metadata import load_status
-    from tools.rag_nav.tool_handlers import (  # _load_graph is private, but okay for demo
+    from llmc.rag_nav.metadata import load_status
+    from llmc.rag_nav.tool_handlers import (  # _load_graph is private, but okay for demo
         _load_graph,
     )
 except ImportError as e:
@@ -276,7 +276,7 @@ def route(
     """Test routing logic for a file path."""
     repo_root = Path(".").resolve()  # Assume CWD
     try:
-        from tools.rag.routing import resolve_domain
+        from llmc.rag.routing import resolve_domain
     except ImportError as e:
         console.print(f"[bold red]Error importing routing logic:[/bold red] {e}")
         return

@@ -141,7 +141,7 @@ def init(
         llmc repo init /path     # Init specific path
     """
     import tomli_w
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     
     repo_path = Path(path).resolve()
     
@@ -387,7 +387,7 @@ def register(
     # Step 3: Initialize database
     db_path = llmc_dir / "index_v2.db"
     try:
-        from tools.rag.database import Database
+        from llmc.rag.database import Database
         db = Database(db_path)
         db.close()
         console.print(f"  ✅ Initialized database")
@@ -399,7 +399,7 @@ def register(
         console.print(f"  📂 Indexing files...")
         try:
             import os as _os
-            from tools.rag.indexer import index_repo
+            from llmc.rag.indexer import index_repo
             
             # Save CWD and change to target repo
             orig_cwd = Path.cwd()
@@ -622,7 +622,7 @@ def bootstrap(
     rag_dir.mkdir(parents=True, exist_ok=True)
     db_path = rag_dir / "index_v2.db"
     try:
-        from tools.rag.database import Database
+        from llmc.rag.database import Database
         db = Database(db_path)
         db.close()
         console.print(f"  ✅ Initialized database")
@@ -634,7 +634,7 @@ def bootstrap(
         console.print(f"  📂 Re-indexing files...")
         try:
             import os as _os
-            from tools.rag.indexer import index_repo
+            from llmc.rag.indexer import index_repo
             
             orig_cwd = Path.cwd()
             _os.chdir(repo_path)

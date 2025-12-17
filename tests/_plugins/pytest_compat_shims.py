@@ -40,7 +40,7 @@ def pytest_configure(config):
 def pytest_sessionstart(session):
     # Compat seam for tools.rag.enrichment.requests
     with contextlib.suppress(Exception):
-        enr = importlib.import_module("tools.rag.enrichment")
+        enr = importlib.import_module("llmc.rag.enrichment")
         if not hasattr(enr, "requests"):
             # Minimal stub that tests can monkeypatch
             class _RequestsStub:

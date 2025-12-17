@@ -6,7 +6,7 @@ repo_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(repo_root))
 
 try:
-    from tools.rag_repo.cli_entry import snapshot_workspace_cmd
+    from llmc.rag_repo.cli_entry import snapshot_workspace_cmd
 
     print("Successfully imported snapshot_workspace_cmd")
 

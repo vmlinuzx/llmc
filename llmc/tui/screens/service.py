@@ -221,7 +221,7 @@ class ServiceScreen(LLMCScreen):
         """Get list of registered repositories."""
         # Try importing ServiceState
         try:
-            from tools.rag.service import ServiceState
+            from llmc.rag.service import ServiceState
             return ServiceState().state.get("repos", [])
         except ImportError:
             # Fallback to reading file directly
@@ -248,7 +248,7 @@ class ServiceScreen(LLMCScreen):
     def _get_repo_stats(self, repo_path: Path) -> dict | None:
         """Get basic stats for a repo."""
         try:
-            from tools.rag.doctor import run_rag_doctor
+            from llmc.rag.doctor import run_rag_doctor
             report = run_rag_doctor(repo_path)
             return report.get("stats")
         except ImportError:

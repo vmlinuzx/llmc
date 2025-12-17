@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from tools.rag.types import SpanWorkItem
+from llmc.rag.types import SpanWorkItem
 
 from .config import DEFAULT_PATH_WEIGHT
 

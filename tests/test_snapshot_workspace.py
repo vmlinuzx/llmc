@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 import tarfile
 
-from tools.rag_repo.archive import create_snapshot_tar
-from tools.rag_repo.fs import SafeFS
+from llmc.rag_repo.archive import create_snapshot_tar
+from llmc.rag_repo.fs import SafeFS
 
 
 def test_snapshot_creates_tar(tmp_path: Path) -> None:

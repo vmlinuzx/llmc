@@ -263,7 +263,7 @@ class TestCronDrivenRefreshWorkflow:
                 content = f.read()
 
             # Should call Python runner
-            assert "tools.rag.runner" in content or "refresh" in content
+            assert "llmc.rag.runner" in content or "refresh" in content
 
     def test_rag_sync_integration(self):
         """Test rag_sync.sh integration."""

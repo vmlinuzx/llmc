@@ -3,8 +3,8 @@ import struct
 
 import pytest
 
-from tools.rag.database import Database
-from tools.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
+from llmc.rag.database import Database
+from llmc.rag.embedding_manager import EmbeddingManager, EmbeddingProfileConfig
 
 DB_PATH = Path(".rag/test_integrity.db")
 

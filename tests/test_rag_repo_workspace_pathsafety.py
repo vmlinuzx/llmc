@@ -5,8 +5,8 @@ import types
 
 import pytest
 
-from tools.rag_repo import workspace as ws
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_repo import workspace as ws
+from llmc.rag_repo.utils import PathTraversalError
 
 
 def _extract_root(result) -> Path:

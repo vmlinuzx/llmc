@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.cli import resolve_export_dir
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_repo.cli import resolve_export_dir
+from llmc.rag_repo.utils import PathTraversalError
 
 
 def test_resolve_export_dir_ok(tmp_path: Path) -> None:

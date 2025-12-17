@@ -16,7 +16,7 @@ from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docge
 
 if TYPE_CHECKING:
     from llmc.docgen.orchestrator import DocgenOrchestrator
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def generate(
         raise typer.Exit(1)
     
     # Deferred import to allow CLI to load without [rag] extras
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     db = Database(db_path)
     
     # Get config settings
@@ -176,7 +176,7 @@ def status():
         raise typer.Exit(1)
     
     # Deferred import to allow CLI to load without [rag] extras
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     db = Database(db_path)
     
     # Get stats

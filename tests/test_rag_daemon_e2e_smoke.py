@@ -8,16 +8,16 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-from tools.rag_daemon.config import load_config
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_daemon.scheduler import Scheduler
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.workers import WorkerPool
-from tools.rag_repo.config import load_tool_config
-from tools.rag_repo.inspect_repo import inspect_repo
-from tools.rag_repo.models import RegistryEntry
-from tools.rag_repo.registry import RegistryAdapter
-from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
+from llmc.rag_daemon.config import load_config
+from llmc.rag_daemon.registry import RegistryClient
+from llmc.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.workers import WorkerPool
+from llmc.rag_repo.config import load_tool_config
+from llmc.rag_repo.inspect_repo import inspect_repo
+from llmc.rag_repo.models import RegistryEntry
+from llmc.rag_repo.registry import RegistryAdapter
+from llmc.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 
 
 @pytest.mark.allow_sleep
@@ -68,7 +68,7 @@ def test_e2e_smoke_test(tmp_path: Path) -> None:
     registry_adapter = RegistryAdapter(tool_config)
 
     # Generate repo ID
-    from tools.rag_repo.utils import generate_repo_id
+    from llmc.rag_repo.utils import generate_repo_id
 
     repo_id = generate_repo_id(test_repo)
     entry = RegistryEntry(
@@ -200,7 +200,7 @@ echo '{"status": "success", "spans": 42}' > /tmp/job_summary_$$.json
     refresh_flag.write_text("")
 
     # Read control events
-    from tools.rag_daemon.control import read_control_events
+    from llmc.rag_daemon.control import read_control_events
 
     events = read_control_events(config.control_dir)
     assert repo_id in events.refresh_repo_ids
@@ -276,7 +276,7 @@ def test_e2e_multiple_repos(tmp_path: Path) -> None:
 
     # Register all repos
     registry_adapter = RegistryAdapter(tool_config)
-    from tools.rag_repo.utils import generate_repo_id
+    from llmc.rag_repo.utils import generate_repo_id
 
     for repo_path, _expected_id_prefix in repos:
         inspection = inspect_repo(repo_path, tool_config)

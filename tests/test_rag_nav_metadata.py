@@ -7,8 +7,8 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.rag_nav.metadata import load_status, save_status, status_path
-from tools.rag_nav.models import IndexStatus
+from llmc.rag_nav.metadata import load_status, save_status, status_path
+from llmc.rag_nav.models import IndexStatus
 
 
 def test_load_status_missing_returns_none(tmp_path: Path) -> None:

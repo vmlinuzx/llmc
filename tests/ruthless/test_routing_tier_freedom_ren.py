@@ -1,5 +1,5 @@
 
-from tools.rag.config_enrichment import (
+from llmc.rag.config_enrichment import (
     EnrichmentBackendSpec,
     _parse_backend_spec,
     filter_chain_for_tier,

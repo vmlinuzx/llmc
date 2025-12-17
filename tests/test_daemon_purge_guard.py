@@ -5,7 +5,7 @@ import types
 
 import pytest
 
-from tools.rag_daemon import api as dapi
+from llmc.rag_daemon import api as dapi
 
 
 class Cfg(types.SimpleNamespace):

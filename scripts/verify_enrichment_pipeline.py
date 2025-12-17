@@ -25,8 +25,8 @@ def main():
     try:
         # Test 1: Can we import the modules?
         print("1. Testing imports...")
-        from tools.rag.enrichment_adapters.ollama import OllamaBackend
-        from tools.rag.enrichment_pipeline import (
+        from llmc.rag.enrichment_adapters.ollama import OllamaBackend
+        from llmc.rag.enrichment_pipeline import (
             EnrichmentBatchResult,
             EnrichmentPipeline,
             EnrichmentResult,

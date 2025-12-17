@@ -12,8 +12,8 @@ from llmc.core import find_repo_root
 
 # Import existing service infrastructure
 try:
-    from tools.rag.service import ServiceState
-    from tools.rag.service_daemon import SystemdManager
+    from llmc.rag.service import ServiceState
+    from llmc.rag.service_daemon import SystemdManager
 except ImportError:
     # Graceful degradation if imports fail
     SystemdManager = None
@@ -21,8 +21,8 @@ except ImportError:
 
 # Import RAG doctor and quality for health checks
 try:
-    from tools.rag.doctor import run_rag_doctor
-    from tools.rag.quality import run_quality_check
+    from llmc.rag.doctor import run_rag_doctor
+    from llmc.rag.quality import run_quality_check
 except ImportError:
     run_rag_doctor = None
     run_quality_check = None

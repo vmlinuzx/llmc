@@ -68,7 +68,7 @@ class TestRagRefresh:
             content = f.read()
 
         # Should exec to Python runner with args
-        assert "tools.rag.runner refresh" in content
+        assert "llmc.rag.runner refresh" in content
         assert '"$@"' in content or "$@" in content
 
 
@@ -470,7 +470,7 @@ class TestRagSync:
             content = f.read()
 
         # Should call tools.rag.cli sync
-        assert "tools.rag.cli sync" in content
+        assert "llmc.rag.cli sync" in content
         assert "--stdin" in content
 
     def test_passes_pythonpath(self):

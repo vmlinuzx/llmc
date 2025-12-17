@@ -18,7 +18,7 @@ from textual.worker import Worker, WorkerState
 from llmc.tui.base import LLMCScreen
 from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docgen_backend
 from llmc.docgen.orchestrator import DocgenOrchestrator
-from tools.rag.database import Database
+from llmc.rag.database import Database
 from llmc.core import find_repo_root, load_config
 
 

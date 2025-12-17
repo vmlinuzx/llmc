@@ -3,14 +3,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # We'll import these inside tests or after creating them to avoid import errors during initial run
-# from tools.rag_nav.models import SearchItem, EnrichmentData
+# from llmc.rag_nav.models import SearchItem, EnrichmentData
 
 
 class TestEnrichedTools:
     def test_model_enrichment_field(self):
         """Test that SearchItem accepts and serializes enrichment data."""
         try:
-            from tools.rag_nav.models import EnrichmentData, SearchItem, Snippet, SnippetLocation
+            from llmc.rag_nav.models import EnrichmentData, SearchItem, Snippet, SnippetLocation
         except ImportError:
             pytest.fail("Models not updated yet")
 
@@ -31,8 +31,8 @@ class TestEnrichedTools:
     def test_tool_search_attaches_graph_enrichment(self, tmp_path):
         """Test that tool_rag_search attaches enrichment from graph nodes."""
         try:
-            from tools.rag_nav.models import SearchItem, SearchResult, Snippet, SnippetLocation
-            from tools.rag_nav.tool_handlers import tool_rag_search
+            from llmc.rag_nav.models import SearchItem, SearchResult, Snippet, SnippetLocation
+            from llmc.rag_nav.tool_handlers import tool_rag_search
         except ImportError:
             pytest.fail("Modules not found")
 
@@ -70,11 +70,11 @@ class TestEnrichedTools:
         ]
 
         with (
-            patch("tools.rag_nav.tool_handlers._compute_route", return_value=mock_route),
-            patch("tools.rag_nav.tool_handlers.fts_search", return_value=[mock_hit]),
-            patch("tools.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
-            patch("tools.rag_nav.tool_handlers.load_rerank_weights", return_value={}),
-            patch("tools.rag_nav.tool_handlers.rerank_hits", side_effect=lambda q, h, **k: h),
+            patch("llmc.rag_nav.tool_handlers._compute_route", return_value=mock_route),
+            patch("llmc.rag_nav.tool_handlers.fts_search", return_value=[mock_hit]),
+            patch("llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
+            patch("llmc.rag_nav.tool_handlers.load_rerank_weights", return_value={}),
+            patch("llmc.rag_nav.tool_handlers.rerank_hits", side_effect=lambda q, h, **k: h),
         ):  # Pass-through
             result = tool_rag_search(repo_root, "login")
 
@@ -85,7 +85,7 @@ class TestEnrichedTools:
 
     def test_tool_where_used_attaches_enrichment(self, tmp_path):
         """Test that where-used attaches enrichment."""
-        from tools.rag_nav.tool_handlers import tool_rag_where_used
+        from llmc.rag_nav.tool_handlers import tool_rag_where_used
 
         repo_root = tmp_path / "repo"
 
@@ -114,13 +114,13 @@ class TestEnrichedTools:
         # Ideally tool_rag_where_used should look up the node for the result path.
 
         with (
-            patch("tools.rag_nav.tool_handlers._compute_route", return_value=mock_route),
-            patch("tools.rag_nav.tool_handlers.load_graph_indices"),
+            patch("llmc.rag_nav.tool_handlers._compute_route", return_value=mock_route),
+            patch("llmc.rag_nav.tool_handlers.load_graph_indices"),
             patch(
-                "tools.rag_nav.tool_handlers.where_used_files_from_index",
+                "llmc.rag_nav.tool_handlers.where_used_files_from_index",
                 return_value=["src/main.py"],
             ),
-            patch("tools.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
+            patch("llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
         ):
             result = tool_rag_where_used(repo_root, "login")
 

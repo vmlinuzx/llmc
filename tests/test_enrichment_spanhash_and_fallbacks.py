@@ -2,8 +2,8 @@ import hashlib
 from pathlib import Path
 import sqlite3
 
-from tools.rag_nav import models
-from tools.rag_nav.enrichment import (
+from llmc.rag_nav import models
+from llmc.rag_nav.enrichment import (
     EnrichStats,
     SqliteEnrichmentStore,
     attach_enrichments_to_search_result,

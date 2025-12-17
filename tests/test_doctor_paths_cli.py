@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tools.rag_repo.doctor import doctor_paths
+from llmc.rag_repo.doctor import doctor_paths
 
 
 def test_doctor_paths_ok(tmp_path: Path) -> None:

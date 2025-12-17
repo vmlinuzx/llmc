@@ -173,7 +173,7 @@ def resolve_doc_path(
 
 
 def check_rag_freshness(
-    db: Any,  # Database type from tools.rag.database
+    db: Any,  # Database type from llmc.rag.database
     relative_path: Path,
     file_sha256: str,
 ) -> tuple[bool, str]:

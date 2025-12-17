@@ -1,6 +1,6 @@
 # Validates adapter helpers wrap existing concrete result models into RagResult
-from tools.rag_nav import models
-from tools.rag_nav.envelope import (
+from llmc.rag_nav import models
+from llmc.rag_nav.envelope import (
     lineage_to_rag_result,
     search_to_rag_result,
     where_used_to_rag_result,

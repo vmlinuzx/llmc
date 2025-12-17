@@ -5,8 +5,8 @@ import types
 
 import pytest
 
-from tools.rag_daemon import api as dapi
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_daemon import api as dapi
+from llmc.rag_repo.utils import PathTraversalError
 
 
 class Cfg(types.SimpleNamespace):

@@ -168,7 +168,7 @@ def complex_usage():
         try:
             # Test the metadata module if it exists
             try:
-                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
+                from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 status = IndexStatus(
                     repo=str(test_repo),
@@ -254,7 +254,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.metadata import load_status
+                from llmc.rag_nav.metadata import load_status
 
                 result = load_status(test_repo)
 
@@ -309,7 +309,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
+                from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 # Create corrupt file
                 status_file = test_repo / ".llmc" / "rag_index_status.json"
@@ -378,7 +378,7 @@ def complex_usage():
             repo2 = Path(tempfile.mkdtemp(prefix="rag_nav_test_repo2_"))
 
             try:
-                from tools.rag_nav.metadata import IndexStatus, load_status, save_status
+                from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
 
                 status1 = IndexStatus(
                     repo=str(repo1),
@@ -484,7 +484,7 @@ def complex_usage():
             else:
                 # Check if module exists
                 try:
-                    import tools.rag_nav.cli
+                    import llmc.rag_nav.cli
 
                     self.add_result(
                         "graph_cli_help",
@@ -518,7 +518,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import build_graph_for_repo
+                from llmc.rag_nav.tool_handlers import build_graph_for_repo
 
                 status = build_graph_for_repo(test_repo)
 
@@ -608,7 +608,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import build_graph_for_repo
+                from llmc.rag_nav.tool_handlers import build_graph_for_repo
 
                 # First build
                 status1 = build_graph_for_repo(test_repo)
@@ -676,7 +676,7 @@ def complex_usage():
 
             # Simulate a build attempt (even if it fails)
             try:
-                from tools.rag_nav.tool_handlers import build_graph_for_repo
+                from llmc.rag_nav.tool_handlers import build_graph_for_repo
 
                 # This should preserve the old graph on failure
                 try:
@@ -729,7 +729,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_search
+                from llmc.rag_nav.tool_handlers import tool_rag_search
 
                 result = tool_rag_search(query="target_function", repo_root=test_repo, limit=10)
 
@@ -808,7 +808,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_where_used
+                from llmc.rag_nav.tool_handlers import tool_rag_where_used
 
                 result = tool_rag_where_used(
                     symbol="target_function", repo_root=test_repo, limit=10
@@ -869,7 +869,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_lineage
+                from llmc.rag_nav.tool_handlers import tool_rag_lineage
 
                 result = tool_rag_lineage(
                     symbol="target_function",
@@ -926,7 +926,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_search
+                from llmc.rag_nav.tool_handlers import tool_rag_search
 
                 result = tool_rag_search(
                     query="nonexistent_symbol_xyz123", repo_root=test_repo, limit=10
@@ -979,7 +979,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.gateway import compute_route
+                from llmc.rag_nav.gateway import compute_route
 
                 route = compute_route(test_repo)
 
@@ -1029,8 +1029,8 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.gateway import compute_route
-                from tools.rag_nav.metadata import IndexStatus, save_status
+                from llmc.rag_nav.gateway import compute_route
+                from llmc.rag_nav.metadata import IndexStatus, save_status
 
                 # Create stale status
                 stale_status = IndexStatus(
@@ -1086,7 +1086,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.gateway import compute_route
+                from llmc.rag_nav.gateway import compute_route
 
                 # Ensure no graph file
                 graph_file = test_repo / ".llmc" / "rag_graph.json"
@@ -1333,7 +1333,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_where_used
+                from llmc.rag_nav.tool_handlers import tool_rag_where_used
 
                 result = tool_rag_where_used(
                     symbol="target_function", repo_root=test_repo, limit=10
@@ -1382,7 +1382,7 @@ def complex_usage():
 
         try:
             try:
-                from tools.rag_nav.tool_handlers import tool_rag_lineage
+                from llmc.rag_nav.tool_handlers import tool_rag_lineage
 
                 result = tool_rag_lineage(
                     symbol="target_function",
@@ -1432,7 +1432,7 @@ def complex_usage():
 
         try:
             # Create inconsistent state (status without graph)
-            from tools.rag_nav.metadata import IndexStatus, save_status
+            from llmc.rag_nav.metadata import IndexStatus, save_status
 
             try:
                 status = IndexStatus(
@@ -1452,7 +1452,7 @@ def complex_usage():
 
                 # Try to route - should detect inconsistency
                 try:
-                    from tools.rag_nav.gateway import compute_route
+                    from llmc.rag_nav.gateway import compute_route
 
                     route = compute_route(test_repo)
 

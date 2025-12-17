@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from tools.rag_repo.inspect_repo import inspect_repo
-from tools.rag_repo.models import ToolConfig
-from tools.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
+from llmc.rag_repo.inspect_repo import inspect_repo
+from llmc.rag_repo.models import ToolConfig
+from llmc.rag_repo.workspace import init_workspace, plan_workspace, validate_workspace
 
 
 def test_workspace_init_and_validate(tmp_path: Path) -> None:

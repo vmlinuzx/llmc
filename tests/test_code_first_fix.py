@@ -18,7 +18,7 @@ import sys
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from tools.rag.database import Database
+from llmc.rag.database import Database
 
 
 def test_pending_enrichments_diversity():

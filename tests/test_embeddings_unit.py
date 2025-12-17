@@ -1,6 +1,6 @@
 import math
 
-from tools.rag.embeddings import EmbeddingSpec, HashEmbeddingBackend
+from llmc.rag.embeddings import EmbeddingSpec, HashEmbeddingBackend
 
 
 def test_hash_backend_is_deterministic():

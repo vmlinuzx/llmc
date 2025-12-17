@@ -1,5 +1,5 @@
 import pytest
-from tools.rag.index_naming import resolve_index_name
+from llmc.rag.index_naming import resolve_index_name
 
 def test_shared_mode_returns_base():
     """sharing="shared" returns just base"""

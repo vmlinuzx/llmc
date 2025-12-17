@@ -7,9 +7,11 @@ Provides tools for loading, validating, and editing llmc.toml configuration file
 from llmc.config.manager import ConfigManager
 from llmc.config.operations import ChainOperations
 from llmc.config.simulator import RoutingSimulator
+from llmc.rag.config import load_config as get_llmc_config
 
 __all__ = [
     "ConfigManager",
     "ChainOperations",
     "RoutingSimulator",
+    "get_llmc_config",
 ]

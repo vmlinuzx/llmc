@@ -195,7 +195,7 @@ def test_resolve_doc_path_custom_output_dir():
 def test_check_rag_freshness_not_indexed(tmp_path):
     """Test RAG freshness check when file not indexed."""
     # Create mock database
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     
     db_path = tmp_path / "test.db"
     db = Database(db_path)
@@ -212,7 +212,7 @@ def test_check_rag_freshness_not_indexed(tmp_path):
 
 def test_check_rag_freshness_stale_index(tmp_path):
     """Test RAG freshness check when file indexed but SHA differs."""
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     
     db_path = tmp_path / "test.db"
     db = Database(db_path)
@@ -238,7 +238,7 @@ def test_check_rag_freshness_stale_index(tmp_path):
 
 def test_check_rag_freshness_fresh(tmp_path):
     """Test RAG freshness check when file indexed and fresh."""
-    from tools.rag.database import Database
+    from llmc.rag.database import Database
     
     db_path = tmp_path / "test.db"
     db = Database(db_path)

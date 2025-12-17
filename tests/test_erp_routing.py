@@ -4,7 +4,7 @@ import pytest
 
 from llmc.routing.content_type import classify_slice
 from llmc.routing.query_type import classify_query
-from tools.rag.config import get_route_for_slice_type
+from llmc.rag.config import get_route_for_slice_type
 
 
 def test_classify_slice_erp_path():

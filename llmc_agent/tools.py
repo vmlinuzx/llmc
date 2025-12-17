@@ -262,7 +262,7 @@ def _make_inspect_tool() -> Tool:
         Returns focused snippets instead of whole files - much more context efficient!
         """
         try:
-            from tools.rag.inspector import inspect_entity, PathSecurityError
+            from llmc.rag.inspector import inspect_entity, PathSecurityError
             
             repo_root = Path.cwd()
             

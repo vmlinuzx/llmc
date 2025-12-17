@@ -8,7 +8,7 @@ import typer
 from llmc.core import find_repo_root
 
 # Import Database to initialize schema
-from tools.rag.database import Database
+from llmc.rag.database import Database
 
 app = typer.Typer()
 

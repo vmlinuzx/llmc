@@ -8,13 +8,13 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
-from tools.rag_daemon.config import load_config
-from tools.rag_daemon.control import read_control_events
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_daemon.scheduler import Scheduler
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.workers import WorkerPool
+from llmc.rag_daemon.config import load_config
+from llmc.rag_daemon.control import read_control_events
+from llmc.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
+from llmc.rag_daemon.registry import RegistryClient
+from llmc.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.workers import WorkerPool
 
 # ==============================================================================
 # 1. Daemon Config & Startup Tests

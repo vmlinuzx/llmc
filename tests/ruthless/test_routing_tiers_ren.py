@@ -1,6 +1,6 @@
 import pytest
 
-from tools.rag.config_enrichment import (
+from llmc.rag.config_enrichment import (
     EnrichmentBackendSpec,
     EnrichmentConfigError,
     _parse_backend_spec,

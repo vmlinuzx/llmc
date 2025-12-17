@@ -17,7 +17,7 @@ import time
 
 import pytest
 
-from tools.rag.freshness import IndexStatus
+from llmc.rag.freshness import IndexStatus
 
 
 @pytest.mark.rag_freshness

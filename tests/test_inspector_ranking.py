@@ -3,8 +3,8 @@ from unittest.mock import patch
 
 import pytest
 
-from tools.rag.inspector import inspect_entity
-from tools.rag.schema import Entity, Relation, SchemaGraph
+from llmc.rag.inspector import inspect_entity
+from llmc.rag.schema import Entity, Relation, SchemaGraph
 
 
 @pytest.fixture
@@ -50,7 +50,7 @@ def test_inspect_entity_ranking(mock_repo, mock_graph):
     # Mock file content
     (mock_repo / "module.py").write_text("\n" * 100)
     
-    with patch("tools.rag.inspector.SchemaGraph.load", return_value=mock_graph):
+    with patch("llmc.rag.inspector.SchemaGraph.load", return_value=mock_graph):
         # Inspect the file
         result = inspect_entity(mock_repo, path="module.py")
         

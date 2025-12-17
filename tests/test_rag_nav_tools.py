@@ -5,7 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tools.rag_nav.tool_handlers import (  # type: ignore  # noqa: E402
+from llmc.rag_nav.tool_handlers import (  # type: ignore  # noqa: E402
     build_graph_for_repo,
     tool_rag_lineage,
     tool_rag_search,

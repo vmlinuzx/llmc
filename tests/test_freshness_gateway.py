@@ -11,8 +11,8 @@ from unittest.mock import patch
 import pytest
 
 # Actual implementation
-from tools.rag_nav.gateway import RouteDecision, compute_route
-from tools.rag_nav.metadata import status_path
+from llmc.rag_nav.gateway import RouteDecision, compute_route
+from llmc.rag_nav.metadata import status_path
 
 
 @pytest.mark.rag_freshness
@@ -140,7 +140,7 @@ class TestComputeRoute:
         )
 
         # Mock git to return a different HEAD
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "new_commit_hash"
             route = compute_route(repo_root)
 
@@ -170,7 +170,7 @@ class TestComputeRoute:
         )
 
         # Mock git to return matching HEAD
-        with patch("tools.rag_nav.gateway._detect_git_head") as mock_git:
+        with patch("llmc.rag_nav.gateway._detect_git_head") as mock_git:
             mock_git.return_value = "current_head"
             route = compute_route(repo_root)
 
@@ -234,7 +234,7 @@ class TestGitIntegration:
         repo_root.mkdir()
 
         # Even if we can't really uninstall git, we can mock run to fail
-        from tools.rag_nav.gateway import _detect_git_head
+        from llmc.rag_nav.gateway import _detect_git_head
 
         with patch("subprocess.run", side_effect=Exception("git not found")):
             head = _detect_git_head(repo_root)
@@ -248,7 +248,7 @@ class TestGitIntegration:
         repo_root = tmp_path / "not_git"
         repo_root.mkdir()
 
-        from tools.rag_nav.gateway import _detect_git_head
+        from llmc.rag_nav.gateway import _detect_git_head
 
         # Actual run without mock, assuming tmp_path is not a git repo
         head = _detect_git_head(repo_root)
@@ -263,9 +263,9 @@ class TestGitIntegration:
         repo_root = tmp_path / "test_repo"
         repo_root.mkdir()
 
-        from tools.rag_nav.gateway import _detect_git_head
+        from llmc.rag_nav.gateway import _detect_git_head
 
-        with patch("tools.rag_nav.gateway.run") as mock_run:
+        with patch("llmc.rag_nav.gateway.run") as mock_run:
             mock_run.return_value.stdout = "detached_hash\n"
             mock_run.return_value.returncode = 0
             head = _detect_git_head(repo_root)

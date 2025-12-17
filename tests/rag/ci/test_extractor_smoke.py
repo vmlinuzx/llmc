@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools.rag.ci.extractor_smoke import run_extractor_smoke
+from llmc.rag.ci.extractor_smoke import run_extractor_smoke
 
 
 def test_smoke_produces_chunks_mocked(tmp_path) -> None:
@@ -20,7 +20,7 @@ def test_smoke_produces_chunks_mocked(tmp_path) -> None:
     mock_extractor_cls = MagicMock()
     mock_module.TechDocsExtractor = mock_extractor_cls
 
-    with patch.dict(sys.modules, {"tools.rag.extractors.tech_docs": mock_module}):
+    with patch.dict(sys.modules, {"llmc.rag.extractors.tech_docs": mock_module}):
         mock_instance = mock_extractor_cls.return_value
         # Mock extract to return 1 chunk per call
         mock_instance.extract.side_effect = [["chunk1"], ["chunk2"]]
@@ -42,7 +42,7 @@ def test_smoke_fails_on_zero_chunks_mocked(tmp_path) -> None:
     mock_extractor_cls = MagicMock()
     mock_module.TechDocsExtractor = mock_extractor_cls
 
-    with patch.dict(sys.modules, {"tools.rag.extractors.tech_docs": mock_module}):
+    with patch.dict(sys.modules, {"llmc.rag.extractors.tech_docs": mock_module}):
         mock_instance = mock_extractor_cls.return_value
         # Mock extract to return 0 chunks
         mock_instance.extract.return_value = []

@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-import tools.rag.service as service_module
+import llmc.rag.service as service_module
 
 
 @pytest.fixture

@@ -2,6 +2,38 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.7.4] - "Clean Cuts" - 2025-12-17
+
+### Purple Flavor: **Clean Cuts**
+
+The `tools/` folder was an architectural accident - core RAG functionality hiding in a gitignored directory. Fixed by moving everything to where it belongs.
+
+### Changed
+
+- **Major Refactor: `tools/rag*` → `llmc/rag*`:**
+  - Moved `tools/rag/` → `llmc/rag/` (core RAG engine: database, search, indexer, embeddings)
+  - Moved `tools/rag_nav/` → `llmc/rag_nav/` (graph navigation, lineage)
+  - Moved `tools/rag_repo/` → `llmc/rag_repo/` (repo utilities)
+  - Moved `tools/rag_daemon/` → `llmc/rag_daemon/` (background service)
+  - Moved `tools/rag_router.py` → `llmc/rag_router.py`
+  - Updated ~100 imports across the codebase
+  - **Impact:** `llmc-cli` now works on fresh clones without needing the gitignored `tools/` folder
+
+- **`tools/` folder now purely for personal scripts:**
+  - Stays in `.gitignore` as intended
+  - Shell scripts, dev tools, orchestrators live here
+  - No core functionality depends on it
+
+- **Added `get_llmc_config` to `llmc.config` module:**
+  - Re-exports `llmc.rag.config.load_config` for backwards compatibility
+  - Simplifies embedding manager configuration
+
+### Fixed
+
+- **`llmc-cli` broken on fresh clone:** Previously failed immediately due to missing `tools/` imports
+
+---
+
 ## [0.7.3] - "Documentation 2.0" - 2025-12-16
 
 ### Purple Flavor: **Documentation 2.0**
@@ -32,11 +64,22 @@ Complete overhaul of LLMC documentation architecture. Diátaxis-based structure,
   - Privacy warnings on sensitive settings
   - Example configurations (minimal, cloud fallback)
 
+- **Tech Docs Graph Edges (Phase 4 Domain RAG):**
+  - New `tools/rag/tech_docs_graph.py` module for edge creation
+  - REFERENCES edges from `related_topics` enrichment field
+  - REQUIRES edges from `prerequisites` enrichment field
+  - WARNS_ABOUT edges from `warnings` enrichment field
+  - Fuzzy span matching for topic-to-span resolution
+  - Idempotent edge creation (no duplicates on re-enrichment)
+  - `tech_docs_edges` table with confidence scores and provenance
+  - Integrated into enrichment pipeline (auto-runs for markdown/docs)
+
 ### Changed
 
 - **README:** Added Documentation section with links to all major doc areas
 - **Makefile:** Added `docs`, `docs-serve`, `docs-build` targets
 - **All python references:** Changed `python` to `python3` in Makefile
+- **Enrichment Pipeline:** Now writes graph edges for tech docs content
 
 ---
 

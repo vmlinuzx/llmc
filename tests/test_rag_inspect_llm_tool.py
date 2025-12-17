@@ -5,11 +5,11 @@ from unittest.mock import patch
 from click.testing import CliRunner
 import pytest
 
-from tools.rag.cli import cli
-from tools.rag.schema import Entity, Relation, SchemaGraph
+from llmc.rag.cli import cli
+from llmc.rag.schema import Entity, Relation, SchemaGraph
 
 # We'll import inspect_entity once implemented. For now, assume it will be in tools.rag.inspector
-# from tools.rag.inspector import inspect_entity, InspectionResult
+# from llmc.rag.inspector import inspect_entity, InspectionResult
 
 # --- Fixtures ---
 
@@ -88,7 +88,7 @@ def mock_graph_json(repo_root: Path):
 
 
 def test_inspect_entity_symbol_default_snippet(repo_root: Path, mock_graph_json: Path):
-    from tools.rag.inspector import inspect_entity
+    from llmc.rag.inspector import inspect_entity
 
     # Inspect a symbol
     result = inspect_entity(repo_root, symbol="src.main.main_func")
@@ -101,7 +101,7 @@ def test_inspect_entity_symbol_default_snippet(repo_root: Path, mock_graph_json:
 
 
 def test_inspect_entity_file_default_snippet(repo_root: Path, mock_graph_json: Path):
-    from tools.rag.inspector import inspect_entity
+    from llmc.rag.inspector import inspect_entity
 
     # Inspect a file
     result = inspect_entity(repo_root, path="src/main.py")
@@ -114,7 +114,7 @@ def test_inspect_entity_file_default_snippet(repo_root: Path, mock_graph_json: P
 
 
 def test_inspect_entity_full_source_flag(repo_root: Path, mock_graph_json: Path):
-    from tools.rag.inspector import inspect_entity
+    from llmc.rag.inspector import inspect_entity
 
     result = inspect_entity(repo_root, path="src/main.py", include_full_source=True)
 
@@ -126,7 +126,7 @@ def test_inspect_entity_full_source_flag(repo_root: Path, mock_graph_json: Path)
 
 
 def test_inspect_entity_relationships_truncated(repo_root: Path, mock_graph_json: Path):
-    from tools.rag.inspector import inspect_entity
+    from llmc.rag.inspector import inspect_entity
 
     # main_func is called by test_main
     result = inspect_entity(repo_root, symbol="src.main.main_func")
@@ -138,10 +138,10 @@ def test_inspect_entity_relationships_truncated(repo_root: Path, mock_graph_json
 
 
 def test_inspect_entity_enrichment_fields(repo_root: Path, mock_graph_json: Path):
-    from tools.rag.inspector import inspect_entity
+    from llmc.rag.inspector import inspect_entity
 
     # Mock DB access
-    with patch("tools.rag.database.Database") as MockDatabase:
+    with patch("llmc.rag.database.Database") as MockDatabase:
         mock_db = MockDatabase.return_value
         mock_db.conn.execute.return_value.fetchone.return_value = {
             "summary": "Enriched summary",

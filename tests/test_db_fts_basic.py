@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 
-from tools.rag.db_fts import FtsHit, RagDbNotFound, fts_search
+from llmc.rag.db_fts import FtsHit, RagDbNotFound, fts_search
 
 
 def _make_fts_db(tmp_path: Path) -> Path:

@@ -192,7 +192,7 @@ class DashboardScreen(LLMCScreen):
     def _get_doctor_report(self, repo_root: Path) -> dict:
         """Get RAG doctor health report."""
         try:
-            from tools.rag.doctor import run_rag_doctor
+            from llmc.rag.doctor import run_rag_doctor
             return run_rag_doctor(repo_root, verbose=False)
         except Exception as e:
             return {

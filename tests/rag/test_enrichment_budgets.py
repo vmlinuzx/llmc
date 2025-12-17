@@ -1,5 +1,5 @@
 import pytest
-from tools.rag.enrichment.budgets import truncate_words, truncate_list, MAX_SUMMARY_WORDS, MAX_LIST_ITEMS
+from llmc.rag.enrichment.budgets import truncate_words, truncate_list, MAX_SUMMARY_WORDS, MAX_LIST_ITEMS
 
 def test_truncate_words_under_limit():
     text = "This is a short text."

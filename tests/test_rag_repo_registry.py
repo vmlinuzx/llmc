@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from tools.rag_repo.models import RegistryEntry, ToolConfig
-from tools.rag_repo.registry import RegistryAdapter
+from llmc.rag_repo.models import RegistryEntry, ToolConfig
+from llmc.rag_repo.registry import RegistryAdapter
 
 
 def test_registry_round_trip(tmp_path: Path) -> None:

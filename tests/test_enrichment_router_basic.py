@@ -10,8 +10,8 @@ Tests runtime data structures:
 from pathlib import Path
 import time
 
-from tools.rag.config_enrichment import EnrichmentBackendSpec, EnrichmentConfig
-from tools.rag.enrichment_router import (
+from llmc.rag.config_enrichment import EnrichmentBackendSpec, EnrichmentConfig
+from llmc.rag.enrichment_router import (
     EnrichmentRouteDecision,
     EnrichmentRouterMetricsEvent,
     EnrichmentSliceView,
@@ -251,7 +251,7 @@ class TestEnrichmentRouter:
         chains: dict[str, list[EnrichmentBackendSpec]] | None = None,
     ) -> EnrichmentConfig:
         """Helper to create test configs."""
-        from tools.rag.config_enrichment import EnrichmentConfig
+        from llmc.rag.config_enrichment import EnrichmentConfig
 
         default_backend = EnrichmentBackendSpec(
             name="default-backend",
@@ -285,7 +285,7 @@ class TestEnrichmentRouter:
 
     def test_router_default_chain_when_disabled(self):
         """Router uses default_chain when enable_routing=False (SDD 6.1.2)."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = self._make_config(
             enable_routing=False,
@@ -312,7 +312,7 @@ class TestEnrichmentRouter:
 
     def test_router_respects_chain_override(self):
         """chain_override takes precedence over routing (SDD 6.1.2)."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = self._make_config(
             enable_routing=True,
@@ -339,7 +339,7 @@ class TestEnrichmentRouter:
 
     def test_router_uses_routes_when_enabled(self):
         """Router maps slice_type -> chain when enabled (SDD 6.2.1)."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = self._make_config(
             enable_routing=True,
@@ -380,7 +380,7 @@ class TestEnrichmentRouter:
 
     def test_router_falls_back_for_unknown_type(self):
         """Router falls back to default_chain for unknown slice_type (SDD 6.2.3)."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = self._make_config(
             enable_routing=True,
@@ -411,7 +411,7 @@ class TestNormalizeSliceType:
 
     def test_case_normalization(self):
         """Verify case insensitivity."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = TestEnrichmentRouter._make_config()
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
@@ -423,7 +423,7 @@ class TestNormalizeSliceType:
 
     def test_language_aliases(self):
         """Verify programming language aliases map to 'code'."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = TestEnrichmentRouter._make_config()
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
@@ -433,7 +433,7 @@ class TestNormalizeSliceType:
 
     def test_doc_aliases(self):
         """Verify documentation format aliases map to 'docs'."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = TestEnrichmentRouter._make_config()
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
@@ -443,7 +443,7 @@ class TestNormalizeSliceType:
 
     def test_empty_returns_unknown(self):
         """Verify empty/None returns 'unknown'."""
-        from tools.rag.enrichment_router import EnrichmentRouter
+        from llmc.rag.enrichment_router import EnrichmentRouter
 
         config = TestEnrichmentRouter._make_config()
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
@@ -459,7 +459,7 @@ class TestNormalizeSliceType:
 
 def test_build_router_from_toml(tmp_path: Path) -> None:
     """Verify build_router_from_toml constructs router correctly."""
-    from tools.rag.enrichment_router import build_router_from_toml
+    from llmc.rag.enrichment_router import build_router_from_toml
 
     repo_root = tmp_path
     llmc = repo_root / "llmc.toml"
@@ -489,7 +489,7 @@ code = "default"
 
 def test_build_router_disable_routing_env(tmp_path: Path) -> None:
     """Verify LLMC_ENRICH_DISABLE_ROUTING=1 forces routing off."""
-    from tools.rag.enrichment_router import build_router_from_toml
+    from llmc.rag.enrichment_router import build_router_from_toml
 
     repo_root = tmp_path
     llmc = repo_root / "llmc.toml"
@@ -518,7 +518,7 @@ code = "code_chain"
 
 def test_router_max_tier_filtering() -> None:
     """Verify max_tier filters backend specs correctly."""
-    from tools.rag.enrichment_router import EnrichmentRouter
+    from llmc.rag.enrichment_router import EnrichmentRouter
 
     backend_7b = EnrichmentBackendSpec(
         name="qwen-7b", chain="default", provider="ollama", routing_tier="7b"

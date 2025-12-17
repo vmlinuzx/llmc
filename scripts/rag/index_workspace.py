@@ -24,7 +24,7 @@ from tqdm import tqdm
 try:
     from ast_chunker import ASTChunker
 
-    from tools.rag.config import get_exclude_dirs
+    from llmc.rag.config import get_exclude_dirs
 except ImportError:
     # Fallback for direct execution without PYTHONPATH
     REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +32,7 @@ except ImportError:
         sys.path.insert(0, str(REPO_ROOT))
     from ast_chunker import ASTChunker
 
-    from tools.rag.config import get_exclude_dirs
+    from llmc.rag.config import get_exclude_dirs
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

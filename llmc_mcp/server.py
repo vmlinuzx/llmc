@@ -1256,7 +1256,7 @@ class LlmcMcpServer:
     async def _handle_rag_where_used(self, args: dict) -> list[TextContent]:
         import json
 
-        from tools.rag_nav.tool_handlers import tool_rag_where_used
+        from llmc.rag_nav.tool_handlers import tool_rag_where_used
 
         symbol = args.get("symbol", "")
         limit = args.get("limit", 50)
@@ -1279,7 +1279,7 @@ class LlmcMcpServer:
     async def _handle_rag_lineage(self, args: dict) -> list[TextContent]:
         import json
 
-        from tools.rag_nav.tool_handlers import tool_rag_lineage
+        from llmc.rag_nav.tool_handlers import tool_rag_lineage
 
         symbol = args.get("symbol", "")
         direction = args.get("direction", "downstream")
@@ -1303,7 +1303,7 @@ class LlmcMcpServer:
     async def _handle_inspect(self, args: dict) -> list[TextContent]:
         import json
 
-        from tools.rag.inspector import inspect_entity
+        from llmc.rag.inspector import inspect_entity
 
         path = args.get("path")
         symbol = args.get("symbol")
@@ -1335,7 +1335,7 @@ class LlmcMcpServer:
     async def _handle_rag_stats(self, args: dict) -> list[TextContent]:
         import json
 
-        from tools.rag_nav.tool_handlers import tool_rag_stats
+        from llmc.rag_nav.tool_handlers import tool_rag_stats
 
         llmc_root = (
             Path(self.config.tools.allowed_roots[0])
@@ -1368,11 +1368,11 @@ class LlmcMcpServer:
 
         try:
             # Use routing logic to analyze query
-            from tools.rag.enrichment_router import build_router_from_toml
+            from llmc.rag.enrichment_router import build_router_from_toml
 
             router = build_router_from_toml(llmc_root)
             # Use choose_chain with a dummy slice view to get routing decision
-            from tools.rag.enrichment_router import EnrichmentSliceView
+            from llmc.rag.enrichment_router import EnrichmentSliceView
             
             dummy_slice = EnrichmentSliceView(
                 span_hash="query_plan",

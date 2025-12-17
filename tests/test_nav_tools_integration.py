@@ -16,8 +16,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag.freshness import IndexStatus
-from tools.rag.nav_meta import RagResult, RagToolMeta
+from llmc.rag.freshness import IndexStatus
+from llmc.rag.nav_meta import RagResult, RagToolMeta
 
 
 @pytest.mark.rag_freshness
@@ -346,7 +346,7 @@ class TestCliOutput:
         CLI tools should output valid JSON with correct structure.
         """
         # This would test running a CLI tool with --json flag
-        # cmd = ["python", "-m", "tools.rag.cli", "search", "query", "--json"]
+        # cmd = ["python", "-m", "llmc.rag.cli", "search", "query", "--json"]
         # result = subprocess.run(cmd, cwd=tmp_path, capture_output=True, text=True)
 
         # assert result.returncode == 0

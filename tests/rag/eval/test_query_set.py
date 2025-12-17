@@ -3,7 +3,7 @@ import json
 from pydantic import ValidationError
 import pytest
 
-from tools.rag.eval.query_set import load_query_set
+from llmc.rag.eval.query_set import load_query_set
 
 
 def test_load_valid_set(tmp_path):

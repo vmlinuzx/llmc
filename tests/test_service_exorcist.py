@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import sqlite3
 
-from tools.rag.service_exorcist import Exorcist, ExorcistStats
+from llmc.rag.service_exorcist import Exorcist, ExorcistStats
 
 
 def _build_fake_rag_repo(tmp_path: Path) -> Path:

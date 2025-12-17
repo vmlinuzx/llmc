@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.fs import SafeFS
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_repo.fs import SafeFS
+from llmc.rag_repo.utils import PathTraversalError
 
 
 def test_safefs_write_read_list_rm(tmp_path: Path) -> None:

@@ -42,7 +42,7 @@ def test_state_store_corrupt_data():
         code = f"""
 import sys
 sys.path.insert(0, '{str(REPO_ROOT)}')
-from tools.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.state_store import StateStore
 from pathlib import Path
 
 store = StateStore(Path('{store_path}'))
@@ -79,7 +79,7 @@ def test_scheduler_consecutive_failures():
 import sys
 sys.path.insert(0, '{str(REPO_ROOT)}')
 from datetime import datetime, timedelta, timezone
-from tools.rag_daemon.models import RepoState
+from llmc.rag_daemon.models import RepoState
 
 # Simulate backoff calculation
 consecutive_failures = 3
@@ -127,7 +127,7 @@ def test_control_surface():
         code = f"""
 import sys
 sys.path.insert(0, '{str(REPO_ROOT)}')
-from tools.rag_daemon.control import read_control_events
+from llmc.rag_daemon.control import read_control_events
 from pathlib import Path
 
 control_dir = Path('{control_dir}')
@@ -174,8 +174,8 @@ def test_registry_empty_and_invalid():
 import sys
 sys.path.insert(0, '{str(REPO_ROOT)}')
 from pathlib import Path
-from tools.rag_repo.config import ToolConfig
-from tools.rag_repo.registry import RegistryAdapter
+from llmc.rag_repo.config import ToolConfig
+from llmc.rag_repo.registry import RegistryAdapter
 
 cfg = ToolConfig(registry_path=Path('{registry_path}'))
 adapter = RegistryAdapter(cfg)
@@ -282,10 +282,10 @@ def test_worker_pool_failure():
         code = f"""
 import sys
 sys.path.insert(0, '{str(REPO_ROOT)}')
-from tools.rag_daemon.models import RepoDescriptor, Job
-from tools.rag_daemon.workers import WorkerPool, make_job_id
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.models import DaemonConfig
+from llmc.rag_daemon.models import RepoDescriptor, Job
+from llmc.rag_daemon.workers import WorkerPool, make_job_id
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.models import DaemonConfig
 from pathlib import Path
 import yaml
 
@@ -295,13 +295,13 @@ for key in ['registry_path', 'state_store_path', 'log_path', 'control_dir']:
     config_dict[key] = Path(config_dict[key])
 
 # Create DaemonConfig
-from tools.rag_daemon.models import DaemonConfig
+from llmc.rag_daemon.models import DaemonConfig
 cfg = DaemonConfig(**config_dict)
 
 store = StateStore(cfg.state_store_path)
 
 # Create a test repo
-from tools.rag_daemon.models import RepoDescriptor
+from llmc.rag_daemon.models import RepoDescriptor
 repo = RepoDescriptor(
     repo_id='test-repo',
     repo_path=Path('{tmpdir}/test'),

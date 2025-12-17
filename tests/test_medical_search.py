@@ -4,10 +4,10 @@ Tests for Medical Search Pipeline (Phase 3).
 
 import pytest
 from typing import List, Optional
-from tools.rag.search.medical_search import MedicalSearchPipeline, SearchResult
-from tools.rag.embeddings.medical import MedicalEmbeddingManager
-from tools.rag.search.section_priority import SectionPriority, SearchResult as SectionPriorityResult
-from tools.rag.eval.medical_eval import MedicalEvaluator
+from llmc.rag.search.medical_search import MedicalSearchPipeline, SearchResult
+from llmc.rag.embeddings.medical import MedicalEmbeddingManager
+from llmc.rag.search.section_priority import SectionPriority, SearchResult as SectionPriorityResult
+from llmc.rag.eval.medical_eval import MedicalEvaluator
 
 class MockVectorDB:
     def query_docs(self, query: str, limit: int) -> List[str]:
@@ -55,7 +55,7 @@ def test_pipeline_flow():
 
 def test_longcontext_adapter_init(tmp_path):
     # Verify adapter loads config
-    from tools.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
+    from llmc.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
     
     config_file = tmp_path / "config.json"
     config_file.write_text('{"model_name": "test/model", "max_seq_tokens": 128}')

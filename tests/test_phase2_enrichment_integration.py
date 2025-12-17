@@ -7,8 +7,8 @@ Tests that verify enrichment data flows from database to graph entities.
 import json
 from pathlib import Path
 
-from tools.rag.database import Database
-from tools.rag.schema import build_enriched_schema_graph, build_graph_for_repo
+from llmc.rag.database import Database
+from llmc.rag.schema import build_enriched_schema_graph, build_graph_for_repo
 
 
 class TestPhase2EnrichmentIntegration:

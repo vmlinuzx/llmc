@@ -4,12 +4,12 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from tools.rag_daemon.models import (
+from llmc.rag_daemon.models import (
     DaemonConfig,
     RepoDescriptor,
     RepoState,
 )
-from tools.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.scheduler import Scheduler
 
 UTC = UTC
 

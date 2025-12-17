@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from tools.rag_repo.fs import SafeFS
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_repo.fs import SafeFS
+from llmc.rag_repo.utils import PathTraversalError
 
 
 @pytest.mark.skipif(not hasattr(os, "symlink"), reason="symlink not supported on this platform")

@@ -39,7 +39,7 @@ class TestRuthlessMcgrep:
     def test_mcgrep_run_search_with_long_lines(self, capsys):
         """Test search with extremely long lines in snippet."""
         # Mock the tool_rag_search
-        with patch("tools.rag_nav.tool_handlers.tool_rag_search") as mock_search:
+        with patch("llmc.rag_nav.tool_handlers.tool_rag_search") as mock_search:
             with patch("llmc.mcgrep.find_repo_root") as mock_root:
                 mock_root.return_value = Path(".")
                 
@@ -65,7 +65,7 @@ class TestRuthlessMcgrep:
 
     def test_mcgrep_invalid_result_structure(self, capsys):
         """Test search when result structure is unexpected."""
-        with patch("tools.rag_nav.tool_handlers.tool_rag_search") as mock_search:
+        with patch("llmc.rag_nav.tool_handlers.tool_rag_search") as mock_search:
             with patch("llmc.mcgrep.find_repo_root") as mock_root:
                 mock_root.return_value = Path(".")
                 

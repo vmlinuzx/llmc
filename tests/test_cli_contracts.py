@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Import the CLI modules
-from tools.rag.cli import (
+from llmc.rag.cli import (
     _emit_end_event,
     _emit_error_event,
     _emit_jsonl_line,
@@ -81,7 +81,7 @@ class TestFlagExclusivity:
             (repo_root / ".git").mkdir()
 
             # Mock tool_rag_search to avoid actual execution
-            with patch("tools.rag.tool_rag_search") as mock_search:
+            with patch("llmc.rag.tool_rag_search") as mock_search:
                 mock_result = Mock()
                 mock_result.items = []
                 mock_result.source = "test"
@@ -101,7 +101,7 @@ class TestFlagExclusivity:
             repo_root = Path(tmpdir)
             (repo_root / ".git").mkdir()
 
-            with patch("tools.rag.tool_rag_search") as mock_search:
+            with patch("llmc.rag.tool_rag_search") as mock_search:
                 mock_result = Mock()
                 mock_result.items = []
                 mock_search.return_value = mock_result
@@ -119,9 +119,9 @@ class TestFlagExclusivity:
             repo_root = Path(tmpdir)
             (repo_root / ".git").mkdir()
 
-            with patch("tools.rag.tool_rag_search") as mock_search:
+            with patch("llmc.rag.tool_rag_search") as mock_search:
                 # Create a more complete mock that can be serialized
-                from tools.rag.nav_meta import RagResult, RagToolMeta
+                from llmc.rag.nav_meta import RagResult, RagToolMeta
 
                 meta = RagToolMeta(
                     status="OK",

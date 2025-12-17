@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from tools.rag.watcher import FileFilter
+from llmc.rag.watcher import FileFilter
 
 def test_file_filter_basic(tmp_path):
     # Setup .gitignore

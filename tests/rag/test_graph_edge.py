@@ -1,7 +1,7 @@
 import pytest
 
-from tools.rag.graph.edge import GraphEdge
-from tools.rag.graph.edge_types import EdgeType
+from llmc.rag.graph.edge import GraphEdge
+from llmc.rag.graph.edge_types import EdgeType
 
 # AC-1 Tests
 

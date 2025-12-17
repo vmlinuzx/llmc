@@ -33,8 +33,8 @@ These are the things that make the current LLMC stack feel solid and intentional
 **Phases:**
 - [x] Phase 1: Config schema (`[repository]` section, `domain` field) ✅ 
 - [x] Phase 2: TechDocsExtractor implementation ✅ (2025-12-13, tests fixed 2025-12-16)
-- [ ] Phase 3: Tech docs enrichment prompts + chain config
-- [ ] Phase 4: Graph edges (REFERENCES, REQUIRES, WARNS_ABOUT)
+- [x] Phase 3: Enrichment schema + prompts ✅ (2025-12-15)
+- [x] Phase 4: Graph edges (REFERENCES, REQUIRES, WARNS_ABOUT) ✅ (2025-12-16)
 - [ ] Phase 5: CI smoke tests + validation on LLMC's own DOCS/
 
 **Why This Matters:**

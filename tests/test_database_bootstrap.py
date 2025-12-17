@@ -1,5 +1,5 @@
-from tools.rag.database import Database
-from tools.rag.inspector import _fetch_enrichment
+from llmc.rag.database import Database
+from llmc.rag.inspector import _fetch_enrichment
 
 
 def test_database_recovers_from_corrupt_file(tmp_path):

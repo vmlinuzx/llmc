@@ -15,7 +15,7 @@ import sys
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root))
 
-from tools.rag.service import FailureTracker, RAGService, ServiceState
+from llmc.rag.service import FailureTracker, RAGService, ServiceState
 
 
 def test_daemon_config_loading():

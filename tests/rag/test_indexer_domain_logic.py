@@ -5,20 +5,20 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from tools.rag import indexer
+from llmc.rag import indexer
 
-@patch("tools.rag.indexer.iter_source_files")
-@patch("tools.rag.indexer.find_repo_root")
-@patch("tools.rag.indexer.Database")
-@patch("tools.rag.indexer.classify_slice")
-@patch("tools.rag.indexer.extract_spans")
-@patch("tools.rag.indexer.populate_span_hashes")
-@patch("tools.rag.indexer.build_file_record")
-@patch("tools.rag.indexer.ensure_storage")
-@patch("tools.rag.indexer.index_path_for_write")
-@patch("tools.rag.indexer.resolve_spans_export_path")
-@patch("tools.rag.indexer.get_path_overrides")
-@patch("tools.rag.indexer.get_default_domain")
+@patch("llmc.rag.indexer.iter_source_files")
+@patch("llmc.rag.indexer.find_repo_root")
+@patch("llmc.rag.indexer.Database")
+@patch("llmc.rag.indexer.classify_slice")
+@patch("llmc.rag.indexer.extract_spans")
+@patch("llmc.rag.indexer.populate_span_hashes")
+@patch("llmc.rag.indexer.build_file_record")
+@patch("llmc.rag.indexer.ensure_storage")
+@patch("llmc.rag.indexer.index_path_for_write")
+@patch("llmc.rag.indexer.resolve_spans_export_path")
+@patch("llmc.rag.indexer.get_path_overrides")
+@patch("llmc.rag.indexer.get_default_domain")
 def test_index_repo_domain_logging(
     mock_get_default_domain,
     mock_get_path_overrides,

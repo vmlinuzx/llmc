@@ -18,13 +18,13 @@ from unittest.mock import Mock, patch
 import pytest
 import yaml
 
-from tools.rag.database import Database
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_repo.config import load_tool_config
+from llmc.rag.database import Database
+from llmc.rag_daemon.registry import RegistryClient
+from llmc.rag_repo.config import load_tool_config
 
 # Import enrichment functions - these may not exist yet
 try:
-    from tools.rag.enrichment import enrich_spans
+    from llmc.rag.enrichment import enrich_spans
 
     ENRICHMENT_AVAILABLE = True
 except ImportError:
@@ -249,7 +249,7 @@ class TestDatabaseErrorHandling:
 class TestNetworkFailureHandling:
     """Test network failure handling."""
 
-    @patch("tools.rag.enrichment.requests.post")
+    @patch("llmc.rag.enrichment.requests.post")
     def test_enrichment_handles_connection_timeout(self, mock_post):
         """Test enrichment handles connection timeout."""
         mock_post.side_effect = Exception("Connection timeout")
@@ -264,7 +264,7 @@ class TestNetworkFailureHandling:
                 # Expected - connection error
                 assert e is not None
 
-    @patch("tools.rag.enrichment.requests.post")
+    @patch("llmc.rag.enrichment.requests.post")
     def test_enrichment_handles_rate_limiting(self, mock_post):
         """Test enrichment handles rate limiting (429 status)."""
         # Mock 429 response
@@ -282,7 +282,7 @@ class TestNetworkFailureHandling:
                 # Might raise or might handle gracefully
                 assert e is not None
 
-    @patch("tools.rag.enrichment.requests.post")
+    @patch("llmc.rag.enrichment.requests.post")
     def test_enrichment_handles_auth_failure(self, mock_post):
         """Test enrichment handles authentication failure."""
         # Mock 401 response
@@ -298,7 +298,7 @@ class TestNetworkFailureHandling:
             except Exception as e:
                 assert e is not None
 
-    @patch("tools.rag.enrichment.requests.post")
+    @patch("llmc.rag.enrichment.requests.post")
     def test_enrichment_handles_server_error(self, mock_post):
         """Test enrichment handles 500 server error."""
 
@@ -589,7 +589,7 @@ class TestInputValidationHandling:
         """Test handling of SQL injection attempts."""
         from pathlib import Path
 
-        from tools.rag.database import Database
+        from llmc.rag.database import Database
 
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
@@ -605,7 +605,7 @@ class TestInputValidationHandling:
                 # Try to insert a file with malicious content
                 import time
 
-                from tools.rag.types import FileRecord
+                from llmc.rag.types import FileRecord
 
                 record = FileRecord(
                     path=Path(malicious_path),
@@ -783,7 +783,7 @@ class TestCommandInjectionHandling:
         from pathlib import Path
         import tempfile
 
-        from tools.rag.runner import iter_repo_files
+        from llmc.rag.runner import iter_repo_files
 
         with tempfile.TemporaryDirectory() as tmpdir:
             repo_root = Path(tmpdir) / "repo"

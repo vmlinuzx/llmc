@@ -3,10 +3,10 @@ Tests for Phase 2 Medical Extractor.
 """
 import pytest
 from textwrap import dedent
-from tools.rag.extractors.medical_segmenter import segment_note, Segment
-from tools.rag.extractors.medical_headers import normalize_header
-from tools.rag.extractors.medical_abbreviations import expand_abbreviation
-from tools.rag.extractors.medical import MedicalExtractor
+from llmc.rag.extractors.medical_segmenter import segment_note, Segment
+from llmc.rag.extractors.medical_headers import normalize_header
+from llmc.rag.extractors.medical_abbreviations import expand_abbreviation
+from llmc.rag.extractors.medical import MedicalExtractor
 
 def test_header_normalization():
     assert normalize_header("History of Present Illness") == "subjective"

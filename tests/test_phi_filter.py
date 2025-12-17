@@ -3,8 +3,8 @@ Tests for PHI detection and filtering.
 """
 import pytest
 from datetime import datetime, timedelta
-from tools.rag.phi.detector import PHIDetector, PHIMatch
-from tools.rag.phi.filter import DateShifter, NameSurrogate, PHIFilter
+from llmc.rag.phi.detector import PHIDetector, PHIMatch
+from llmc.rag.phi.filter import DateShifter, NameSurrogate, PHIFilter
 
 def test_phi_detector_basic():
     """Test basic PHI detection."""

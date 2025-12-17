@@ -20,7 +20,7 @@ if str(REPO_ROOT) not in sys.path:
 
 def test_schema_core_fields():
     """Schema metadata should expose core fields on Entity."""
-    from tools.rag.schema import Entity
+    from llmc.rag.schema import Entity
 
     entity = Entity(
         id="test:function_one",
@@ -38,7 +38,7 @@ def test_schema_core_fields():
 
 def test_schema_round_trip():
     """Entities and relations should round-trip through SchemaGraph.to_dict/from_dict."""
-    from tools.rag.schema import Entity, Relation, SchemaGraph
+    from llmc.rag.schema import Entity, Relation, SchemaGraph
 
     func1 = Entity(
         id="module:func_a",
@@ -78,7 +78,7 @@ def test_schema_round_trip():
 
 def test_schema_backwards_compatibility():
     """Older schema payloads without location fields should still load."""
-    from tools.rag.schema import SchemaGraph
+    from llmc.rag.schema import SchemaGraph
 
     old_schema = {
         "version": 1,
@@ -105,7 +105,7 @@ def test_schema_backwards_compatibility():
 
 def test_language_detection():
     """language_for_path should map known extensions and ignore unknown ones."""
-    from tools.rag.schema import language_for_path
+    from llmc.rag.schema import language_for_path
 
     cases = [
         (Path("test.py"), "python"),
@@ -123,7 +123,7 @@ def test_language_detection():
 
 def test_entity_location_fields_round_trip():
     """Entity location fields should survive SchemaGraph round-trip."""
-    from tools.rag.schema import Entity, SchemaGraph
+    from llmc.rag.schema import Entity, SchemaGraph
 
     entity = Entity(
         id="test:function_with_location",

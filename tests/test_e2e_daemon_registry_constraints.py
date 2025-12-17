@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_daemon import api as dapi, registry as dreg
-from tools.rag_repo.utils import PathTraversalError
+from llmc.rag_daemon import api as dapi, registry as dreg
+from llmc.rag_repo.utils import PathTraversalError
 
 
 class Cfg:

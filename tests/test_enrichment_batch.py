@@ -3,8 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from tools.rag.database import Database
-from tools.rag.enrichment import EnrichmentBatchResult, batch_enrich
+from llmc.rag.database import Database
+from llmc.rag.enrichment import EnrichmentBatchResult, batch_enrich
 
 
 def _insert_file_and_span(

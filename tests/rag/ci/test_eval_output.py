@@ -1,6 +1,6 @@
 import json
 
-from tools.rag.ci.eval_output import generate_eval_artifact
+from llmc.rag.ci.eval_output import generate_eval_artifact
 
 
 def test_generate_artifact(tmp_path) -> None:

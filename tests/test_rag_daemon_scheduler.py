@@ -1,11 +1,11 @@
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from tools.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
-from tools.rag_daemon.registry import RegistryClient
-from tools.rag_daemon.scheduler import Scheduler
-from tools.rag_daemon.state_store import StateStore
-from tools.rag_daemon.workers import WorkerPool
+from llmc.rag_daemon.models import DaemonConfig, RepoDescriptor, RepoState
+from llmc.rag_daemon.registry import RegistryClient
+from llmc.rag_daemon.scheduler import Scheduler
+from llmc.rag_daemon.state_store import StateStore
+from llmc.rag_daemon.workers import WorkerPool
 
 
 class DummyRegistry(RegistryClient):

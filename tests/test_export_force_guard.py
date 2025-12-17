@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.cli import export_bundle
+from llmc.rag_repo.cli import export_bundle
 
 
 def test_export_force_guard(tmp_path: Path) -> None:

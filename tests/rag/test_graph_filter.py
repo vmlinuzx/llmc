@@ -1,7 +1,7 @@
 import pytest
 
-from tools.rag.graph.edge import GraphEdge
-from tools.rag.graph.filter import (
+from llmc.rag.graph.edge import GraphEdge
+from llmc.rag.graph.filter import (
     filter_edges_by_confidence,
     filter_edges_by_type,
     filter_llm_edges,

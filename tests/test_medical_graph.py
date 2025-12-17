@@ -4,9 +4,9 @@ Unit tests for Clinical Knowledge Graph and Relations.
 import pytest
 import tempfile
 from pathlib import Path
-from tools.rag.graph.medical_graph import MedicalGraph, MedicalNode, create_medical_graph
-from tools.rag.relation.clinical_re import ClinicalRelation, ClinicalRelationExtractor, EdgeType
-from tools.rag.graph.edge_types import EdgeType as GraphEdgeType
+from llmc.rag.graph.medical_graph import MedicalGraph, MedicalNode, create_medical_graph
+from llmc.rag.relation.clinical_re import ClinicalRelation, ClinicalRelationExtractor, EdgeType
+from llmc.rag.graph.edge_types import EdgeType as GraphEdgeType
 
 
 def test_edge_type_enum():

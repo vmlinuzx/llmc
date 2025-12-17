@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.rag_repo.policy import PathPolicyError, PathSafetyPolicy, enforce_policy
+from llmc.rag_repo.policy import PathPolicyError, PathSafetyPolicy, enforce_policy
 
 
 def test_denylist_blocks(tmp_path: Path) -> None:
