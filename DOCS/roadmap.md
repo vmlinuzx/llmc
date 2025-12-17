@@ -48,6 +48,61 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ---
 
+### 1.0.2 Security Hardening (P0) 🔴 NEW
+
+**Status:** 🔴 Critical items remaining  
+**Added:** 2025-12-17 (from Emilia daily audit)
+
+**Completed This Session:**
+- ✅ RCE in `execute_code` - fixed (subprocess isolation)
+- ✅ SSRF in `service_health` - fixed (URL validation)
+- ✅ 8 dependency CVEs - updated (`urllib3`, `filelock`, `mcp`, `setuptools`)
+
+**Remaining Issues (Priority Order):**
+
+| Priority | Issue | Location | Risk |
+|----------|-------|----------|------|
+| **P0** | `linux_proc_start` = unsandboxed RCE | `llmc_mcp/tools/linux_ops/proc.py` | MAXIMUM - full host control |
+| **P1** | `te_run` RCE via env var | `llmc_mcp/tools/te.py` | HIGH - `LLMC_TE_EXE` controls executable |
+| **P1** | `is_isolated_environment` false positive | `llmc_mcp/isolation.py` | HIGH - incorrectly trusts cgroups |
+| **P2** | `os.chdir()` in RAG tools | `llmc_mcp/tools/rag.py` | MEDIUM - poor practice, race conditions |
+| **P2** | Unvalidated `repo_root` in RAG | `llmc_mcp/tools/rag.py` | MEDIUM - no `allowed_roots` check |
+| **P2** | `te_run` unvalidated `cwd` | `llmc_mcp/tools/te.py` | MEDIUM - can run in any directory |
+
+**Recommended Actions:**
+
+1. **P0 - `linux_ops/proc.py`:** Either:
+   - Remove entirely (recommended by Rem)
+   - Gate behind `require_isolation`
+   - Disable by default in `LinuxOpsConfig`
+
+2. **P1 - `te_run` env var:** Hardcode executable path, don't trust `LLMC_TE_EXE`
+
+3. **P1 - Isolation detection:** Make `is_isolated_environment()` more specific (current cgroup check has false positives)
+
+**📄 Full Report:** `tests/REPORTS/current/rem_mcp_2025-12-17.md`
+
+**Effort:** 4-8 hours | **Difficulty:** 🟢 Easy (fixes are straightforward)
+
+---
+
+### 1.0.3 CLI Startup Performance (P1)
+
+**Status:** 🟡 Not started  
+**Added:** 2025-12-17 (from Emilia performance audit)
+
+**Problem:** `llmc --help` takes several seconds due to eager imports of heavy ML libraries.
+
+**Root Cause:** Top-level imports of `transformers`, `torch`, `sentence_transformers`, `sklearn`, `scipy`, `numpy` even for simple commands.
+
+**Fix:** Move heavy imports inside command functions (lazy loading).
+
+**📄 Full Report:** `tests/REPORTS/current/rem_performance_2025-12-17.md`
+
+**Effort:** 4-6 hours | **Difficulty:** 🟢 Easy
+
+---
+
 ### ~~1.1 Ruthless MCP Testing Agent (RMTA)~~ ✅ DONE (Phase 1)
 
 **Completed:** Dec 2025
