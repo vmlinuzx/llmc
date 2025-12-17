@@ -1,0 +1,20 @@
+[mcp]
+enabled = true
+config_version = "v0"
+mode = "classic" # Ensure all tools are loaded
+
+[mcp.server]
+transport = "stdio"
+log_level = "debug"
+
+[mcp.tools]
+allowed_roots = ["/app"]
+enable_run_cmd = true
+exec_timeout = 10
+
+[mcp.observability]
+enabled = true
+log_level = "debug"
+
+[rag]
+enabled = false # Minimal dependency
