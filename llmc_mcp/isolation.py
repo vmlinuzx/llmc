@@ -10,6 +10,7 @@ from __future__ import annotations
 from functools import lru_cache
 import os
 from pathlib import Path
+import re
 
 
 @lru_cache(maxsize=1)
@@ -19,10 +20,11 @@ def is_isolated_environment() -> bool:
 
     Checks for:
     1. Docker container (/.dockerenv file)
-    2. Kubernetes pod (KUBERNETES_SERVICE_HOST env)
-    3. Container runtime (cgroup containerd/docker markers)
-    4. Explicit LLMC_ISOLATED=1 env var
-    5. nsjail/firejail markers
+    2. Podman/OCI container (/run/.containerenv file)
+    3. Kubernetes pod (KUBERNETES_SERVICE_HOST env)
+    4. Container runtime (cgroup containerd/docker markers)
+    5. Explicit LLMC_ISOLATED=1 env var
+    6. nsjail/firejail markers
 
     Returns:
         True if isolated, False if running on bare host.
@@ -35,6 +37,10 @@ def is_isolated_environment() -> bool:
     if Path("/.dockerenv").exists():
         return True
 
+    # Podman and other OCI runtimes
+    if Path("/run/.containerenv").exists():
+        return True
+
     # Kubernetes
     if os.environ.get("KUBERNETES_SERVICE_HOST"):
         return True
@@ -44,10 +50,23 @@ def is_isolated_environment() -> bool:
     if cgroup_path.exists():
         try:
             cgroup_content = cgroup_path.read_text()
-            if any(
-                marker in cgroup_content
-                for marker in ("docker", "containerd", "lxc", "kubepods")
-            ):
+            # This regex uses positive matching for known container cgroup path
+            # structures, which is more robust than blacklisting.
+            # - `:/docker/`: Standard Docker with cgroupfs driver.
+            # - `:/kubepods/`: Standard Kubernetes pod cgroup.
+            # - `docker-.*\.scope`: Standard Docker with systemd cgroup driver.
+            # - `:/lxc/`: Standard LXC container.
+            # - `:/containerd/`: Standard containerd path.
+            # This is specific enough to avoid false positives from host services
+            # like 'docker.service'.
+            container_patterns = [
+                r":/docker/",
+                r":/kubepods/",
+                r"docker-.*\.scope",
+                r":/lxc/",
+                r":/containerd/",
+            ]
+            if any(re.search(p, cgroup_content) for p in container_patterns):
                 return True
         except (PermissionError, OSError):
             pass
@@ -93,6 +112,7 @@ def isolation_status() -> dict:
     return {
         "isolated": is_isolated_environment(),
         "dockerenv_exists": Path("/.dockerenv").exists(),
+        "podman_containerenv_exists": Path("/run/.containerenv").exists(),
         "kubernetes": bool(os.environ.get("KUBERNETES_SERVICE_HOST")),
         "container_env": os.environ.get("container"),
         "llmc_isolated_env": os.environ.get("LLMC_ISOLATED"),
