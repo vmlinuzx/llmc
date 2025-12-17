@@ -9,17 +9,17 @@ from llmc.te.cli import _handle_passthrough
 from llmc_mcp.tools.te import te_run
 
 
-def test_te_cli_command_injection():
+def test_te_cli_no_shell_injection():
     """
-    VULN-001 PoC: Command Injection in TE CLI.
-    The _handle_passthrough function uses shell=True with user-controlled input.
+    Security Test: TE CLI does NOT use shell=True.
+    
+    Originally a PoC for VULN-001, now verifies the fix.
+    The _handle_passthrough function should NOT use shell=True.
     """
     repo_root = Path(".")
 
-    # We mock subprocess.run to verify it receives the injected command with shell=True
     with patch("subprocess.run") as mock_run:
-        # Simulate 'te run echo "hello; rm -rf /"'
-        # The 'te' CLI parses this into command="echo", args=["hello; rm -rf /"]
+        # Try injection payload
         command = "echo"
         args = ["hello; rm -rf /"]
 
@@ -28,19 +28,15 @@ def test_te_cli_command_injection():
         # Verify call
         mock_run.assert_called_once()
         call_args = mock_run.call_args
-        cmd_arg = call_args[0][0]
         kwargs = call_args[1]
 
-        # Check 1: shell=True is used
+        # Security: shell=True must NOT be used
         assert (
-            kwargs.get("shell") is True
-        ), "CRITICAL: TE CLI must not use shell=True for pass-through"
-
-        # Check 2: Malicious payload is present in the command string
-        assert "rm -rf /" in cmd_arg, "CRITICAL: Injected command was lost"
+            kwargs.get("shell") is not True
+        ), "CRITICAL: TE CLI is still using shell=True for pass-through!"
 
         print(
-            f"\n[+] Vulnerability Confirmed: TE CLI executes '{cmd_arg}' with shell=True"
+            f"\n[+] Security Verified: TE CLI uses shell=False, preventing injection"
         )
 
 

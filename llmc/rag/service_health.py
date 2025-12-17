@@ -6,9 +6,13 @@ Checks Ollama endpoint availability and latency.
 
 from dataclasses import dataclass
 import json
+import logging
 import os
 import time
+import urllib.parse
 import urllib.request
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -99,8 +103,46 @@ class HealthChecker:
         return "\n".join(output)
 
 
+def _validate_url(url: str) -> tuple[bool, str]:
+    """
+    Validate a URL for safe use in health checks.
+    
+    Returns:
+        Tuple of (is_valid, validated_url_or_error_message)
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+        
+        # SECURITY: Only allow http/https schemes
+        if parsed.scheme not in ("http", "https"):
+            return False, f"Invalid URL scheme '{parsed.scheme}'. Only http/https allowed."
+        
+        # Must have a hostname
+        if not parsed.hostname:
+            return False, "URL must have a hostname."
+        
+        # Warn about potentially dangerous internal hostnames
+        hostname = parsed.hostname.lower()
+        internal_prefixes = ("127.", "10.", "192.168.", "172.16.", "172.17.", 
+                            "172.18.", "172.19.", "172.20.", "172.21.", "172.22.",
+                            "172.23.", "172.24.", "172.25.", "172.26.", "172.27.",
+                            "172.28.", "172.29.", "172.30.", "172.31.")
+        internal_names = ("localhost", "host.docker.internal", "kubernetes.default")
+        
+        if hostname in internal_names or any(hostname.startswith(p) for p in internal_prefixes):
+            logger.warning(
+                f"SSRF Warning: URL '{url}' points to internal/localhost address. "
+                "This is allowed but could be used for internal network scanning."
+            )
+        
+        return True, url
+        
+    except Exception as e:
+        return False, f"Failed to parse URL: {e}"
+
+
 def parse_ollama_hosts_from_env() -> list[OllamaEndpoint]:
-    """Parse ENRICH_OLLAMA_HOSTS environment variable."""
+    """Parse ENRICH_OLLAMA_HOSTS environment variable with URL validation."""
     raw = os.getenv("ENRICH_OLLAMA_HOSTS", "")
     if not raw:
         return []
@@ -121,8 +163,15 @@ def parse_ollama_hosts_from_env() -> list[OllamaEndpoint]:
         label = label.strip() or f"host{len(endpoints) + 1}"
         url = url.strip()
 
+        # Add default scheme if not present
         if not url.startswith(("http://", "https://")):
             url = f"http://{url}"
+
+        # SECURITY: Validate URL before adding
+        is_valid, result = _validate_url(url)
+        if not is_valid:
+            logger.warning(f"Skipping invalid Ollama host '{label}': {result}")
+            continue
 
         endpoints.append(OllamaEndpoint(label=label, url=url.rstrip("/"), model=model))
 

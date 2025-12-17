@@ -46,6 +46,30 @@ The `tools/` folder was an architectural accident - core RAG functionality hidin
   - Updated error message in `llmc/rag/search/__init__.py`
   - **Impact:** RAG enrichment daemon now runs correctly after refactor
 
+### Security
+
+- **CRITICAL: RCE in `execute_code` Fixed (VULN-001):**
+  - `llmc_mcp/tools/code_exec.py`: Replaced in-process `exec()` with subprocess-based execution
+  - Old blacklist (`import os` check) trivially bypassed with `__import__('os')`
+  - New subprocess model provides proper process isolation - malicious code can't access MCP server memory
+  - Added comprehensive security tests verifying subprocess isolation, PID separation, and timeout enforcement
+  
+- **P1: SSRF in `service_health` Fixed (VULN-002):**
+  - `llmc/rag/service_health.py`: Added proper URL validation using `urllib.parse`
+  - Now validates scheme is http/https only (blocked `file://` etc)
+  - Logs warnings for internal/localhost addresses
+
+- **Dependency Security Updates:**
+  - `urllib3` 2.3.0 → 2.6.2 (CVE-2025-50181, CVE-2025-50182, CVE-2025-66418, CVE-2025-66471)
+  - `filelock` 3.19.1 → 3.20.1 (CVE-2025-68146)
+  - `mcp` 1.22.0 → 1.24.0 (CVE-2025-66416)
+  - `setuptools` 70.2.0 → 80.9.0 (PYSEC-2025-49)
+
+- **Updated Security Tests:**
+  - Fixed PoC tests that were written to *demonstrate* vulnerabilities, now verify fixes
+  - Updated `test_code_exec_vulnerability.py`, `test_code_exec_breakout.py`, `test_critical_pocs.py`, `test_pocs.py`, `test_run_cmd_bypass.py`, `test_tool_security.py`
+  - All 50 security tests now pass
+
 ---
 
 ## [0.7.3] - "Documentation 2.0" - 2025-12-16

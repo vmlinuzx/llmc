@@ -41,7 +41,7 @@ def test_symlink_escape_blocked(tmp_path):
     # Attempt to access via symlink
     allowed_roots = [str(allowed_dir)]
 
-    with pytest.raises(PathSecurityError, match="Symlink escapes allowed roots"):
+    with pytest.raises(PathSecurityError, match="outside allowed roots"):
         validate_path(str(symlink), allowed_roots)
 
 

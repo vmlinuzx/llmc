@@ -9,17 +9,15 @@ from llmc.te.cli import _handle_passthrough
 
 def test_poc_te_command_injection():
     """
-    POC: Command Injection in TE CLI.
+    Security Verification: TE CLI does NOT use shell=True.
 
-    The 'te' tool wraps commands but uses shell=True in _handle_passthrough.
-    If arguments are not sanitized, they can inject shell commands.
+    Originally a PoC showing shell=True vulnerability.
+    Now verifies the fix: shell=False prevents command injection.
     """
-    print("\n[+] Testing TE Command Injection...")
+    print("\n[+] Testing TE Command Injection Prevention...")
 
-    # We mock subprocess.run to avoid actually executing 'rm -rf /'
     with patch("subprocess.run") as mock_run:
         # Simulate 'te run "; echo pwned"'
-        # command="run", args=[ "; echo pwned"]
         command = "run"
         args = ["; echo pwned"]
         repo_root = Path("/tmp")
@@ -29,23 +27,17 @@ def test_poc_te_command_injection():
         # Check what was passed to subprocess
         assert mock_run.called
         call_args = mock_run.call_args
-        cmd_arg = call_args[0][0]  # The first positional arg is the command string
+        cmd_arg = call_args[0][0]  # The first positional arg is the command
         shell_arg = call_args[1].get("shell")
 
         print(f"Executed command: {cmd_arg!r}")
         print(f"Shell argument: {shell_arg}")
 
-        # Verify shell=True
-        if shell_arg is not True:
-            pytest.fail("Vulnerability NOT reproduced: shell=True was not used.")
-
-        # Verify injection
-        if "; echo pwned" in cmd_arg:
-            print(
-                "[!] VULNERABILITY CONFIRMED: User input concatenated into shell command."
-            )
-        else:
-            pytest.fail("Vulnerability NOT reproduced: Injection string not found.")
+        # Verify shell=False (vulnerability is fixed)
+        assert shell_arg is not True, \
+            "SECURITY REGRESSION: shell=True is still being used!"
+        
+        print("[+] SECURITY VERIFIED: shell=False prevents injection.")
 
 
 # --- POC 2: LLMC Backend Flag Injection ---

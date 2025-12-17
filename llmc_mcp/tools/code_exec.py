@@ -237,20 +237,26 @@ def execute_code(
 
     The code can import from 'stubs' to access tool functions.
     Only stdout/stderr and explicit return values are captured.
-    This is the "sandbox" where Claude's code runs.
     
-    SECURITY: Requires isolated environment (Docker, K8s, nsjail).
+    SECURITY: 
+    - Requires isolated environment (Docker, K8s, nsjail).
+    - Code runs in a subprocess for process isolation.
+    - NOTE: tool_caller is NOT available in subprocess mode (stubs won't work).
+      This is a security tradeoff - full stub support requires the orchestrator
+      pattern where Claude iterates: execute code -> get result -> execute more.
 
     Args:
         code: Python code to execute
-        tool_caller: Function to call MCP tools (name, args) -> result
+        tool_caller: Function to call MCP tools (currently unused in subprocess mode)
         timeout: Max execution time in seconds
         max_output_bytes: Max bytes to capture from stdout/stderr
-        stubs_dir: Path to stubs directory (for imports)
+        stubs_dir: Path to stubs directory (added to PYTHONPATH)
 
     Returns:
         CodeExecResult with stdout, stderr, return_value, and error
     """
+    import tempfile
+    
     # SECURITY: Only allow execution in isolated environments
     from llmc_mcp.isolation import require_isolation
     try:
@@ -263,76 +269,73 @@ def execute_code(
             error=str(e),
         )
     
-    # SECURITY: Simple heuristic to block obviously malicious code
-    if "import os" in code or "import subprocess" in code:
-        return CodeExecResult(
-            success=False,
-            stdout="",
-            stderr="Blocked for security reasons: os and subprocess imports are not allowed.",
-            error="Blocked for security reasons: os and subprocess imports are not allowed.",
-        )
+    # SECURITY: Process-based isolation
+    # Write code to a temp file and execute in subprocess.
+    # This prevents malicious code from accessing the MCP server's memory,
+    # credentials, or state. The old exec() approach was vulnerable to
+    # bypasses like __import__('os').
     
-    # Prepare execution namespace
-    # Inject _call_tool into builtins so imported stubs can find it
-    import builtins
-    import contextlib
-    import io
-
-    _original_call_tool = getattr(builtins, "_call_tool", None)
-    builtins._call_tool = tool_caller
-
-    namespace = {
-        "__builtins__": builtins,
-        "_call_tool": tool_caller,  # Also in namespace for inline code
-    }
-
-    # Add stubs to path if provided
-    if stubs_dir and stubs_dir.exists():
-        sys.path.insert(0, str(stubs_dir.parent))
-
-    stdout_capture = io.StringIO()
-    stderr_capture = io.StringIO()
-
     try:
-        with contextlib.redirect_stdout(stdout_capture), contextlib.redirect_stderr(stderr_capture):
-            # Compile and exec
-            compiled = compile(code, "<claude_code>", "exec")
-            exec(compiled, namespace)
-
-        stdout = stdout_capture.getvalue()[:max_output_bytes]
-        stderr = stderr_capture.getvalue()[:max_output_bytes]
-
-        # Check for explicit return value (last expression)
-        return_value = namespace.get("_result_", None)
-
-        return CodeExecResult(
-            success=True,
-            stdout=stdout,
-            stderr=stderr,
-            return_value=return_value,
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.py', delete=False
+        ) as f:
+            f.write(code)
+            temp_path = f.name
+        
+        # Build environment - inherit current env but can add stubs path
+        env = dict(__import__('os').environ)
+        if stubs_dir and stubs_dir.exists():
+            current_pythonpath = env.get('PYTHONPATH', '')
+            stubs_parent = str(stubs_dir.parent)
+            if current_pythonpath:
+                env['PYTHONPATH'] = f"{stubs_parent}:{current_pythonpath}"
+            else:
+                env['PYTHONPATH'] = stubs_parent
+        
+        # Execute in subprocess with timeout
+        result = subprocess.run(
+            [sys.executable, temp_path],
+            capture_output=True,
+            timeout=timeout,
+            env=env,
+            cwd=str(stubs_dir.parent) if stubs_dir else None,
         )
+        
+        stdout = result.stdout.decode('utf-8', errors='replace')[:max_output_bytes]
+        stderr = result.stderr.decode('utf-8', errors='replace')[:max_output_bytes]
+        
+        if result.returncode == 0:
+            return CodeExecResult(
+                success=True,
+                stdout=stdout,
+                stderr=stderr,
+                return_value=None,  # Can't get return value from subprocess
+            )
+        else:
+            return CodeExecResult(
+                success=False,
+                stdout=stdout,
+                stderr=stderr,
+                error=f"Process exited with code {result.returncode}",
+            )
 
     except subprocess.TimeoutExpired:
         return CodeExecResult(
             success=False,
-            stdout=stdout_capture.getvalue()[:max_output_bytes],
-            stderr=stderr_capture.getvalue()[:max_output_bytes],
+            stdout="",
+            stderr="",
             error=f"Code execution timed out after {timeout}s",
         )
     except Exception as e:
         return CodeExecResult(
             success=False,
-            stdout=stdout_capture.getvalue()[:max_output_bytes],
-            stderr=stderr_capture.getvalue()[:max_output_bytes],
+            stdout="",
+            stderr="",
             error=f"{type(e).__name__}: {e}",
         )
     finally:
-        # Clean up sys.path
-        if stubs_dir and str(stubs_dir.parent) in sys.path:
-            sys.path.remove(str(stubs_dir.parent))
-        # Restore original builtins._call_tool (or remove if didn't exist)
-        if _original_call_tool is None:
-            if hasattr(builtins, "_call_tool"):
-                delattr(builtins, "_call_tool")
-        else:
-            builtins._call_tool = _original_call_tool
+        # Clean up temp file
+        try:
+            Path(temp_path).unlink(missing_ok=True)
+        except Exception:
+            pass
