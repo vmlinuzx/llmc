@@ -32,6 +32,7 @@ def repo_read(
     *,
     max_bytes: int | None = None,
     ctx: McpSessionContext | None = None,
+    allowed_roots: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Read a file from a repo via TE.
@@ -40,7 +41,7 @@ def repo_read(
     args = ["repo", "read", "--root", root, "--path", path]
     if isinstance(max_bytes, int) and max_bytes > 0:
         args += ["--max-bytes", str(max_bytes)]
-    return te_run(args, ctx=ctx)
+    return te_run(args, ctx=ctx, cwd=root, allowed_roots=allowed_roots)
 
 
 def rag_query(
@@ -50,6 +51,7 @@ def rag_query(
     index: str | None = None,
     filters: Mapping[str, Any] | None = None,
     ctx: McpSessionContext | None = None,
+    allowed_roots: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Run a RAG query via TE.
@@ -65,4 +67,4 @@ def rag_query(
             args += ["--filters", json.dumps(filters)]
         except Exception:
             logger.warning("Could not JSON-encode filters; ignoring.")
-    return te_run(args, ctx=ctx)
+    return te_run(args, ctx=ctx, allowed_roots=allowed_roots)
