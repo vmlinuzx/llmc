@@ -57,6 +57,17 @@ All notable changes to LLMC will be documented in this file.
 
 - **Security Test:** Added `test_normalize_path_fuzzy_match_priority` to `tests/security/test_security_normalization.py` to verify fuzzy matching behavior (SDD-Security-FuzzyMatching).
 
+- **Domain RAG Phase 5 - CI Validation (P0 Complete):**
+  - `tests/rag/ci/test_llmc_docs_validation.py` - validates TechDocsExtractor on LLMC's own DOCS/
+  - 373 markdown files processed, 6545 chunks created, zero errors
+  - Tests: extraction quantity, quality (section paths, anchors), and determinism
+  - All 5 phases of Domain RAG Tech Docs now complete
+
+- **Security: Isolation Bypass Audit Logging:**
+  - Added WARNING log when `LLMC_ISOLATED=1` environment variable is used to bypass isolation
+  - Creates audit trail for forensic analysis when security checks are bypassed
+  - Addresses SDD-Security-IsolationLog gap analysis finding
+
 ### Changed
 
 - **Legacy Test Alias Cleanup (PR #27):**
