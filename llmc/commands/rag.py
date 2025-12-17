@@ -5,15 +5,6 @@ from typing import Annotated, Any, cast
 import typer
 
 from llmc.core import find_repo_root
-from llmc.rag.config import get_est_tokens_per_span, index_path_for_read
-from llmc.rag.database import Database
-from llmc.rag.doctor import run_rag_doctor as run_doctor
-
-# Imports from existing tools
-from llmc.rag.indexer import index_repo as run_index_repo
-from llmc.rag.inspector import inspect_entity as run_inspect_entity
-from llmc.rag.planner import generate_plan as run_generate_plan
-from llmc.rag.search import search_spans as run_search_spans
 
 
 def index(
@@ -23,6 +14,8 @@ def index(
     no_export: Annotated[bool, typer.Option(help="Skip JSONL span export")] = False,
 ):
     """Index the repository (full or incremental)."""
+    from llmc.rag.indexer import index_repo as run_index_repo
+
     try:
         stats = run_index_repo(since=since, export_json=not no_export)
         typer.echo(
@@ -40,6 +33,8 @@ def search(
     json_output: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ):
     """Semantic search."""
+    from llmc.rag.search import search_spans as run_search_spans
+
     # Input validation
     if limit <= 0:
         typer.echo("Error: --limit must be a positive integer", err=True)
@@ -96,6 +91,8 @@ def inspect(
     ] = False,
 ):
     """Deep dive into symbol/file."""
+    from llmc.rag.inspector import inspect_entity as run_inspect_entity
+
     repo_root = find_repo_root()
     if not symbol and not path:
         typer.echo("Must provide --symbol or --path")
@@ -123,6 +120,8 @@ def plan(
     ] = 0.6,
 ):
     """Generate retrieval plan."""
+    from llmc.rag.planner import generate_plan as run_generate_plan
+
     repo_root = find_repo_root()
     try:
         result = run_generate_plan(
@@ -140,6 +139,9 @@ def stats(
     ] = False,
 ):
     """Print summary stats for the current index."""
+    from llmc.rag.config import get_est_tokens_per_span, index_path_for_read
+    from llmc.rag.database import Database
+
     repo_root = find_repo_root()
     db_file = index_path_for_read(repo_root)
     if not db_file.exists():
@@ -226,6 +228,8 @@ def doctor(
     ] = False,
 ):
     """Diagnose RAG health."""
+    from llmc.rag.doctor import run_rag_doctor as run_doctor
+
     repo_root = find_repo_root()
     run_doctor(repo_path=repo_root, verbose=verbose)
 
@@ -328,7 +332,8 @@ def enrich(
     """Preview or execute enrichment tasks (summary/tags)."""
     from llmc.core import load_config
     from llmc.enrichment import FileClassifier, load_path_weight_map
-    from llmc.rag.database import Database as RagDatabase
+    from llmc.rag.config import index_path_for_read
+    from llmc.rag.database import Database
     from llmc.rag.types import SpanWorkItem
     from llmc.rag.workers import (
         default_enrichment_callable,
@@ -366,6 +371,7 @@ def enrich(
                 err=True,
             )
             raise typer.Exit(code=1) from e
+
     db_file = index_path_for_read(repo_root)
     if not db_file.exists():
         typer.echo("No index database found. Run `llmc index` first.")
@@ -385,7 +391,7 @@ def enrich(
                 cfg = load_config(repo_root)
                 weight_map = load_path_weight_map(cfg)
 
-                rag_db = RagDatabase(db_file)
+                rag_db = Database(db_file)
                 try:
                     pending: list[SpanWorkItem] = rag_db.pending_enrichments(
                         limit=limit, cooldown_seconds=cooldown
@@ -465,6 +471,8 @@ def embed(
     ] = 0,
 ):
     """Preview or execute embedding jobs for spans."""
+    from llmc.rag.config import index_path_for_read
+    from llmc.rag.database import Database
     from llmc.rag.workers import embedding_plan, execute_embeddings
 
     repo_root = find_repo_root()

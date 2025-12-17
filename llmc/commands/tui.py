@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from llmc.core import find_repo_root
-from llmc.tui.app import LLMC_TUI
 
 
 def tui():
     """Launch the interactive TUI."""
+    from llmc.tui.app import LLMC_TUI
     repo_root = find_repo_root()
     # TUI app expects repo_root to be passed or defaults to cwd
     # We pass it explicitly to be safe
