@@ -48,41 +48,32 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ---
 
-### 1.0.2 Security Hardening (P0) 🔴 NEW
+### ~~1.0.2 Security Hardening (P0)~~ ✅ DONE
 
-**Status:** 🔴 Critical items remaining  
-**Added:** 2025-12-17 (from Emilia daily audit)
+**Status:** ✅ Complete  
+**Added:** 2025-12-17 (from Emilia daily audit) | **Completed:** 2025-12-17
 
-**Completed This Session:**
-- ✅ RCE in `execute_code` - fixed (subprocess isolation)
+**Completed:**
+- ✅ RCE in `execute_code` - fixed (subprocess isolation, PR #23)
 - ✅ SSRF in `service_health` - fixed (URL validation)
 - ✅ 8 dependency CVEs - updated (`urllib3`, `filelock`, `mcp`, `setuptools`)
+- ✅ `linux_proc_start` - already gated behind `require_isolation()` (verified)
+- ✅ `linux_proc_kill`, `linux_proc_send` - already gated behind `require_isolation()` (verified)
+- ✅ `te_run` RCE via env var - fixed, executable hardcoded to `"te"` (PR #23)
+- ✅ `te_run` unvalidated `cwd` - fixed with `_validate_cwd()` and `allowed_roots` (PR #23)
+- ✅ `is_isolated_environment` false positive - fixed with precise regex patterns (PR #22)
+- ✅ Isolation bypass audit logging - WARNING now logged when `LLMC_ISOLATED=1` is used
 
-**Remaining Issues (Priority Order):**
+**Remaining (P2 - Low Priority):**
 
 | Priority | Issue | Location | Risk |
 |----------|-------|----------|------|
-| **P0** | `linux_proc_start` = unsandboxed RCE | `llmc_mcp/tools/linux_ops/proc.py` | MAXIMUM - full host control |
-| **P1** | `te_run` RCE via env var | `llmc_mcp/tools/te.py` | HIGH - `LLMC_TE_EXE` controls executable |
-| **P1** | `is_isolated_environment` false positive | `llmc_mcp/isolation.py` | HIGH - incorrectly trusts cgroups |
 | **P2** | `os.chdir()` in RAG tools | `llmc_mcp/tools/rag.py` | MEDIUM - poor practice, race conditions |
 | **P2** | Unvalidated `repo_root` in RAG | `llmc_mcp/tools/rag.py` | MEDIUM - no `allowed_roots` check |
-| **P2** | `te_run` unvalidated `cwd` | `llmc_mcp/tools/te.py` | MEDIUM - can run in any directory |
-
-**Recommended Actions:**
-
-1. **P0 - `linux_ops/proc.py`:** Either:
-   - Remove entirely (recommended by Rem)
-   - Gate behind `require_isolation`
-   - Disable by default in `LinuxOpsConfig`
-
-2. **P1 - `te_run` env var:** Hardcode executable path, don't trust `LLMC_TE_EXE`
-
-3. **P1 - Isolation detection:** Make `is_isolated_environment()` more specific (current cgroup check has false positives)
 
 **📄 Full Report:** `tests/REPORTS/current/rem_mcp_2025-12-17.md`
 
-**Effort:** 4-8 hours | **Difficulty:** 🟢 Easy (fixes are straightforward)
+**Effort:** ~~4-8 hours~~ Done | **Difficulty:** ✅ Complete
 
 ---
 
