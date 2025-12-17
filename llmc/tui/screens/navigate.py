@@ -69,6 +69,14 @@ class NavigateScreen(LLMCScreen):
         text-style: bold;
         padding: 0 1;
     }
+
+    NavigateScreen.expanded #nav-grid {
+        grid-columns: 1fr;
+    }
+
+    NavigateScreen.expanded #tree-panel {
+        display: none;
+    }
     """
 
     def __init__(self):
@@ -140,8 +148,7 @@ class NavigateScreen(LLMCScreen):
 
     def action_toggle_tree(self) -> None:
         """Toggle tree visibility (expand code view)."""
-        # TODO: Implement layout toggling if needed
-        pass
+        self.toggle_class("expanded")
 
     def action_inspect_file(self) -> None:
         """Open current file in Inspector."""
