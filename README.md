@@ -1,5 +1,4 @@
 <div align="center">
-  <img src="DOCS/grace/grace1.png" alt="LLMC Logo" width="100%" />
 
   # LLMC: Large Language Model Compressor
 
