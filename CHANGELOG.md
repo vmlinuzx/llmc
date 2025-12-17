@@ -4,6 +4,37 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Security (Jules PRs - 2025-12-17)
+
+- **CRITICAL: RCE in linux_ops/proc.py Fixed (PR #24):**
+  - Added `require_isolation()` checks to `mcp_linux_proc_start`, `mcp_linux_proc_kill`, `mcp_linux_proc_send`
+  - These functions were ungated RCE vectors on bare metal hosts
+  - Follows same pattern as `run_cmd` isolation enforcement
+
+- **CRITICAL: Path Traversal in te.py Fixed (PR #23):**
+  - Added `PathSecurityError` exception and `_validate_cwd()` function
+  - Hardcoded TE executable to `"te"` (removed env var `LLMC_TE_EXE` injection vector)
+  - Added `allowed_roots` parameter for CWD validation
+  - New tests: `test_te_security.py`, `test_te_repo_security.py`
+
+- **CRITICAL: Path Traversal in te/cli.py Fixed (PR #21):**
+  - Added path normalization to `repo read` command using `llmc.security.normalize_path`
+  - Blocks `../` traversal attempts in file paths
+  - New test: `test_te_cli_traversal.py`
+
+- **P1: Isolation Check False Positive Fixed (PR #22):**
+  - Fixed `is_isolated_environment()` incorrectly identifying host systems as containerized
+  - Replaced simple substring matching with precise regex patterns for cgroup detection
+  - Added Podman detection (`/run/.containerenv`)
+  - Patterns: `:/docker/`, `:/kubepods/`, `docker-.*\.scope`, `:/lxc/`, `:/containerd/`
+
+### Performance
+
+- **Lazy Loading for CLI Imports (PR #25):**
+  - Moved heavy RAG/ML imports from module-level to function-level in `llmc/commands/rag.py`
+  - Deferred `LLMC_TUI` import in `llmc/commands/tui.py`
+  - **Impact:** Significantly faster `llmc --help` startup time
+
 ### Added
 - **Security Test:** Added `test_normalize_path_fuzzy_match_priority` to `tests/security/test_security_normalization.py` to verify fuzzy matching behavior (SDD-Security-FuzzyMatching).
 
