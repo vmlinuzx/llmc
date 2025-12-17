@@ -23,6 +23,7 @@ from pathlib import Path
 import subprocess
 import sys
 
+from llmc.security import normalize_path, PathSecurityError
 from .config import _find_repo_root, get_te_config
 from .handlers import handle_grep
 from .store import get_entry, list_handles, load
@@ -563,7 +564,15 @@ def main() -> int:
                 path_idx = cmd_args.index("--path") + 1
                 root = cmd_args[root_idx]
                 path = cmd_args[path_idx]
-                full_path = str(Path(root) / path)
+
+                # Security: Validate path is within root
+                try:
+                    safe_path = normalize_path(Path(root), path)
+                    full_path = str(Path(root) / safe_path)
+                except PathSecurityError as e:
+                    print(f"[TE] Security Error: {e}", file=sys.stderr)
+                    return 1
+
                 return _handle_passthrough(
                     "cat",
                     [full_path],
