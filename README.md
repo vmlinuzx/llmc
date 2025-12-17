@@ -6,7 +6,6 @@
   <br>
   Get 70-95% cost reduction through local RAG, intelligent routing, and containerized security.
 
-  [![PyPI version](https://badge.fury.io/py/llmcwrapper.svg)](https://badge.fury.io/py/llmcwrapper)
   [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
   [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
