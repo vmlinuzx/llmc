@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from llmc_mcp.tools.linux_ops.config import LinuxOpsConfig
 
+from llmc_mcp.isolation import require_isolation
 from llmc_mcp.tools.linux_ops.errors import (
     FeatureDisabledError,
     InvalidArgumentError,
@@ -237,6 +238,7 @@ def mcp_linux_proc_kill(
         InvalidArgumentError: If invalid signal name
         ProcessNotFoundError: If process doesn't exist
     """
+    require_isolation("linux_proc_kill")
     # Check feature flag
     if not config.features.proc_enabled:
         raise FeatureDisabledError("Process tools are disabled in config")
@@ -325,6 +327,7 @@ def mcp_linux_proc_start(
     Returns:
         dict with proc_id, pid, first_output, state
     """
+    require_isolation("linux_proc_start")
     from llmc_mcp.te.process import count_processes, read_output, start_process
 
     # Check feature flag
@@ -375,6 +378,7 @@ def mcp_linux_proc_send(
     Returns:
         dict with acknowledged flag
     """
+    require_isolation("linux_proc_send")
     from llmc_mcp.te.process import send_input
 
     if not config.features.repl_enabled:
