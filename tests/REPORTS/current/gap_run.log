@@ -1,0 +1,513 @@
+FFF.F....Fssss..................FF.FFF                                   [100%]
+=================================== FAILURES ===================================
+______________________ test_cmd_allowlist_config_mismatch ______________________
+
+tmp_path = PosixPath('/tmp/pytest-of-jules/pytest-4/test_cmd_allowlist_config_mism0')
+
+    def test_cmd_allowlist_config_mismatch(tmp_path):
+        """
+        Test that the 'run_cmd_allowlist' in llmc.toml is currently ignored,
+        leading to a security fail-open state where commands not in the allowlist are executed.
+
+        See: tests/gap/SDDs/SDD-Security-CmdAllowlist.md
+        """
+
+        # 1. Create a temporary llmc.toml with an explicit allowlist
+        config_content = """
+    [mcp.tools]
+    enable_run_cmd = true
+    run_cmd_allowlist = ["ls", "echo"]
+    """
+        config_file = tmp_path / "llmc.toml"
+        config_file.write_text(config_content, encoding="utf-8")
+
+        # 2. Load the configuration
+        config = load_config(config_file)
+
+        # 3. Assertions on the Config Object
+        # The bug is that 'run_cmd_allowlist' is ignored, and 'run_cmd_blacklist' defaults to empty.
+        assert (
+            config.tools.run_cmd_blacklist == []
+        ), "Blacklist should be empty as it wasn't specified"
+
+        # Check that the config object doesn't even have the allowlist field (confirming the gap)
+        assert not hasattr(
+            config.tools, "run_cmd_allowlist"
+        ), "Config model is missing 'run_cmd_allowlist'"
+
+        # 4. Execution Test
+        # We try to run a command that is NOT in the allowlist (e.g., 'whoami').
+        # Desired behavior: It should be blocked.
+        # Current behavior (Bug): It runs because the blacklist is empty and allowlist is ignored.
+
+        # Mock isolation to allow command execution logic to proceed
+        with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+            mock_iso.return_value = None
+
+            # Execute 'whoami' (not in allowlist)
+            # We pass the blacklist from the loaded config
+            result = run_cmd(
+                "whoami", cwd=tmp_path, blacklist=config.tools.run_cmd_blacklist
+            )
+
+            # The Test: Assert that the security control worked (i.e., blocked the command).
+            # THIS ASSERTION IS EXPECTED TO FAIL until the bug is fixed.
+>           assert (
+                result.success is False
+            ), f"Security Breach: 'whoami' was allowed despite not being in allowlist! Stdout: {result.stdout.strip()}"
+E           AssertionError: Security Breach: 'whoami' was allowed despite not being in allowlist! Stdout: jules
+E           assert True is False
+E            +  where True = ExecResult(success=True, stdout='jules\n', stderr='', exit_code=0, error=None).success
+
+/app/tests/gap/security/test_cmd_allowlist_config.py:55: AssertionError
+_____________________ test_hybrid_mode_bypasses_isolation ______________________
+
+mock_config = <MagicMock spec='McpConfig' id='140474836755440'>
+
+    @pytest.mark.asyncio
+    async def test_hybrid_mode_bypasses_isolation(mock_config):
+        """Verify that hybrid mode sets host_mode=True and bypasses isolation."""
+        mock_config.mode = "hybrid"
+        mock_config.hybrid = MagicMock()
+        mock_config.hybrid.promoted_tools = ["run_cmd"]
+        mock_config.hybrid.include_execute_code = False
+        mock_config.hybrid.bootstrap_budget_warning = 10000
+
+        # We need to mock run_cmd to avoid actual execution but verify the call args
+        with patch("llmc_mcp.tools.cmd.run_cmd") as mock_run_cmd:
+            mock_run_cmd.return_value = MagicMock(
+                success=True, stdout="ok", stderr="", exit_code=0, error=None
+            )
+
+            server = LlmcMcpServer(mock_config)
+
+            # Test run_cmd
+            result = await server._handle_run_cmd({"command": "echo check"})
+
+            # Assert run_cmd was called with host_mode=True
+            mock_run_cmd.assert_called_once()
+            call_kwargs = mock_run_cmd.call_args.kwargs
+>           assert call_kwargs["host_mode"] is True, "Hybrid mode must set host_mode=True"
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+E           KeyError: 'host_mode'
+
+/app/tests/gap/security/test_hybrid_mode.py:48: KeyError
+_____________________ test_classic_mode_enforces_isolation _____________________
+
+mock_config = <MagicMock spec='McpConfig' id='140474834974720'>
+
+    @pytest.mark.asyncio
+    async def test_classic_mode_enforces_isolation(mock_config):
+        """Verify that classic mode sets host_mode=False."""
+        mock_config.mode = "classic"
+
+        with patch("llmc_mcp.tools.cmd.run_cmd") as mock_run_cmd:
+            mock_run_cmd.return_value = MagicMock(
+                success=True, stdout="ok", stderr="", exit_code=0, error=None
+            )
+
+            server = LlmcMcpServer(mock_config)
+
+            # Test run_cmd
+            result = await server._handle_run_cmd({"command": "echo check"})
+
+            # Assert run_cmd was called with host_mode=False
+            mock_run_cmd.assert_called_once()
+            call_kwargs = mock_run_cmd.call_args.kwargs
+            assert (
+>               call_kwargs["host_mode"] is False
+                ^^^^^^^^^^^^^^^^^^^^^^^^
+            ), "Classic mode must set host_mode=False"
+E           KeyError: 'host_mode'
+
+/app/tests/gap/security/test_hybrid_mode.py:70: KeyError
+______________ TestMcpEditOom.test_edit_block_rejects_large_files ______________
+
+self = <test_mcp_edit_oom.TestMcpEditOom testMethod=test_edit_block_rejects_large_files>
+MockPath = <MagicMock name='Path' id='140474833290160'>
+
+    @patch("llmc_mcp.tools.fs.Path")
+    def test_edit_block_rejects_large_files(self, MockPath):
+        """
+        Test that edit_block rejects files larger than the safety limit (e.g. 10MB)
+        to prevent OOM vulnerabilities.
+        """
+        # The path object used in logic
+        mock_path_obj = MagicMock()
+
+        # When Path("...") is called, return a mock that returns mock_path_obj on resolve()
+        # Because validate_path does: Path(str).resolve()
+        MockPath.return_value.resolve.return_value = mock_path_obj
+
+        # Basic checks
+        mock_path_obj.exists.return_value = True
+        mock_path_obj.is_file.return_value = True
+        mock_path_obj.is_symlink.return_value = False
+
+        # Stat setup
+        mock_stat = MagicMock()
+        mock_stat.st_size = 20 * 1024 * 1024  # 20MB
+        mock_stat.st_mode = stat.S_IFREG  # Regular file
+        mock_path_obj.stat.return_value = mock_stat
+
+        # Mock read_text to ensure it doesn't crash if called (simulating real file read)
+        mock_path_obj.read_text.return_value = "some content"
+
+        # Execution
+        # We pass allowed_roots=[] which means "allow all" in the current implementation of check_path_allowed
+        result = edit_block("/tmp/fake_large_file", [], "foo", "bar")
+
+        # Verification
+        # This assertion is expected to FAIL until the bug is fixed.
+        self.assertFalse(result.success, "Should fail for large file")
+        self.assertIsNotNone(result.error)
+>       self.assertIn(
+            "too large",
+            result.error.lower(),
+            f"Error should mention size limit, got: {result.error}",
+        )
+E       AssertionError: 'too large' not found in 'text not found in file' : Error should mention size limit, got: Text not found in file
+
+/app/tests/gap/security/test_mcp_edit_oom.py:44: AssertionError
+___________ TestAgentToolFeedback.test_silent_tool_failure_feedback ____________
+
+self = <test_agent_tool_feedback.TestAgentToolFeedback testMethod=test_silent_tool_failure_feedback>
+
+    async def test_silent_tool_failure_feedback(self):
+        """
+        Test that the agent provides feedback when a tool is not available in the current tier.
+        SDD: tests/gap/SDDs/SDD-Agent-SilentToolFailure.md
+        """
+        # Setup Config
+        mock_config = MagicMock()
+        mock_config.ollama.url = "http://localhost:11434"
+        mock_config.ollama.timeout = 30
+        mock_config.ollama.temperature = 0.0
+        mock_config.ollama.num_ctx = 4096
+        mock_config.rag.enabled = False
+        mock_config.agent.model = "test-model"
+        mock_config.agent.context_budget = 8192
+        mock_config.agent.response_reserve = 1024
+        mock_config.rag.include_summary = True
+        mock_config.rag.max_results = 5
+        mock_config.rag.min_score = 0.5
+
+        # Mock OllamaBackend
+        with patch("llmc_agent.agent.OllamaBackend") as MockOllamaBackend:
+            mock_backend_instance = AsyncMock()
+            MockOllamaBackend.return_value = mock_backend_instance
+
+            # Instantiate Agent
+            agent = Agent(mock_config)
+
+            # Force ToolRegistry to WALK tier
+            agent.tools.current_tier = ToolTier.WALK
+
+            # Mock responses
+            # Response 1: Tool call to 'write_file' (RUN tier)
+            tool_call_args = '{"path": "test.txt", "content": "hello"}'
+            response_1 = GenerateResponse(
+                content="",
+                tokens_prompt=10,
+                tokens_completion=10,
+                model="test-model",
+                finish_reason="tool_calls",
+                tool_calls=[
+                    {
+                        "function": {"name": "write_file", "arguments": tool_call_args},
+                        "id": "call_123",
+                    }
+                ],
+            )
+
+            # Response 2: Text response (simulating model reacting to feedback)
+            response_2 = GenerateResponse(
+                content="I see I cannot write files.",
+                tokens_prompt=20,
+                tokens_completion=10,
+                model="test-model",
+                finish_reason="stop",
+                tool_calls=[],
+            )
+
+            # We might need more responses if it loops multiple times due to failure
+            mock_backend_instance.generate_with_tools.side_effect = [
+                response_1,
+                response_2,
+                response_2,
+                response_2,
+            ]
+
+            # Patch detect_intent_tier to prevent auto-upgrade to RUN
+            with patch(
+                "llmc_agent.tools.detect_intent_tier", return_value=ToolTier.WALK
+            ):
+                await agent.ask_with_tools("Please write this file")
+
+            # Assertions
+
+            # Check the inputs to the second call
+            # We expect at least 2 calls. If the agent silently failed and looped, it might have called more times
+            # with the exact same input (missing tool feedback).
+            assert mock_backend_instance.generate_with_tools.call_count >= 2
+
+            # Get the arguments of the second call
+            second_call_request = (
+                mock_backend_instance.generate_with_tools.call_args_list[1][0][0]
+            )
+            messages = second_call_request.messages
+
+            # Verify that we have a tool error message
+
+            has_assistant_call = any(
+                msg.get("role") == "assistant" and msg.get("tool_calls")
+                for msg in messages
+            )
+
+>           assert (
+                has_assistant_call
+            ), "Assistant tool call message missing from history (Silent Failure detected)"
+E           AssertionError: Assistant tool call message missing from history (Silent Failure detected)
+E           assert False
+
+/app/tests/gap/test_agent_tool_feedback.py:104: AssertionError
+______________________________ test_dos_via_exit _______________________________
+
+    def test_dos_via_exit():
+        """
+        Test that calling execute_code with sys.exit() propagates SystemExit
+        when isolation is bypassed (mocked).
+        """
+        # Patch require_isolation to bypass the environment check
+        with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+            # Code that triggers sys.exit(1)
+            code = "import sys; sys.exit(1)"
+
+            # We expect SystemExit to be raised because the current implementation
+            # catches Exception but not BaseException (which SystemExit inherits from).
+>           with pytest.raises(SystemExit):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'SystemExit'>
+
+/app/tests/gap/test_mcp_dos.py:20: Failed
+_______________________ test_dos_via_keyboard_interrupt ________________________
+
+    def test_dos_via_keyboard_interrupt():
+        """
+        Test that calling execute_code with raise KeyboardInterrupt propagates KeyboardInterrupt.
+        """
+        # Patch require_isolation to bypass the environment check
+        with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+            # Code that raises KeyboardInterrupt
+            code = "raise KeyboardInterrupt"
+
+            # We expect KeyboardInterrupt to be raised.
+>           with pytest.raises(KeyboardInterrupt):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE <class 'KeyboardInterrupt'>
+
+/app/tests/gap/test_mcp_dos.py:34: Failed
+______________________ test_write_file_append_blocks_fifo ______________________
+
+tmp_fifo = PosixPath('/tmp/pytest-of-jules/pytest-4/test_write_file_append_blocks_0/test.fifo')
+
+    def test_write_file_append_blocks_fifo(tmp_fifo):
+        """Verify write_file (append) blocks on FIFO (Gap Confirmation)."""
+        # This test is EXPECTED to fail (hang) if the gap exists.
+        # So we want to assert that it DOES NOT hang.
+
+        allowed_roots = [str(tmp_fifo.parent)]
+        content = "test"
+        mode = "append"
+
+        result_container = {}
+
+        def target():
+            try:
+                result_container["result"] = write_file(
+                    str(tmp_fifo), allowed_roots, content, mode=mode
+                )
+            except Exception as e:
+                result_container["error"] = str(e)
+
+        t = threading.Thread(target=target)
+        t.start()
+        t.join(timeout=2.0)
+
+        if t.is_alive():
+            # Ideally we kill the thread but in Python we can't easily.
+            # We just report failure.
+>           pytest.fail(
+                "write_file hung on FIFO write! GAP CONFIRMED: write_file(append) allows opening FIFO."
+            )
+E           Failed: write_file hung on FIFO write! GAP CONFIRMED: write_file(append) allows opening FIFO.
+
+/app/tests/gap/test_mcp_fs_devices.py:70: Failed
+___________________ test_router_resilience_heuristic_failure ___________________
+
+    def test_router_resilience_heuristic_failure():
+        """
+        Test that classify_query catches exceptions from heuristic modules
+        and falls back to a default route.
+        """
+        with patch(
+            "llmc.routing.code_heuristics.score_all",
+            side_effect=ValueError("Simulated failure"),
+        ):
+            # This should not raise an exception
+>           result = classify_query("how to install")
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/app/tests/gap/test_router_resilience.py:16:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/app/llmc/routing/query_type.py:51: in classify_query
+    code_sig = ch.score_all(text, cfg.get("code_detection"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1139: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1143: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <MagicMock name='score_all' id='140474835081104'>
+args = ('how to install', {}), kwargs = {}
+effect = ValueError('Simulated failure')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               ValueError: Simulated failure
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1198: ValueError
+______________________ test_security_confirmation_bypass _______________________
+
+    @pytest.mark.allow_network
+    def test_security_confirmation_bypass():
+        """
+
+        SDD: tests/gap/SDDs/SDD-Safety-ConfirmationBypass.md
+
+
+
+        Test that a tool marked with requires_confirmation=True
+
+        is NOT executed automatically by the agent.
+
+
+
+        This test is EXPECTED TO FAIL currently, demonstrating the vulnerability.
+
+        """
+
+>       asyncio.run(_test_logic())
+
+/app/tests/gap/test_security_confirmation_bypass.py:115:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def _test_logic():
+        """
+        Async logic for the test.
+        """
+
+        # 1. Setup Mock Config
+        config = Config(
+            ollama=OllamaConfig(url="http://mock:11434"),
+            rag=RAGConfig(enabled=False),
+            agent=AgentConfig(model="mock-model"),
+        )
+
+        agent = Agent(config)
+
+        # 2. Register dangerous tool
+        explosive_tool_impl = ExplosiveTool()
+
+        dangerous_tool = Tool(
+            name="explode",
+            description="Destroys everything",
+            tier=ToolTier.RUN,
+            function=explosive_tool_impl.explode,
+            parameters={"type": "object", "properties": {"intensity": {"type": "integer"}}},
+            requires_confirmation=True,  # CRITICAL FLAG
+        )
+
+        # Inject tool into agent's registry
+        agent.tools._register(dangerous_tool)
+
+        # 3. Mock Ollama Backend
+        mock_ollama = AsyncMock()
+
+        tool_call_payload = {
+            "function": {
+                "name": "explode",
+                "arguments": '{"intensity": 9000}',  # Ollama usually returns JSON string for arguments
+            },
+            "id": "call_123",
+        }
+
+        # First response: Call the tool
+        response_with_tool = GenerateResponse(
+            content="",
+            model="mock-model",
+            tokens_prompt=10,
+            tokens_completion=10,
+            finish_reason="tool_calls",
+            tool_calls=[tool_call_payload],
+        )
+
+        # Second response: After tool execution
+        response_final = GenerateResponse(
+            content="I have destroyed it.",
+            model="mock-model",
+            tokens_prompt=20,
+            tokens_completion=5,
+            finish_reason="stop",
+        )
+
+        mock_ollama.generate_with_tools.side_effect = [response_with_tool, response_final]
+
+        agent.ollama = mock_ollama
+
+        # 4. Execute
+        # "please delete" triggers RUN tier via detect_intent_tier (destroy is not in keywords)
+        await agent.ask_with_tools("please delete everything")
+
+        # 5. Assert
+        # We assert that the tool was NOT detonated.
+        # Since the vulnerability exists, self.detonated will be True, and this assertion will fail.
+>       assert (
+            not explosive_tool_impl.detonated
+        ), "SECURITY FAILURE: Tool with requires_confirmation=True was executed automatically!"
+E       AssertionError: SECURITY FAILURE: Tool with requires_confirmation=True was executed automatically!
+E       assert not True
+E        +  where True = <test_security_confirmation_bypass.ExplosiveTool object at 0x7fc2d8a52fc0>.detonated
+
+/app/tests/gap/test_security_confirmation_bypass.py:92: AssertionError
+=========================== short test summary info ============================
+FAILED tests/gap/security/test_cmd_allowlist_config.py::test_cmd_allowlist_config_mismatch
+FAILED tests/gap/security/test_hybrid_mode.py::test_hybrid_mode_bypasses_isolation
+FAILED tests/gap/security/test_hybrid_mode.py::test_classic_mode_enforces_isolation
+FAILED tests/gap/security/test_mcp_edit_oom.py::TestMcpEditOom::test_edit_block_rejects_large_files
+FAILED tests/gap/test_agent_tool_feedback.py::TestAgentToolFeedback::test_silent_tool_failure_feedback
+FAILED tests/gap/test_mcp_dos.py::test_dos_via_exit - Failed: DID NOT RAISE <...
+FAILED tests/gap/test_mcp_dos.py::test_dos_via_keyboard_interrupt - Failed: D...
+FAILED tests/gap/test_mcp_fs_devices.py::test_write_file_append_blocks_fifo
+FAILED tests/gap/test_router_resilience.py::test_router_resilience_heuristic_failure
+FAILED tests/gap/test_security_confirmation_bypass.py::test_security_confirmation_bypass
+10 failed, 24 passed, 4 skipped in 3.57s

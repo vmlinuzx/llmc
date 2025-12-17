@@ -1,0 +1,52 @@
+...................................F
+=================================== FAILURES ===================================
+__________________________ test_blacklist_validation ___________________________
+
+    def test_blacklist_validation():
+        """Test command blacklist validation."""
+        print("Testing blacklist validation...")
+
+        # With empty blacklist, everything should be allowed
+        assert validate_command(["ls", "-la"], DEFAULT_BLACKLIST) == "ls"
+        assert validate_command(["rg", "pattern"], DEFAULT_BLACKLIST) == "rg"
+        assert (
+            validate_command(["/usr/bin/python", "-c", "print(1)"], DEFAULT_BLACKLIST)
+            == "python"
+        )
+        assert validate_command(["curl", "http://example.com"], DEFAULT_BLACKLIST) == "curl"
+        assert validate_command(["sed", "-i", "s/foo/bar/"], DEFAULT_BLACKLIST) == "sed"
+
+        # With explicit blacklist, blocked commands should raise
+        test_blacklist = ["rm", "chmod", "chown"]
+
+        try:
+            validate_command(["rm", "-rf", "/"], test_blacklist)
+            raise AssertionError("Should have raised for rm")
+        except CommandSecurityError as e:
+            assert "blacklisted" in str(e)
+
+        try:
+            validate_command(["chmod", "777", "file"], test_blacklist)
+            raise AssertionError("Should have raised for chmod")
+        except CommandSecurityError as e:
+            assert "blacklisted" in str(e)
+
+        # Non-blacklisted commands should still work
+        assert validate_command(["ls", "-la"], test_blacklist) == "ls"
+        assert validate_command(["curl", "http://example.com"], test_blacklist) == "curl"
+
+        # Test allowlist mode
+        test_allowlist = ["ls", "cat", "grep"]
+        assert (
+>           validate_command(["ls", "-la"], DEFAULT_BLACKLIST, allowlist=test_allowlist)
+            == "ls"
+        )
+E       TypeError: validate_command() got an unexpected keyword argument 'allowlist'
+
+/app/tests/mcp/test_cmd.py:56: TypeError
+----------------------------- Captured stdout call -----------------------------
+Testing blacklist validation...
+=========================== short test summary info ============================
+FAILED tests/mcp/test_cmd.py::test_blacklist_validation - TypeError: validate...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 35 passed, 1 skipped, 1 warning in 3.22s

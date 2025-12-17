@@ -1,0 +1,878 @@
+........................................................................ [  3%]
+..F...............................................F..................... [  7%]
+.......s.................................FFF......................s.ss.. [ 11%]
+........F......................F....s........F.....ss.................s. [ 15%]
+...........sssss...........................................s............ [ 19%]
+........................................................................ [ 23%]
+.........F.........................................................sss.. [ 27%]
+....................sss................................................. [ 30%]
+........................................................................ [ 34%]
+........................................ssssssssssss.................... [ 38%]
+........................................................................ [ 42%]
+........................................................................ [ 46%]
+..............ssss.....FF..
+=================================== FAILURES ===================================
+________________________ test_index_repo_domain_logging ________________________
+
+args = ()
+keywargs = {'caplog': <_pytest.logging.LogCaptureFixture object at 0x7fcd6bff7530>, 'capsys': <_pytest.capture.CaptureFixture object at 0x7fcd6bff5760>}
+
+    @wraps(func)
+    def patched(*args, **keywargs):
+>       with self.decoration_helper(patched,
+                                    args,
+                                    keywargs) as (newargs, newkeywargs):
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1393:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1375: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/contextlib.py:526: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1467: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <unittest.mock._patch object at 0x7fcd6dfcb7a0>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+
+        original = DEFAULT
+        local = False
+
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'llmc.rag.indexer' from '/app/llmc/rag/indexer.py'> does not have the attribute 'get_default_domain'
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/unittest/mock.py:1437: AttributeError
+___________________ test_fusion_relative_vs_absolute_quality ___________________
+
+    def test_fusion_relative_vs_absolute_quality():
+        """
+        Gap: MinMax normalization destroys absolute score differences between routes.
+
+        Route A (Good): [0.9, 0.8] -> Norm: [1.0, 0.0]
+        Route B (Bad):  [0.2, 0.1] -> Norm: [1.0, 0.0]
+
+        Fused (50/50 weights):
+        A_top: 0.5
+        B_top: 0.5
+
+        Realistically, A_top (0.9) should CRUSH B_top (0.2).
+        """
+        route_results = {
+            "good_route": [
+                {"slice_id": "good_1", "score": 0.9},
+                {"slice_id": "good_2", "score": 0.8},
+            ],
+            "bad_route": [
+                {"slice_id": "bad_1", "score": 0.2},
+                {"slice_id": "bad_2", "score": 0.1},
+            ],
+        }
+
+        weights = {"good_route": 0.5, "bad_route": 0.5}
+
+        fused = fuse_scores(route_results, weights)
+
+        # Sort check: We expect good_1 and good_2 to be at the top.
+        # Currently, bad_1 (score 0.2 -> norm 1.0 -> fused 0.5) ties with good_1.
+        # And bad_1 beats good_2 (score 0.8 -> norm 0.0 -> fused 0.0).
+
+        top_ids = [item["slice_id"] for item in fused]
+
+        # The Gap: "bad_1" should NOT be above "good_2"
+        # But with current logic, it is.
+
+        # We assert the DESIRED behavior (which will fail)
+        # This proves the gap exists.
+>       assert (
+            "good_2" in top_ids[:2]
+        ), f"Expected good_2 to be in top 2, but got: {top_ids}"
+E       AssertionError: Expected good_2 to be in top 2, but got: ['good_1', 'bad_1', 'good_2', 'bad_2']
+E       assert 'good_2' in ['good_1', 'bad_1']
+
+/app/tests/routing/test_fusion_robustness.py:43: AssertionError
+_____________________ TestMcgrepCLI.test_mcgrep_help_works _____________________
+
+self = <test_mcgrep.TestMcgrepCLI object at 0x7fcd6d98e7b0>
+
+    def test_mcgrep_help_works(self):
+        """mcgrep --help should return usage info."""
+        result = subprocess.run(
+            [sys.executable, "-m", "llmc.mcgrep", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+>       assert result.returncode == 0
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.mcgrep', '--help'], returncode=1...n/python3: Error while finding module specification for 'llmc.mcgrep' (ModuleNotFoundError: No module named 'llmc')\n").returncode
+
+/app/tests/ruthless/test_mcgrep.py:27: AssertionError
+_______________ TestMcgrepCLI.test_mcgrep_status_command_exists ________________
+
+self = <test_mcgrep.TestMcgrepCLI object at 0x7fcd6d98eb40>
+
+    def test_mcgrep_status_command_exists(self):
+        """mcgrep status should be a valid command."""
+        result = subprocess.run(
+            [sys.executable, "-m", "llmc.mcgrep", "status", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+>       assert result.returncode == 0
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.mcgrep', 'status', '--help'], re...n/python3: Error while finding module specification for 'llmc.mcgrep' (ModuleNotFoundError: No module named 'llmc')\n").returncode
+
+/app/tests/ruthless/test_mcgrep.py:42: AssertionError
+_______________ TestMcgrepCLI.test_mcgrep_search_command_exists ________________
+
+self = <test_mcgrep.TestMcgrepCLI object at 0x7fcd6d98ef60>
+
+    def test_mcgrep_search_command_exists(self):
+        """mcgrep search should be a valid command."""
+        result = subprocess.run(
+            [sys.executable, "-m", "llmc.mcgrep", "search", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+>       assert result.returncode == 0
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.mcgrep', 'search', '--help'], re...n/python3: Error while finding module specification for 'llmc.mcgrep' (ModuleNotFoundError: No module named 'llmc')\n").returncode
+
+/app/tests/ruthless/test_mcgrep.py:54: AssertionError
+__________ TestCLIIntegration.test_llmc_repo_validate_command_exists ___________
+
+self = <test_repo_validator.TestCLIIntegration object at 0x7fcd6d8e7350>
+
+    @pytest.mark.integration
+    @pytest.mark.allow_sleep
+    def test_llmc_repo_validate_command_exists(self):
+        """llmc repo validate should be a valid command."""
+        import subprocess
+        import sys
+
+        result = subprocess.run(
+            [sys.executable, "-m", "llmc.main", "repo", "validate", "--help"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        # Command should exist
+>       assert (
+            result.returncode == 0
+            or "validate" in result.stdout
+            or "validate" in result.stderr
+        )
+E       assert (1 == 0 or 'validate' in '' or 'validate' in "/home/jules/.pyenv/versions/3.12.12/bin/python3: Error while finding module specification for 'llmc.main' (ModuleNotFoundError: No module named 'llmc')\n")
+E        +  where 1 = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.main', 'repo', 'validate', '--he...bin/python3: Error while finding module specification for 'llmc.main' (ModuleNotFoundError: No module named 'llmc')\n").returncode
+E        +  and   '' = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.main', 'repo', 'validate', '--he...bin/python3: Error while finding module specification for 'llmc.main' (ModuleNotFoundError: No module named 'llmc')\n").stdout
+E        +  and   "/home/jules/.pyenv/versions/3.12.12/bin/python3: Error while finding module specification for 'llmc.main' (ModuleNotFoundError: No module named 'llmc')\n" = CompletedProcess(args=['/home/jules/.pyenv/versions/3.12.12/bin/python3', '-m', 'llmc.main', 'repo', 'validate', '--he...bin/python3: Error while finding module specification for 'llmc.main' (ModuleNotFoundError: No module named 'llmc')\n").stderr
+
+/app/tests/ruthless/test_repo_validator.py:278: AssertionError
+_______________________ test_llmc_backend_injection_sync _______________________
+
+    def test_llmc_backend_injection_sync():
+        """Verify that user queries starting with - are treated as flags without -- delimiter."""
+
+        async def run_test():
+            from pathlib import Path
+
+            repo_root = Path(__file__).parent.parent.parent
+            print(f"Repo root: {repo_root}")
+
+            backend = LLMCBackend(repo_root=repo_root)
+
+            # We mock subprocess.run to capture arguments
+            with patch("subprocess.run") as mock_run:
+                # Configure mock to look like success
+                mock_run.return_value.returncode = 0
+                mock_run.return_value.stdout = '{"results": []}'
+
+                # Attack query
+                attack_query = "--help"
+
+                await backend.search(attack_query)
+
+                print(f"Mock calls: {mock_run.call_args_list}")
+
+                if not mock_run.call_args:
+                    pytest.fail(
+                        f"subprocess.run was not called. Repo root found? {backend.repo_root}"
+                    )
+
+                # Check what was passed
+                args, _ = mock_run.call_args
+                cmd_list = args[0]
+
+                # If safe, it should be [..., "search", "--", "--help", ...]
+                # If unsafe, it is [..., "search", "--help", ...]
+
+                # We expect it to be UNSAFE currently based on code review
+                # We search for the index of "search"
+                try:
+                    search_idx = cmd_list.index("search")
+                    # The next arg should be the query
+                    next_arg = cmd_list[search_idx + 1]
+
+                    if next_arg == "--":
+                        pytest.fail("Vulnerability NOT found: '--' delimiter is present.")
+                    elif next_arg == attack_query:
+                        # Vulnerability confirmed
+                        pass
+                    else:
+                        # Maybe arguments are shifted?
+                        pass
+                except ValueError:
+                    pass
+
+>       asyncio.run(run_test())
+
+/app/tests/security/test_command_injection.py:63:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/runners.py:194: in run
+    with Runner(debug=debug, loop_factory=loop_factory) as runner:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/runners.py:58: in __enter__
+    self._lazy_init()
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/runners.py:137: in _lazy_init
+    self._loop = events.new_event_loop()
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/events.py:823: in new_event_loop
+    return get_event_loop_policy().new_event_loop()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/events.py:720: in new_event_loop
+    return self._loop_factory()
+           ^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/unix_events.py:64: in __init__
+    super().__init__(selector)
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/selector_events.py:66: in __init__
+    self._make_self_pipe()
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/asyncio/selector_events.py:120: in _make_self_pipe
+    self._ssock, self._csock = socket.socketpair()
+                               ^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/socket.py:660: in socketpair
+    a = socket(family, type, proto, a.detach())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <tests._plugins.pytest_ruthless._NoNetSocket object at 0x7fcd6baceab0>
+a = (<AddressFamily.AF_UNIX: 1>, <SocketKind.SOCK_STREAM: 1>, 0, 15), k = {}
+
+    def __init__(self, *a, **k):
+>       raise RuntimeError(
+            "Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network"
+        )
+E       RuntimeError: Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network
+
+/app/tests/_plugins/pytest_ruthless.py:37: RuntimeError
+_________________________ test_poc_llmc_flag_injection _________________________
+
+    @pytest.mark.asyncio
+    async def test_poc_llmc_flag_injection():
+        """
+        POC: Flag Injection in LLMC Backend.
+
+        The backend passes the query directly to subprocess without '--'.
+        A query starting with '-' is interpreted as a flag.
+        """
+        print("\n[+] Testing LLMC Backend Flag Injection...")
+
+        backend = LLMCBackend(repo_root=Path("."))
+
+        # Mock _check_llmc_available to force fallback search (rg)
+        backend._llmc_available = False  # Force fallback to rg
+
+        with patch("subprocess.run") as mock_run:
+            # Simulate searching for a flag-like string
+            query = "--help"
+
+            await backend._fallback_search(query, limit=5)
+
+>           assert mock_run.called
+E           AssertionError: assert False
+E            +  where False = <MagicMock name='run' id='140520250996640'>.called
+
+/app/tests/security/test_pocs.py:68: AssertionError
+----------------------------- Captured stdout call -----------------------------
+
+[+] Testing LLMC Backend Flag Injection...
+________________ test_load_shell_backend_allows_path_traversal _________________
+
+tmp_path = PosixPath('/tmp/pytest-of-jules/pytest-5/test_load_shell_backend_allows0')
+
+    def test_load_shell_backend_allows_path_traversal(tmp_path):
+        """Verify that load_shell_backend allows executing scripts outside the repo."""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir()
+
+        # Create a script OUTSIDE the repo
+        outside_script = tmp_path / "evil_script.sh"
+        outside_script.write_text("#!/bin/sh\necho 'owned'")
+        outside_script.chmod(0o755)
+
+        # Config pointing to the outside script using ..
+        config = {"shell": {"script": "../evil_script.sh", "timeout_seconds": 10}}
+
+        # This should succeed (but ideally shouldn't)
+>       backend = load_shell_backend(repo_root, config)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/app/tests/test_docgen_ruthless_config.py:18:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+repo_root = PosixPath('/tmp/pytest-of-jules/pytest-5/test_load_shell_backend_allows0/repo')
+config = {'shell': {'script': '../evil_script.sh', 'timeout_seconds': 10}}
+
+    def load_shell_backend(
+        repo_root: Path,
+        config: dict[str, Any],
+    ) -> ShellDocgenBackend:
+        """Load shell backend from configuration.
+
+        Args:
+            repo_root: Absolute path to repository root
+            config: [docs.docgen] configuration section
+
+        Returns:
+            ShellDocgenBackend instance
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        # Get shell-specific config
+        shell_config = config.get("shell", {})
+
+        # Get script path
+        script_str = shell_config.get("script")
+        if not script_str:
+            raise ValueError("Missing 'shell.script' in docgen configuration")
+
+        # Resolve script path (relative to repo root)
+        script_path = (repo_root / script_str).resolve()
+
+        # Security: ensure script is within repo root
+        if not str(script_path).startswith(str(repo_root.resolve())):
+>           raise ValueError(f"Docgen script is outside the repository root: {script_path}")
+E           ValueError: Docgen script is outside the repository root: /tmp/pytest-of-jules/pytest-5/test_load_shell_backend_allows0/evil_script.sh
+
+/app/llmc/docgen/backends/shell.py:177: ValueError
+_________________ test_index_repo_creates_db_and_spans_export __________________
+
+tmp_path = PosixPath('/tmp/pytest-of-jules/pytest-5/test_index_repo_creates_db_and0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcd6bd399d0>
+
+    def test_index_repo_creates_db_and_spans_export(tmp_path: Path, monkeypatch) -> None:
+        """index_repo on a minimal repo produces DB and spans export."""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir(parents=True, exist_ok=True)
+        _write_simple_python_file(repo_root)
+
+        # Run indexing with CWD set to the temporary repo.
+        monkeypatch.chdir(repo_root)
+
+>       stats = indexer.index_repo(export_json=True)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/app/tests/test_indexer_basic.py:32:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/app/llmc/rag/indexer.py:207: in index_repo
+    source = absolute_path.read_bytes()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/pathlib.py:1019: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/tmp/pytest-of-jules/pytest-5/test_graph_permission_denied0/repo/.llmc/rag_graph.json')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       PermissionError: [Errno 13] Permission denied: '/tmp/pytest-of-jules/pytest-5/test_graph_permission_denied0/repo/.llmc/rag_graph.json'
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/pathlib.py:1013: PermissionError
+----------------------------- Captured stderr call -----------------------------
+    📊 Spans: 0 unchanged, 25 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 22 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 28 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 50 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 32 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 30 added, 0 deleted
+    📊 Spans: 0 unchanged, 309 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 31 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 66 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 18 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 19 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 57 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 42 added, 0 deleted
+    📊 Spans: 0 unchanged, 35 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 31 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 77 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 34 added, 0 deleted
+    📊 Spans: 0 unchanged, 33 added, 0 deleted
+    📊 Spans: 0 unchanged, 49 added, 0 deleted
+    📊 Spans: 0 unchanged, 32 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 27 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 25 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 24 added, 0 deleted
+    📊 Spans: 0 unchanged, 27 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 61 added, 0 deleted
+    📊 Spans: 0 unchanged, 19 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 30 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 57 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 231 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 30 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 54 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 29 added, 0 deleted
+    📊 Spans: 0 unchanged, 28 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 19 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 50 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 34 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 31 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 22 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 28 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 50 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 32 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 30 added, 0 deleted
+    📊 Spans: 0 unchanged, 52 added, 0 deleted
+    📊 Spans: 0 unchanged, 184 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 40 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 159 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 33 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 44 added, 0 deleted
+    📊 Spans: 0 unchanged, 28 added, 0 deleted
+    📊 Spans: 0 unchanged, 23 added, 0 deleted
+    📊 Spans: 0 unchanged, 23 added, 0 deleted
+    📊 Spans: 0 unchanged, 51 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 84 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 110 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 26 added, 0 deleted
+    📊 Spans: 0 unchanged, 94 added, 0 deleted
+    📊 Spans: 0 unchanged, 43 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 53 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 26 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 75 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 21 added, 0 deleted
+    📊 Spans: 0 unchanged, 13 added, 0 deleted
+    📊 Spans: 0 unchanged, 14 added, 0 deleted
+    📊 Spans: 0 unchanged, 19 added, 0 deleted
+    📊 Spans: 0 unchanged, 39 added, 0 deleted
+    📊 Spans: 0 unchanged, 29 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 21 added, 0 deleted
+    📊 Spans: 0 unchanged, 31 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 25 added, 0 deleted
+    📊 Spans: 0 unchanged, 19 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 67 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 14 added, 0 deleted
+    📊 Spans: 0 unchanged, 21 added, 0 deleted
+    📊 Spans: 0 unchanged, 28 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 14 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 27 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 18 added, 0 deleted
+    📊 Spans: 0 unchanged, 25 added, 0 deleted
+    📊 Spans: 0 unchanged, 44 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 13 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 18 added, 0 deleted
+    📊 Spans: 0 unchanged, 24 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 6 added, 0 deleted
+    📊 Spans: 0 unchanged, 7 added, 0 deleted
+    📊 Spans: 0 unchanged, 26 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 13 added, 0 deleted
+    📊 Spans: 0 unchanged, 40 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 51 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 50 added, 0 deleted
+    📊 Spans: 0 unchanged, 35 added, 0 deleted
+    📊 Spans: 0 unchanged, 10 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 9 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 44 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 15 added, 0 deleted
+    📊 Spans: 0 unchanged, 3 added, 0 deleted
+    📊 Spans: 0 unchanged, 22 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 22 added, 0 deleted
+    📊 Spans: 0 unchanged, 35 added, 0 deleted
+    📊 Spans: 0 unchanged, 43 added, 0 deleted
+    📊 Spans: 0 unchanged, 14 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 11 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 44 added, 0 deleted
+    📊 Spans: 0 unchanged, 12 added, 0 deleted
+    📊 Spans: 0 unchanged, 56 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 20 added, 0 deleted
+    📊 Spans: 0 unchanged, 219 added, 0 deleted
+    📊 Spans: 0 unchanged, 272 added, 0 deleted
+    📊 Spans: 0 unchanged, 109 added, 0 deleted
+    📊 Spans: 0 unchanged, 131 added, 0 deleted
+    📊 Spans: 0 unchanged, 42 added, 0 deleted
+    📊 Spans: 0 unchanged, 29 added, 0 deleted
+    📊 Spans: 0 unchanged, 16 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 17 added, 0 deleted
+    📊 Spans: 0 unchanged, 8 added, 0 deleted
+    📊 Spans: 0 unchanged, 5 added, 0 deleted
+    📊 Spans: 0 unchanged, 4 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+    📊 Spans: 0 unchanged, 2 added, 0 deleted
+____________________ test_index_repo_skips_unchanged_files _____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-jules/pytest-5/test_index_repo_skips_unchange0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7fcd6bd4acc0>
+
+    def test_index_repo_skips_unchanged_files(tmp_path: Path, monkeypatch) -> None:
+        """Second index_repo run should count unchanged file rather than reindexing."""
+        repo_root = tmp_path / "repo"
+        repo_root.mkdir(parents=True, exist_ok=True)
+        _write_simple_python_file(repo_root)
+
+        monkeypatch.chdir(repo_root)
+
+>       first = indexer.index_repo(export_json=False)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+/app/tests/test_indexer_basic.py:55:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+/app/llmc/rag/indexer.py:207: in index_repo
+    source = absolute_path.read_bytes()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/pathlib.py:1019: in read_bytes
+    with self.open(mode='rb') as f:
+         ^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = PosixPath('/tmp/pytest-of-jules/pytest-5/test_graph_permission_denied0/repo/.llmc/rag_graph.json')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       PermissionError: [Errno 13] Permission denied: '/tmp/pytest-of-jules/pytest-5/test_graph_permission_denied0/repo/.llmc/rag_graph.json'
+
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/pathlib.py:1013: PermissionError
+----------------------------- Captured stderr call -----------------------------
+    📊 Spans: 0 unchanged, 1 added, 0 deleted
+=========================== short test summary info ============================
+FAILED tests/rag/test_indexer_domain_logic.py::test_index_repo_domain_logging
+FAILED tests/routing/test_fusion_robustness.py::test_fusion_relative_vs_absolute_quality
+FAILED tests/ruthless/test_mcgrep.py::TestMcgrepCLI::test_mcgrep_help_works
+FAILED tests/ruthless/test_mcgrep.py::TestMcgrepCLI::test_mcgrep_status_command_exists
+FAILED tests/ruthless/test_mcgrep.py::TestMcgrepCLI::test_mcgrep_search_command_exists
+FAILED tests/ruthless/test_repo_validator.py::TestCLIIntegration::test_llmc_repo_validate_command_exists
+FAILED tests/security/test_command_injection.py::test_llmc_backend_injection_sync
+FAILED tests/security/test_pocs.py::test_poc_llmc_flag_injection - AssertionE...
+FAILED tests/test_docgen_ruthless_config.py::test_load_shell_backend_allows_path_traversal
+FAILED tests/test_indexer_basic.py::test_index_repo_creates_db_and_spans_export
+FAILED tests/test_indexer_basic.py::test_index_repo_skips_unchanged_files - P...
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/home/jules/.pyenv/versions/3.12.12/lib/python3.12/multiprocessing/popen_fork.py:27: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+11 failed, 844 passed, 37 skipped, 3 warnings in 55.78s

@@ -1,0 +1,28 @@
+tests/_examples/test_nav_template.py: 1
+tests/core/test_config_robustness.py: 1
+tests/docgen/test_config.py: 13
+tests/docgen/test_gating.py: 17
+tests/docgen/test_types.py: 3
+tests/gap/security/test_cmd_allowlist_config.py: 1
+
+==================================== ERRORS ====================================
+___________ ERROR collecting tests/gap/security/test_hybrid_mode.py ____________
+ImportError while importing test module '/app/tests/gap/security/test_hybrid_mode.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+llmc_mcp/server.py:35: in <module>
+    from mcp.server import Server
+E   ModuleNotFoundError: No module named 'mcp.server'
+
+The above exception was the direct cause of the following exception:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/gap/security/test_hybrid_mode.py:6: in <module>
+    from llmc_mcp.server import LlmcMcpServer
+llmc_mcp/server.py:40: in <module>
+    raise ImportError(
+E   ImportError: CRITICAL: Missing 'mcp' dependency. The 'mcp' package is required. Application must be run in .venv environment for dependency.
+=========================== short test summary info ============================
+ERROR tests/gap/security/test_hybrid_mode.py
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!

@@ -1,0 +1,18 @@
+would reformat /app/llmc/commands/tui.py
+would reformat /app/llmc/rag/database.py
+would reformat /app/llmc/rag/scoring.py
+would reformat /app/llmc/rag/service_health.py
+would reformat /app/llmc/rag/search/__init__.py
+would reformat /app/llmc/rag/tests/test_scoring.py
+would reformat /app/tests/rag/ci/test_llmc_docs_validation.py
+would reformat /app/tests/security/test_critical_pocs.py
+would reformat /app/tests/security/test_code_exec_breakout.py
+would reformat /app/tests/security/test_code_exec_vulnerability.py
+would reformat /app/tests/security/test_run_cmd_bypass.py
+would reformat /app/tests/security/test_pocs.py
+would reformat /app/tests/security/test_te_cli_traversal.py
+would reformat /app/tests/security/test_te_repo_security.py
+would reformat /app/tests/security/test_te_security.py
+
+Oh no! 💥 💔 💥
+15 files would be reformatted, 561 files would be left unchanged.
