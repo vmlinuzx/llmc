@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "llmcwrapper"
+name = "llmc"
 version = "0.7.2"
 description = "LLM cost compression through intelligent RAG and multi-tier routing"
 authors = [{name="LLMC Core"}]
@@ -58,7 +58,7 @@ dev = [
 # Explicitly declare which top-level packages are part of the install.
 # This avoids setuptools' flat-layout safety check on unrelated dirs
 # like DOCS/, logs/, and legacy/.
-packages = ["llmcwrapper", "tools", "llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
+packages = ["llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
 
 [project.scripts]
 llmc-cli = "llmc.main:app"
@@ -125,7 +125,7 @@ docstring-code-format = true
 [tool.ruff.lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
-known-first-party = ["tools", "llmcwrapper", "mcp"]
+known-first-party = ["llmc", "llmc_mcp", "llmc_agent"]
 
 [tool.mypy]
 python_version = "3.12"

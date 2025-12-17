@@ -379,7 +379,7 @@ Process files in custom batches:
 from pathlib import Path
 from llmc.docgen.orchestrator import DocgenOrchestrator
 from llmc.docgen.config import load_docgen_backend
-from tools.rag.database import Database
+from llmc.rag.database import Database
 import toml
 
 # Load config

@@ -97,7 +97,7 @@ if [ "$VERBOSE" = true ]; then
   python3 -c "
 import sys
 sys.path.insert(0, '$LLMC_ROOT')
-from tools.rag_router import route_query
+from llmc.rag_router import route_query
 from pathlib import Path
 import json
 
@@ -125,7 +125,7 @@ else
   python3 -c "
 import sys
 sys.path.insert(0, '$LLMC_ROOT')
-from tools.rag_router import route_query
+from llmc.rag_router import route_query
 from pathlib import Path
 import json
 

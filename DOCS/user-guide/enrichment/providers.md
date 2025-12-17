@@ -73,8 +73,8 @@ output = 0.30   # Per 1M output tokens
 ### 4. Run Enrichment
 
 ```python
-from tools.rag.enrichment_pipeline import EnrichmentPipeline
-from tools.rag.enrichment_factory import create_backend_from_spec
+from llmc.rag.enrichment_pipeline import EnrichmentPipeline
+from llmc.rag.enrichment_factory import create_backend_from_spec
 
 pipeline = EnrichmentPipeline(
     db=database,
@@ -208,7 +208,7 @@ The pipeline will stop enriching when budgets are exceeded.
 
 Check spending:
 ```python
-from tools.rag.enrichment_factory import create_cost_tracker_from_config
+from llmc.rag.enrichment_factory import create_cost_tracker_from_config
 
 cost_tracker = create_cost_tracker_from_config(enrichment_config)
 print(f"Daily spend: ${cost_tracker.daily_spend:.4f}")
@@ -275,11 +275,11 @@ If you're currently using only Ollama, no changes needed! The new system is full
 
 ```python
 # Old way (still works)
-from tools.rag.enrichment_adapters.ollama import OllamaBackend
+from llmc.rag.enrichment_adapters.ollama import OllamaBackend
 backend_factory = OllamaBackend.from_spec
 
 # New way (supports all providers)
-from tools.rag.enrichment_factory import create_backend_from_spec
+from llmc.rag.enrichment_factory import create_backend_from_spec
 backend_factory = create_backend_from_spec
 ```
 

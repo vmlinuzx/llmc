@@ -90,7 +90,7 @@ Core type definitions:
 ```python
 from llmc.docgen.orchestrator import DocgenOrchestrator
 from llmc.docgen.config import load_docgen_backend
-from tools.rag.database import Database
+from llmc.rag.database import Database
 
 # Load configuration
 backend = load_docgen_backend(repo_root, toml_data)
