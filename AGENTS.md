@@ -135,7 +135,7 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 
 ## 5. RAG Tooling Reference
 
-**Command Prefix:** `python3 -m tools.rag.cli`
+**Command Prefix:** `python3 -m llmc.rag.cli`
 
 | Tool | Purpose | When to use | Key Flags |
 | :--- | :--- | :--- | :--- |
@@ -230,7 +230,7 @@ Heuristic:
 1. Run `search`:
 
    ```bash
-   python3 -m tools.rag.cli search "user problem or feature" --limit 25 --json
+   python3 -m llmc.rag.cli search "user problem or feature" --limit 25 --json
    ```
 
 2. Skim top hits by **path + symbol + snippet**.
@@ -245,7 +245,7 @@ Heuristic:
 1. Run `plan`:
 
    ```bash
-   python3 -m tools.rag.cli plan "short description of change" --limit 50 --min-confidence 0.5
+   python3 -m llmc.rag.cli plan "short description of change" --limit 50 --min-confidence 0.5
    ```
 
 2. Inspect planned targets:

@@ -32,6 +32,15 @@ The `tools/` folder was an architectural accident - core RAG functionality hidin
 
 - **`llmc-cli` broken on fresh clone:** Previously failed immediately due to missing `tools/` imports
 
+- **Post-refactor stale references (hotfix 2025-12-17):**
+  - Updated systemd service (`llmc-rag.service`) from `tools.rag.service` → `llmc.rag.service`
+  - Fixed `llmc/tui/screens/rag_doctor.py` button commands (4 references)
+  - Fixed `tools/dc_rag_plan.sh` and `tools/dc_rag_query.sh` module paths
+  - Fixed `scripts/rag_sync.sh` module invocation
+  - Updated all documentation (`AGENTS.md`, `llmc/rag/USAGE.md`, `llmc/rag/README.md`)
+  - Updated error message in `llmc/rag/search/__init__.py`
+  - **Impact:** RAG enrichment daemon now runs correctly after refactor
+
 ---
 
 ## [0.7.3] - "Documentation 2.0" - 2025-12-16

@@ -178,11 +178,11 @@ class RAGDoctorScreen(Screen):
             self.action_refresh()
         elif event.button.id == "btn-embed-dry":
             self.run_worker(
-                lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --limit 20"), thread=True
+                lambda: self._run_te_cmd("python3 -m llmc.rag.cli embed --limit 20"), thread=True
             )
         elif event.button.id == "btn-embed-exec":
             self.run_worker(
-                lambda: self._run_te_cmd("python3 -m tools.rag.cli embed --execute --limit 100"),
+                lambda: self._run_te_cmd("python3 -m llmc.rag.cli embed --execute --limit 100"),
                 thread=True,
             )
 
@@ -340,13 +340,13 @@ class RAGDoctorScreen(Screen):
         if pending_emb > 0:
             lines.append(f"Found {pending_emb} spans missing embeddings.")
             lines.append("Recommended action:")
-            lines.append(self._te_cmd("python3 -m tools.rag.cli embed-missing"))
+            lines.append(self._te_cmd("python3 -m llmc.rag.cli embed-missing"))
             lines.append("")
 
         if orphans > 0:
             lines.append(f"Found {orphans} orphan enrichments.")
             lines.append("Recommended action (investigate):")
-            lines.append(self._te_cmd("python3 -m tools.rag.cli doctor --json"))
+            lines.append(self._te_cmd("python3 -m llmc.rag.cli doctor --json"))
             lines.append("")
 
         if not lines:

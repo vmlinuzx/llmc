@@ -78,5 +78,5 @@ done
 (
   cd "$REPO_ROOT"
   PYTHONPATH="$EXEC_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
-    "$PYTHON_BIN" -m tools.rag.cli sync --stdin < "$TMP_INPUT"
+    "$PYTHON_BIN" -m llmc.rag.cli sync --stdin < "$TMP_INPUT"
 )

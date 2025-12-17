@@ -395,7 +395,7 @@ def search_spans(
     db_path = index_path_for_read(repo)
     if not db_path.exists():
         raise FileNotFoundError(
-            f"No embedding index found at {db_path}. Run `python -m tools.rag.cli index` and `embed --execute` first."
+            f"No embedding index found at {db_path}. Run `python -m llmc.rag.cli index` and `embed --execute` first."
         )
 
     # 1. Classify Query

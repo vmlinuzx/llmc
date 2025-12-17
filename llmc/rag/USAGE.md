@@ -31,7 +31,7 @@ pip install .
 Test that both `llmc` and `tools` modules are available:
 
 ```bash
-python3 -c "import llmc; import tools.rag; print('✅ Installation successful')"
+python3 -c "import llmc; import llmc.rag; print('✅ Installation successful')"
 ```
 
 ## Running RAG CLI Commands
@@ -42,11 +42,11 @@ When the package is installed in editable mode with the venv:
 
 ```bash
 # Use the venv python
-.venv/bin/python3 -m tools.rag.cli --help
+.venv/bin/python3 -m llmc.rag.cli --help
 
 # Or activate the venv first
 source .venv/bin/activate
-python3 -m tools.rag.cli --help
+python3 -m llmc.rag.cli --help
 ```
 
 ### From Any Directory
@@ -58,13 +58,13 @@ Once installed, RAG tools work from any directory:
 cd ~/my-project
 
 # Index the repository
-python3 -m tools.rag.cli index
+python3 -m llmc.rag.cli index
 
 # Search indexed content
-python3 -m tools.rag.cli search "authentication logic"
+python3 -m llmc.rag.cli search "authentication logic"
 
 # View statistics
-python3 -m tools.rag.cli stats
+python3 -m llmc.rag.cli stats
 ```
 
 ## Common Commands
@@ -73,46 +73,46 @@ python3 -m tools.rag.cli stats
 
 ```bash
 # Full index of current repository
-python3 -m tools.rag.cli index
+python3 -m llmc.rag.cli index
 
 # Index only files changed since a commit
-python3 -m tools.rag.cli index --since HEAD~5
+python3 -m llmc.rag.cli index --since HEAD~5
 
 # Skip JSON export (faster)
-python3 -m tools.rag.cli index --no-export
+python3 -m llmc.rag.cli index --no-export
 ```
 
 ### Searching
 
 ```bash
 # Vector search
-python3 -m tools.rag.cli search "JWT validation" --limit 10
+python3 -m llmc.rag.cli search "JWT validation" --limit 10
 
 # JSON output
-python3 -m tools.rag.cli search "error handling" --json
+python3 -m llmc.rag.cli search "error handling" --json
 
 # With debug info
-python3 -m tools.rag.cli search "database connection" --debug
+python3 -m llmc.rag.cli search "database connection" --debug
 ```
 
 ### Statistics
 
 ```bash
 # Human-readable stats
-python3 -m tools.rag.cli stats
+python3 -m llmc.rag.cli stats
 
 # JSON format
-python3 -m tools.rag.cli stats --json
+python3 -m llmc.rag.cli stats --json
 ```
 
 ### Schema Graph
 
 ```bash
 # Build schema graph
-python3 -m tools.rag.cli graph
+python3 -m llmc.rag.cli graph
 
 # Allow empty enrichment
-python3 -m tools.rag.cli graph --allow-empty-enrichment
+python3 -m llmc.rag.cli graph --allow-empty-enrichment
 ```
 
 ## Troubleshooting
@@ -141,7 +141,7 @@ python3 -m tools.rag.cli graph --allow-empty-enrichment
 
 4. **Verify installation:**
    ```bash
-   python3 -c "import llmc; import tools.rag; print('OK')"
+   python3 -c "import llmc; import llmc.rag; print('OK')"
    ```
 
 ### Import Errors from tools/rag/indexer.py
@@ -162,20 +162,20 @@ python3 -m tools.rag.cli graph --allow-empty-enrichment
 
 ### Python Path Issues
 
-The `tools/rag/__init__.py` module automatically adds the repo root to `sys.path` when imported. This ensures `llmc` imports work even in edge cases.
+The RAG modules are now part of the main `llmc` package. With an editable install, no special path handling is needed.
 
 **Manual override** (not recommended):
 ```bash
 export PYTHONPATH=/path/to/llmc:$PYTHONPATH
-python3 -m tools.rag.cli index
+python3 -m llmc.rag.cli index
 ```
 
 ## Architecture Notes
 
-- **Module Structure:** RAG tools are in `tools/rag/`, main LLMC code in `llmc/`
-- **Import Fix:** `tools/rag/__init__.py` adds repo root to `sys.path`
-- **Editable Install:** Creates mapping of `llmc`, `tools`, `llmcwrapper` packages
-- **CLI Entry Point:** Tools are accessed via `python3 -m tools.rag.cli`
+- **Module Structure:** RAG tools are in `llmc/rag/`, integrated with the main LLMC package
+- **Import:** RAG modules are directly importable from `llmc.rag`
+- **Editable Install:** Creates mapping of `llmc` and `llmcwrapper` packages
+- **CLI Entry Point:** Tools are accessed via `python3 -m llmc.rag.cli`
 
 ## Related Documents
 
