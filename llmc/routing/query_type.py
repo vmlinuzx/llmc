@@ -101,7 +101,3 @@ def classify_query(
         "confidence": confidence,
         "reasons": reasons,
     }
-
-
-# Backward compatibility exports for legacy test modules
-# TODO: Update legacy tests to use new names and remove these aliases in a future cleanup phase

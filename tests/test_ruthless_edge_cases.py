@@ -8,8 +8,8 @@ Every green check is suspicious until proven otherwise.
 
 import pytest
 
-from llmc.routing.code_heuristics import CODE_STRUCT_REGEXES as CODE_STRUCT_REGEX
-from llmc.routing.erp_heuristics import ERP_SKU_RE as ERP_SKU_REGEX
+from llmc.routing.code_heuristics import CODE_STRUCT_REGEXES
+from llmc.routing.erp_heuristics import ERP_SKU_RE
 from llmc.routing.query_type import classify_query
 
 # ==============================================================================
@@ -98,7 +98,7 @@ def test_classify_query_mixed_unicode_normal():
 
 def test_sku_regex_very_short():
     """Test SKU regex with very short patterns"""
-    # ERP_SKU_REGEX expects 1-4 letters + 4-6 digits
+    # ERP_SKU_RE expects 1-4 letters + 4-6 digits
     test_cases = [
         ("A-123", False),  # Too few digits
         ("AB-12345", True),  # Valid
@@ -109,7 +109,7 @@ def test_sku_regex_very_short():
     ]
 
     for pattern, should_match in test_cases:
-        matches = ERP_SKU_REGEX.findall(pattern)
+        matches = ERP_SKU_RE.findall(pattern)
         if should_match:
             assert len(matches) > 0, f"Pattern {pattern} should match but didn't"
         else:
@@ -130,14 +130,14 @@ def test_sku_regex_weird_but_valid():
     ]
 
     for pattern in test_cases:
-        matches = ERP_SKU_REGEX.findall(pattern)
+        matches = ERP_SKU_RE.findall(pattern)
         print(f"Pattern '{pattern}' matched: {matches}")
         # These should match the SKU part
         assert len(matches) > 0
 
 
 def test_code_struct_regex_pathological():
-    """Test CODE_STRUCT_REGEX with pathological cases"""
+    """Test CODE_STRUCT_REGEXES with pathological cases"""
     test_cases = [
         # Should match (Python centric)
         ("class Foo: pass", True),
@@ -153,17 +153,17 @@ def test_code_struct_regex_pathological():
         ("return but not code", False),  # Single keyword doesn't match structure
     ]
     for pattern, should_match in test_cases:
-        # CODE_STRUCT_REGEX is a list of compiled regex patterns
+        # CODE_STRUCT_REGEXES is a list of compiled regex patterns
         found_any = False
         all_matches = []
-        for regex in CODE_STRUCT_REGEX:
+        for regex in CODE_STRUCT_REGEXES:
             matches = regex.findall(pattern)
             if matches:
                 found_any = True
                 all_matches.extend(matches)
 
         if should_match:
-            assert found_any, f"Pattern '{pattern}' should match CODE_STRUCT_REGEX"
+            assert found_any, f"Pattern '{pattern}' should match CODE_STRUCT_REGEXES"
         else:
             assert (
                 not found_any
