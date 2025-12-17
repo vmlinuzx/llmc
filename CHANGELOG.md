@@ -36,7 +36,34 @@ All notable changes to LLMC will be documented in this file.
   - **Impact:** Significantly faster `llmc --help` startup time
 
 ### Added
+
+- **TUI Layout Toggle (PR #26):**
+  - Implemented `action_toggle_tree` in `NavigateScreen` to toggle file tree visibility
+  - New `.expanded` CSS class hides tree panel and expands code view to full width
+  - Replaces previous `pass` placeholder with working toggle
+
+- **Configurable RAG Scoring (PR #28):**
+  - New `llmc/rag/scoring.py` module with `Scorer` class
+  - Configurable extension boosts (code vs docs) via `[scoring]` section in `llmc.toml`
+  - Heuristic intent detection: "how to" → boost docs, "function" → boost code
+  - Filename matching boosts (exact, stem, partial)
+  - Comprehensive test suite in `llmc/rag/tests/test_scoring.py`
+
+- **Rem Gap Analysis SDDs (PR #29):**
+  - `tests/gap/SDDs/SDD-TUI-NavigateScreen.md` - Navigate screen test coverage gaps
+  - `tests/gap/SDDs/SDD-RAG-Watcher-Debounce.md` - ChangeQueue starvation issue
+  - `tests/gap/SDDs/SDD-Security-IsolationLog.md` - Missing audit logging for isolation bypass
+  - Gap analysis report: `tests/REPORTS/current/rem_gap_2025-12-17_part3.md`
+
 - **Security Test:** Added `test_normalize_path_fuzzy_match_priority` to `tests/security/test_security_normalization.py` to verify fuzzy matching behavior (SDD-Security-FuzzyMatching).
+
+### Changed
+
+- **Legacy Test Alias Cleanup (PR #27):**
+  - Removed stale "Backward compatibility exports" TODO from `llmc/routing/query_type.py`
+  - Updated `tests/test_ruthless_edge_cases.py` to use canonical imports:
+    - `CODE_STRUCT_REGEX` → `CODE_STRUCT_REGEXES`
+    - `ERP_SKU_REGEX` → `ERP_SKU_RE`
 
 ## [0.7.4] - "Clean Cuts" - 2025-12-17
 
