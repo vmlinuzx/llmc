@@ -9,7 +9,10 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import toml
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 import typer
 
 from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docgen_backend
@@ -40,8 +43,8 @@ def generate(
         typer.echo(f"❌ Config not found: {config_path}", err=True)
         raise typer.Exit(1)
     
-    with open(config_path) as f:
-        toml_data = toml.load(f)
+    with open(config_path, "rb") as f:
+        toml_data = tomllib.load(f)
     
     # Load backend
     backend = load_docgen_backend(repo_root, toml_data)
@@ -147,8 +150,8 @@ def status():
         typer.echo(f"❌ Config not found: {config_path}", err=True)
         raise typer.Exit(1)
     
-    with open(config_path) as f:
-        toml_data = toml.load(f)
+    with open(config_path, "rb") as f:
+        toml_data = tomllib.load(f)
     
     # Check if docgen is enabled
     backend = load_docgen_backend(repo_root, toml_data)
