@@ -1,10 +1,18 @@
 from llmc.rag_nav.enrichment import EnrichmentSnippet
-from llmc.rag_nav.models import EnrichmentData, SearchItem, SearchResult, Snippet, SnippetLocation
+from llmc.rag_nav.models import (
+    EnrichmentData,
+    SearchItem,
+    SearchResult,
+    Snippet,
+    SnippetLocation,
+)
 
 
 def test_enrichment_data_structure():
     """Test that EnrichmentData supports the new content_type fields."""
-    data = EnrichmentData(summary="Test summary", content_type="code", content_language="python")
+    data = EnrichmentData(
+        summary="Test summary", content_type="code", content_language="python"
+    )
     d = data.to_dict()
     assert d["content_type"] == "code"
     assert d["content_language"] == "python"
@@ -13,7 +21,9 @@ def test_enrichment_data_structure():
 
 def test_enrichment_snippet_structure():
     """Test that EnrichmentSnippet dataclass has the new fields."""
-    snip = EnrichmentSnippet(summary="Summary", content_type="docs", content_language="en")
+    snip = EnrichmentSnippet(
+        summary="Summary", content_type="docs", content_language="en"
+    )
     assert snip.content_type == "docs"
     assert snip.content_language == "en"
 
@@ -35,7 +45,9 @@ def test_search_result_structure():
 class MockStore:
     def snippets_for_span_or_path(self, *args, **kwargs):
         return [
-            EnrichmentSnippet(summary="sum", content_type="code", content_language="python")
+            EnrichmentSnippet(
+                summary="sum", content_type="code", content_language="python"
+            )
         ], "span"
 
 
@@ -43,7 +55,9 @@ def test_enrichment_attachment():
     """Test attaching enrichment to search result."""
     from llmc.rag_nav.enrichment import attach_enrichments_to_search_result
 
-    item = SearchItem(file="test.py", snippet=Snippet("code", SnippetLocation("test.py", 1, 1)))
+    item = SearchItem(
+        file="test.py", snippet=Snippet("code", SnippetLocation("test.py", 1, 1))
+    )
     res = SearchResult(query="test", items=[item])
 
     # Manually call attachment with mock store

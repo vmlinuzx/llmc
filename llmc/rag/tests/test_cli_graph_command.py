@@ -122,7 +122,9 @@ def _seed_index_with_matching_enrichment(repo_root: Path) -> Path:
     return db_path
 
 
-def test_graph_cli_allows_ast_only_without_enrichment(tmp_path: Path, monkeypatch) -> None:
+def test_graph_cli_allows_ast_only_without_enrichment(
+    tmp_path: Path, monkeypatch
+) -> None:
     """`rag graph --allow-empty-enrichment` should succeed without a DB and produce a plain AST-only graph."""
     repo_root = _make_repo_with_single_function(tmp_path)
     runner = CliRunner()
@@ -144,10 +146,14 @@ def test_graph_cli_allows_ast_only_without_enrichment(tmp_path: Path, monkeypatc
     # With no enrichment rows in the DB, no entity should have a summary.
     for entity in data["entities"]:
         metadata = entity.get("metadata") or {}
-        assert "summary" not in metadata, "Did not expect enrichment summaries in plain mode"
+        assert (
+            "summary" not in metadata
+        ), "Did not expect enrichment summaries in plain mode"
 
 
-def test_graph_cli_require_enrichment_raises_on_empty_db(tmp_path: Path, monkeypatch) -> None:
+def test_graph_cli_require_enrichment_raises_on_empty_db(
+    tmp_path: Path, monkeypatch
+) -> None:
     """When require_enrichment=True and DB has 0 enrichments, CLI should fail."""
     repo_root = _make_repo_with_single_function(tmp_path)
     monkeypatch.chdir(repo_root)
@@ -161,7 +167,9 @@ def test_graph_cli_require_enrichment_raises_on_empty_db(tmp_path: Path, monkeyp
     assert "require_enrichment=True" in result.output
 
 
-def test_graph_cli_writes_enriched_graph_when_db_present(tmp_path: Path, monkeypatch) -> None:
+def test_graph_cli_writes_enriched_graph_when_db_present(
+    tmp_path: Path, monkeypatch
+) -> None:
     """`rag graph` should build an enriched graph when the DB has enrichments."""
     repo_root = _make_repo_with_single_function(tmp_path)
     _seed_index_with_matching_enrichment(repo_root)

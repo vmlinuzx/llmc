@@ -23,11 +23,19 @@ def _insert_file_and_span(
     # Use INSERT OR IGNORE to handle multiple spans in same file
     db.conn.execute(
         "INSERT OR IGNORE INTO files (path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-        (str(file_rel), "python", "hash-" + span_hash, len(code.encode("utf-8")), 123456.0),
+        (
+            str(file_rel),
+            "python",
+            "hash-" + span_hash,
+            len(code.encode("utf-8")),
+            123456.0,
+        ),
     )
     db.conn.commit()
 
-    file_id = db.conn.execute("SELECT id FROM files WHERE path=?", (str(file_rel),)).fetchone()[0]
+    file_id = db.conn.execute(
+        "SELECT id FROM files WHERE path=?", (str(file_rel),)
+    ).fetchone()[0]
 
     db.conn.execute(
         """
@@ -172,7 +180,9 @@ def test_batch_enrich_is_idempotent_for_completed_spans(tmp_path) -> None:
     # Second run: if pending_enrichments works as intended, there should be no
     # pending spans, and we should not need to call the LLM again. Use a
     # callable that would explode if invoked.
-    def fake_llm_call_second(prompt: dict[str, Any]) -> dict[str, Any]:  # pragma: no cover
+    def fake_llm_call_second(
+        prompt: dict[str, Any],
+    ) -> dict[str, Any]:  # pragma: no cover
         raise AssertionError("LLM should not be called on already-enriched spans")
 
     result2 = batch_enrich(

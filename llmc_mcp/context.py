@@ -19,8 +19,12 @@ class McpSessionContext:
     def from_env(cls) -> McpSessionContext:
         """Create context from current environment."""
         return cls(
-            agent_id=os.getenv("LLMC_TE_AGENT_ID") or os.getenv("TE_AGENT_ID") or "unknown",
-            session_id=os.getenv("LLMC_TE_SESSION_ID") or os.getenv("TE_SESSION_ID") or "unknown",
+            agent_id=os.getenv("LLMC_TE_AGENT_ID")
+            or os.getenv("TE_AGENT_ID")
+            or "unknown",
+            session_id=os.getenv("LLMC_TE_SESSION_ID")
+            or os.getenv("TE_SESSION_ID")
+            or "unknown",
             model=os.getenv("LLMC_TE_MODEL") or os.getenv("TE_MODEL") or "unknown",
         )
 

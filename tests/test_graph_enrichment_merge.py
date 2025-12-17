@@ -24,7 +24,8 @@ class TestGraphEnrichment:
         db_path.parent.mkdir(parents=True, exist_ok=True)
 
         conn = sqlite3.connect(str(db_path))
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS enrichments (
                 id INTEGER PRIMARY KEY,
                 span_hash TEXT,
@@ -35,7 +36,8 @@ class TestGraphEnrichment:
                 usage_guide TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         for r in records:
             conn.execute(
@@ -43,7 +45,14 @@ class TestGraphEnrichment:
                 INSERT INTO enrichments (span_hash, file_path, start_line, end_line, summary, usage_guide)
                 VALUES (?, ?, ?, ?, ?, ?)
             """,
-                (r.span_hash, r.file_path, r.start_line, r.end_line, r.summary, r.usage_guide),
+                (
+                    r.span_hash,
+                    r.file_path,
+                    r.start_line,
+                    r.end_line,
+                    r.summary,
+                    r.usage_guide,
+                ),
             )
 
         conn.commit()
@@ -68,7 +77,10 @@ class TestGraphEnrichment:
 
     def test_load_enrichment_data_valid(self, tmp_path):
         """Test 1.2: Load from valid DB."""
-        from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+        from llmc.rag.enrichment_db_helpers import (
+            EnrichmentRecord,
+            load_enrichment_data,
+        )
 
         repo_root = tmp_path / "repo"
         repo_root.mkdir()
@@ -119,7 +131,9 @@ class TestGraphEnrichment:
             end_line=20,
             span_hash="hash_func_1",
         )
-        base_graph = SchemaGraph(repo=str(repo_root), entities=[base_entity], relations=[])
+        base_graph = SchemaGraph(
+            repo=str(repo_root), entities=[base_entity], relations=[]
+        )
 
         # 3. Setup Enrichment DB
         from llmc.rag.enrichment_db_helpers import EnrichmentRecord
@@ -170,7 +184,9 @@ class TestGraphEnrichment:
             end_line=40,
             span_hash="hash_func_2",
         )
-        base_graph = SchemaGraph(repo=str(repo_root), entities=[base_entity], relations=[])
+        base_graph = SchemaGraph(
+            repo=str(repo_root), entities=[base_entity], relations=[]
+        )
 
         # DB has record for DIFFERENT hash
         from llmc.rag.enrichment_db_helpers import EnrichmentRecord

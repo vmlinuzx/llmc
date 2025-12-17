@@ -72,7 +72,10 @@ def test_enrichment_router_edge_cases():
     print("\nTest 2: EnrichmentRouteDecision edge cases")
     try:
         from llmc.rag.config_enrichment import EnrichmentBackendSpec
-        from llmc.rag.enrichment_router import EnrichmentRouteDecision, EnrichmentSliceView
+        from llmc.rag.enrichment_router import (
+            EnrichmentRouteDecision,
+            EnrichmentSliceView,
+        )
 
         # Test with None backend
         try:

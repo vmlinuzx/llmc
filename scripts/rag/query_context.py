@@ -91,7 +91,9 @@ class ContextQuerier:
 
         # Generate query embedding
         prefixed_query = f"{self.query_prefix}{query_text.strip()}"
-        query_embedding = self.model.encode([prefixed_query], normalize_embeddings=True)[0]
+        query_embedding = self.model.encode(
+            [prefixed_query], normalize_embeddings=True
+        )[0]
 
         # Query collection
         results = self.collection.query(
@@ -108,13 +110,16 @@ class ContextQuerier:
                     "text": results["documents"][0][i],
                     "metadata": results["metadatas"][0][i],
                     "distance": results["distances"][0][i],
-                    "relevance": 1.0 - results["distances"][0][i],  # Convert distance to relevance
+                    "relevance": 1.0
+                    - results["distances"][0][i],  # Convert distance to relevance
                 }
                 contexts.append(context)
 
         return contexts
 
-    def build_context_for_task(self, task: str, project: str, max_tokens: int = 8000) -> str:
+    def build_context_for_task(
+        self, task: str, project: str, max_tokens: int = 8000
+    ) -> str:
         """Build comprehensive context for a coding task"""
 
         # Query for relevant chunks
@@ -140,9 +145,7 @@ class ContextQuerier:
             relevance = ctx["relevance"]
 
             # Format chunk with metadata
-            chunk_text = (
-                f"\n### {file_path} (relevance: {relevance:.2f})\n```\n{ctx['text']}\n```\n"
-            )
+            chunk_text = f"\n### {file_path} (relevance: {relevance:.2f})\n```\n{ctx['text']}\n```\n"
             chunk_tokens = len(chunk_text.split())
 
             # Check token budget
@@ -166,8 +169,12 @@ def main():
     parser.add_argument("--project", help="Filter by project name")
     parser.add_argument("--type", help="Filter by file type (e.g., .py, .ts)")
     parser.add_argument("--limit", type=int, default=10, help="Number of results")
-    parser.add_argument("--context", action="store_true", help="Build full context for task")
-    parser.add_argument("--max-tokens", type=int, default=8000, help="Max tokens for context")
+    parser.add_argument(
+        "--context", action="store_true", help="Build full context for task"
+    )
+    parser.add_argument(
+        "--max-tokens", type=int, default=8000, help="Max tokens for context"
+    )
 
     args = parser.parse_args()
 
@@ -204,7 +211,9 @@ def main():
             print(f"File: {meta.get('file_path', 'unknown')}")
             print(f"Project: {meta.get('project', 'unknown')}")
             if "last_commit" in meta:
-                print(f"Last commit: {meta['last_commit']} by {meta.get('last_author', 'unknown')}")
+                print(
+                    f"Last commit: {meta['last_commit']} by {meta.get('last_author', 'unknown')}"
+                )
             print(f"\n{result['text'][:500]}...")
             print()
 

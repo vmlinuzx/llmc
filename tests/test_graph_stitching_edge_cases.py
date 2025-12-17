@@ -265,7 +265,8 @@ class TestOneHopNeighborExpansion:
         # Create large graph
         nodes = [{"id": f"func_{i}", "path": f"file_{i}.py"} for i in range(100)]
         edges = [
-            {"type": "CALLS", "source": f"func_{i}", "target": f"func_{i + 1}"} for i in range(99)
+            {"type": "CALLS", "source": f"func_{i}", "target": f"func_{i + 1}"}
+            for i in range(99)
         ]
 
         graph = {"nodes": nodes, "edges": edges}

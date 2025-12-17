@@ -116,41 +116,74 @@ class ConfigScreen(Screen):
         container.mount(Static(f"[b]Repo Root[/b]: {repo_root}", classes="config-item"))
         try:
             index_path = index_path_for_read(repo_root)
-            container.mount(Static(f"[b]RAG Index DB[/b]: {index_path}", classes="config-item"))
             container.mount(
-                Static(f"[b]Index Exists[/b]: {index_path.exists()}", classes="config-item")
+                Static(f"[b]RAG Index DB[/b]: {index_path}", classes="config-item")
+            )
+            container.mount(
+                Static(
+                    f"[b]Index Exists[/b]: {index_path.exists()}", classes="config-item"
+                )
             )
         except Exception as e:
-            container.mount(Static(f"[b]RAG Index DB[/b]: Error - {e}", classes="config-item"))
+            container.mount(
+                Static(f"[b]RAG Index DB[/b]: Error - {e}", classes="config-item")
+            )
 
         container.mount(Static(""))  # Spacer
 
         container.mount(Static("Embedding Model", classes="config-section-title"))
-        container.mount(Static(f"[b]Preset[/b]: {embedding_model_preset()}", classes="config-item"))
-        container.mount(Static(f"[b]Name[/b]: {embedding_model_name()}", classes="config-item"))
-        container.mount(Static(f"[b]Dimension[/b]: {embedding_model_dim()}", classes="config-item"))
         container.mount(
-            Static(f"[b]Passage Prefix[/b]: '{embedding_passage_prefix()}'", classes="config-item")
+            Static(f"[b]Preset[/b]: {embedding_model_preset()}", classes="config-item")
         )
         container.mount(
-            Static(f"[b]Query Prefix[/b]: '{embedding_query_prefix()}'", classes="config-item")
-        )
-        container.mount(Static(f"[b]Normalize[/b]: {embedding_normalize()}", classes="config-item"))
-        container.mount(
-            Static(f"[b]Device Pref[/b]: {embedding_device_preference()}", classes="config-item")
+            Static(f"[b]Name[/b]: {embedding_model_name()}", classes="config-item")
         )
         container.mount(
-            Static(f"[b]Wait for GPU[/b]: {embedding_wait_for_gpu()}", classes="config-item")
-        )
-        container.mount(
-            Static(f"[b]GPU Min Free MB[/b]: {embedding_gpu_min_free_mb()}", classes="config-item")
-        )
-        container.mount(
-            Static(f"[b]GPU Max Retries[/b]: {embedding_gpu_max_retries()}", classes="config-item")
+            Static(f"[b]Dimension[/b]: {embedding_model_dim()}", classes="config-item")
         )
         container.mount(
             Static(
-                f"[b]GPU Retry Seconds[/b]: {embedding_gpu_retry_seconds()}", classes="config-item"
+                f"[b]Passage Prefix[/b]: '{embedding_passage_prefix()}'",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(
+                f"[b]Query Prefix[/b]: '{embedding_query_prefix()}'",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(f"[b]Normalize[/b]: {embedding_normalize()}", classes="config-item")
+        )
+        container.mount(
+            Static(
+                f"[b]Device Pref[/b]: {embedding_device_preference()}",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(
+                f"[b]Wait for GPU[/b]: {embedding_wait_for_gpu()}",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(
+                f"[b]GPU Min Free MB[/b]: {embedding_gpu_min_free_mb()}",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(
+                f"[b]GPU Max Retries[/b]: {embedding_gpu_max_retries()}",
+                classes="config-item",
+            )
+        )
+        container.mount(
+            Static(
+                f"[b]GPU Retry Seconds[/b]: {embedding_gpu_retry_seconds()}",
+                classes="config-item",
             )
         )
         container.mount(Static(""))  # Spacer
@@ -164,10 +197,17 @@ class ConfigScreen(Screen):
         # 3. Other (e.g., Python version, OS, etc.)
         container.mount(Static("System Information", classes="config-section-title"))
         container.mount(
-            Static(f"[b]Python Version[/b]: {sys.version.splitlines()[0]}", classes="config-item")
+            Static(
+                f"[b]Python Version[/b]: {sys.version.splitlines()[0]}",
+                classes="config-item",
+            )
         )
-        container.mount(Static(f"[b]Operating System[/b]: {sys.platform}", classes="config-item"))
-        container.mount(Static(f"[b]Current Working Dir[/b]: {Path.cwd()}", classes="config-item"))
+        container.mount(
+            Static(f"[b]Operating System[/b]: {sys.platform}", classes="config-item")
+        )
+        container.mount(
+            Static(f"[b]Current Working Dir[/b]: {Path.cwd()}", classes="config-item")
+        )
         container.mount(
             Static(f"[b]TUI CWD[/b]: {self.app.repo_root}", classes="config-item")
         )  # This is the app's repo_root, might be different than cwd

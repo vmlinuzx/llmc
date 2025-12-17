@@ -1,19 +1,20 @@
+from unittest.mock import patch
 
-import pytest
-from unittest.mock import patch, MagicMock, mock_open
-from pathlib import Path
-from llmc.commands.wizard import run_wizard, _check_ollama
-import typer
+from llmc.commands.wizard import _check_ollama, run_wizard
+
 
 def test_check_ollama_success():
     with patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 200
-        mock_get.return_value.json.return_value = {"models": [{"name": "qwen2.5:3b"}, {"name": "nomic-embed-text"}]}
+        mock_get.return_value.json.return_value = {
+            "models": [{"name": "qwen2.5:3b"}, {"name": "nomic-embed-text"}]
+        }
 
         connected, models = _check_ollama("http://localhost:11434")
         assert connected is True
         assert "qwen2.5:3b" in models
         assert "nomic-embed-text" in models
+
 
 def test_check_ollama_failure():
     with patch("requests.get") as mock_get:
@@ -22,6 +23,7 @@ def test_check_ollama_failure():
         connected, models = _check_ollama("http://localhost:11434")
         assert connected is False
         assert models == []
+
 
 @patch("llmc.commands.wizard.Prompt.ask")
 @patch("llmc.commands.wizard.Confirm.ask")
@@ -40,10 +42,10 @@ def test_run_wizard_flow(mock_check, mock_confirm, mock_prompt, tmp_path):
     # If we return "skip" for Tier 2, _select_model returns None.
 
     mock_prompt.side_effect = [
-        "http://localhost:11434", # URL
-        "qwen2.5:3b",             # Tier 1
-        "skip",                   # Tier 2
-        "nomic-embed-text"        # Embed
+        "http://localhost:11434",  # URL
+        "qwen2.5:3b",  # Tier 1
+        "skip",  # Tier 2
+        "nomic-embed-text",  # Embed
     ]
 
     # Confirms:
@@ -58,6 +60,7 @@ def test_run_wizard_flow(mock_check, mock_confirm, mock_prompt, tmp_path):
     assert config_path.exists()
 
     import tomli
+
     with open(config_path, "rb") as f:
         config = tomli.load(f)
 
@@ -65,17 +68,19 @@ def test_run_wizard_flow(mock_check, mock_confirm, mock_prompt, tmp_path):
     assert len(config["enrichment"]["chain"]) == 1
     assert config["embeddings"]["profiles"]["docs"]["model"] == "nomic-embed-text"
 
+
 @patch("llmc.commands.wizard.Prompt.ask")
 @patch("llmc.commands.wizard.Confirm.ask")
 @patch("llmc.commands.wizard._check_ollama")
 def test_run_wizard_models_only(mock_check, mock_confirm, mock_prompt, tmp_path):
     # Create existing config
     import tomli_w
+
     config_path = tmp_path / "llmc.toml"
     initial_config = {
         "existing": "value",
         "enrichment": {"chain": [{"model": "old"}]},
-        "embeddings": {"profiles": {"docs": {"model": "old"}}}
+        "embeddings": {"profiles": {"docs": {"model": "old"}}},
     }
     with open(config_path, "wb") as f:
         tomli_w.dump(initial_config, f)
@@ -84,10 +89,10 @@ def test_run_wizard_models_only(mock_check, mock_confirm, mock_prompt, tmp_path)
     mock_check.return_value = (True, ["new-model", "new-embed"])
 
     mock_prompt.side_effect = [
-        "http://localhost:11434", # URL
-        "new-model",              # Tier 1
-        "skip",                   # Tier 2
-        "new-embed"               # Embed
+        "http://localhost:11434",  # URL
+        "new-model",  # Tier 1
+        "skip",  # Tier 2
+        "new-embed",  # Embed
     ]
 
     mock_confirm.return_value = False
@@ -95,9 +100,10 @@ def test_run_wizard_models_only(mock_check, mock_confirm, mock_prompt, tmp_path)
     run_wizard(repo_path=tmp_path, models_only=True)
 
     import tomli
+
     with open(config_path, "rb") as f:
         config = tomli.load(f)
 
-    assert config["existing"] == "value" # Preserved
+    assert config["existing"] == "value"  # Preserved
     assert config["enrichment"]["chain"][0]["model"] == "new-model"
     assert config["embeddings"]["profiles"]["docs"]["model"] == "new-embed"

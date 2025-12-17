@@ -51,7 +51,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Render a RAG planner snippet for inclusion in prompts."
     )
-    parser.add_argument("query", nargs="*", help="Natural language question (defaults to stdin).")
+    parser.add_argument(
+        "query", nargs="*", help="Natural language question (defaults to stdin)."
+    )
     parser.add_argument(
         "--repo",
         dest="repo",
@@ -59,9 +61,15 @@ def main() -> int:
         type=Path,
         help="Repository root containing .rag/.",
     )
-    parser.add_argument("--limit", dest="limit", default=5, type=int, help="Max spans to include.")
     parser.add_argument(
-        "--min-score", dest="min_score", default=0.4, type=float, help="Minimum span score to keep."
+        "--limit", dest="limit", default=5, type=int, help="Max spans to include."
+    )
+    parser.add_argument(
+        "--min-score",
+        dest="min_score",
+        default=0.4,
+        type=float,
+        help="Minimum span score to keep.",
     )
     parser.add_argument(
         "--min-confidence",
@@ -71,7 +79,10 @@ def main() -> int:
         help="Confidence threshold before recommending fallback.",
     )
     parser.add_argument(
-        "--no-log", dest="no_log", action="store_true", help="Skip writing planner metrics to disk."
+        "--no-log",
+        dest="no_log",
+        action="store_true",
+        help="Skip writing planner metrics to disk.",
     )
     args = parser.parse_args()
 

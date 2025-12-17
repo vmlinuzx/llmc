@@ -90,7 +90,9 @@ def init_workspace(
     # .gitignore inside workspace
     gitignore = plan.workspace_root / ".gitignore"
     if not gitignore.exists():
-        gitignore.write_text("index/\nenrichments/\nmetadata/\nlogs/\ntmp/\n", encoding="utf-8")
+        gitignore.write_text(
+            "index/\nenrichments/\nmetadata/\nlogs/\ntmp/\n", encoding="utf-8"
+        )
 
 
 def validate_workspace(plan: WorkspacePlan) -> WorkspaceValidationResult:
@@ -106,4 +108,6 @@ def validate_workspace(plan: WorkspacePlan) -> WorkspaceValidationResult:
         status = "warning"
         issues.append("Missing version.yml (consider migrating workspace)")
 
-    return WorkspaceValidationResult(status=status, issues=issues, suggested_migrations=[])
+    return WorkspaceValidationResult(
+        status=status, issues=issues, suggested_migrations=[]
+    )

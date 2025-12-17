@@ -54,7 +54,10 @@ def test_fuse_scores_single_route():
 def test_fuse_scores_multi_route_disjoint():
     # Two routes, different items
     route_results = {
-        "r1": [{"slice_id": "a", "score": 10.0}, {"slice_id": "b", "score": 0.0}],  # a=1.0, b=0.0
+        "r1": [
+            {"slice_id": "a", "score": 10.0},
+            {"slice_id": "b", "score": 0.0},
+        ],  # a=1.0, b=0.0
         "r2": [
             {"slice_id": "c", "score": 100.0},
             {"slice_id": "d", "score": 50.0},

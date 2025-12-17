@@ -20,7 +20,9 @@ class TestWrapperScripts:
 
     def test_claude_minimax_wrapper_help_flag(self):
         """Test that cmw.sh responds to --help flag."""
-        wrapper_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        wrapper_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
 
         # Note: These scripts don't have --help flag explicitly defined,
         # so we test their behavior without arguments
@@ -29,7 +31,12 @@ class TestWrapperScripts:
         env["LLMC_WRAPPER_VALIDATE_ONLY"] = "1"
 
         result = subprocess.run(
-            [str(wrapper_path)], check=False, capture_output=True, text=True, timeout=10, env=env
+            [str(wrapper_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
 
         # Script should succeed in validate-only mode
@@ -38,7 +45,9 @@ class TestWrapperScripts:
 
     def test_claude_minimax_wrapper_missing_env_vars(self):
         """Test that cmw.sh validates required env vars and exits with error."""
-        wrapper_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        wrapper_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
 
         # Run without any env vars set
         result = subprocess.run(
@@ -57,7 +66,9 @@ class TestWrapperScripts:
 
     def test_claude_minimax_wrapper_repo_flag(self):
         """Test that cmw.sh accepts --repo flag and validates path."""
-        wrapper_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        wrapper_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             # Set up required env var
@@ -83,7 +94,9 @@ class TestWrapperScripts:
 
     def test_claude_minimax_wrapper_yolo_flag(self):
         """Test that cmw.sh accepts --yolo flag."""
-        wrapper_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        wrapper_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             env = os.environ.copy()
@@ -173,7 +186,9 @@ class TestWrapperScripts:
 
     def test_wrapper_script_existence(self):
         """Test that both wrapper scripts exist and are executable."""
-        cmw_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        cmw_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
         cw_path = Path(__file__).parent.parent / "tools" / "codex_rag_wrapper.sh"
 
         assert cmw_path.exists(), "claude_minimax_rag_wrapper.sh should exist"
@@ -185,12 +200,16 @@ class TestWrapperScripts:
 
     def test_wrapper_scripts_have_shebang(self):
         """Test that wrapper scripts have proper bash shebang."""
-        cmw_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        cmw_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
         cw_path = Path(__file__).parent.parent / "tools" / "codex_rag_wrapper.sh"
 
         with open(cmw_path) as f:
             first_line = f.readline().strip()
-            assert first_line == "#!/usr/bin/env bash", "cmw.sh should have bash shebang"
+            assert (
+                first_line == "#!/usr/bin/env bash"
+            ), "cmw.sh should have bash shebang"
 
         with open(cw_path) as f:
             first_line = f.readline().strip()
@@ -198,7 +217,9 @@ class TestWrapperScripts:
 
     def test_claude_minimax_wrapper_quote_handling(self):
         """Test that cmw.sh properly quotes user-provided arguments."""
-        wrapper_path = Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        wrapper_path = (
+            Path(__file__).parent.parent / "tools" / "claude_minimax_rag_wrapper.sh"
+        )
 
         with tempfile.TemporaryDirectory() as tmpdir:
             env = os.environ.copy()

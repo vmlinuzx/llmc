@@ -164,7 +164,9 @@ def test_registry_multiple_entries_different_intervals(tmp_path: Path) -> None:
                     scheduler._run_tick()
 
         # All three should be eligible now
-        assert len(workers.submitted) == 3, f"Expected 3 jobs, got {len(workers.submitted)}"
+        assert (
+            len(workers.submitted) == 3
+        ), f"Expected 3 jobs, got {len(workers.submitted)}"
 
         submitted_ids = {job.repo.repo_id for job in workers.submitted}
         assert "repo-fast" in submitted_ids

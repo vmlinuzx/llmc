@@ -23,7 +23,16 @@ except Exception:  # pragma: no cover - fallback for older runtimes
         _toml = None  # type: ignore[assignment]
 
 
-_ALLOWED_PROVIDERS = {"ollama", "gateway", "gemini", "minimax", "openai", "anthropic", "groq", "azure"}
+_ALLOWED_PROVIDERS = {
+    "ollama",
+    "gateway",
+    "gemini",
+    "minimax",
+    "openai",
+    "anthropic",
+    "groq",
+    "azure",
+}
 # Common tier labels for reference - NOT enforced, just suggestions
 _COMMON_TIERS = {"nano", "1b", "3b", "7b", "8b", "14b", "20b", "30b", "70b", "405b"}
 
@@ -84,7 +93,9 @@ __all__ = [
 
 def _load_toml(path: Path) -> dict[str, Any]:
     if _toml is None:
-        raise EnrichmentConfigError("No TOML parser available (tomllib/tomli not installed).")
+        raise EnrichmentConfigError(
+            "No TOML parser available (tomllib/tomli not installed)."
+        )
     with path.open("rb") as f:
         return _toml.load(f)  # type: ignore[no-any-return]
 
@@ -96,7 +107,9 @@ def _parse_backend_spec(
 ) -> EnrichmentBackendSpec:
     name = str(raw.get("name") or "").strip()
     if not name:
-        raise EnrichmentConfigError("enrichment.chain entry is missing a non-empty 'name'.")
+        raise EnrichmentConfigError(
+            "enrichment.chain entry is missing a non-empty 'name'."
+        )
 
     chain_name = str(raw.get("chain") or default_chain)
     provider = str(raw.get("provider") or "").strip()
@@ -189,7 +202,9 @@ def _parse_chain_from_json(
     try:
         payload = json.loads(json_str)
     except json.JSONDecodeError as exc:
-        raise EnrichmentConfigError(f"Failed to parse ENRICH_CHAIN_JSON: {exc}") from exc
+        raise EnrichmentConfigError(
+            f"Failed to parse ENRICH_CHAIN_JSON: {exc}"
+        ) from exc
 
     chains: dict[str, list[EnrichmentBackendSpec]] = {}
 
@@ -205,7 +220,9 @@ def _parse_chain_from_json(
     if isinstance(payload, Mapping) and "chains" in payload:
         chains_raw = payload.get("chains") or {}
         if not isinstance(chains_raw, Mapping):
-            raise EnrichmentConfigError("ENRICH_CHAIN_JSON['chains'] must be a mapping.")
+            raise EnrichmentConfigError(
+                "ENRICH_CHAIN_JSON['chains'] must be a mapping."
+            )
         for chain_name, entries in chains_raw.items():
             if not isinstance(entries, list):
                 continue
@@ -263,13 +280,17 @@ def load_enrichment_config(
     default_chain = str(root_enrichment.get("default_chain") or "default")
 
     # Concurrency / cooldown with env overrides.
-    concurrency_raw = env.get("ENRICH_CONCURRENCY", root_enrichment.get("concurrency", 1))
+    concurrency_raw = env.get(
+        "ENRICH_CONCURRENCY", root_enrichment.get("concurrency", 1)
+    )
     try:
         concurrency = int(concurrency_raw)
     except (TypeError, ValueError):
         concurrency = 1
 
-    cooldown_raw = env.get("ENRICH_COOLDOWN_SECONDS", root_enrichment.get("cooldown_seconds", 0))
+    cooldown_raw = env.get(
+        "ENRICH_COOLDOWN_SECONDS", root_enrichment.get("cooldown_seconds", 0)
+    )
     try:
         cooldown_seconds = int(cooldown_raw)
     except (TypeError, ValueError):
@@ -294,7 +315,12 @@ def load_enrichment_config(
         "ENRICH_ENFORCE_LATIN1",
         root_enrichment.get("enforce_latin1_enrichment", True),
     )
-    enforce_latin1_enrichment = str(enforce_latin1_raw).lower() in ("1", "true", "yes", "on")
+    enforce_latin1_enrichment = str(enforce_latin1_raw).lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
 
     # Chains from TOML.
     chains = _parse_chain_from_toml(data, default_chain=default_chain)
@@ -388,7 +414,9 @@ def select_chain(
     entries = config.chains.get(effective_name, [])
     enabled_entries = [s for s in entries if s.enabled]
     if not enabled_entries:
-        raise EnrichmentConfigError(f"No enabled entries for enrichment chain {effective_name!r}.")
+        raise EnrichmentConfigError(
+            f"No enabled entries for enrichment chain {effective_name!r}."
+        )
     return enabled_entries
 
 

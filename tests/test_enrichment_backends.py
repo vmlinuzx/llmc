@@ -10,12 +10,16 @@ from llmc.rag.enrichment_backends import BackendCascade, BackendError
 class _FakeBackend:
     """Simple fake backend for testing BackendCascade."""
 
-    def __init__(self, name: str, should_fail: bool = False, failure_type: str = "runtime") -> None:
+    def __init__(
+        self, name: str, should_fail: bool = False, failure_type: str = "runtime"
+    ) -> None:
         self._name = name
         self._should_fail = should_fail
         self._failure_type = failure_type
         # Minimal config shim
-        self.config = type("Cfg", (), {"name": name, "provider": "fake", "model": None})()
+        self.config = type(
+            "Cfg", (), {"name": name, "provider": "fake", "model": None}
+        )()
 
     def describe_host(self) -> str | None:
         return self._name

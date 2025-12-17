@@ -39,7 +39,9 @@ class InspectionResult:
     primary_span: tuple[int, int] | None
     file_summary: str | None
 
-    graph_status: str = "unknown"  # graph_missing, file_not_indexed, isolated, connected
+    graph_status: str = (
+        "unknown"  # graph_missing, file_not_indexed, isolated, connected
+    )
 
     defined_symbols: list[DefinedSymbol] = field(default_factory=list)
 
@@ -75,7 +77,10 @@ def _read_file_content(repo_root: Path, rel_path: Path) -> str:
 
 
 def _extract_snippet(
-    lines: list[str], span: tuple[int, int] | None, context: int = 5, max_lines: int = 50
+    lines: list[str],
+    span: tuple[int, int] | None,
+    context: int = 5,
+    max_lines: int = 50,
 ) -> str:
     """Extract a focused snippet around the span."""
     if not lines:
@@ -136,7 +141,10 @@ def _get_provenance(repo_root: Path, rel_path: Path) -> dict[str, Any]:
 
 
 def _fetch_enrichment(
-    db_path: Path, span_hash: str | None, symbol: str | None = None, file_path: Path | None = None
+    db_path: Path,
+    span_hash: str | None,
+    symbol: str | None = None,
+    file_path: Path | None = None,
 ) -> dict[str, Any]:
     data = {
         "summary": None,
@@ -177,7 +185,9 @@ def _fetch_enrichment(
                 LIMIT 1
             """
             # Try exact symbol match first, then fuzzy
-            row = db.conn.execute(query, (path_suffix, short_sym, f"%{short_sym}")).fetchone()
+            row = db.conn.execute(
+                query, (path_suffix, short_sym, f"%{short_sym}")
+            ).fetchone()
 
         if row:
             data["summary"] = row["summary"]
@@ -205,7 +215,7 @@ def _fetch_enrichment(
 def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
     """Calculate importance score for an entity."""
     score = 0.0
-    
+
     # 1. Kind Score
     kind_scores = {
         "class": 100,
@@ -216,7 +226,7 @@ def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
         "variable": 10,
     }
     score += kind_scores.get(entity.kind, 0)
-    
+
     # 2. Name Score
     name = entity.id.split(":", 1)[-1].split(".")[-1]
     if name.startswith("__"):
@@ -225,12 +235,12 @@ def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
         score -= 20
     if "test" in name.lower():
         score -= 10
-        
+
     # 3. Size Score (lines)
     if entity.start_line and entity.end_line:
         lines = entity.end_line - entity.start_line
         score += min(lines * 0.5, 50)  # Cap at 50 points
-        
+
     # 4. Connectivity Score (if graph available)
     if graph:
         # This is O(E) per entity, might be slow if many relations.
@@ -238,10 +248,10 @@ def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
         # Optimization: Pre-calculate counts if performance becomes an issue.
         in_degree = sum(1 for r in graph.relations if r.dst == entity.id)
         out_degree = sum(1 for r in graph.relations if r.src == entity.id)
-        
+
         score += min(in_degree * 5, 50)  # Cap at 50 points
-        score += min(out_degree * 1, 20) # Cap at 20 points
-        
+        score += min(out_degree * 1, 20)  # Cap at 20 points
+
     return score
 
 
@@ -290,7 +300,9 @@ def inspect_entity(
         if candidates:
             # Pick best match? For now first.
             target_entity = candidates[0]
-            rel_path = Path(target_entity.file_path) if target_entity.file_path else None
+            rel_path = (
+                Path(target_entity.file_path) if target_entity.file_path else None
+            )
 
     if not target_entity and path:
         # File mode
@@ -350,10 +362,9 @@ def inspect_entity(
         else:
             # Defined symbols in this file
             # Sort by importance score, then line number
-            file_entities.sort(key=lambda x: (
-                -_calculate_entity_score(x, graph), 
-                x.start_line or 0
-            ))
+            file_entities.sort(
+                key=lambda x: (-_calculate_entity_score(x, graph), x.start_line or 0)
+            )
 
             for ent in file_entities[:10]:  # Limit to 10
                 name = ent.id.split(":", 1)[-1].split(".")[-1]

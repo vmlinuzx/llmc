@@ -148,14 +148,16 @@ def _handle_stats(repo_root: Path) -> int:
     conn = sqlite3.connect(db_path)
     try:
         # Overall stats
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 COUNT(*) as total_calls,
                 COUNT(DISTINCT cmd) as unique_cmds,
                 AVG(latency_ms) as avg_latency,
                 SUM(output_size) as total_output_bytes
             FROM telemetry_events
-        """)
+        """
+        )
         row = cursor.fetchone()
         total_calls = row[0] or 0
         unique_cmds = row[1] or 0
@@ -165,7 +167,9 @@ def _handle_stats(repo_root: Path) -> int:
         print("┌─ [TE] Telemetry Summary ──────────────────────────────┐")
         print(f"│ Total calls:     {total_calls:<37}│")
         print(f"│ Unique commands: {unique_cmds:<37}│")
-        print(f"│ Avg latency:     {avg_latency:.1f}ms{' ' * (35 - len(f'{avg_latency:.1f}'))}│")
+        print(
+            f"│ Avg latency:     {avg_latency:.1f}ms{' ' * (35 - len(f'{avg_latency:.1f}'))}│"
+        )
         val_str = f"{total_output / 1024:.1f} KB"
         print(f"│ Total output:    {val_str:<37}│")
         print("└───────────────────────────────────────────────────────┘")
@@ -173,7 +177,8 @@ def _handle_stats(repo_root: Path) -> int:
 
         # Top 5 Unenriched (mode != 'enriched')
         print("┌─ Top 5 Unenriched Calls ──────────────────────────────┐")
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 cmd,
                 COUNT(*) as count,
@@ -183,7 +188,8 @@ def _handle_stats(repo_root: Path) -> int:
             GROUP BY cmd
             ORDER BY count DESC
             LIMIT 5
-        """)
+        """
+        )
 
         rows = cursor.fetchall()
         if not rows:
@@ -196,7 +202,8 @@ def _handle_stats(repo_root: Path) -> int:
 
         # Top 5 Enriched (mode == 'enriched')
         print("┌─ Top 5 Enriched Calls ────────────────────────────────┐")
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 cmd,
                 COUNT(*) as count,
@@ -206,7 +213,8 @@ def _handle_stats(repo_root: Path) -> int:
             GROUP BY cmd
             ORDER BY count DESC
             LIMIT 5
-        """)
+        """
+        )
 
         rows = cursor.fetchall()
         if not rows:
@@ -221,12 +229,14 @@ def _handle_stats(repo_root: Path) -> int:
         print("┌─ Routing Stats ───────────────────────────────────────┐")
 
         # Slice Ingest Routing
-        slice_ingest_cursor = conn.execute("""
+        slice_ingest_cursor = conn.execute(
+            """
             SELECT 
                 cmd
             FROM telemetry_events 
             WHERE mode = 'routing_ingest_slice'
-        """)
+        """
+        )
         slice_ingest_events = slice_ingest_cursor.fetchall()
 
         slice_types: dict[str, int] = {}
@@ -256,12 +266,14 @@ def _handle_stats(repo_root: Path) -> int:
         print("│                                                       │")
 
         # Query Routing
-        query_classify_cursor = conn.execute("""
+        query_classify_cursor = conn.execute(
+            """
             SELECT 
                 cmd
             FROM telemetry_events 
             WHERE mode = 'routing_query_classify'
-        """)
+        """
+        )
         query_classify_events = query_classify_cursor.fetchall()
 
         query_routes: dict[str, int] = {}
@@ -274,12 +286,14 @@ def _handle_stats(repo_root: Path) -> int:
             route_name = details.get("route_name", "unknown")
             query_routes[route_name] = query_routes.get(route_name, 0) + 1
 
-        fallback_cursor = conn.execute("""
+        fallback_cursor = conn.execute(
+            """
             SELECT 
                 cmd
             FROM telemetry_events 
             WHERE mode = 'routing_fallback'
-        """)
+        """
+        )
         fallback_events = fallback_cursor.fetchall()
 
         fallbacks: dict[str, int] = {}
@@ -292,12 +306,14 @@ def _handle_stats(repo_root: Path) -> int:
             fallback_type = details.get("type", "unknown")
             fallbacks[fallback_type] = fallbacks.get(fallback_type, 0) + 1
 
-        error_cursor = conn.execute("""
+        error_cursor = conn.execute(
+            """
             SELECT 
                 cmd
             FROM telemetry_events 
             WHERE mode = 'routing_error'
-        """)
+        """
+        )
         error_events = error_cursor.fetchall()
 
         routing_errors: dict[str, int] = {}
@@ -332,7 +348,9 @@ def _handle_stats(repo_root: Path) -> int:
     return 0
 
 
-def _handle_grep(args: list[str], raw: bool, repo_root: Path, json_mode: bool = False) -> int:
+def _handle_grep(
+    args: list[str], raw: bool, repo_root: Path, json_mode: bool = False
+) -> int:
     """Handle grep subcommand."""
     if not args:
         print("[TE] grep requires a pattern", file=sys.stderr)
@@ -632,12 +650,17 @@ def main() -> int:
         )
 
     if command == "grep":
-        return _handle_grep(cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode)
+        return _handle_grep(
+            cmd_args, raw=False, repo_root=repo_root, json_mode=json_mode
+        )
 
     elif command == "cat":
         # Phase 1 - not yet implemented, fall back to pass-through
         if not json_mode:
-            print("[TE] cat enrichment not yet implemented, using pass-through", file=sys.stderr)
+            print(
+                "[TE] cat enrichment not yet implemented, using pass-through",
+                file=sys.stderr,
+            )
         return _handle_passthrough(
             command,
             cmd_args,
@@ -649,7 +672,10 @@ def main() -> int:
     elif command == "find":
         # Phase 1 - not yet implemented, fall back to pass-through
         if not json_mode:
-            print("[TE] find enrichment not yet implemented, using pass-through", file=sys.stderr)
+            print(
+                "[TE] find enrichment not yet implemented, using pass-through",
+                file=sys.stderr,
+            )
         return _handle_passthrough(
             command,
             cmd_args,

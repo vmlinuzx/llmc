@@ -30,7 +30,9 @@ def test_tool_registry_contains_te_wrappers():
     reg = _get_registry(server)
     names = set(reg.keys())
     for name in ("te_run", "repo_read", "rag_query"):
-        assert name in names, f"Expected tool '{name}' to be registered; got {sorted(names)}"
+        assert (
+            name in names
+        ), f"Expected tool '{name}' to be registered; got {sorted(names)}"
 
 
 def test_get_metrics_basic_shape():
@@ -47,6 +49,8 @@ def test_get_metrics_basic_shape():
             res = get_metrics({})
         except Exception as e:
             pytest.skip(f"get_metrics call signature unknown: {e}")
-    assert isinstance(res, dict), f"get_metrics should return dict-like, got {type(res)}"
+    assert isinstance(
+        res, dict
+    ), f"get_metrics should return dict-like, got {type(res)}"
     # Non-strict sanity: must contain at least one top-level key
     assert len(res.keys()) > 0

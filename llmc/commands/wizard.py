@@ -1,4 +1,3 @@
-
 """
 Interactive Configuration Wizard for LLMC.
 
@@ -8,17 +7,15 @@ Guides users through setup:
 3. Config generation & validation
 """
 
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
 
 import requests
-import tomli_w
-import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm, Prompt
 from rich.table import Table
+import tomli_w
+import typer
 
 # Try to import tomllib (Python 3.11+) or fall back to tomli
 try:
@@ -33,13 +30,29 @@ except ImportError:
 console = Console()
 
 # Recommended models for different tiers
-RECOMMENDED_SMALL = ["qwen2.5:3b", "qwen2.5:1.5b", "llama3.2:3b", "llama3.2:1b", "qwen2.5:0.5b"]
+RECOMMENDED_SMALL = [
+    "qwen2.5:3b",
+    "qwen2.5:1.5b",
+    "llama3.2:3b",
+    "llama3.2:1b",
+    "qwen2.5:0.5b",
+]
 RECOMMENDED_MEDIUM = ["qwen2.5:7b", "llama3.1:8b", "gemma2:9b", "mistral:7b"]
-RECOMMENDED_LARGE = ["qwen2.5:14b", "qwen2.5:32b", "llama3.3:70b", "deepseek-coder-v2:16b"]
-RECOMMENDED_EMBED = ["nomic-embed-text", "mxbai-embed-large", "all-minilm", "snowflake-arctic-embed"]
+RECOMMENDED_LARGE = [
+    "qwen2.5:14b",
+    "qwen2.5:32b",
+    "llama3.3:70b",
+    "deepseek-coder-v2:16b",
+]
+RECOMMENDED_EMBED = [
+    "nomic-embed-text",
+    "mxbai-embed-large",
+    "all-minilm",
+    "snowflake-arctic-embed",
+]
 
 
-def _check_ollama(url: str) -> Tuple[bool, List[str]]:
+def _check_ollama(url: str) -> tuple[bool, list[str]]:
     """Check Ollama connectivity and return available models."""
     try:
         # Normalize URL
@@ -58,7 +71,7 @@ def _check_ollama(url: str) -> Tuple[bool, List[str]]:
     return False, []
 
 
-def _print_model_table(models: List[str], current_selection: Optional[str] = None):
+def _print_model_table(models: list[str], current_selection: str | None = None):
     """Print available models in a table."""
     table = Table(title="Available Models")
     table.add_column("Model Name", style="cyan")
@@ -86,11 +99,11 @@ def _print_model_table(models: List[str], current_selection: Optional[str] = Non
 
 def _select_model(
     prompt_text: str,
-    models: List[str],
-    recommended: List[str],
+    models: list[str],
+    recommended: list[str],
     allow_skip: bool = False,
-    default: Optional[str] = None,
-) -> Optional[str]:
+    default: str | None = None,
+) -> str | None:
     """Ask user to select a model with autocomplete-like suggestions."""
 
     # Filter available recommendations
@@ -120,8 +133,10 @@ def _select_model(
     while True:
         selection = Prompt.ask(
             "Select model",
-            choices=choices if len(choices) < 20 else None, # Don't list all if too many
-            default=suggestion if suggestion else None
+            choices=(
+                choices if len(choices) < 20 else None
+            ),  # Don't list all if too many
+            default=suggestion if suggestion else None,
         )
 
         if selection == "skip" and allow_skip:
@@ -137,7 +152,9 @@ def _select_model(
             if Confirm.ask("Use this model?"):
                 return matches[0]
 
-        console.print("[red]Invalid selection. Please choose from available models.[/red]")
+        console.print(
+            "[red]Invalid selection. Please choose from available models.[/red]"
+        )
 
 
 def run_wizard(
@@ -167,7 +184,9 @@ def run_wizard(
                 console.print(f"[red]❌ Failed to parse config: {e}[/red]")
                 raise typer.Exit(1)
         else:
-            console.print("[red]❌ No TOML parser available (install tomli or use Python 3.11+)[/red]")
+            console.print(
+                "[red]❌ No TOML parser available (install tomli or use Python 3.11+)[/red]"
+            )
             raise typer.Exit(1)
 
         console.print("[bold]Updating model configuration only.[/bold]")
@@ -201,19 +220,23 @@ def run_wizard(
         console.print(f"[green]✅ Connected! Found {len(models)} models.[/green]")
 
     if not models and connected:
-        console.print("[yellow]⚠️  No models found in Ollama. You'll need to pull some models first.[/yellow]")
+        console.print(
+            "[yellow]⚠️  No models found in Ollama. You'll need to pull some models first.[/yellow]"
+        )
         console.print("Example: [dim]ollama pull qwen2.5:7b[/dim]")
 
     # 2. Model Selection
     console.print("\n[bold]2. Enrichment Model Selection[/bold]")
-    console.print("LLMC uses a tiered approach: Fast models for simple files, larger models for complex ones.")
+    console.print(
+        "LLMC uses a tiered approach: Fast models for simple files, larger models for complex ones."
+    )
 
     # Tier 1: Small/Fast
     tier1_model = _select_model(
         "Select PRIMARY model (Small/Fast - e.g. 1b-4b params)",
         models,
         RECOMMENDED_SMALL,
-        default="qwen2.5:3b"
+        default="qwen2.5:3b",
     )
 
     # Tier 2: Medium (Optional)
@@ -224,7 +247,7 @@ def run_wizard(
             models,
             RECOMMENDED_MEDIUM,
             allow_skip=True,
-            default="qwen2.5:7b"
+            default="qwen2.5:7b",
         )
 
     # Tier 3: Large (Optional)
@@ -235,16 +258,13 @@ def run_wizard(
             models,
             RECOMMENDED_LARGE,
             allow_skip=True,
-            default="qwen2.5:14b"
+            default="qwen2.5:14b",
         )
 
     # 3. Embeddings
     console.print("\n[bold]3. Embeddings Configuration[/bold]")
     embed_model = _select_model(
-        "Select EMBEDDING model",
-        models,
-        RECOMMENDED_EMBED,
-        default="nomic-embed-text"
+        "Select EMBEDDING model", models, RECOMMENDED_EMBED, default="nomic-embed-text"
     )
 
     # 4. Generate Config
@@ -263,8 +283,14 @@ def run_wizard(
             },
             "indexing": {
                 "exclude_dirs": [
-                    ".git", ".llmc", ".venv", "__pycache__",
-                    "node_modules", "dist", "build", ".pytest_cache",
+                    ".git",
+                    ".llmc",
+                    ".venv",
+                    "__pycache__",
+                    "node_modules",
+                    "dist",
+                    "build",
+                    ".pytest_cache",
                 ]
             },
             "rag": {"enabled": True},
@@ -274,43 +300,49 @@ def run_wizard(
     chain = []
 
     if tier1_model:
-        chain.append({
-            "name": f"{tier1_model.split(':')[0]}-fast",
-            "chain": "code_enrichment_models",
-            "provider": "ollama",
-            "model": tier1_model,
-            "url": ollama_url,
-            "routing_tier": "fast",
-            "timeout_seconds": 90,
-            "enabled": True,
-            "options": {"num_ctx": 8192, "temperature": 0.2},
-        })
+        chain.append(
+            {
+                "name": f"{tier1_model.split(':')[0]}-fast",
+                "chain": "code_enrichment_models",
+                "provider": "ollama",
+                "model": tier1_model,
+                "url": ollama_url,
+                "routing_tier": "fast",
+                "timeout_seconds": 90,
+                "enabled": True,
+                "options": {"num_ctx": 8192, "temperature": 0.2},
+            }
+        )
 
     if tier2_model:
-        chain.append({
-            "name": f"{tier2_model.split(':')[0]}-medium",
-            "chain": "code_enrichment_models",
-            "provider": "ollama",
-            "model": tier2_model,
-            "url": ollama_url,
-            "routing_tier": "medium",
-            "timeout_seconds": 120,
-            "enabled": True,
-            "options": {"num_ctx": 8192, "temperature": 0.2},
-        })
+        chain.append(
+            {
+                "name": f"{tier2_model.split(':')[0]}-medium",
+                "chain": "code_enrichment_models",
+                "provider": "ollama",
+                "model": tier2_model,
+                "url": ollama_url,
+                "routing_tier": "medium",
+                "timeout_seconds": 120,
+                "enabled": True,
+                "options": {"num_ctx": 8192, "temperature": 0.2},
+            }
+        )
 
     if tier3_model:
-        chain.append({
-            "name": f"{tier3_model.split(':')[0]}-large",
-            "chain": "code_enrichment_models",
-            "provider": "ollama",
-            "model": tier3_model,
-            "url": ollama_url,
-            "routing_tier": "large",
-            "timeout_seconds": 180,
-            "enabled": True,
-            "options": {"num_ctx": 12288, "temperature": 0.2},
-        })
+        chain.append(
+            {
+                "name": f"{tier3_model.split(':')[0]}-large",
+                "chain": "code_enrichment_models",
+                "provider": "ollama",
+                "model": tier3_model,
+                "url": ollama_url,
+                "routing_tier": "large",
+                "timeout_seconds": 180,
+                "enabled": True,
+                "options": {"num_ctx": 12288, "temperature": 0.2},
+            }
+        )
 
     # Update enrichment section
     if "enrichment" not in config:
@@ -366,13 +398,15 @@ def run_wizard(
         }
 
     # Review
-    console.print(Panel(
-        f"Primary: {tier1_model}\n"
-        f"Fallback: {tier2_model or 'None'}\n"
-        f"Final: {tier3_model or 'None'}\n"
-        f"Embeddings: {embed_model}",
-        title="Config Summary"
-    ))
+    console.print(
+        Panel(
+            f"Primary: {tier1_model}\n"
+            f"Fallback: {tier2_model or 'None'}\n"
+            f"Final: {tier3_model or 'None'}\n"
+            f"Embeddings: {embed_model}",
+            title="Config Summary",
+        )
+    )
 
     # Save
     if config_path.exists() and not models_only:
@@ -390,14 +424,18 @@ def run_wizard(
 
     # Validate
     if Confirm.ask("Run validation now?"):
-        from llmc.commands.repo_validator import validate_repo, print_result
+        from llmc.commands.repo_validator import print_result, validate_repo
+
         result = validate_repo(repo_path, check_connectivity=True, check_models=True)
         print_result(result)
         if result.passed:
             console.print("\n[bold green]🚀 You are ready to go![/bold green]")
             if not models_only:
-                console.print("Run: [cyan]llmc repo register .[/cyan] (if not already registered)")
+                console.print(
+                    "Run: [cyan]llmc repo register .[/cyan] (if not already registered)"
+                )
             console.print("Run: [cyan]llmc service start[/cyan]")
+
 
 if __name__ == "__main__":
     typer.run(run_wizard)

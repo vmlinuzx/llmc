@@ -258,7 +258,9 @@ def execute_embeddings(
         )
 
         profile_cfg = config.get("embeddings", {}).get("profiles", {})
-        profile_details = profile_cfg.get(profile_name, {})  # Get details for the resolved profile
+        profile_details = profile_cfg.get(
+            profile_name, {}
+        )  # Get details for the resolved profile
 
         # Resolve model/dim (CLI overrides apply to all)
         resolved_model = model
@@ -301,7 +303,9 @@ def execute_embeddings(
             )
 
         with db.transaction():
-            db.ensure_embedding_meta(backend.model_name, backend.dim, profile=profile_name)
+            db.ensure_embedding_meta(
+                backend.model_name, backend.dim, profile=profile_name
+            )
             for span_hash, vector in zip(prepared_hashes, vectors, strict=False):
                 db.store_embedding(
                     span_hash,
@@ -318,7 +322,9 @@ def execute_embeddings(
     return total_created, last_model, last_dim
 
 
-def default_enrichment_callable(model: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+def default_enrichment_callable(
+    model: str,
+) -> Callable[[dict[str, Any]], dict[str, Any]]:
     def _call(prompt: dict[str, Any]) -> dict[str, Any]:
         path = prompt.get("path", "")
         start, end = prompt.get("lines", [0, 0])
@@ -420,7 +426,11 @@ def execute_enrichment(
             effective_code_first = False
 
     scheduled_items = items
-    if effective_code_first and FileClassifier is not None and load_path_weight_map is not None:
+    if (
+        effective_code_first
+        and FileClassifier is not None
+        and load_path_weight_map is not None
+    ):
         try:
             cfg = _load_llmc_config(repo_root) if _load_llmc_config is not None else {}
             weight_map = load_path_weight_map(cfg)
@@ -444,6 +454,7 @@ def execute_enrichment(
 
             def key(pair):
                 return pair[1].final_priority  # type: ignore[assignment]
+
             high_items.sort(key=key, reverse=True)
             mid_items.sort(key=key, reverse=True)
             low_items.sort(key=key, reverse=True)

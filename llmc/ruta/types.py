@@ -16,13 +16,16 @@ class TraceEvent(TypedDict):
     success: bool | None
     metadata: dict[str, Any] | None
 
+
 class RunContext(TypedDict):
     run_id: str
     scenario_id: str
     start_time: str
     status: Literal["running", "completed", "failed"]
 
+
 # --- Scenario Schema ---
+
 
 class Property(BaseModel):
     name: str
@@ -30,13 +33,18 @@ class Property(BaseModel):
     relation: str | None = None
     constraint: str
 
+
 class SeverityPolicy(BaseModel):
-    property_failures: dict[str, Literal["P0", "P1", "P2", "P3"]] = Field(default_factory=dict)
+    property_failures: dict[str, Literal["P0", "P1", "P2", "P3"]] = Field(
+        default_factory=dict
+    )
+
 
 class Expectations(BaseModel):
     must_use_tools: list[str] = Field(default_factory=list)
     must_not_use_tools: list[str] = Field(default_factory=list)
     properties: list[Property] = Field(default_factory=list)
+
 
 class Scenario(BaseModel):
     id: str

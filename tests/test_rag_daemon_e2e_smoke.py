@@ -60,9 +60,10 @@ def test_e2e_smoke_test(tmp_path: Path) -> None:
     init_workspace(plan, inspection, tool_config, non_interactive=True)
     validation = validate_workspace(plan)
 
-    assert validation.status in ["ok", "warning"], (
-        f"Workspace validation failed: {validation.issues}"
-    )
+    assert validation.status in [
+        "ok",
+        "warning",
+    ], f"Workspace validation failed: {validation.issues}"
 
     # Setup 3: Register the repo using the registry tool
     registry_adapter = RegistryAdapter(tool_config)

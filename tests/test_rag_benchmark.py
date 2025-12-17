@@ -193,7 +193,9 @@ class TestBenchmarkCase:
 
     def test_benchmark_case_frozen(self):
         """Test that BenchmarkCase is frozen."""
-        case = BenchmarkCase(name="test", query="query", positives=["p"], negatives=["n"])
+        case = BenchmarkCase(
+            name="test", query="query", positives=["p"], negatives=["n"]
+        )
 
         # Should not be able to modify after creation
         with pytest.raises(Exception):
@@ -202,7 +204,10 @@ class TestBenchmarkCase:
     def test_benchmark_case_immutable_tuple(self):
         """Test BenchmarkCase with tuples."""
         case = BenchmarkCase(
-            name="tuple-case", query="query", positives=("pos1", "pos2"), negatives=("neg1", "neg2")
+            name="tuple-case",
+            query="query",
+            positives=("pos1", "pos2"),
+            negatives=("neg1", "neg2"),
         )
 
         # Should accept tuples
@@ -458,7 +463,9 @@ class TestRunEmbeddingBenchmark:
             assert results["avg_margin"] == 0.0
 
     @patch("llmc.rag.benchmark.build_embedding_backend")
-    def test_run_embedding_benchmark_calculates_average_scores(self, mock_build_backend):
+    def test_run_embedding_benchmark_calculates_average_scores(
+        self, mock_build_backend
+    ):
         """Test average positive and negative score calculation."""
         mock_backend = Mock()
 
@@ -572,7 +579,10 @@ class TestBenchmarkEdgeCases:
         """Test benchmark when all candidates have equal scores."""
         equal_case = (
             BenchmarkCase(
-                name="equal-scores", query="test", positives=["positive1"], negatives=["negative1"]
+                name="equal-scores",
+                query="test",
+                positives=["positive1"],
+                negatives=["negative1"],
             ),
         )
 

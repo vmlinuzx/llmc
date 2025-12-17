@@ -14,7 +14,7 @@ logger = logging.getLogger("llmc-mcp.maasl")
 class TelemetrySink:
     """
     Lightweight telemetry sink for MAASL events.
-    
+
     Emits structured logs for lock acquisition, contention, and coordination events.
     Future: Can be extended to emit to MetricsCollector for aggregation.
     """
@@ -22,7 +22,7 @@ class TelemetrySink:
     def __init__(self, enabled: bool = True):
         self.enabled = enabled
         self._start_time = time.time()
-        
+
         # Stats collection for introspection
         self._stats = {
             "lock_acquired": 0,
@@ -37,11 +37,11 @@ class TelemetrySink:
             "stomp_guard_success": 0,
             "stomp_guard_failed": 0,
         }
-    
+
     def _get_uptime(self) -> float:
         """Get telemetry uptime in seconds."""
         return time.time() - self._start_time
-    
+
     def _increment_stat(self, key: str):
         """Increment a stat counter."""
         if key in self._stats:
@@ -59,7 +59,7 @@ class TelemetrySink:
         """Log successful lock acquisition."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("lock_acquired")
         logger.info(
             "Lock acquired",
@@ -86,7 +86,7 @@ class TelemetrySink:
         """Log lock acquisition timeout (contention)."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("lock_timeout")
         logger.warning(
             "Lock timeout",
@@ -112,7 +112,7 @@ class TelemetrySink:
         """Log lock release."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("lock_released")
         logger.info(
             "Lock released",
@@ -138,7 +138,7 @@ class TelemetrySink:
         """Log database write operation."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("db_write_success" if success else "db_write_failed")
         level = logging.INFO if success else logging.ERROR
         logger.log(
@@ -167,7 +167,7 @@ class TelemetrySink:
         """Log knowledge graph merge operation."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("graph_merge")
         logger.info(
             "Graph merge completed",
@@ -195,7 +195,7 @@ class TelemetrySink:
         """Log documentation generation event."""
         if not self.enabled:
             return
-        
+
         # Track by status: generated, noop, error
         if status == "generated":
             self._increment_stat("docgen_generated")
@@ -203,7 +203,7 @@ class TelemetrySink:
             self._increment_stat("docgen_noop")
         elif error:
             self._increment_stat("docgen_error")
-        
+
         level = logging.INFO if not error else logging.ERROR
         logger.log(
             level,
@@ -234,7 +234,7 @@ class TelemetrySink:
         """Log high-level call_with_stomp_guard invocation."""
         if not self.enabled:
             return
-        
+
         self._increment_stat("stomp_guard_success" if success else "stomp_guard_failed")
         level = logging.INFO if success else logging.WARNING
         logger.log(

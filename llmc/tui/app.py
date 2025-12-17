@@ -21,7 +21,7 @@ from llmc.tui.theme import GLOBAL_CSS
 class LLMC_TUI(App):
     """
     Main LLMC TUI Application.
-    
+
     Navigation:
         1 - Dashboard (stats, quick actions, logs)
         2 - Search (code search)
@@ -55,7 +55,7 @@ def main():
     """Entry point for the TUI."""
     # Parse args
     repo_root = Path.cwd()
-    
+
     if len(sys.argv) > 1:
         arg = sys.argv[1]
         if arg in ("-h", "--help"):
@@ -64,11 +64,11 @@ def main():
             print("  repo_path: Path to repository (default: current directory)")
             return
         repo_root = Path(arg).resolve()
-    
+
     if not repo_root.exists():
         print(f"Error: Path does not exist: {repo_root}")
         sys.exit(1)
-    
+
     # Launch TUI
     app = LLMC_TUI(repo_root=repo_root)
     app.run()

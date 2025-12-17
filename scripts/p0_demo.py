@@ -9,8 +9,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="P0 demo: DB→Graph→API smoke")
     parser.add_argument("--repo", required=True, help="Repo root")
     parser.add_argument("--query", default="foo")
-    parser.add_argument("--enrich-db", default=None, help="Optional explicit enrichment DB path")
-    parser.add_argument("--enable-enrich", action="store_true", help="Enable enrichment attach")
+    parser.add_argument(
+        "--enrich-db", default=None, help="Optional explicit enrichment DB path"
+    )
+    parser.add_argument(
+        "--enable-enrich", action="store_true", help="Enable enrichment attach"
+    )
     args = parser.parse_args()
 
     if args.enable_enrich:
@@ -45,7 +49,8 @@ def main() -> None:
             enrichment = getattr(first, "enrichment", None)
             if enrichment:
                 core = {
-                    key: enrichment.get(key) for key in ("summary", "inputs", "outputs", "pitfalls")
+                    key: enrichment.get(key)
+                    for key in ("summary", "inputs", "outputs", "pitfalls")
                 }
                 print("enrichment:", core)
 

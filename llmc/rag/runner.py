@@ -11,12 +11,20 @@ import subprocess
 import sys
 
 from .config import index_path_for_write
+from llmc.core import find_repo_root
 from .lang import EXTENSION_LANG
-from .utils import find_repo_root
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SUPPORTED_SUFFIXES = {ext.lower() for ext in EXTENSION_LANG.keys()}
-DEFAULT_EXCLUDE_DIRS = {".git", ".rag", "node_modules", "dist", "build", "__pycache__", ".venv"}
+DEFAULT_EXCLUDE_DIRS = {
+    ".git",
+    ".rag",
+    "node_modules",
+    "dist",
+    "build",
+    "__pycache__",
+    ".venv",
+}
 
 
 def log(msg: str) -> None:
@@ -70,7 +78,9 @@ def _extra_patterns(repo_root: Path) -> list[str]:
     ragignore = repo_root / ".ragignore"
     if ragignore.exists():
         try:
-            for line in ragignore.read_text(encoding="utf-8", errors="ignore").splitlines():
+            for line in ragignore.read_text(
+                encoding="utf-8", errors="ignore"
+            ).splitlines():
                 line = line.strip()
                 if not line or line.startswith("#"):
                     continue
@@ -182,7 +192,14 @@ def run_sync(repo_root: Path, paths: Sequence[str]) -> None:
 
 
 def run_embed(repo_root: Path, limit: int) -> str:
-    cmd = _python_env() + ["-m", "llmc.rag.cli", "embed", "--execute", "--limit", str(limit)]
+    cmd = _python_env() + [
+        "-m",
+        "llmc.rag.cli",
+        "embed",
+        "--execute",
+        "--limit",
+        str(limit),
+    ]
     env = os.environ.copy()
     py_paths = [str(PROJECT_ROOT)]
     if env.get("PYTHONPATH"):
@@ -416,7 +433,9 @@ def build_parser() -> argparse.ArgumentParser:
     detect_parser.add_argument("--json", action="store_true")
     detect_parser.set_defaults(func=command_detect)
 
-    idx_parser = sub.add_parser("indexenrich", help="Incremental sync + enrich + embed pipeline")
+    idx_parser = sub.add_parser(
+        "indexenrich", help="Incremental sync + enrich + embed pipeline"
+    )
     idx_parser.add_argument("--repo", type=Path, default=None)
     idx_parser.add_argument(
         "--doc-path", action="append", help="Additional doc paths to always sync"

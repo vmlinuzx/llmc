@@ -94,7 +94,8 @@ class NavTestRunner:
         (self.temp_dir / "src").mkdir()
 
         # Module A: defines a symbol
-        (self.temp_dir / "src" / "module_a.py").write_text("""
+        (self.temp_dir / "src" / "module_a.py").write_text(
+            """
 def target_function():
     '''Target function for testing'''
     return "Hello from module_a"
@@ -102,10 +103,12 @@ def target_function():
 class TargetClass:
     def method(self):
         pass
-""")
+"""
+        )
 
         # Module B: uses symbols from module A
-        (self.temp_dir / "src" / "module_b.py").write_text("""
+        (self.temp_dir / "src" / "module_b.py").write_text(
+            """
 from module_a import target_function
 from module_a import TargetClass
 
@@ -114,10 +117,12 @@ def caller_function():
     return result
 
 obj = TargetClass()
-""")
+"""
+        )
 
         # Module C: more complex usage
-        (self.temp_dir / "src" / "module_c.py").write_text("""
+        (self.temp_dir / "src" / "module_c.py").write_text(
+            """
 import module_b
 from module_a import target_function as tf
 
@@ -125,7 +130,8 @@ def complex_usage():
     value = tf()
     module_b.caller_function()
     return value
-""")
+"""
+        )
 
         # Create git repo
         (self.temp_dir / ".git").mkdir(exist_ok=True)
@@ -419,7 +425,10 @@ def complex_usage():
                         False,
                         "Status mixing between repos",
                         (time.time() - start) * 1000,
-                        {"repo1_match": loaded1 == status1, "repo2_match": loaded2 == status2},
+                        {
+                            "repo1_match": loaded1 == status1,
+                            "repo2_match": loaded2 == status2,
+                        },
                     )
             except ImportError:
                 # Manual test without module
@@ -731,7 +740,9 @@ def complex_usage():
             try:
                 from llmc.rag_nav.tool_handlers import tool_rag_search
 
-                result = tool_rag_search(query="target_function", repo_root=test_repo, limit=10)
+                result = tool_rag_search(
+                    query="target_function", repo_root=test_repo, limit=10
+                )
 
                 # Check result structure
                 has_items = hasattr(result, "items") and result.items is not None
@@ -743,7 +754,9 @@ def complex_usage():
                     if result.items:
                         first = result.items[0]
                         has_path = hasattr(first, "file") or "path" in first.__dict__
-                        has_snippet = hasattr(first, "snippet") or "snippet" in first.__dict__
+                        has_snippet = (
+                            hasattr(first, "snippet") or "snippet" in first.__dict__
+                        )
 
                         if has_path and has_snippet:
                             self.add_result(
@@ -752,7 +765,10 @@ def complex_usage():
                                 True,
                                 f"SearchResult format valid ({len(result.items)} items)",
                                 (time.time() - start) * 1000,
-                                {"source": result.source, "freshness": result.freshness_state},
+                                {
+                                    "source": result.source,
+                                    "freshness": result.freshness_state,
+                                },
                             )
                         else:
                             self.add_result(
@@ -769,7 +785,10 @@ def complex_usage():
                             True,
                             "SearchResult format valid (no items found)",
                             (time.time() - start) * 1000,
-                            {"source": result.source, "freshness": result.freshness_state},
+                            {
+                                "source": result.source,
+                                "freshness": result.freshness_state,
+                            },
                         )
                 else:
                     self.add_result(
@@ -817,7 +836,9 @@ def complex_usage():
                 # Should find usages in module_b.py and module_c.py
                 if result.items:
                     paths = [getattr(item, "file", str(item)) for item in result.items]
-                    has_usage = any("module_b" in str(p) or "module_c" in str(p) for p in paths)
+                    has_usage = any(
+                        "module_b" in str(p) or "module_c" in str(p) for p in paths
+                    )
 
                     if has_usage:
                         self.add_result(
@@ -995,7 +1016,10 @@ def complex_usage():
                         True,
                         f"Route computed (use_rag={route.use_rag}, freshness={route.freshness_state})",
                         (time.time() - start) * 1000,
-                        {"use_rag": route.use_rag, "freshness_state": route.freshness_state},
+                        {
+                            "use_rag": route.use_rag,
+                            "freshness_state": route.freshness_state,
+                        },
                     )
                 else:
                     self.add_result(
@@ -1103,7 +1127,10 @@ def complex_usage():
                         True,
                         "Routing handles missing graph gracefully",
                         (time.time() - start) * 1000,
-                        {"use_rag": route.use_rag, "freshness_state": route.freshness_state},
+                        {
+                            "use_rag": route.use_rag,
+                            "freshness_state": route.freshness_state,
+                        },
                     )
                 else:
                     self.add_result(
@@ -1141,7 +1168,9 @@ def complex_usage():
         try:
             # Test search command (bash script)
             result = self.run(
-                ["/bin/bash", "scripts/llmc-rag-nav", "search", "--help"], check=False, timeout=10
+                ["/bin/bash", "scripts/llmc-rag-nav", "search", "--help"],
+                check=False,
+                timeout=10,
             )
 
             if result.returncode == 0 and "--symbol" in result.stdout:
@@ -1285,7 +1314,9 @@ def complex_usage():
                                 graph_files.add(entity["path"])
 
                     # Verify paths are relative and consistent
-                    all_relative = all(not Path(p).is_absolute() for p in graph_files if p)
+                    all_relative = all(
+                        not Path(p).is_absolute() for p in graph_files if p
+                    )
 
                     if all_relative:
                         self.add_result(
@@ -1628,7 +1659,9 @@ def complex_usage():
         print(f"Total Tests: {total}")
         print(f"Passed: {total_passed}")
         print(f"Failed: {total_failed}")
-        print(f"Success Rate: {(total_passed / total * 100):.1f}%" if total > 0 else "N/A")
+        print(
+            f"Success Rate: {(total_passed / total * 100):.1f}%" if total > 0 else "N/A"
+        )
         print()
 
         # By category
@@ -1684,7 +1717,9 @@ def complex_usage():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="LLMC RAG Nav Comprehensive Test Suite")
+    parser = argparse.ArgumentParser(
+        description="LLMC RAG Nav Comprehensive Test Suite"
+    )
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--filter", help="Filter tests by name pattern")
     args = parser.parse_args()

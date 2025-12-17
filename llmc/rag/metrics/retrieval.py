@@ -44,8 +44,7 @@ def ndcg_at_k(results: list[list[float]], k: int = 10) -> float:
 
     def dcg(scores: list[float]) -> float:
         return sum(
-            (2**score - 1) / math.log2(i + 2)
-            for i, score in enumerate(scores[:k])
+            (2**score - 1) / math.log2(i + 2) for i, score in enumerate(scores[:k])
         )
 
     ndcg_sum = 0.0
@@ -53,7 +52,7 @@ def ndcg_at_k(results: list[list[float]], k: int = 10) -> float:
         actual_dcg = dcg(scores)
         ideal_scores = sorted(scores, reverse=True)
         ideal_dcg = dcg(ideal_scores)
-        
+
         if ideal_dcg > 0:
             ndcg_sum += actual_dcg / ideal_dcg
         else:

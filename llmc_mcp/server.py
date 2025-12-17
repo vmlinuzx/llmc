@@ -505,7 +505,11 @@ TOOLS: list[Tool] = [
             "properties": {
                 "path": {"type": "string", "description": "File path to write"},
                 "content": {"type": "string", "description": "Text content to write"},
-                "mode": {"type": "string", "enum": ["rewrite", "append"], "default": "rewrite"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["rewrite", "append"],
+                    "default": "rewrite",
+                },
                 "expected_sha256": {
                     "type": "string",
                     "description": "If set, verify file hash before write",
@@ -624,12 +628,12 @@ class LlmcMcpServer:
 
     def __init__(self, config: McpConfig):
         self.config = config
-        
+
         # Select prompt based on mode
         prompt = BOOTSTRAP_PROMPT
         if config.mode == "hybrid":
             prompt = HYBRID_MODE_PROMPT
-            
+
         self.server = Server("llmc-mcp", instructions=prompt)
 
         # Initialize observability (M4)
@@ -726,7 +730,9 @@ class LlmcMcpServer:
             "00_INIT": self._handle_bootstrap,
         }
 
-        logger.info(f"Code execution mode: {len(self.tools)} bootstrap tools registered")
+        logger.info(
+            f"Code execution mode: {len(self.tools)} bootstrap tools registered"
+        )
 
     def _init_hybrid_mode(self):
         """
@@ -773,6 +779,7 @@ class LlmcMcpServer:
 
         # Bootstrap budget check
         import json
+
         total_chars = sum(len(json.dumps(t.inputSchema)) for t in self.tools)
         if total_chars > self.config.hybrid.bootstrap_budget_warning:
             logger.warning(
@@ -780,7 +787,9 @@ class LlmcMcpServer:
                 f"{self.config.hybrid.bootstrap_budget_warning}). Consider removing tools."
             )
 
-        logger.info(f"Hybrid mode: {len(self.tools)} tools registered ({total_chars} chars)")
+        logger.info(
+            f"Hybrid mode: {len(self.tools)} tools registered ({total_chars} chars)"
+        )
 
     def _get_handler_for_tool(self, tool_name: str) -> Callable | None:
         """Centralized handler registry for all tools."""
@@ -789,20 +798,16 @@ class LlmcMcpServer:
             "read_file": self._handle_read_file,
             "list_dir": self._handle_list_dir,
             "stat": self._handle_stat,
-
             # Write tools (secured by allowed_roots)
             "linux_fs_write": self._handle_fs_write,
             "linux_fs_edit": self._handle_fs_edit,
             "linux_fs_mkdir": self._handle_fs_mkdir,
             "linux_fs_move": self._handle_fs_move,
             "linux_fs_delete": self._handle_fs_delete,
-
             # Shell (secured by allowlist)
             "run_cmd": self._handle_run_cmd,
-
             # Code exec (isolation-gated)
             "execute_code": self._handle_execute_code,
-
             # RAG (read-only, safe)
             "rag_search": self._handle_rag_search,
             "rag_search_enriched": self._handle_rag_search_enriched,
@@ -811,17 +816,13 @@ class LlmcMcpServer:
             "inspect": self._handle_inspect,
             "rag_stats": self._handle_rag_stats,
             "rag_plan": self._handle_rag_plan,
-
             # Metrics
             "get_metrics": self._handle_get_metrics,
-
             # Tool envelope
             "te_run": self._handle_te_run,
-
             # Repository
             "repo_read": self._handle_repo_read,
             "rag_query": self._handle_rag_query,
-
             # LinuxOps
             "linux_proc_list": self._handle_proc_list,
             "linux_proc_kill": self._handle_proc_kill,
@@ -986,7 +987,9 @@ class LlmcMcpServer:
 
         return handler
 
-    async def _handle_run_executable(self, cmd_path: str, args: list[str]) -> list[TextContent]:
+    async def _handle_run_executable(
+        self, cmd_path: str, args: list[str]
+    ) -> list[TextContent]:
         """Execute a configured executable."""
         cwd = (
             Path(self.config.tools.allowed_roots[0])
@@ -1036,7 +1039,9 @@ class LlmcMcpServer:
             return [
                 TextContent(
                     type="text",
-                    text=json.dumps({"success": False, "error": str(e), "exit_code": -1}, indent=2),
+                    text=json.dumps(
+                        {"success": False, "error": str(e), "exit_code": -1}, indent=2
+                    ),
                 )
             ]
 
@@ -1057,7 +1062,9 @@ class LlmcMcpServer:
             success = True
             error_msg = None
 
-            logger.info(f"call_tool: {name}", extra={"correlation_id": cid, "tool": name})
+            logger.info(
+                f"call_tool: {name}", extra={"correlation_id": cid, "tool": name}
+            )
 
             try:
                 handler = self.tool_handlers.get(name)
@@ -1084,7 +1091,9 @@ class LlmcMcpServer:
 
                 # Check for error in result (soft failure)
                 if result and result[0].text:
-                    if '"error"' in result[0].text:  # Still check for the string "error"
+                    if (
+                        '"error"' in result[0].text
+                    ):  # Still check for the string "error"
                         success = False
                         try:
                             data = json.loads(result[0].text)
@@ -1097,7 +1106,8 @@ class LlmcMcpServer:
                 success = False
                 error_msg = str(e)
                 logger.exception(
-                    f"Tool {name} failed: {e}", extra={"correlation_id": cid, "tool": name}
+                    f"Tool {name} failed: {e}",
+                    extra={"correlation_id": cid, "tool": name},
                 )
                 result = [
                     TextContent(
@@ -1272,7 +1282,9 @@ class LlmcMcpServer:
 
         try:
             result = tool_rag_where_used(llmc_root, symbol, limit=limit)
-            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+            return [
+                TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))
+            ]
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
@@ -1296,7 +1308,9 @@ class LlmcMcpServer:
 
         try:
             result = tool_rag_lineage(llmc_root, symbol, direction, max_results=limit)
-            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+            return [
+                TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))
+            ]
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
@@ -1311,7 +1325,9 @@ class LlmcMcpServer:
         max_neighbors = args.get("max_neighbors", 3)
 
         if not path and not symbol:
-            return [TextContent(type="text", text='{"error": "path or symbol is required"}')]
+            return [
+                TextContent(type="text", text='{"error": "path or symbol is required"}')
+            ]
 
         llmc_root = (
             Path(self.config.tools.allowed_roots[0])
@@ -1328,7 +1344,9 @@ class LlmcMcpServer:
                 include_full_source=include_full_source,
                 max_neighbors=max_neighbors,
             )
-            return [TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))]
+            return [
+                TextContent(type="text", text=json.dumps(result.to_dict(), indent=2))
+            ]
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
 
@@ -1373,7 +1391,7 @@ class LlmcMcpServer:
             router = build_router_from_toml(llmc_root)
             # Use choose_chain with a dummy slice view to get routing decision
             from llmc.rag.enrichment_router import EnrichmentSliceView
-            
+
             dummy_slice = EnrichmentSliceView(
                 span_hash="query_plan",
                 file_path=llmc_root / "query",
@@ -1559,7 +1577,9 @@ class LlmcMcpServer:
 
                 if not rag_result.error and rag_result.data:
                     # Format RAG preview
-                    preview = "🎯 Smart Search Results (AI-powered semantic search):\n\n"
+                    preview = (
+                        "🎯 Smart Search Results (AI-powered semantic search):\n\n"
+                    )
                     for i, item in enumerate(rag_result.data[:5], 1):
                         lines = item.get("lines", [0, 0])
                         preview += f"{i}. {item['path']}:{lines[0]}-{lines[1]}\n"
@@ -1567,12 +1587,12 @@ class LlmcMcpServer:
                         preview += f"   Relevance: {item['score']:.3f}\n"
                         if item.get("summary"):
                             summary = item["summary"][:120]
-                            preview += (
-                                f"   {summary}{'...' if len(item['summary']) > 120 else ''}\n"
-                            )
+                            preview += f"   {summary}{'...' if len(item['summary']) > 120 else ''}\n"
                         preview += "\n"
 
-                    preview += "💡 These are semantic search results with AI understanding.\n"
+                    preview += (
+                        "💡 These are semantic search results with AI understanding.\n"
+                    )
                     preview += "   They find MEANING, not just text matches.\n"
                     preview += f"   Original command: {command}\n"
                     preview += "   Run the original command if you need exact string matching.\n"
@@ -1655,7 +1675,9 @@ class LlmcMcpServer:
                 return [
                     TextContent(
                         type="text",
-                        text=json.dumps({"error": f"cwd '{cwd_str}' not allowed", "meta": {}}),
+                        text=json.dumps(
+                            {"error": f"cwd '{cwd_str}' not allowed", "meta": {}}
+                        ),
                     )
                 ]
 
@@ -1684,7 +1706,9 @@ class LlmcMcpServer:
         max_bytes = args.get("max_bytes")
 
         if not root or not path:
-            return [TextContent(type="text", text='{"error": "root and path are required"}')]
+            return [
+                TextContent(type="text", text='{"error": "root and path are required"}')
+            ]
 
         ctx = McpSessionContext.from_env()
 
@@ -1749,7 +1773,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     async def _handle_proc_kill(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_kill tool."""
@@ -1770,7 +1798,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     async def _handle_sys_snapshot(self, args: dict) -> list[TextContent]:
         """Handle linux_sys_snapshot tool."""
@@ -1781,7 +1813,11 @@ class LlmcMcpServer:
             result = mcp_linux_sys_snapshot(config=self.config.linux_ops)
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     # L3 LinuxOps - REPL handlers
     async def _handle_proc_start(self, args: dict) -> list[TextContent]:
@@ -1805,7 +1841,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     async def _handle_proc_send(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_send tool."""
@@ -1816,7 +1856,11 @@ class LlmcMcpServer:
         input_text = args.get("input")
 
         if not proc_id or input_text is None:
-            return [TextContent(type="text", text='{"error": "proc_id and input are required"}')]
+            return [
+                TextContent(
+                    type="text", text='{"error": "proc_id and input are required"}'
+                )
+            ]
 
         try:
             result = mcp_linux_proc_send(
@@ -1826,7 +1870,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     async def _handle_proc_read(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_read tool."""
@@ -1847,7 +1895,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     async def _handle_proc_stop(self, args: dict) -> list[TextContent]:
         """Handle linux_proc_stop tool."""
@@ -1868,7 +1920,11 @@ class LlmcMcpServer:
             )
             return [TextContent(type="text", text=json.dumps(result, indent=2))]
         except LinuxOpsError as e:
-            return [TextContent(type="text", text=json.dumps({"error": str(e), "code": e.code}))]
+            return [
+                TextContent(
+                    type="text", text=json.dumps({"error": str(e), "code": e.code})
+                )
+            ]
 
     # L1 Phase 2 - FS Write handlers (MAASL-protected)
     async def _handle_fs_write(self, args: dict) -> list[TextContent]:
@@ -1881,11 +1937,13 @@ class LlmcMcpServer:
         mode = args.get("mode", "rewrite")
         expected_sha256 = args.get("expected_sha256")
         if not path or content is None:
-            return [TextContent(type="text", text='{"error": "path and content required"}')]
-        
+            return [
+                TextContent(type="text", text='{"error": "path and content required"}')
+            ]
+
         # Extract agent/session context for lock tracking
         ctx = McpSessionContext.from_env()
-        
+
         result = write_file_protected(
             path=path,
             allowed_roots=self.config.tools.allowed_roots,
@@ -1899,11 +1957,15 @@ class LlmcMcpServer:
         if result.success:
             return [
                 TextContent(
-                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
                 )
             ]
         return [
-            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+            TextContent(
+                type="text",
+                text=json.dumps({"error": result.error, "meta": result.meta}),
+            )
         ]
 
     async def _handle_fs_mkdir(self, args: dict) -> list[TextContent]:
@@ -1918,11 +1980,15 @@ class LlmcMcpServer:
         if result.success:
             return [
                 TextContent(
-                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
                 )
             ]
         return [
-            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+            TextContent(
+                type="text",
+                text=json.dumps({"error": result.error, "meta": result.meta}),
+            )
         ]
 
     async def _handle_fs_move(self, args: dict) -> list[TextContent]:
@@ -1933,10 +1999,12 @@ class LlmcMcpServer:
         source = args.get("source", "")
         dest = args.get("dest", "")
         if not source or not dest:
-            return [TextContent(type="text", text='{"error": "source and dest required"}')]
-        
+            return [
+                TextContent(type="text", text='{"error": "source and dest required"}')
+            ]
+
         ctx = McpSessionContext.from_env()
-        
+
         result = move_file_protected(
             source=source,
             dest=dest,
@@ -1948,11 +2016,15 @@ class LlmcMcpServer:
         if result.success:
             return [
                 TextContent(
-                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
                 )
             ]
         return [
-            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+            TextContent(
+                type="text",
+                text=json.dumps({"error": result.error, "meta": result.meta}),
+            )
         ]
 
     async def _handle_fs_delete(self, args: dict) -> list[TextContent]:
@@ -1964,9 +2036,9 @@ class LlmcMcpServer:
         recursive = args.get("recursive", False)
         if not path:
             return [TextContent(type="text", text='{"error": "path required"}')]
-        
+
         ctx = McpSessionContext.from_env()
-        
+
         result = delete_file_protected(
             path=path,
             allowed_roots=self.config.tools.allowed_roots,
@@ -1978,11 +2050,15 @@ class LlmcMcpServer:
         if result.success:
             return [
                 TextContent(
-                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
                 )
             ]
         return [
-            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+            TextContent(
+                type="text",
+                text=json.dumps({"error": result.error, "meta": result.meta}),
+            )
         ]
 
     async def _handle_fs_edit(self, args: dict) -> list[TextContent]:
@@ -1995,10 +2071,12 @@ class LlmcMcpServer:
         new_text = args.get("new_text", "")
         expected = args.get("expected_replacements", 1)
         if not path or not old_text:
-            return [TextContent(type="text", text='{"error": "path and old_text required"}')]
-        
+            return [
+                TextContent(type="text", text='{"error": "path and old_text required"}')
+            ]
+
         ctx = McpSessionContext.from_env()
-        
+
         result = edit_block_protected(
             path=path,
             allowed_roots=self.config.tools.allowed_roots,
@@ -2012,11 +2090,15 @@ class LlmcMcpServer:
         if result.success:
             return [
                 TextContent(
-                    type="text", text=json.dumps({"data": result.data, "meta": result.meta})
+                    type="text",
+                    text=json.dumps({"data": result.data, "meta": result.meta}),
                 )
             ]
         return [
-            TextContent(type="text", text=json.dumps({"error": result.error, "meta": result.meta}))
+            TextContent(
+                type="text",
+                text=json.dumps({"error": result.error, "meta": result.meta}),
+            )
         ]
 
     async def run(self):
@@ -2068,7 +2150,9 @@ def main():
         logger.setLevel(log_level)
 
     # Log effective config (minus secrets)
-    logger.info(f"Config loaded: enabled={config.enabled}, version={config.config_version}")
+    logger.info(
+        f"Config loaded: enabled={config.enabled}, version={config.config_version}"
+    )
     logger.info(
         f"Tools: allowed_roots={config.tools.allowed_roots}, run_cmd={config.tools.enable_run_cmd}"
     )

@@ -14,9 +14,9 @@ sys.path.insert(0, str(repo_root))
 from llmc.rag.search import search_spans
 
 # Test 1: Direct search
-print("="*60)
+print("=" * 60)
 print("TEST 1: Direct search_spans for 'model'")
-print("="*60)
+print("=" * 60)
 
 results = search_spans("model", limit=5, repo_root=repo_root)
 print(f"\nResults: {len(results)}")
@@ -33,9 +33,9 @@ else:
     sys.exit(1)
 
 # Test 2: Config hot-reload
-print("="*60)
+print("=" * 60)
 print("TEST 2: Config hot-reload (edit llmc.toml)")
-print("="*60)
+print("=" * 60)
 
 from llmc.rag.config import load_config
 
@@ -44,8 +44,7 @@ original = config_file.read_text()
 
 # Edit
 modified = original.replace(
-    'default_profile = "docs"',
-    'default_profile = "code"  # HOTRELOAD_TEST'
+    'default_profile = "docs"', 'default_profile = "code"  # HOTRELOAD_TEST'
 )
 config_file.write_text(modified)
 print("\n✓ Config edited")
@@ -66,9 +65,9 @@ else:
     print(f"❌ FAILED - Still shows: {default_profile}")
     sys.exit(1)
 
-print("="*60)
+print("=" * 60)
 print("🎉 ALL TESTS PASSED!")
-print("="*60)
+print("=" * 60)
 print("\nThe bugs are fixed:")
 print("  ✓ 'model' keyword returns search results")
 print("  ✓ Config hot-reload works (no daemon restart needed)")

@@ -13,19 +13,18 @@ def test_load_valid_set(tmp_path):
             {
                 "query_id": "q1",
                 "text": "test query",
-                "judgments": [
-                    {"doc_id": "doc1", "score": 1.0}
-                ]
+                "judgments": [{"doc_id": "doc1", "score": 1.0}],
             }
-        ]
+        ],
     }
     f = tmp_path / "valid.json"
     f.write_text(json.dumps(data))
-    
+
     qs = load_query_set(str(f))
     assert qs.version == "1.0"
     assert len(qs.queries) == 1
     assert qs.queries[0].text == "test query"
+
 
 def test_schema_validation(tmp_path):
     data = {
@@ -34,15 +33,16 @@ def test_schema_validation(tmp_path):
             {
                 "query_id": "q1",
                 # Missing text
-                "judgments": []
+                "judgments": [],
             }
-        ]
+        ],
     }
     f = tmp_path / "invalid.json"
     f.write_text(json.dumps(data))
-    
+
     with pytest.raises(ValidationError):
         load_query_set(str(f))
+
 
 def test_file_not_found():
     with pytest.raises(FileNotFoundError):

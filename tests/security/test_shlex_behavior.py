@@ -1,5 +1,4 @@
 import shlex
-import subprocess
 
 cmd = "ls -la; echo Pwned"
 parts = shlex.split(cmd)

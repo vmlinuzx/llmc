@@ -24,7 +24,7 @@ def test_mrr_mixed() -> None:
     results = [
         [True, False],  # 1.0
         [False, True],  # 0.5
-        [False, False], # 0.0
+        [False, False],  # 0.0
     ]
     # (1.0 + 0.5 + 0.0) / 3 = 0.5
     assert mean_reciprocal_rank(results) == 0.5
@@ -44,8 +44,8 @@ def test_recall_at_10_all_hit() -> None:
 def test_recall_at_10_partial() -> None:
     """Some queries hit = correct ratio"""
     results = [
-        [True] + [False] * 20,   # Hit at 1
-        [False] * 20,            # Miss
+        [True] + [False] * 20,  # Hit at 1
+        [False] * 20,  # Miss
     ]
     assert recall_at_k(results, k=10) == 0.5
 

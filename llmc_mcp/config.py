@@ -114,9 +114,9 @@ class McpCodeExecutionConfig:
 class HybridConfig:
     """Hybrid mode settings (Phase 1 - MCP Hybrid Bootstrap Mode)."""
 
-    promoted_tools: list[str] = field(default_factory=lambda: [
-        "linux_fs_write", "linux_fs_edit", "run_cmd"
-    ])
+    promoted_tools: list[str] = field(
+        default_factory=lambda: ["linux_fs_write", "linux_fs_edit", "run_cmd"]
+    )
     include_execute_code: bool = True
     bootstrap_budget_warning: int = 15000
 
@@ -149,7 +149,9 @@ class McpObservabilityConfig:
         if self.enabled and self.csv_token_audit_enabled:
             path = Path(self.csv_path)
             if path.exists() and not path.is_file():
-                raise ValueError(f"Audit CSV path '{self.csv_path}' exists but is not a file")
+                raise ValueError(
+                    f"Audit CSV path '{self.csv_path}' exists but is not a file"
+                )
 
 
 @dataclass
@@ -164,8 +166,12 @@ class McpConfig:
     tools: McpToolsConfig = field(default_factory=McpToolsConfig)
     rag: McpRagConfig = field(default_factory=McpRagConfig)
     limits: McpLimitsConfig = field(default_factory=McpLimitsConfig)
-    observability: McpObservabilityConfig = field(default_factory=McpObservabilityConfig)
-    code_execution: McpCodeExecutionConfig = field(default_factory=McpCodeExecutionConfig)
+    observability: McpObservabilityConfig = field(
+        default_factory=McpObservabilityConfig
+    )
+    code_execution: McpCodeExecutionConfig = field(
+        default_factory=McpCodeExecutionConfig
+    )
     hybrid: HybridConfig = field(default_factory=HybridConfig)
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
 
@@ -227,7 +233,9 @@ def _apply_env_overrides(cfg: McpConfig) -> McpConfig:
             "LLMC_MCP_OBS_CSV_ENABLED", ""
         ).lower() in ("1", "true", "yes")
     if os.getenv("LLMC_MCP_OBS_CSV_PATH"):
-        cfg.observability.csv_path = os.getenv("LLMC_MCP_OBS_CSV_PATH", cfg.observability.csv_path)
+        cfg.observability.csv_path = os.getenv(
+            "LLMC_MCP_OBS_CSV_PATH", cfg.observability.csv_path
+        )
 
     return cfg
 
@@ -291,21 +299,27 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         tools = mcp_data.get("tools", {})
         cfg.tools.allowed_roots = tools.get("allowed_roots", cfg.tools.allowed_roots)
         cfg.tools.enable_run_cmd = tools.get("enable_run_cmd", cfg.tools.enable_run_cmd)
-        cfg.tools.run_cmd_blacklist = tools.get("run_cmd_blacklist", cfg.tools.run_cmd_blacklist)
+        cfg.tools.run_cmd_blacklist = tools.get(
+            "run_cmd_blacklist", cfg.tools.run_cmd_blacklist
+        )
         cfg.tools.executables = tools.get("executables", cfg.tools.executables)
         cfg.tools.read_timeout = tools.get("read_timeout", cfg.tools.read_timeout)
         cfg.tools.exec_timeout = tools.get("exec_timeout", cfg.tools.exec_timeout)
 
         # RAG
         rag = mcp_data.get("rag", {})
-        cfg.rag.jit_context_enabled = rag.get("jit_context_enabled", cfg.rag.jit_context_enabled)
+        cfg.rag.jit_context_enabled = rag.get(
+            "jit_context_enabled", cfg.rag.jit_context_enabled
+        )
         cfg.rag.default_scope = rag.get("default_scope", cfg.rag.default_scope)
         cfg.rag.top_k = rag.get("top_k", cfg.rag.top_k)
         cfg.rag.token_budget = rag.get("token_budget", cfg.rag.token_budget)
 
         # Limits
         limits = mcp_data.get("limits", {})
-        cfg.limits.max_request_bytes = limits.get("max_request_bytes", cfg.limits.max_request_bytes)
+        cfg.limits.max_request_bytes = limits.get(
+            "max_request_bytes", cfg.limits.max_request_bytes
+        )
         cfg.limits.max_response_bytes = limits.get(
             "max_response_bytes", cfg.limits.max_response_bytes
         )
@@ -313,7 +327,9 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         # Observability (M4)
         obs = mcp_data.get("observability", {})
         cfg.observability.enabled = obs.get("enabled", cfg.observability.enabled)
-        cfg.observability.log_format = obs.get("log_format", cfg.observability.log_format)
+        cfg.observability.log_format = obs.get(
+            "log_format", cfg.observability.log_format
+        )
         cfg.observability.log_level = obs.get("log_level", cfg.observability.log_level)
         cfg.observability.include_correlation_id = obs.get(
             "include_correlation_id", cfg.observability.include_correlation_id
@@ -321,23 +337,37 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.observability.metrics_enabled = obs.get(
             "metrics_enabled", cfg.observability.metrics_enabled
         )
-        cfg.observability.metrics_path = obs.get("metrics_path", cfg.observability.metrics_path)
+        cfg.observability.metrics_path = obs.get(
+            "metrics_path", cfg.observability.metrics_path
+        )
         cfg.observability.csv_token_audit_enabled = obs.get(
             "csv_token_audit_enabled", cfg.observability.csv_token_audit_enabled
         )
         cfg.observability.csv_path = obs.get("csv_path", cfg.observability.csv_path)
-        cfg.observability.sqlite_enabled = obs.get("sqlite_enabled", cfg.observability.sqlite_enabled)
-        cfg.observability.sqlite_path = obs.get("sqlite_path", cfg.observability.sqlite_path)
+        cfg.observability.sqlite_enabled = obs.get(
+            "sqlite_enabled", cfg.observability.sqlite_enabled
+        )
+        cfg.observability.sqlite_path = obs.get(
+            "sqlite_path", cfg.observability.sqlite_path
+        )
         cfg.observability.retention_days = obs.get(
             "retention_days", cfg.observability.retention_days
         )
 
         # Code Execution (Phase 2 - Code Mode)
         code_exec = mcp_data.get("code_execution", {})
-        cfg.code_execution.enabled = code_exec.get("enabled", cfg.code_execution.enabled)
-        cfg.code_execution.stubs_dir = code_exec.get("stubs_dir", cfg.code_execution.stubs_dir)
-        cfg.code_execution.sandbox = code_exec.get("sandbox", cfg.code_execution.sandbox)
-        cfg.code_execution.timeout = code_exec.get("timeout", cfg.code_execution.timeout)
+        cfg.code_execution.enabled = code_exec.get(
+            "enabled", cfg.code_execution.enabled
+        )
+        cfg.code_execution.stubs_dir = code_exec.get(
+            "stubs_dir", cfg.code_execution.stubs_dir
+        )
+        cfg.code_execution.sandbox = code_exec.get(
+            "sandbox", cfg.code_execution.sandbox
+        )
+        cfg.code_execution.timeout = code_exec.get(
+            "timeout", cfg.code_execution.timeout
+        )
         cfg.code_execution.max_output_bytes = code_exec.get(
             "max_output_bytes", cfg.code_execution.max_output_bytes
         )
@@ -347,8 +377,12 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
 
         # Hybrid Mode (Phase 1 - Hybrid Bootstrap Mode)
         hybrid = mcp_data.get("hybrid", {})
-        cfg.hybrid.promoted_tools = hybrid.get("promoted_tools", cfg.hybrid.promoted_tools)
-        cfg.hybrid.include_execute_code = hybrid.get("include_execute_code", cfg.hybrid.include_execute_code)
+        cfg.hybrid.promoted_tools = hybrid.get(
+            "promoted_tools", cfg.hybrid.promoted_tools
+        )
+        cfg.hybrid.include_execute_code = hybrid.get(
+            "include_execute_code", cfg.hybrid.include_execute_code
+        )
         cfg.hybrid.bootstrap_budget_warning = hybrid.get(
             "bootstrap_budget_warning", cfg.hybrid.bootstrap_budget_warning
         )

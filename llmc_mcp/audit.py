@@ -36,7 +36,9 @@ class TokenAuditWriter:
         self.enabled = enabled
         self._lock = Lock()
         self._initialized = False
-        self._failed = False  # Track if initialization failed to avoid repeated warnings
+        self._failed = (
+            False  # Track if initialization failed to avoid repeated warnings
+        )
 
     def _ensure_file(self) -> None:
         """Create CSV file with headers if needed. Fails silently on error."""
@@ -97,5 +99,7 @@ class TokenAuditWriter:
                     )
         except Exception as e:
             # CRITICAL: Never let audit failures kill tool calls
-            logger.warning(f"Failed to write audit record: {e}. Continuing without audit.")
+            logger.warning(
+                f"Failed to write audit record: {e}. Continuing without audit."
+            )
             self._failed = True  # Disable further attempts

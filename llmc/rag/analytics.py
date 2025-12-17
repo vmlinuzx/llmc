@@ -66,7 +66,9 @@ class QueryTracker:
         conn.executescript(self.SCHEMA)
         conn.close()
 
-    def log_query(self, query_text: str, results_count: int, files_retrieved: list[str]):
+    def log_query(
+        self, query_text: str, results_count: int, files_retrieved: list[str]
+    ):
         """Log a search query."""
         import json
 

@@ -45,7 +45,9 @@ def precision_at_k_files(files: list[str], gold_globs: list[str], k: int) -> flo
     return hits / max(1, k)
 
 
-def precision_at_k_tokens(items: list[dict[str, Any]], relevant_tokens: list[str], k: int) -> float:
+def precision_at_k_tokens(
+    items: list[dict[str, Any]], relevant_tokens: list[str], k: int
+) -> float:
     """Precision@k based on token presence in file path + snippet text."""
     tokens = [token.lower() for token in relevant_tokens]
     top = items[:k]
@@ -155,10 +157,14 @@ def run(
         fb_files = [item["file"] for item in (fb_items or [])]
 
         p_rag_tokens = (
-            precision_at_k_tokens(rag_items or [], relevant, k) if rag_items is not None else None
+            precision_at_k_tokens(rag_items or [], relevant, k)
+            if rag_items is not None
+            else None
         )
         p_fb_tokens = (
-            precision_at_k_tokens(fb_items or [], relevant, k) if fb_items is not None else None
+            precision_at_k_tokens(fb_items or [], relevant, k)
+            if fb_items is not None
+            else None
         )
         p_rag_gold = (
             precision_at_k_files(rag_files, gold_globs, k)
@@ -183,12 +189,16 @@ def run(
         summary["by_query"].append(
             {
                 "q": query,
-                "rag": {"p_at_k_tokens": p_rag_tokens, "files": rag_files}
-                if rag_items is not None
-                else None,
-                "fallback": {"p_at_k_tokens": p_fb_tokens, "files": fb_files}
-                if fb_items is not None
-                else None,
+                "rag": (
+                    {"p_at_k_tokens": p_rag_tokens, "files": rag_files}
+                    if rag_items is not None
+                    else None
+                ),
+                "fallback": (
+                    {"p_at_k_tokens": p_fb_tokens, "files": fb_files}
+                    if fb_items is not None
+                    else None
+                ),
                 "gold": gold_globs or None,
                 "p_at_k_gold": (
                     {"rag": p_rag_gold, "fallback": p_fb_gold}
@@ -220,7 +230,9 @@ def run(
 
     with md_path.open("w", encoding="utf-8") as handle:
         handle.write(f"# Search Eval Report — {timestamp}\n\n")
-        handle.write(f"- k: {k}\n- queries: {summary['n']}\n- mode: {mode_normalized}\n\n")
+        handle.write(
+            f"- k: {k}\n- queries: {summary['n']}\n- mode: {mode_normalized}\n\n"
+        )
         handle.write("## Macro Scores\n\n")
         if macro_tokens["rag"] is not None or macro_tokens["fallback"] is not None:
             rag_value = macro_tokens["rag"]
@@ -242,7 +254,9 @@ def run(
             if row.get("rag") is not None:
                 handle.write(f"- Tokens P@{k} (RAG): {row['rag']['p_at_k_tokens']}\n")
             if row.get("fallback") is not None:
-                handle.write(f"- Tokens P@{k} (FB): {row['fallback']['p_at_k_tokens']}\n")
+                handle.write(
+                    f"- Tokens P@{k} (FB): {row['fallback']['p_at_k_tokens']}\n"
+                )
             if row.get("p_at_k_gold") is not None:
                 handle.write(
                     f"- Gold P@{k}: RAG={row['p_at_k_gold']['rag']}, "
@@ -274,11 +288,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     result = run(
-        Path(args.repo_root).resolve(), Path(args.queries), Path(args.out), k=args.k, mode=args.mode
+        Path(args.repo_root).resolve(),
+        Path(args.queries),
+        Path(args.out),
+        k=args.k,
+        mode=args.mode,
     )
     print(
         json.dumps(
-            {"wrote": result["json"], "md": result["md"], "macro": result["summary"]["macro"]},
+            {
+                "wrote": result["json"],
+                "md": result["md"],
+                "macro": result["summary"]["macro"],
+            },
             indent=2,
         )
     )

@@ -15,7 +15,8 @@ def test_query_routing_integration(tmp_path, monkeypatch):
     (repo_root / ".git").mkdir()
 
     # Config: Enable routing
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [embeddings.profiles.default_docs]
 provider = "ignored"
 model = "hash-emb-v1"
@@ -36,7 +37,8 @@ index = "emb_code"
 
 [routing.options]
 enable_query_routing = true
-""")
+"""
+    )
 
     monkeypatch.chdir(repo_root)
 
@@ -51,18 +53,26 @@ enable_query_routing = true
         "INSERT INTO files (path, lang, file_hash, size, mtime) VALUES ('code.py', 'python', 'h2', 10, 0)"
     )
 
-    file_id_doc = db.conn.execute("SELECT id FROM files WHERE path='doc.md'").fetchone()[0]
-    file_id_code = db.conn.execute("SELECT id FROM files WHERE path='code.py'").fetchone()[0]
+    file_id_doc = db.conn.execute(
+        "SELECT id FROM files WHERE path='doc.md'"
+    ).fetchone()[0]
+    file_id_code = db.conn.execute(
+        "SELECT id FROM files WHERE path='code.py'"
+    ).fetchone()[0]
 
     # Insert spans
-    db.conn.execute(f"""
+    db.conn.execute(
+        f"""
         INSERT INTO spans (file_id, symbol, kind, start_line, end_line, byte_start, byte_end, span_hash, slice_type) 
         VALUES ({file_id_doc}, 'doc', 'text', 1, 1, 0, 10, 'hash_doc', 'docs')
-    """)
-    db.conn.execute(f"""
+    """
+    )
+    db.conn.execute(
+        f"""
         INSERT INTO spans (file_id, symbol, kind, start_line, end_line, byte_start, byte_end, span_hash, slice_type) 
         VALUES ({file_id_code}, 'code', 'func', 1, 1, 0, 10, 'hash_code', 'code')
-    """)
+    """
+    )
 
     # Insert embeddings:
     # Doc vector in 'embeddings' table
@@ -89,8 +99,12 @@ enable_query_routing = true
     # we are partitioning the search space.
 
     # Insert random vectors
-    db.conn.execute("INSERT INTO embeddings (span_hash, vec) VALUES ('hash_doc', ?)", (vec_blob,))
-    db.conn.execute("INSERT INTO emb_code (span_hash, vec) VALUES ('hash_code', ?)", (vec_blob,))
+    db.conn.execute(
+        "INSERT INTO embeddings (span_hash, vec) VALUES ('hash_doc', ?)", (vec_blob,)
+    )
+    db.conn.execute(
+        "INSERT INTO emb_code (span_hash, vec) VALUES ('hash_code', ?)", (vec_blob,)
+    )
     db.conn.commit()
 
     db.close()
@@ -148,7 +162,8 @@ enable_query_routing = true
     assert results[0].debug_info["search"]["target_index"] == "embeddings"
 
     # Test 3: Disable Routing
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [embeddings.profiles.default_docs]
 provider = "ignored"
 model = "hash-emb-v1"
@@ -160,7 +175,8 @@ index = "embeddings"
 
 [routing.options]
 enable_query_routing = false
-""")
+"""
+    )
 
     # Clear config cache
 

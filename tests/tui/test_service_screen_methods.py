@@ -1,15 +1,13 @@
-
-import sys
 import json
-import os
 from pathlib import Path
+import sys
 from unittest.mock import MagicMock, patch
-import pytest
 
 # Add repo root to sys.path
 sys.path.append(str(Path.cwd()))
 
 from llmc.tui.screens.service import ServiceScreen
+
 
 class TestServiceScreenMethods:
 
@@ -18,7 +16,7 @@ class TestServiceScreenMethods:
         """Test retrieving repos via ServiceState."""
         # We need to ensure the import succeeds, so we mock the module if it's not there
         if "llmc.rag.service" not in sys.modules:
-             sys.modules["llmc.rag.service"] = MagicMock()
+            sys.modules["llmc.rag.service"] = MagicMock()
 
         mock_state = MagicMock()
         mock_state.state = {"repos": ["/path/to/repo1", "/path/to/repo2"]}
@@ -83,8 +81,8 @@ class TestServiceScreenMethods:
 
         # If tools.rag.doctor raises ImportError
         with patch.dict(sys.modules, {"llmc.rag.doctor": None}):
-             # We need to ensure the import fails.
-             # Note: if tools.rag.doctor was already imported elsewhere, 'from llmc.rag.doctor import ...' might succeed using the cached module.
-             # So we might need to remove it from sys.modules to force re-import, but setting to None forces failure.
-             stats = screen._get_repo_stats(Path("/some/repo"))
-             assert stats is None
+            # We need to ensure the import fails.
+            # Note: if tools.rag.doctor was already imported elsewhere, 'from llmc.rag.doctor import ...' might succeed using the cached module.
+            # So we might need to remove it from sys.modules to force re-import, but setting to None forces failure.
+            stats = screen._get_repo_stats(Path("/some/repo"))
+            assert stats is None

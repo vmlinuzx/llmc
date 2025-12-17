@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from llmc.rag import indexer
-from llmc.rag.utils import find_repo_root
+from llmc.core import find_repo_root
 
 
 def _write_simple_python_file(repo_root: Path) -> Path:

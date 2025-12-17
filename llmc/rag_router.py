@@ -103,8 +103,18 @@ class RAGRouter:
             # Task patterns that override RAG analysis
             "forced_routing": {
                 "local": ["format", "add comments", "fix", "rename variable"],
-                "mid": ["write tests", "generate test cases", "find bugs", "stress test"],
-                "premium": ["design", "review security", "validate", "complex refactor"],
+                "mid": [
+                    "write tests",
+                    "generate test cases",
+                    "find bugs",
+                    "stress test",
+                ],
+                "premium": [
+                    "design",
+                    "review security",
+                    "validate",
+                    "complex refactor",
+                ],
             },
         }
 
@@ -262,7 +272,9 @@ class RAGRouter:
         query_lower = query.lower()
         return any(kw in query_lower for kw in validation_keywords)
 
-    def _decide_tier(self, analysis: QueryAnalysis, query: str, repo_root: Path) -> RoutingDecision:
+    def _decide_tier(
+        self, analysis: QueryAnalysis, query: str, repo_root: Path
+    ) -> RoutingDecision:
         """
         Make the routing decision based on analysis.
 
@@ -297,15 +309,20 @@ class RAGRouter:
             tier = "premium"
             rationale.append("Complex reasoning required")
         elif (
-            analysis.estimated_context_tokens > self.config["thresholds"]["context_token_limit_mid"]
+            analysis.estimated_context_tokens
+            > self.config["thresholds"]["context_token_limit_mid"]
         ):
             tier = "premium"
-            rationale.append(f"Large context needed ({analysis.estimated_context_tokens} tokens)")
+            rationale.append(
+                f"Large context needed ({analysis.estimated_context_tokens} tokens)"
+            )
 
         # Decision: Local tier
         elif analysis.complexity == "simple" and analysis.confidence > 0.8:
             tier = "local"
-            rationale.append(f"Simple task with high confidence ({analysis.confidence:.2f})")
+            rationale.append(
+                f"Simple task with high confidence ({analysis.confidence:.2f})"
+            )
         elif not analysis.requires_codebase and analysis.complexity == "simple":
             tier = "local"
             rationale.append("Simple task without codebase context")

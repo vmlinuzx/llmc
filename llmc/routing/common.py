@@ -31,10 +31,15 @@ def load_routing_config(start_dir: Path | None = None) -> dict[str, Any]:
                 routing = data.get("routing", {})
                 cfg.update(
                     {
-                        "default_route": routing.get("default_route", cfg["default_route"]),
-                        "code_detection": routing.get("code_detection", cfg["code_detection"])
+                        "default_route": routing.get(
+                            "default_route", cfg["default_route"]
+                        ),
+                        "code_detection": routing.get(
+                            "code_detection", cfg["code_detection"]
+                        )
                         or {},
-                        "erp_vs_code": routing.get("erp_vs_code", cfg["erp_vs_code"]) or {},
+                        "erp_vs_code": routing.get("erp_vs_code", cfg["erp_vs_code"])
+                        or {},
                     }
                 )
             except Exception:

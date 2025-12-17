@@ -111,7 +111,9 @@ class ServiceScreen(LLMCScreen):
                 yield Static(id="status-content")
                 with Container(id="service-buttons"):
                     yield Button("[s] Start", id="btn-start", classes="svc-btn")
-                    yield Button("[x] Stop", id="btn-stop", classes="svc-btn", variant="error")
+                    yield Button(
+                        "[x] Stop", id="btn-stop", classes="svc-btn", variant="error"
+                    )
                     yield Button("[t] Restart", id="btn-restart", classes="svc-btn")
 
             # Repos panel
@@ -130,16 +132,16 @@ class ServiceScreen(LLMCScreen):
     def on_mount(self) -> None:
         """Initialize service screen."""
         super().on_mount()
-        
+
         # Set up repos table
         table = self.query_one("#repos-table", DataTable)
         table.add_columns("Repository", "Status", "Spans")
-        
+
         self._start_log_stream()
         self.update_status()
         self.update_repos()
         self.update_logs()
-        
+
         self.set_interval(3.0, self.update_status)
         self.set_interval(5.0, self.update_repos)
         self.set_interval(0.5, self.update_logs)
@@ -154,37 +156,52 @@ class ServiceScreen(LLMCScreen):
             # Check systemd service status
             result = subprocess.run(
                 ["systemctl", "--user", "is-active", "llmc-rag.service"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=5,
             )
             is_active = result.stdout.strip() == "active"
-            
+
             # Get more details if active
             if is_active:
                 pid_result = subprocess.run(
-                    ["systemctl", "--user", "show", "-p", "MainPID", "llmc-rag.service"],
-                    check=False, capture_output=True,
+                    [
+                        "systemctl",
+                        "--user",
+                        "show",
+                        "-p",
+                        "MainPID",
+                        "llmc-rag.service",
+                    ],
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=5,
                 )
-                pid = pid_result.stdout.strip().split("=")[1] if "=" in pid_result.stdout else "?"
-                
+                pid = (
+                    pid_result.stdout.strip().split("=")[1]
+                    if "=" in pid_result.stdout
+                    else "?"
+                )
+
                 status_color = "green"
                 status_text = "RUNNING"
             else:
                 pid = "-"
                 status_color = "red"
                 status_text = "STOPPED"
-            
-            content = "\n".join([
-                f"[#666680]Status:[/]  [bold {status_color}]{status_text}[/]",
-                f"[#666680]PID:[/]     [bold]{pid}[/]",
-                "[#666680]Service:[/] llmc-rag.service",
-            ])
-            
+
+            content = "\n".join(
+                [
+                    f"[#666680]Status:[/]  [bold {status_color}]{status_text}[/]",
+                    f"[#666680]PID:[/]     [bold]{pid}[/]",
+                    "[#666680]Service:[/] llmc-rag.service",
+                ]
+            )
+
             self.query_one("#status-content", Static).update(content)
-            
+
         except Exception as e:
             self.query_one("#status-content", Static).update(
                 f"[red]Error checking status: {e}[/]"
@@ -195,9 +212,9 @@ class ServiceScreen(LLMCScreen):
         try:
             table = self.query_one("#repos-table", DataTable)
             table.clear()
-            
+
             repos = self._get_registered_repos()
-            
+
             if not repos:
                 # Could optionally show a placeholder or empty state
                 pass
@@ -213,7 +230,7 @@ class ServiceScreen(LLMCScreen):
                     spans = str(stats.get("spans", "?"))
 
                 table.add_row(str(repo_path), status, spans)
-            
+
         except Exception as e:
             self.notify(f"Error loading repos: {e}", severity="error")
 
@@ -222,6 +239,7 @@ class ServiceScreen(LLMCScreen):
         # Try importing ServiceState
         try:
             from llmc.rag.service import ServiceState
+
             return ServiceState().state.get("repos", [])
         except ImportError:
             # Fallback to reading file directly
@@ -249,6 +267,7 @@ class ServiceScreen(LLMCScreen):
         """Get basic stats for a repo."""
         try:
             from llmc.rag.doctor import run_rag_doctor
+
             report = run_rag_doctor(repo_path)
             return report.get("stats")
         except ImportError:
@@ -260,17 +279,25 @@ class ServiceScreen(LLMCScreen):
         """Start streaming service logs."""
         if self._log_proc is not None:
             return
-        
+
         try:
             self._log_proc = subprocess.Popen(
-                ["journalctl", "--user", "-u", "llmc-rag.service",
-                 "-f", "-n", "50", "--no-pager"],
+                [
+                    "journalctl",
+                    "--user",
+                    "-u",
+                    "llmc-rag.service",
+                    "-f",
+                    "-n",
+                    "50",
+                    "--no-pager",
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
             )
-            
+
             def reader():
                 try:
                     for line in self._log_proc.stdout:
@@ -281,10 +308,10 @@ class ServiceScreen(LLMCScreen):
                                 self.logs = self.logs[-100:]
                 except Exception:
                     pass
-            
+
             self._log_thread = threading.Thread(target=reader, daemon=True)
             self._log_thread.start()
-            
+
         except Exception as e:
             self.logs.append(f"[Log stream error: {e}]")
 
@@ -301,10 +328,12 @@ class ServiceScreen(LLMCScreen):
         """Refresh log display."""
         if not self._show_logs:
             return
-            
-        content = "\n".join(self.logs[-50:]) if self.logs else "[dim]No logs yet...[/dim]"
+
+        content = (
+            "\n".join(self.logs[-50:]) if self.logs else "[dim]No logs yet...[/dim]"
+        )
         self.query_one("#log-content", Static).update(content)
-        
+
         scroll = self.query_one("#log-scroll", ScrollableContainer)
         scroll.scroll_end(animate=False)
 
@@ -349,15 +378,19 @@ class ServiceScreen(LLMCScreen):
 
     def action_repo_add(self) -> None:
         """Add a repository (placeholder)."""
-        self.notify("Repo add: Use CLI 'llmc service repo add <path>'", severity="information")
+        self.notify(
+            "Repo add: Use CLI 'llmc service repo add <path>'", severity="information"
+        )
 
     def _run_systemctl(self, action: str) -> None:
         """Run a systemctl command asynchronously."""
+
         def run():
             try:
                 result = subprocess.run(
                     ["systemctl", "--user", action, "llmc-rag.service"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=30,
                 )
@@ -365,12 +398,12 @@ class ServiceScreen(LLMCScreen):
                     self.logs.append(f"[OK] Service {action} successful")
                 else:
                     self.logs.append(f"[ERR] Service {action}: {result.stderr[:100]}")
-                
+
                 # Refresh status after action
                 self.call_from_thread(self.update_status)
-                
+
             except Exception as e:
                 self.logs.append(f"[ERR] Service {action}: {e}")
-        
+
         thread = threading.Thread(target=run, daemon=True)
         thread.start()

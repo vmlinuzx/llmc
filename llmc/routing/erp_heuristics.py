@@ -32,7 +32,9 @@ def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | Non
         return RouteSignal(route="erp", score=0.85, reason=f"erp:sku={m.group(1)}")
     hits = [w for w in ERP_WORDS if w in tl]
     if len(hits) >= 2:
-        return RouteSignal(route="erp", score=0.70, reason=f"erp:kw2={','.join(hits[:3])}")
+        return RouteSignal(
+            route="erp", score=0.70, reason=f"erp:kw2={','.join(hits[:3])}"
+        )
     if len(hits) == 1:
         return RouteSignal(route="erp", score=0.55, reason=f"erp:kw1={hits[0]}")
     return None

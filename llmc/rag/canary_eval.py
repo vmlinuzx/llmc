@@ -22,7 +22,9 @@ DEFAULT_CANARY: list[dict[str, Any]] = [
 ]
 
 
-def precision_at_k(items: list[object], relevant_tokens: list[str], k: int = 10) -> float:
+def precision_at_k(
+    items: list[object], relevant_tokens: list[str], k: int = 10
+) -> float:
     """
     Compute precision@k by checking whether any relevant token appears in the
     file path or snippet text of the top-k items.
@@ -66,7 +68,9 @@ def _clear_weight_env() -> None:
         os.environ.pop(env, None)
 
 
-def run(repo_root: Path, queries_path: Path | None = None, k: int = 10) -> dict[str, Any]:
+def run(
+    repo_root: Path, queries_path: Path | None = None, k: int = 10
+) -> dict[str, Any]:
     """
     Run a baseline and alt evaluation over a set of canary queries.
 

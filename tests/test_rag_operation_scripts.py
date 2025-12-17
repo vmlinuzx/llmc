@@ -30,7 +30,9 @@ class TestRagPlanHelper:
         """Test that rag_plan_helper.sh exists and is executable."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         assert script_path.exists(), "rag_plan_helper.sh should exist"
-        assert os.access(script_path, os.X_OK), "rag_plan_helper.sh should be executable"
+        assert os.access(
+            script_path, os.X_OK
+        ), "rag_plan_helper.sh should be executable"
 
     def test_script_has_proper_shebang(self):
         """Test that script has proper bash shebang."""
@@ -43,7 +45,10 @@ class TestRagPlanHelper:
         """Test that script has valid bash syntax."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -97,7 +102,11 @@ class TestRagPlanHelper:
         """Test that query from stdin is read correctly."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         subprocess.run(
-            [str(script_path)], check=False, capture_output=True, text=True, input="test query"
+            [str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
+            input="test query",
         )
         # May fail without proper setup, but should process the query
         # This tests stdin handling
@@ -154,7 +163,10 @@ class TestRagPlanHelper:
         """Test that unknown options produce error."""
         script_path = scripts_dir / "rag_plan_helper.sh"
         result = subprocess.run(
-            [str(script_path), "--unknown-flag"], check=False, capture_output=True, text=True
+            [str(script_path), "--unknown-flag"],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode != 0
         assert "unknown option" in result.stderr or "Usage" in result.stderr

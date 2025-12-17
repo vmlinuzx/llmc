@@ -10,12 +10,12 @@ from typing import Protocol
 @dataclass
 class DocgenResult:
     """Result of a documentation generation operation."""
-    
+
     status: str  # "noop" | "generated" | "skipped" | "error"
     sha256: str
     output_markdown: str | None
     reason: str | None = None
-    
+
     def __post_init__(self):
         """Validate status field."""
         valid_statuses = {"noop", "generated", "skipped", "error"}
@@ -28,11 +28,11 @@ class DocgenResult:
 
 class DocgenBackend(Protocol):
     """Protocol for documentation generation backends.
-    
+
     Backends are responsible for generating documentation for a single file,
     given the source contents and optional graph context.
     """
-    
+
     def generate_for_file(
         self,
         repo_root: Path,
@@ -43,7 +43,7 @@ class DocgenBackend(Protocol):
         graph_context: str | None,
     ) -> DocgenResult:
         """Generate documentation for a single file.
-        
+
         Args:
             repo_root: Absolute path to repository root
             relative_path: Path relative to repo root
@@ -51,7 +51,7 @@ class DocgenBackend(Protocol):
             source_contents: Contents of source file
             existing_doc_contents: Contents of existing doc (if any)
             graph_context: Graph context from RAG (if available)
-            
+
         Returns:
             DocgenResult with status and generated content
         """

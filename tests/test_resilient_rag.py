@@ -43,7 +43,9 @@ class TestResilientRag:
             file="src/auth.py",
             snippet=Snippet(
                 text="def login():",
-                location=SnippetLocation(path="src/auth.py", start_line=101, end_line=102),
+                location=SnippetLocation(
+                    path="src/auth.py", start_line=101, end_line=102
+                ),
             ),
         )
 

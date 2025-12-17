@@ -59,11 +59,17 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--since", metavar="SHA", help="Only parse files changed since the given commit")
+@click.option(
+    "--since", metavar="SHA", help="Only parse files changed since the given commit"
+)
 @click.option("--no-export", is_flag=True, default=False, help="Skip JSONL span export")
 @click.option("--json", "as_json", is_flag=True, help="Emit output as JSON.")
-@click.option("--show-domain-decisions", is_flag=True, help="Show domain resolution decisions.")
-def index(since: str | None, no_export: bool, as_json: bool, show_domain_decisions: bool) -> None:
+@click.option(
+    "--show-domain-decisions", is_flag=True, help="Show domain resolution decisions."
+)
+def index(
+    since: str | None, no_export: bool, as_json: bool, show_domain_decisions: bool
+) -> None:
     """Index the repository (full or incremental)."""
     from .indexer import index_repo
 
@@ -110,7 +116,9 @@ def _collect_paths(paths: Iterable[str], use_stdin: bool) -> list[Path]:
     help="Read newline-delimited paths from stdin",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit output as JSON.")
-def sync(paths: Iterable[str], since: str | None, use_stdin: bool, as_json: bool) -> None:
+def sync(
+    paths: Iterable[str], since: str | None, use_stdin: bool, as_json: bool
+) -> None:
     """Incrementally update spans for selected files."""
     from .indexer import sync_paths
     from .utils import git_changed_paths
@@ -236,7 +244,10 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
 
 @cli.command()
 @click.option(
-    "--limit", default=10, show_default=True, help="Maximum spans to include in the plan."
+    "--limit",
+    default=10,
+    show_default=True,
+    help="Maximum spans to include in the plan.",
 )
 @click.option(
     "--dry-run/--execute",
@@ -292,7 +303,9 @@ def enrich(
     repo_root = _find_repo_root()
 
     if code_first and no_code_first:
-        click.echo("Error: cannot pass both --code-first and --no-code-first.", err=True)
+        click.echo(
+            "Error: cannot pass both --code-first and --no-code-first.", err=True
+        )
         raise SystemExit(1)
 
     code_first_override: bool | None
@@ -323,12 +336,16 @@ def enrich(
     db = Database(db_file)
     try:
         if dry_run:
-            plan = enrichment_plan(db, repo_root, limit=limit, cooldown_seconds=cooldown)
+            plan = enrichment_plan(
+                db, repo_root, limit=limit, cooldown_seconds=cooldown
+            )
             if not plan:
                 click.echo("No spans pending enrichment.")
                 return
             click.echo(json.dumps(plan, indent=2, ensure_ascii=False))
-            click.echo("\n(Dry run only. Pass --execute to persist enrichment results.)")
+            click.echo(
+                "\n(Dry run only. Pass --execute to persist enrichment results.)"
+            )
             return
 
         llm = default_enrichment_callable(model)
@@ -358,7 +375,10 @@ def enrich(
 
 @cli.command()
 @click.option(
-    "--limit", default=10, show_default=True, help="Maximum spans to include in the plan."
+    "--limit",
+    default=10,
+    show_default=True,
+    help="Maximum spans to include in the plan.",
 )
 @click.option(
     "--dry-run/--execute",
@@ -396,7 +416,9 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
         dim_arg = None if dim <= 0 else dim
 
         if dry_run:
-            plan = embedding_plan(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
+            plan = embedding_plan(
+                db, repo_root, limit=limit, model=model_arg, dim=dim_arg
+            )
             if not plan:
                 click.echo("No spans pending embedding.")
                 return
@@ -420,7 +442,9 @@ def embed(limit: int, dry_run: bool, model: str, dim: int) -> None:
 @click.argument("query", nargs=-1)
 @click.option("--limit", default=5, show_default=True, help="Maximum spans to return.")
 @click.option("--json", "as_json", is_flag=True, help="Emit results as JSON.")
-@click.option("--debug", is_flag=True, help="Include debug metadata (graph, enrichment, scores).")
+@click.option(
+    "--debug", is_flag=True, help="Include debug metadata (graph, enrichment, scores)."
+)
 def search(query: list[str], limit: int, as_json: bool, debug: bool) -> None:
     """Run a cosine-similarity search over the local embedding index."""
     phrase = " ".join(query).strip()
@@ -492,7 +516,8 @@ def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> 
     """Run a lightweight embedding quality benchmark."""
     metrics = run_embedding_benchmark()
     success = (
-        metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+        metrics["top1_accuracy"] >= top1_threshold
+        and metrics["avg_margin"] >= margin_threshold
     )
     report = {
         **metrics,
@@ -519,7 +544,9 @@ def benchmark(as_json: bool, top1_threshold: float, margin_threshold: float) -> 
 @cli.command()
 @click.argument("query", nargs=-1)
 @click.option("--limit", default=5, show_default=True, help="Maximum spans to return.")
-@click.option("--min-score", default=0.4, show_default=True, help="Minimum span score to keep.")
+@click.option(
+    "--min-score", default=0.4, show_default=True, help="Minimum span score to keep."
+)
 @click.option(
     "--min-confidence",
     default=0.6,
@@ -618,12 +645,18 @@ def export(output: str | None) -> None:
 
 @cli.command()
 @click.option("--path", help="File path to inspect.")
-@click.option("--symbol", help="Symbol name to resolve (e.g. 'tools.rag.search.search_spans').")
+@click.option(
+    "--symbol", help="Symbol name to resolve (e.g. 'tools.rag.search.search_spans')."
+)
 @click.option("--line", type=int, help="Line number to focus on (if path provided).")
 @click.option("--full", "full_source", is_flag=True, help="Include full source code.")
 @click.option("--json", "as_json", is_flag=True, help="Emit machine-readable JSON.")
 def inspect(
-    path: str | None, symbol: str | None, line: int | None, full_source: bool, as_json: bool
+    path: str | None,
+    symbol: str | None,
+    line: int | None,
+    full_source: bool,
+    as_json: bool,
 ) -> None:
     """Fast inspection of a file or symbol with graph + enrichment context.
 
@@ -639,7 +672,11 @@ def inspect(
 
     try:
         result = inspect_entity(
-            repo_root, path=path, symbol=symbol, line=line, include_full_source=full_source
+            repo_root,
+            path=path,
+            symbol=symbol,
+            line=line,
+            include_full_source=full_source,
         )
     except Exception as e:
         click.echo(f"Error inspecting entity: {e}", err=True)
@@ -699,11 +736,15 @@ def inspect(
         elif status == "file_not_indexed":
             click.echo("# GRAPH STATUS: ⚠️  File not found in graph index.")
         elif status == "isolated":
-            click.echo("# GRAPH STATUS: ⚠️  File indexed but isolated (no relationships found).")
+            click.echo(
+                "# GRAPH STATUS: ⚠️  File indexed but isolated (no relationships found)."
+            )
 
     click.echo("")
     if result.primary_span:
-        click.echo(f"# SNIPPET (lines {result.primary_span[0]}-{result.primary_span[1]}):")
+        click.echo(
+            f"# SNIPPET (lines {result.primary_span[0]}-{result.primary_span[1]}):"
+        )
     else:
         click.echo("# SNIPPET:")
 
@@ -807,7 +848,11 @@ def _now_iso() -> str:
     import datetime as _dt
 
     # Use timezone-aware UTC timestamp to avoid deprecated utcnow.
-    return _dt.datetime.now(_dt.UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+    return (
+        _dt.datetime.now(_dt.UTC)
+        .isoformat(timespec="milliseconds")
+        .replace("+00:00", "Z")
+    )
 
 
 def _emit_start_event(command: str, **kw) -> None:
@@ -829,7 +874,12 @@ def _emit_end_event(command: str, total: int, elapsed_ms: int) -> None:
 
 
 def _emit_error_event(command: str, message: str, code: str | None = None) -> None:
-    evt: dict = {"type": "error", "command": command, "message": message, "ts": _now_iso()}
+    evt: dict = {
+        "type": "error",
+        "command": command,
+        "message": message,
+        "ts": _now_iso(),
+    }
     if code:
         evt["code"] = code
     _emit_jsonl_line(evt)
@@ -870,7 +920,9 @@ def _emit_schema_manifest(repo_root: Path) -> None:
             },
             {
                 "cmd": "nav where-used",
-                "json": {"schema": "llmc://schemas/rag_nav/where_used_result.schema.json"},
+                "json": {
+                    "schema": "llmc://schemas/rag_nav/where_used_result.schema.json"
+                },
                 "jsonl": {"schema": "llmc://schemas/rag_nav/jsonl_event.schema.json"},
             },
             {
@@ -910,10 +962,15 @@ def nav_print_schema() -> None:
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Repository root (defaults to auto-detected).",
 )
-@click.option("--limit", "-n", default=10, show_default=True, help="Max results to return.")
+@click.option(
+    "--limit", "-n", default=10, show_default=True, help="Max results to return."
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
 @click.option(
-    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+    "--jsonl",
+    "as_jsonl",
+    is_flag=True,
+    help="Emit JSON Lines (JSONL) output, one object per line.",
 )
 @click.option(
     "--jsonl-compact",
@@ -928,9 +985,15 @@ def nav_print_schema() -> None:
     help="Show first-line preview of the snippet in text mode.",
 )
 @click.option(
-    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+    "--width",
+    "-w",
+    default=96,
+    show_default=True,
+    help="Max preview width in characters.",
 )
-@click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
+@click.option(
+    "--color/--no-color", default=True, show_default=True, help="Colorize text output."
+)
 def nav_search(
     query: list[str],
     repo: str | None,
@@ -1012,7 +1075,9 @@ def nav_search(
                         "start_line": loc.start_line,
                         "end_line": loc.end_line,
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
             else:
@@ -1029,7 +1094,9 @@ def nav_search(
                             },
                         },
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
@@ -1042,13 +1109,17 @@ def nav_search(
         loc = it.snippet.location
         line = f"{i:2d}. {it.file}:{loc.start_line}-{loc.end_line}"
         if preview and it.snippet and it.snippet.text:
-            first_line = it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            first_line = (
+                it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            )
             line += f" — {_preview_line(first_line, width)}"
         if color:
             line = click.style(line, fg="white")
         click.echo(line)
     if not result.items:
-        click.echo(click.style("(no results)", fg="bright_black") if color else "(no results)")
+        click.echo(
+            click.style("(no results)", fg="bright_black") if color else "(no results)"
+        )
 
 
 @nav.command("where-used")
@@ -1059,10 +1130,15 @@ def nav_search(
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
     help="Repository root (defaults to auto-detected).",
 )
-@click.option("--limit", "-n", default=50, show_default=True, help="Max results to return.")
+@click.option(
+    "--limit", "-n", default=50, show_default=True, help="Max results to return."
+)
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
 @click.option(
-    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+    "--jsonl",
+    "as_jsonl",
+    is_flag=True,
+    help="Emit JSON Lines (JSONL) output, one object per line.",
 )
 @click.option(
     "--jsonl-compact",
@@ -1077,9 +1153,15 @@ def nav_search(
     help="Show first-line preview of the snippet in text mode.",
 )
 @click.option(
-    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+    "--width",
+    "-w",
+    default=96,
+    show_default=True,
+    help="Max preview width in characters.",
 )
-@click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
+@click.option(
+    "--color/--no-color", default=True, show_default=True, help="Colorize text output."
+)
 def nav_where_used(
     symbol: str,
     repo: str | None,
@@ -1156,7 +1238,9 @@ def nav_where_used(
                         "start_line": loc.start_line,
                         "end_line": loc.end_line,
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
             else:
@@ -1173,7 +1257,9 @@ def nav_where_used(
                             },
                         },
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
@@ -1185,11 +1271,15 @@ def nav_where_used(
         loc = it.snippet.location
         line = f"{i:2d}. {it.file}:{loc.start_line}-{loc.end_line}"
         if preview and it.snippet and it.snippet.text:
-            first_line = it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            first_line = (
+                it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            )
             line += f" — {_preview_line(first_line, width)}"
         click.echo(click.style(line, fg="white") if color else line)
     if not result.items:
-        click.echo(click.style("(no results)", fg="bright_black") if color else "(no results)")
+        click.echo(
+            click.style("(no results)", fg="bright_black") if color else "(no results)"
+        )
 
 
 @nav.command("lineage")
@@ -1208,11 +1298,18 @@ def nav_where_used(
     help="Repository root (defaults to auto-detected).",
 )
 @click.option(
-    "--max-results", "-n", default=50, show_default=True, help="Max lineage hops to return."
+    "--max-results",
+    "-n",
+    default=50,
+    show_default=True,
+    help="Max lineage hops to return.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Emit JSON output.")
 @click.option(
-    "--jsonl", "as_jsonl", is_flag=True, help="Emit JSON Lines (JSONL) output, one object per line."
+    "--jsonl",
+    "as_jsonl",
+    is_flag=True,
+    help="Emit JSON Lines (JSONL) output, one object per line.",
 )
 @click.option(
     "--jsonl-compact",
@@ -1227,9 +1324,15 @@ def nav_where_used(
     help="Show first-line preview of the snippet in text mode.",
 )
 @click.option(
-    "--width", "-w", default=96, show_default=True, help="Max preview width in characters."
+    "--width",
+    "-w",
+    default=96,
+    show_default=True,
+    help="Max preview width in characters.",
 )
-@click.option("--color/--no-color", default=True, show_default=True, help="Colorize text output.")
+@click.option(
+    "--color/--no-color", default=True, show_default=True, help="Colorize text output."
+)
 def nav_lineage(
     symbol: str,
     direction: str,
@@ -1310,7 +1413,9 @@ def nav_lineage(
                         "start_line": loc.start_line,
                         "end_line": loc.end_line,
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
             else:
@@ -1327,7 +1432,9 @@ def nav_lineage(
                             },
                         },
                         "source": getattr(result, "source", "UNKNOWN"),
-                        "freshness_state": getattr(result, "freshness_state", "UNKNOWN"),
+                        "freshness_state": getattr(
+                            result, "freshness_state", "UNKNOWN"
+                        ),
                     }
                 )
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
@@ -1339,11 +1446,15 @@ def nav_lineage(
         loc = it.snippet.location
         line = f"{i:2d}. {it.file}:{loc.start_line}-{loc.end_line}"
         if preview and it.snippet and it.snippet.text:
-            first_line = it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            first_line = (
+                it.snippet.text.splitlines()[0] if it.snippet.text.splitlines() else ""
+            )
             line += f" — {_preview_line(first_line, width)}"
         click.echo(click.style(line, fg="white") if color else line)
     if not result.items:
-        click.echo(click.style("(no results)", fg="bright_black") if color else "(no results)")
+        click.echo(
+            click.style("(no results)", fg="bright_black") if color else "(no results)"
+        )
 
 
 @cli.group()
@@ -1354,7 +1465,10 @@ def routing() -> None:
 
 @routing.command()
 @click.option(
-    "--dataset", type=click.Path(exists=True), required=True, help="Path to JSONL dataset"
+    "--dataset",
+    type=click.Path(exists=True),
+    required=True,
+    help="Path to JSONL dataset",
 )
 @click.option("--top-k", default=10, help="Number of results to retrieve")
 @click.option("--json", "as_json", is_flag=True, help="Output results as JSON")
@@ -1385,6 +1499,7 @@ def eval(dataset: str, top_k: int, as_json: bool) -> None:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
+
 @cli.command("show-weights")
 @click.argument("path", required=False)
 def show_weights(path: str | None) -> None:
@@ -1399,23 +1514,23 @@ def show_weights(path: str | None) -> None:
             get_path_weight,
             load_path_weight_map,
         )
-        
+
         cfg = _load_llmc_config(repo_root)
         weight_map = load_path_weight_map(cfg)
-        
+
         click.echo(f"Loaded path weights from {repo_root / 'llmc.toml'}:")
         # Sort by weight (ascending = higher priority)
         sorted_weights = sorted(weight_map.items(), key=lambda x: x[1])
         for pattern, weight in sorted_weights:
             click.echo(f"  {pattern:<30} : {weight}")
-            
+
         if path:
             weight, matched, winning = get_path_weight(path, weight_map)
             click.echo(f"\nAnalysis for '{path}':")
             click.echo(f"  Matched patterns: {matched}")
             click.echo(f"  Winning pattern:  {winning}")
             click.echo(f"  Path Weight:      {weight}")
-            
+
             click.echo("\nPriorities:")
             for ctype in ["code", "docs"]:
                 _, base = classify_content_type(ctype)

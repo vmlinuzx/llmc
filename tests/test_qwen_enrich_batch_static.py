@@ -7,7 +7,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def _run(cmd: list[str]) -> None:
     """Run a subprocess command and fail the test on non-zero exit."""
     result = subprocess.run(cmd, check=False, cwd=str(REPO_ROOT))
-    assert result.returncode == 0, f"{' '.join(cmd)} failed with code {result.returncode}"
+    assert (
+        result.returncode == 0
+    ), f"{' '.join(cmd)} failed with code {result.returncode}"
 
 
 def test_qwen_enrich_batch_ruff_clean() -> None:

@@ -117,15 +117,23 @@ class AnalyticsScreen(Screen):
                     for i in range(5):
                         with Container(classes="stat-item"):
                             yield Static(
-                                "-", id=f"stat-val-{i}", classes="stat-value", markup=False
+                                "-",
+                                id=f"stat-val-{i}",
+                                classes="stat-value",
+                                markup=False,
                             )
                             yield Static(
-                                "...", id=f"stat-lbl-{i}", classes="stat-label", markup=False
+                                "...",
+                                id=f"stat-lbl-{i}",
+                                classes="stat-label",
+                                markup=False,
                             )
 
             # Row 2, Col 1: Candidates
             with Container(id="candidates-panel", classes="panel"):
-                yield Static("Top Unenriched Candidates (Unmatched)", classes="panel-title")
+                yield Static(
+                    "Top Unenriched Candidates (Unmatched)", classes="panel-title"
+                )
                 yield DataTable(id="candidates-table", zebra_stripes=True)
 
             # Row 2, Col 2: Enriched Actions
@@ -186,7 +194,8 @@ class AnalyticsScreen(Screen):
 
     def _update_summary(self, conn: sqlite3.Connection) -> None:
         """Update the summary stats grid."""
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 COUNT(*) as total,
                 COUNT(DISTINCT cmd) as unique_cmds,
@@ -195,7 +204,8 @@ class AnalyticsScreen(Screen):
                 SUM(output_size) as total_bytes
             FROM telemetry_events
             WHERE timestamp >= datetime('now', '-7 days')
-        """)
+        """
+        )
         row = cursor.fetchone()
         total, unique_cmds, avg_lat, enriched, total_bytes = row or (0, 0, 0, 0, 0)
 
@@ -223,7 +233,8 @@ class AnalyticsScreen(Screen):
         table = self.query_one("#candidates-table", DataTable)
         table.clear()
 
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 cmd,
                 COUNT(*) as count,
@@ -233,7 +244,8 @@ class AnalyticsScreen(Screen):
             GROUP BY cmd 
             ORDER BY count DESC
             LIMIT 50
-        """)
+        """
+        )
 
         for cmd, count, avg_out in cursor.fetchall():
             avg_kb = f"{avg_out / 1024:.1f} KB"
@@ -244,7 +256,8 @@ class AnalyticsScreen(Screen):
         table = self.query_one("#enriched-table", DataTable)
         table.clear()
 
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT 
                 cmd,
                 COUNT(*) as count,
@@ -254,7 +267,8 @@ class AnalyticsScreen(Screen):
             GROUP BY cmd 
             ORDER BY count DESC
             LIMIT 50
-        """)
+        """
+        )
 
         for cmd, count, avg_lat in cursor.fetchall():
             avg_str = f"{avg_lat:.1f}ms"

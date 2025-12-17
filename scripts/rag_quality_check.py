@@ -49,18 +49,22 @@ class QualityChecker:
         stats["total"] = cursor.fetchone()[0]
 
         # By model
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT model, COUNT(*) as count
             FROM enrichments
             GROUP BY model
-        """)
+        """
+        )
         stats["by_model"] = {row["model"]: row["count"] for row in cursor.fetchall()}
 
         # Recent (last 24h)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) FROM enrichments
             WHERE created_at > datetime('now', '-1 day')
-        """)
+        """
+        )
         stats["recent_24h"] = cursor.fetchone()[0]
 
         return stats
@@ -100,7 +104,8 @@ class QualityChecker:
         """Delete all identified placeholder/fake data."""
         cursor = self.conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             DELETE FROM enrichments
             WHERE summary LIKE '%auto-summary generated offline%'
                OR summary LIKE '%TODO: implement%'
@@ -108,7 +113,8 @@ class QualityChecker:
                OR summary LIKE '%fake%'
                OR summary GLOB '*-*-*-*'
                OR summary GLOB '*auto-summary*'
-        """)
+        """
+        )
         deleted = cursor.rowcount
 
         self.conn.commit()
@@ -212,10 +218,16 @@ def print_report(report: dict, verbose: bool = True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Check RAG enrichment data quality (v1-cjk-aware)")
+    parser = argparse.ArgumentParser(
+        description="Check RAG enrichment data quality (v1-cjk-aware)"
+    )
     parser.add_argument("repo", type=Path, help="Repository path")
-    parser.add_argument("--json", action="store_true", help="Output JSON instead of human-readable")
-    parser.add_argument("--fix", action="store_true", help="Delete identified placeholder data")
+    parser.add_argument(
+        "--json", action="store_true", help="Output JSON instead of human-readable"
+    )
+    parser.add_argument(
+        "--fix", action="store_true", help="Delete identified placeholder data"
+    )
     parser.add_argument("--quiet", action="store_true", help="Only show summary")
 
     args = parser.parse_args()

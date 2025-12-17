@@ -76,7 +76,9 @@ def mock_graph_json(repo_root: Path):
         ],
         relations=[
             Relation(
-                src="func:tests.test_main.test_main", edge="calls", dst="func:src.main.main_func"
+                src="func:tests.test_main.test_main",
+                edge="calls",
+                dst="func:src.main.main_func",
             ),
         ],
     )

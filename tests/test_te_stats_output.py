@@ -29,7 +29,8 @@ def setup_mock_db(temp_db_path):
     """
     conn = sqlite3.connect(temp_db_path)
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         CREATE TABLE IF NOT EXISTS telemetry_events (
             timestamp TEXT,
             cmd TEXT,
@@ -42,48 +43,159 @@ def setup_mock_db(temp_db_path):
             error TEXT,
             output_text TEXT
         )
-    """)
+    """
+    )
 
     # Insert sample data
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:00:00Z", "ls -l", "passthrough", 10, 100, 0, 0, 50.0, None, "output"),
+        (
+            "2025-12-01T10:00:00Z",
+            "ls -l",
+            "passthrough",
+            10,
+            100,
+            0,
+            0,
+            50.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:01:00Z", "grep pattern", "passthrough", 15, 80, 0, 0, 75.0, None, "output"),
+        (
+            "2025-12-01T10:01:00Z",
+            "grep pattern",
+            "passthrough",
+            15,
+            80,
+            0,
+            0,
+            75.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:02:00Z", "grep other", "enriched", 20, 120, 0, 0, 100.0, None, "output"),
+        (
+            "2025-12-01T10:02:00Z",
+            "grep other",
+            "enriched",
+            20,
+            120,
+            0,
+            0,
+            100.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:03:00Z", "ls -a", "passthrough", 8, 90, 0, 0, 60.0, None, "output"),
+        (
+            "2025-12-01T10:03:00Z",
+            "ls -a",
+            "passthrough",
+            8,
+            90,
+            0,
+            0,
+            60.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:04:00Z", "cat file.txt", "enriched", 12, 110, 0, 0, 90.0, None, "output"),
+        (
+            "2025-12-01T10:04:00Z",
+            "cat file.txt",
+            "enriched",
+            12,
+            110,
+            0,
+            0,
+            90.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:05:00Z", "grep pattern", "passthrough", 15, 85, 0, 0, 70.0, None, "output"),
+        (
+            "2025-12-01T10:05:00Z",
+            "grep pattern",
+            "passthrough",
+            15,
+            85,
+            0,
+            0,
+            70.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:06:00Z", "grep pattern", "enriched", 20, 125, 0, 0, 110.0, None, "output"),
+        (
+            "2025-12-01T10:06:00Z",
+            "grep pattern",
+            "enriched",
+            20,
+            125,
+            0,
+            0,
+            110.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:07:00Z", "grep pattern", "enriched", 20, 130, 0, 0, 105.0, None, "output"),
+        (
+            "2025-12-01T10:07:00Z",
+            "grep pattern",
+            "enriched",
+            20,
+            130,
+            0,
+            0,
+            105.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:08:00Z", "find .", "passthrough", 5, 200, 0, 0, 200.0, None, "output"),
+        (
+            "2025-12-01T10:08:00Z",
+            "find .",
+            "passthrough",
+            5,
+            200,
+            0,
+            0,
+            200.0,
+            None,
+            "output",
+        ),
     )
     cursor.execute(
         "INSERT INTO telemetry_events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ("2025-12-01T10:09:00Z", "grep other", "enriched", 20, 115, 0, 0, 95.0, None, "output"),
+        (
+            "2025-12-01T10:09:00Z",
+            "grep other",
+            "enriched",
+            20,
+            115,
+            0,
+            0,
+            95.0,
+            None,
+            "output",
+        ),
     )
 
     # Routing events
@@ -182,7 +294,9 @@ def setup_mock_db(temp_db_path):
     conn.close()
 
     # Patch sqlite3.connect to return a connection to our temporary database
-    with patch("sqlite3.connect", return_value=sqlite3.connect(temp_db_path)) as mock_connect:
+    with patch(
+        "sqlite3.connect", return_value=sqlite3.connect(temp_db_path)
+    ) as mock_connect:
         yield mock_connect  # Yield control to the test function
 
 
@@ -246,16 +360,18 @@ class TestTeStatsOutput:
         expected_output_lines = [
             line.strip() for line in expected_output.splitlines() if line.strip()
         ]
-        actual_output_lines = [line.strip() for line in output.splitlines() if line.strip()]
+        actual_output_lines = [
+            line.strip() for line in output.splitlines() if line.strip()
+        ]
 
         # Compare line by line for clearer diffs
         assert len(actual_output_lines) == len(expected_output_lines)
         for i, (actual_line, expected_line) in enumerate(
             zip(actual_output_lines, expected_output_lines, strict=False)
         ):
-            assert actual_line == expected_line, (
-                f"Line {i + 1} differs: Actual='{actual_line}', Expected='{expected_line}'"
-            )
+            assert (
+                actual_line == expected_line
+            ), f"Line {i + 1} differs: Actual='{actual_line}', Expected='{expected_line}'"
 
     @patch("sys.stdout", new_callable=StringIO)
     @patch("llmc.te.cli._find_repo_root")
@@ -270,7 +386,8 @@ class TestTeStatsOutput:
         # Create an empty DB
         conn = sqlite3.connect(empty_db_path)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS telemetry_events (
                 timestamp TEXT,
                 cmd TEXT,
@@ -283,7 +400,8 @@ class TestTeStatsOutput:
                 error TEXT,
                 output_text TEXT
             )
-        """)
+        """
+        )
         conn.commit()
         conn.close()
 

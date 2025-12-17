@@ -14,7 +14,9 @@ def doctor_paths(
     """Quick checks for repo/workspace/export path sanity."""
     repo_root_path = Path(repo_root).expanduser().resolve()
     workspace_root = resolve_workspace_from_cli(repo_root_path, workspace_arg)
-    export_dir = resolve_export_dir(repo_root_path, workspace_arg, export_arg or "exports")
+    export_dir = resolve_export_dir(
+        repo_root_path, workspace_arg, export_arg or "exports"
+    )
     export_dir.mkdir(parents=True, exist_ok=True)
     return {
         "repo_root": repo_root_path,

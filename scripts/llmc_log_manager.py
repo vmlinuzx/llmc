@@ -51,7 +51,9 @@ class LLMCLogManager:
         enabled: Master switch to enable/disable rotation.
     """
 
-    def __init__(self, max_size_mb: int = 10, keep_jsonl_lines: int = 1000, enabled: bool = True):
+    def __init__(
+        self, max_size_mb: int = 10, keep_jsonl_lines: int = 1000, enabled: bool = True
+    ):
         self.max_size_bytes = int(max_size_mb) * 1024 * 1024
         self.keep_jsonl_lines = int(keep_jsonl_lines)
         self.enabled = bool(enabled)
@@ -81,7 +83,9 @@ class LLMCLogManager:
             "age_hours": round((time.time() - stat.st_mtime) / 3600, 1),
         }
 
-    def truncate_log(self, file_path: Path, keep_lines: int | None = None) -> dict[str, Any]:
+    def truncate_log(
+        self, file_path: Path, keep_lines: int | None = None
+    ) -> dict[str, Any]:
         """Truncate log file to last N lines (JSONL) or by size (others)."""
         if not file_path.exists():
             return {"error": "File doesn't exist"}
@@ -194,10 +198,16 @@ def main():
         "  llmc_log_manager.py --rotate logs/\n"
         "  llmc_log_manager.py --rotate --max-size 5 logs/",
     )
-    parser.add_argument("log_dir", nargs="?", help="Log directory path (overrides config)")
-    parser.add_argument("--check", action="store_true", help="Check log sizes without rotating")
+    parser.add_argument(
+        "log_dir", nargs="?", help="Log directory path (overrides config)"
+    )
+    parser.add_argument(
+        "--check", action="store_true", help="Check log sizes without rotating"
+    )
     parser.add_argument("--rotate", action="store_true", help="Rotate oversized logs")
-    parser.add_argument("--max-size", default="10MB", help="Max log file size (default: 10MB)")
+    parser.add_argument(
+        "--max-size", default="10MB", help="Max log file size (default: 10MB)"
+    )
     parser.add_argument("--quiet", action="store_true", help="Suppress output")
     parser.add_argument("--config", help="Path to llmc.toml (optional)")
 
@@ -234,7 +244,9 @@ def main():
             log_dir = (repo_root / log_dir).resolve()
     else:
         if args.check or args.rotate:
-            parser.error("Log directory required (positional or [logging].log_directory)")
+            parser.error(
+                "Log directory required (positional or [logging].log_directory)"
+            )
         else:
             parser.print_help()
             return

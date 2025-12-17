@@ -137,13 +137,21 @@ def _index_nodes(graph: dict) -> dict[str, Node]:
 
         # Prefer explicit file-relative paths; fall back to generic path fields.
         path = _norm_path(
-            raw.get("file_path") or raw.get("path") or raw.get("file") or raw.get("filepath") or ""
+            raw.get("file_path")
+            or raw.get("path")
+            or raw.get("file")
+            or raw.get("filepath")
+            or ""
         )
 
         # Prefer explicit symbol/name fields including metadata.symbol when available.
         metadata = raw.get("metadata") or {}
         name = str(
-            raw.get("symbol") or metadata.get("symbol") or raw.get("name") or raw.get("label") or ""
+            raw.get("symbol")
+            or metadata.get("symbol")
+            or raw.get("name")
+            or raw.get("label")
+            or ""
         )
 
         if not nid and name:
@@ -236,7 +244,9 @@ def build_indices_from_graph(graph: dict) -> GraphIndices:
             src_symbol = src_node.name or src_node.nid
             if src_symbol:
                 for key in _candidate_keys(src_symbol):
-                    _accumulate(symbol_to_callee_files, key, dst_node.path or src_node.path)
+                    _accumulate(
+                        symbol_to_callee_files, key, dst_node.path or src_node.path
+                    )
 
     return GraphIndices(
         symbol_to_files=symbol_to_files,
@@ -305,7 +315,9 @@ def where_used_files(indices: GraphIndices, symbol: str, limit: int = 50) -> lis
     return out[:limit]
 
 
-def lineage_files(indices: GraphIndices, symbol: str, direction: str, limit: int = 50) -> list[str]:
+def lineage_files(
+    indices: GraphIndices, symbol: str, direction: str, limit: int = 50
+) -> list[str]:
     """
     Return files related by CALLS edges for lineage queries.
 

@@ -3,11 +3,10 @@ Navigate Screen - File explorer and code viewer.
 """
 
 from pathlib import Path
-from typing import Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Grid, ScrollableContainer
+from textual.containers import Container, Grid
 from textual.widgets import DirectoryTree, Static, TextArea
 
 from llmc.tui.base import LLMCScreen
@@ -74,11 +73,11 @@ class NavigateScreen(LLMCScreen):
 
     def __init__(self):
         super().__init__()
-        self.current_path: Optional[Path] = None
+        self.current_path: Path | None = None
 
     def compose_content(self) -> ComposeResult:
         """Build navigation layout."""
-        repo_root = getattr(self.app, 'repo_root', Path.cwd())
+        repo_root = getattr(self.app, "repo_root", Path.cwd())
 
         with Grid(id="nav-grid"):
             # Left: File Tree
@@ -90,10 +89,14 @@ class NavigateScreen(LLMCScreen):
             with Container(id="code-panel"):
                 yield Static("Code Preview", classes="panel-title", id="code-title")
                 # Using TextArea for code viewing (read-only)
-                text_area = TextArea.code_editor("", language="python", read_only=True, id="code-view")
+                text_area = TextArea.code_editor(
+                    "", language="python", read_only=True, id="code-view"
+                )
                 yield text_area
 
-    def on_directory_tree_file_selected(self, event: DirectoryTree.FileSelected) -> None:
+    def on_directory_tree_file_selected(
+        self, event: DirectoryTree.FileSelected
+    ) -> None:
         """Handle file selection in tree."""
         self.current_path = event.path
         self._load_file_content(event.path)
@@ -105,29 +108,29 @@ class NavigateScreen(LLMCScreen):
 
         try:
             # Update title
-            rel_path = path.relative_to(getattr(self.app, 'repo_root', Path.cwd()))
+            rel_path = path.relative_to(getattr(self.app, "repo_root", Path.cwd()))
             title.update(f"Code Preview: {rel_path}")
 
             # Determine language based on extension
             ext = path.suffix.lower()
             lang = "python"  # default
-            if ext in ['.md', '.markdown']:
+            if ext in [".md", ".markdown"]:
                 lang = "markdown"
-            elif ext in ['.json']:
+            elif ext in [".json"]:
                 lang = "json"
-            elif ext in ['.sh', '.bash']:
+            elif ext in [".sh", ".bash"]:
                 lang = "bash"
-            elif ext in ['.toml']:
+            elif ext in [".toml"]:
                 lang = "toml"
-            elif ext in ['.css']:
+            elif ext in [".css"]:
                 lang = "css"
-            elif ext in ['.html']:
+            elif ext in [".html"]:
                 lang = "html"
-            elif ext in ['.js']:
+            elif ext in [".js"]:
                 lang = "javascript"
 
             # Load content
-            content = path.read_text(encoding='utf-8')
+            content = path.read_text(encoding="utf-8")
             code_view.load_text(content)
             code_view.language = lang
 
@@ -145,6 +148,7 @@ class NavigateScreen(LLMCScreen):
         if self.current_path:
             try:
                 from llmc.tui.screens.inspector import InspectorScreen
+
                 # We need to pass the path to the inspector, but InspectorScreen
                 # currently takes input from user.
                 # We can modify InspectorScreen or just switch and pre-fill.
@@ -157,7 +161,9 @@ class NavigateScreen(LLMCScreen):
                 self.app.switch_screen(InspectorScreen())
                 # Note: To fully integrate, we would need to modify InspectorScreen
                 # to accept an initial path.
-                self.notify(f"Switching to Inspector. Please type: {self.current_path.name}")
+                self.notify(
+                    f"Switching to Inspector. Please type: {self.current_path.name}"
+                )
 
             except ImportError:
                 self.notify("Inspector screen not available", severity="warning")

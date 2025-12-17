@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 class DocgenLock:
     """File-based lock for docgen operations.
-    
+
     Ensures only one docgen process runs per repository at a time.
     """
-    
+
     def __init__(self, repo_root: Path, timeout: float = 0):
         """Initialize lock.
-        
+
         Args:
             repo_root: Absolute path to repository root
             timeout: Max seconds to wait for lock acquisition (0 = fail immediately)
@@ -28,22 +28,22 @@ class DocgenLock:
         self.lock_file = repo_root / ".llmc" / "docgen.lock"
         self._lock_handle: IO | None = None
         self.timeout = timeout
-    
+
     def acquire(self, timeout: float | None = None) -> bool:
         """Acquire the lock.
-        
+
         Args:
             timeout: Max seconds to wait (None = use instance timeout, 0 = fail immediately)
-            
+
         Returns:
             True if lock acquired, False otherwise
         """
         if timeout is None:
             timeout = self.timeout
-            
+
         # Create lock directory if needed
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
         # Security check: Reject symlinks (defense in depth)
         if self.lock_file.exists() and self.lock_file.is_symlink():
             logger.error(
@@ -51,31 +51,34 @@ class DocgenLock:
                 "This could be a security attack. Refusing to proceed."
             )
             return False
-        
+
         # Open lock file WITHOUT truncation to prevent symlink attack
         # Use os.open with O_RDWR|O_CREAT instead of open("w")
         # "w" mode implies O_TRUNC which would wipe symlink targets
         try:
             fd = os.open(
-                self.lock_file, 
+                self.lock_file,
                 os.O_RDWR | os.O_CREAT,  # Read-write, create if missing, NO truncate
-                0o644  # Standard file permissions
+                0o644,  # Standard file permissions
             )
             self._lock_handle = open(fd, "r+")  # Open file object from fd
         except OSError as e:
             logger.error(f"Failed to open lock file: {e}")
             return False
-        
+
         # Try to acquire exclusive lock
         try:
             if timeout > 0:
                 # Blocking lock with timeout (not supported by fcntl directly)
                 # For simplicity, we'll just try non-blocking
                 import time
+
                 end_time = time.time() + timeout
                 while time.time() < end_time:
                     try:
-                        fcntl.flock(self._lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        fcntl.flock(
+                            self._lock_handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB
+                        )
                         return True
                     except BlockingIOError:
                         time.sleep(0.1)
@@ -94,12 +97,12 @@ class DocgenLock:
             self._lock_handle.close()
             self._lock_handle = None
             return False
-    
+
     def release(self) -> None:
         """Release the lock."""
         if self._lock_handle is None:
             return
-        
+
         try:
             fcntl.flock(self._lock_handle.fileno(), fcntl.LOCK_UN)
             self._lock_handle.close()
@@ -107,7 +110,7 @@ class DocgenLock:
             logger.warning(f"Error releasing lock: {e}")
         finally:
             self._lock_handle = None
-    
+
     def __enter__(self):
         """Context manager entry."""
         if not self.acquire():
@@ -116,7 +119,7 @@ class DocgenLock:
                 "Another docgen process may be running."
             )
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.release()

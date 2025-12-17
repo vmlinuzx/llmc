@@ -2,6 +2,11 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Security Test:** Added `test_normalize_path_fuzzy_match_priority` to `tests/security/test_security_normalization.py` to verify fuzzy matching behavior (SDD-Security-FuzzyMatching).
+
 ## [0.7.4] - "Clean Cuts" - 2025-12-17
 
 ### Purple Flavor: **Clean Cuts**

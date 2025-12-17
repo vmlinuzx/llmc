@@ -42,7 +42,9 @@ class TestExecuteCode:
 
     def test_call_tool_injection(self):
         """Verify _call_tool is available in executed code namespace."""
-        mock_caller = make_mock_tool_caller({"test_tool": {"data": "mock_result", "meta": {}}})
+        mock_caller = make_mock_tool_caller(
+            {"test_tool": {"data": "mock_result", "meta": {}}}
+        )
 
         result = execute_code(
             code="""
@@ -67,7 +69,9 @@ print(f"Got: {result}")
             description="A test tool",
             inputSchema={
                 "type": "object",
-                "properties": {"query": {"type": "string", "description": "Test query"}},
+                "properties": {
+                    "query": {"type": "string", "description": "Test query"}
+                },
                 "required": ["query"],
             },
         )
@@ -93,7 +97,9 @@ print(f"Result: {result}")
             stubs_dir=stubs_dir,
         )
 
-        assert result.success, f"Execution failed: {result.error}\nstderr: {result.stderr}"
+        assert (
+            result.success
+        ), f"Execution failed: {result.error}\nstderr: {result.stderr}"
         assert len(calls) == 1, f"Expected 1 call, got {len(calls)}"
         assert calls[0][0] == "my_test_tool"
         assert "query" in calls[0][1]
@@ -114,7 +120,9 @@ print(f"Result: {result}")
 
         assert result.success
         # _call_tool should be cleaned up
-        assert not hasattr(builtins, "_call_tool"), "builtins._call_tool should be cleaned up"
+        assert not hasattr(
+            builtins, "_call_tool"
+        ), "builtins._call_tool should be cleaned up"
 
     def test_timeout_capture(self):
         """Test that stderr is captured on error."""
@@ -150,7 +158,11 @@ class TestGenerateStubs:
                 "type": "object",
                 "properties": {
                     "required_arg": {"type": "string", "description": "Required"},
-                    "optional_arg": {"type": "integer", "description": "Optional", "default": 10},
+                    "optional_arg": {
+                        "type": "integer",
+                        "description": "Optional",
+                        "default": 10,
+                    },
                 },
                 "required": ["required_arg"],
             },

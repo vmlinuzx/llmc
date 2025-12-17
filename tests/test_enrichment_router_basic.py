@@ -99,7 +99,9 @@ class TestEnrichmentRouteDecision:
         """Verify decision can hold multiple backends (cascade)."""
         backends = [
             EnrichmentBackendSpec(name="qwen-7b", chain="cascade", provider="ollama"),
-            EnrichmentBackendSpec(name="gemini-flash", chain="cascade", provider="gemini"),
+            EnrichmentBackendSpec(
+                name="gemini-flash", chain="cascade", provider="gemini"
+            ),
         ]
         decision = EnrichmentRouteDecision(
             slice_type="docs",
@@ -429,7 +431,9 @@ class TestNormalizeSliceType:
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
 
         for lang in ["python", "javascript", "typescript", "java", "rust", "go"]:
-            assert router.normalize_slice_type(lang) == "code", f"{lang} should map to 'code'"
+            assert (
+                router.normalize_slice_type(lang) == "code"
+            ), f"{lang} should map to 'code'"
 
     def test_doc_aliases(self):
         """Verify documentation format aliases map to 'docs'."""
@@ -439,7 +443,9 @@ class TestNormalizeSliceType:
         router = EnrichmentRouter(config=config, enable_routing=False, routes=None)
 
         for fmt in ["markdown", "md", "rst", "text", "txt", "documentation"]:
-            assert router.normalize_slice_type(fmt) == "docs", f"{fmt} should map to 'docs'"
+            assert (
+                router.normalize_slice_type(fmt) == "docs"
+            ), f"{fmt} should map to 'docs'"
 
     def test_empty_returns_unknown(self):
         """Verify empty/None returns 'unknown'."""

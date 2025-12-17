@@ -41,7 +41,9 @@ except ImportError as e:
 app = typer.Typer()
 console = Console()
 
-LLMC_ROOT = Path(__file__).parent.parent.parent  # Assumes llmc/cli.py is in llmc/llmc/cli.py
+LLMC_ROOT = Path(
+    __file__
+).parent.parent.parent  # Assumes llmc/cli.py is in llmc/llmc/cli.py
 
 
 def get_repo_stats(repo_root: Path) -> dict[str, Any]:
@@ -63,17 +65,23 @@ def get_repo_stats(repo_root: Path) -> dict[str, Any]:
         if index_status:
             stats["freshness_state"] = index_status.index_state
             stats["last_indexed_at"] = (
-                index_status.last_indexed_at if index_status.last_indexed_at else "Never"
+                index_status.last_indexed_at
+                if index_status.last_indexed_at
+                else "Never"
             )
 
         # Get graph stats
         nodes, _ = _load_graph(repo_root)
         stats["graph_nodes"] = len(nodes)
-        stats["enriched_nodes"] = sum(1 for n in nodes if n.get("metadata", {}).get("summary"))
+        stats["enriched_nodes"] = sum(
+            1 for n in nodes if n.get("metadata", {}).get("summary")
+        )
 
         # Approximate token usage (simple heuristic: 4 chars/token avg)
         # This is a placeholder; real token count would be in the DB.
-        total_content_len = sum(len(n.get("metadata", {}).get("summary", "")) for n in nodes)
+        total_content_len = sum(
+            len(n.get("metadata", {}).get("summary", "")) for n in nodes
+        )
         stats["token_usage"] = total_content_len // 4  # Rough estimate
 
         # Daemon status (placeholder for now, real implementation would read PID file or socket)
@@ -120,12 +128,14 @@ class DashboardState:
 
     def update(self):
         # Update real stats every few seconds or if error
-        if (datetime.now() - self.last_stats_update).total_seconds() > 2 or self.current_stats.get(
-            "error"
-        ):
+        if (
+            datetime.now() - self.last_stats_update
+        ).total_seconds() > 2 or self.current_stats.get("error"):
             self.current_stats = get_repo_stats(self.repo_root)
             if self.current_stats.get("error"):
-                self.add_log(f"Error fetching stats: {self.current_stats['error']}", "ERR")
+                self.add_log(
+                    f"Error fetching stats: {self.current_stats['error']}", "ERR"
+                )
             else:
                 self.add_log("Stats refreshed.", "OK ")
             self.last_stats_update = datetime.now()
@@ -145,7 +155,9 @@ def make_layout() -> Layout:
     layout = Layout(name="root")
 
     layout.split(
-        Layout(name="header", size=3), Layout(name="body", ratio=1), Layout(name="footer", size=3)
+        Layout(name="header", size=3),
+        Layout(name="body", ratio=1),
+        Layout(name="footer", size=3),
     )
 
     layout["body"].split_row(
@@ -153,9 +165,13 @@ def make_layout() -> Layout:
         Layout(name="right", ratio=2),  # Give more space to logs/status
     )
 
-    layout["left"].split_column(Layout(name="menu", ratio=2), Layout(name="help", ratio=1))
+    layout["left"].split_column(
+        Layout(name="menu", ratio=2), Layout(name="help", ratio=1)
+    )
 
-    layout["right"].split_column(Layout(name="context", ratio=1), Layout(name="log", ratio=2))
+    layout["right"].split_column(
+        Layout(name="context", ratio=1), Layout(name="log", ratio=2)
+    )
 
     return layout
 
@@ -176,7 +192,11 @@ def monitor():
     # Header
     layout["header"].update(
         Panel(
-            Text(f"LLMC v0.5.5 [DEV] --repo {repo_root}", justify="center", style="bold white"),
+            Text(
+                f"LLMC v0.5.5 [DEV] --repo {repo_root}",
+                justify="center",
+                style="bold white",
+            ),
             style="white on blue",
         )
     )
@@ -184,7 +204,11 @@ def monitor():
     # Footer
     layout["footer"].update(
         Panel(
-            Text("[q] Quit  [s] Save & Exit  [h] Help", justify="center", style="dim white"),
+            Text(
+                "[q] Quit  [s] Save & Exit  [h] Help",
+                justify="center",
+                style="dim white",
+            ),
             style="on black",
         )
     )
@@ -198,7 +222,9 @@ def monitor():
             menu_text = Text()
             for i, item in enumerate(state.menu_items):
                 if i == state.menu_idx:
-                    menu_text.append(f"> [{i + 1}] {item}\n", style="bold yellow reverse")
+                    menu_text.append(
+                        f"> [{i + 1}] {item}\n", style="bold yellow reverse"
+                    )
                 else:
                     menu_text.append(f"  [{i + 1}] {item}\n", style="white")
 
@@ -209,9 +235,13 @@ def monitor():
             # 2. Help/Info (Bottom Left)
             help_content = ""
             if state.menu_idx == 0:
-                help_content = "View live system metrics,\nactive agents, and\nresource usage."
+                help_content = (
+                    "View live system metrics,\nactive agents, and\nresource usage."
+                )
             elif state.menu_idx == 1:
-                help_content = "Search the codebase using\nRAG + Fuzzy Linking.\nSupports regex."
+                help_content = (
+                    "Search the codebase using\nRAG + Fuzzy Linking.\nSupports regex."
+                )
             elif state.menu_idx == 2:
                 help_content = "Edit llmc.toml settings\nand configure LLM\nproviders."
             else:
@@ -233,20 +263,32 @@ def monitor():
 
             grid.add_row("📂 Files Tracked:", f"[bold]{stats['files_tracked']}[/bold]")
             grid.add_row("🧠 Graph Nodes:", f"[bold]{stats['graph_nodes']}[/bold]")
-            grid.add_row("🧠 Enriched Nodes:", f"[bold]{stats['enriched_nodes']}[/bold]")
-            grid.add_row("🎫 Token Usage:", f"[bold yellow]{stats['token_usage']:,}[/bold yellow]")
-            grid.add_row("🔋 Daemon Status:", f"[bold green]{stats['daemon_status']}[/bold green]")
+            grid.add_row(
+                "🧠 Enriched Nodes:", f"[bold]{stats['enriched_nodes']}[/bold]"
+            )
+            grid.add_row(
+                "🎫 Token Usage:",
+                f"[bold yellow]{stats['token_usage']:,}[/bold yellow]",
+            )
+            grid.add_row(
+                "🔋 Daemon Status:",
+                f"[bold green]{stats['daemon_status']}[/bold green]",
+            )
             grid.add_row(
                 "📈 Freshness:",
                 f"[bold {('red' if stats['freshness_state'] == 'STALE' else 'green')}]"
                 f"{stats['freshness_state']}[/bold]",
             )
-            grid.add_row("⏱️  Uptime:", str(datetime.now() - state.start_time).split(".")[0])
+            grid.add_row(
+                "⏱️  Uptime:", str(datetime.now() - state.start_time).split(".")[0]
+            )
             grid.add_row(
                 "📝 Last Indexed:",
-                stats["last_indexed_at"].split("T")[0]
-                if stats["last_indexed_at"] and "T" in stats["last_indexed_at"]
-                else "Never",
+                (
+                    stats["last_indexed_at"].split("T")[0]
+                    if stats["last_indexed_at"] and "T" in stats["last_indexed_at"]
+                    else "Never"
+                ),
             )
 
             layout["context"].update(

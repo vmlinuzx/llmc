@@ -73,7 +73,9 @@ def search(
             typer.echo(json.dumps(data, indent=2))
         else:
             for r in results:
-                typer.echo(f"[{r.score:.2f}] {r.path}:{r.start_line} {r.symbol or '(no symbol)'}")
+                typer.echo(
+                    f"[{r.score:.2f}] {r.path}:{r.start_line} {r.symbol or '(no symbol)'}"
+                )
                 if r.summary:
                     typer.echo(f"    {r.summary[:100]}...")
     except Exception as e:
@@ -82,10 +84,16 @@ def search(
 
 
 def inspect(
-    symbol: Annotated[str | None, typer.Option("--symbol", "-s", help="Symbol to inspect")] = None,
+    symbol: Annotated[
+        str | None, typer.Option("--symbol", "-s", help="Symbol to inspect")
+    ] = None,
     path: Annotated[str | None, typer.Option("--path", "-p", help="File path")] = None,
-    line: Annotated[int | None, typer.Option("--line", "-l", help="Line number")] = None,
-    full: Annotated[bool, typer.Option("--full", help="Include full source code")] = False,
+    line: Annotated[
+        int | None, typer.Option("--line", "-l", help="Line number")
+    ] = None,
+    full: Annotated[
+        bool, typer.Option("--full", help="Include full source code")
+    ] = False,
 ):
     """Deep dive into symbol/file."""
     repo_root = find_repo_root()
@@ -95,7 +103,11 @@ def inspect(
 
     try:
         result = run_inspect_entity(
-            repo_root=repo_root, symbol=symbol, path=path, line=line, include_full_source=full
+            repo_root=repo_root,
+            symbol=symbol,
+            path=path,
+            line=line,
+            include_full_source=full,
         )
         typer.echo(result)
     except Exception as e:
@@ -106,7 +118,9 @@ def inspect(
 def plan(
     query: str,
     limit: Annotated[int, typer.Option(help="Max files/spans")] = 50,
-    min_confidence: Annotated[float, typer.Option(help="Minimum confidence threshold")] = 0.6,
+    min_confidence: Annotated[
+        float, typer.Option(help="Minimum confidence threshold")
+    ] = 0.6,
 ):
     """Generate retrieval plan."""
     repo_root = find_repo_root()
@@ -121,7 +135,9 @@ def plan(
 
 
 def stats(
-    json_output: Annotated[bool, typer.Option("--json", help="Emit stats as JSON.")] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit stats as JSON.")
+    ] = False,
 ):
     """Print summary stats for the current index."""
     repo_root = find_repo_root()
@@ -151,31 +167,36 @@ def stats(
     # Add Tool Stats from Telemetry DB
     telemetry_db = repo_root / ".llmc" / "telemetry.db"
     tool_stats = {"total_calls": 0, "total_errors": 0, "top_tools": []}
-    
+
     if telemetry_db.exists():
         try:
             import sqlite3
+
             with sqlite3.connect(telemetry_db) as conn:
                 # Total calls
                 row = conn.execute("SELECT COUNT(*) FROM tool_usage").fetchone()
                 if row:
                     tool_stats["total_calls"] = row[0]
-                
+
                 # Total errors
-                row = conn.execute("SELECT COUNT(*) FROM tool_usage WHERE success = 0").fetchone()
+                row = conn.execute(
+                    "SELECT COUNT(*) FROM tool_usage WHERE success = 0"
+                ).fetchone()
                 if row:
                     tool_stats["total_errors"] = row[0]
-                
+
                 # Top tools
-                rows = conn.execute("""
+                rows = conn.execute(
+                    """
                     SELECT tool, COUNT(*) as c 
                     FROM tool_usage 
                     GROUP BY tool 
                     ORDER BY c DESC 
                     LIMIT 5
-                """).fetchall()
+                """
+                ).fetchall()
                 tool_stats["top_tools"] = [{"tool": r[0], "calls": r[1]} for r in rows]
-                
+
             data["tool_stats"] = tool_stats
         except Exception:
             pass
@@ -189,7 +210,7 @@ def stats(
         typer.echo(f"Embeddings: {data['embeddings']}")
         typer.echo(f"Enrichments: {data['enrichments']}")
         typer.echo(f"Est. Remote Tokens: {data['estimated_remote_tokens']:,}")
-        
+
         if tool_stats["total_calls"] > 0:
             typer.echo("\nTool Usage:")
             typer.echo(f"  Total Calls: {tool_stats['total_calls']}")
@@ -200,7 +221,9 @@ def stats(
 
 
 def doctor(
-    verbose: Annotated[bool, typer.Option("--verbose", "-v", help="Verbose output")] = False,
+    verbose: Annotated[
+        bool, typer.Option("--verbose", "-v", help="Verbose output")
+    ] = False,
 ):
     """Diagnose RAG health."""
     repo_root = find_repo_root()
@@ -217,7 +240,9 @@ def sync(
     since: Annotated[
         str | None, typer.Option(help="Sync files changed since commit")
     ] = None,
-    stdin: Annotated[bool, typer.Option("--stdin", help="Read paths from stdin")] = False,
+    stdin: Annotated[
+        bool, typer.Option("--stdin", help="Read paths from stdin")
+    ] = False,
 ):
     """Incrementally update spans for selected files."""
     from llmc.rag.indexer import sync_paths
@@ -261,7 +286,9 @@ def enrich(
         bool, typer.Option(help="Preview work items without running LLM")
     ] = False,
     model: Annotated[str, typer.Option(help="Model identifier")] = "local-qwen",
-    cooldown: Annotated[int, typer.Option(help="Skip spans changed within N seconds")] = 0,
+    cooldown: Annotated[
+        int, typer.Option(help="Skip spans changed within N seconds")
+    ] = 0,
     code_first: Annotated[
         bool,
         typer.Option(
@@ -313,7 +340,9 @@ def enrich(
 
     # Resolve code-first override and starvation ratio.
     if code_first and no_code_first:
-        typer.echo("Error: cannot pass both --code-first and --no-code-first.", err=True)
+        typer.echo(
+            "Error: cannot pass both --code-first and --no-code-first.", err=True
+        )
         raise typer.Exit(code=1)
 
     code_first_override: bool | None
@@ -345,7 +374,9 @@ def enrich(
     db = Database(db_file)
     try:
         if dry_run:
-            plan = enrichment_plan(db, repo_root, limit=limit, cooldown_seconds=cooldown)
+            plan = enrichment_plan(
+                db, repo_root, limit=limit, cooldown_seconds=cooldown
+            )
             if not plan:
                 typer.echo("No spans pending enrichment.")
                 return
@@ -365,7 +396,9 @@ def enrich(
                 pending_by_hash: dict[str, SpanWorkItem] = {
                     item.span_hash: item for item in pending
                 }
-                classifier = FileClassifier(repo_root=repo_root, weight_config=weight_map)
+                classifier = FileClassifier(
+                    repo_root=repo_root, weight_config=weight_map
+                )
 
                 enriched_plan: list[dict] = []
                 for entry in plan:
@@ -388,7 +421,9 @@ def enrich(
                 plan = enriched_plan
 
             typer.echo(json.dumps(plan, indent=2, ensure_ascii=False))
-            typer.echo("\n(Dry run only. Remove --dry-run to persist enrichment results.)")
+            typer.echo(
+                "\n(Dry run only. Remove --dry-run to persist enrichment results.)"
+            )
             return
 
         llm = default_enrichment_callable(model)
@@ -425,7 +460,9 @@ def embed(
     model: Annotated[
         str, typer.Option(help="Embedding model (auto uses configured default)")
     ] = "auto",
-    dim: Annotated[int, typer.Option(help="Embedding dimension (0 uses model default)")] = 0,
+    dim: Annotated[
+        int, typer.Option(help="Embedding dimension (0 uses model default)")
+    ] = 0,
 ):
     """Preview or execute embedding jobs for spans."""
     from llmc.rag.workers import embedding_plan, execute_embeddings
@@ -442,7 +479,9 @@ def embed(
         dim_arg = None if dim <= 0 else dim
 
         if dry_run:
-            plan = embedding_plan(db, repo_root, limit=limit, model=model_arg, dim=dim_arg)
+            plan = embedding_plan(
+                db, repo_root, limit=limit, model=model_arg, dim=dim_arg
+            )
             if not plan:
                 typer.echo("No spans pending embedding.")
                 return
@@ -639,7 +678,9 @@ def export(
 
 
 def benchmark(
-    json_output: Annotated[bool, typer.Option("--json", help="Emit metrics as JSON")] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit metrics as JSON")
+    ] = False,
     top1_threshold: Annotated[
         float, typer.Option(help="Minimum top-1 accuracy required")
     ] = 0.75,
@@ -652,7 +693,8 @@ def benchmark(
 
     metrics = run_embedding_benchmark()
     success = (
-        metrics["top1_accuracy"] >= top1_threshold and metrics["avg_margin"] >= margin_threshold
+        metrics["top1_accuracy"] >= top1_threshold
+        and metrics["avg_margin"] >= margin_threshold
     )
 
     report = {
@@ -685,7 +727,9 @@ def benchmark(
 def nav_search(
     query: str,
     limit: Annotated[int, typer.Option("-n", "--limit", help="Max results")] = 10,
-    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit JSON output")
+    ] = False,
 ):
     """Semantic/structural search using graph when fresh, else local fallback."""
     from llmc.rag import tool_rag_search
@@ -731,7 +775,9 @@ def nav_search(
 def nav_where_used(
     symbol: str,
     limit: Annotated[int, typer.Option(help="Max results")] = 10,
-    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit JSON output")
+    ] = False,
 ):
     """Find where a symbol is used (callers, importers)."""
     from llmc.rag import tool_rag_where_used
@@ -755,7 +801,9 @@ def nav_where_used(
 def nav_lineage(
     symbol: str,
     depth: Annotated[int, typer.Option(help="Max depth to traverse")] = 2,
-    json_output: Annotated[bool, typer.Option("--json", help="Emit JSON output")] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit JSON output")
+    ] = False,
 ):
     """Show symbol lineage (parents, children, dependencies)."""
     from llmc.rag import tool_rag_lineage

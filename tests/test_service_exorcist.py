@@ -35,7 +35,9 @@ def _build_fake_rag_repo(tmp_path: Path) -> Path:
 
     # Enrichments JSON with a couple of entries.
     enrichments = rag_dir / "enrichments.json"
-    enrichments.write_text(json.dumps([{"span_hash": "x"}, {"span_hash": "y"}]), encoding="utf-8")
+    enrichments.write_text(
+        json.dumps([{"span_hash": "x"}, {"span_hash": "y"}]), encoding="utf-8"
+    )
 
     # Embeddings database with embeddings table and rows.
     embeddings_db = rag_dir / "embeddings.db"

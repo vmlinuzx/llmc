@@ -37,7 +37,9 @@ def test_safe_subpath_blocks_parent_escape(tmp_path: Path) -> None:
         safe_subpath(base, "../../etc/passwd")
 
 
-@pytest.mark.skipif(not hasattr(os, "symlink"), reason="symlinks not supported on this platform")
+@pytest.mark.skipif(
+    not hasattr(os, "symlink"), reason="symlinks not supported on this platform"
+)
 def test_safe_subpath_blocks_symlink_outside(tmp_path: Path) -> None:
     base = tmp_path / "root"
     base.mkdir()

@@ -35,6 +35,7 @@ def _wrap_in_envelope(res: Any) -> dict:
     envelope = RagResult(meta=meta, items=items)
     return envelope.to_dict()
 
+
 def _print_top_level_help() -> None:
     """Print a tree-style help overview for llmc-rag-nav."""
     print(
@@ -50,9 +51,9 @@ def _print_top_level_help() -> None:
         "  status       Show RAG index status\n"
         "  stats        Show graph enrichment statistics\n\n"
         "Examples:\n"
-        "  llmc-rag-nav search --repo . \"auth middleware\"\n"
-        "  llmc-rag-nav where-used --repo . \"User\"\n"
-        "  llmc-rag-nav lineage --repo . \"User.save\" --direction downstream\n"
+        '  llmc-rag-nav search --repo . "auth middleware"\n'
+        '  llmc-rag-nav where-used --repo . "User"\n'
+        '  llmc-rag-nav lineage --repo . "User.save" --direction downstream\n'
     )
 
 
@@ -68,7 +69,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     # build-graph
-    p_build = sub.add_parser("build-graph", help="Build schema graph + index status for a repo")
+    p_build = sub.add_parser(
+        "build-graph", help="Build schema graph + index status for a repo"
+    )
     p_build.add_argument("--repo", required=True, help="Repository root path")
 
     # status
@@ -154,7 +157,9 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         elif args.command == "where-used":
-            res = tool_handlers.tool_rag_where_used(str(repo), args.symbol, limit=args.limit)
+            res = tool_handlers.tool_rag_where_used(
+                str(repo), args.symbol, limit=args.limit
+            )
             if args.json:
                 print(json.dumps(_wrap_in_envelope(res), indent=2))
             else:
@@ -162,7 +167,11 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         elif args.command == "lineage":
-            direction = "upstream" if args.direction in ("upstream", "callers") else "downstream"
+            direction = (
+                "upstream"
+                if args.direction in ("upstream", "callers")
+                else "downstream"
+            )
             res = tool_handlers.tool_rag_lineage(
                 str(repo), args.symbol, direction, limit=args.limit
             )
@@ -183,7 +192,9 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _print_search(res):
-    print(f"Search: '{res.query}' (Source: {res.source}, Freshness: {res.freshness_state})")
+    print(
+        f"Search: '{res.query}' (Source: {res.source}, Freshness: {res.freshness_state})"
+    )
     if not res.items:
         print("  No results.")
         return
@@ -213,7 +224,9 @@ def _print_search(res):
 
 
 def _print_where_used(res):
-    print(f"Where Used: '{res.symbol}' (Source: {res.source}, Freshness: {res.freshness_state})")
+    print(
+        f"Where Used: '{res.symbol}' (Source: {res.source}, Freshness: {res.freshness_state})"
+    )
     if not res.items:
         print("  No usages found.")
         return

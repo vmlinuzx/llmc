@@ -56,7 +56,8 @@ def _init_telemetry_db(db_path: Path) -> None:
     """Initialize telemetry database schema if needed."""
     conn = sqlite3.connect(db_path)
     try:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS telemetry_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT NOT NULL,
@@ -72,23 +73,30 @@ def _init_telemetry_db(db_path: Path) -> None:
                 error TEXT,
                 output_text TEXT
             )
-        """)
+        """
+        )
 
         # Index for common queries
-        conn.execute("""
+        conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_timestamp 
             ON telemetry_events(timestamp DESC)
-        """)
+        """
+        )
 
-        conn.execute("""
+        conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_agent_cmd 
             ON telemetry_events(agent_id, cmd)
-        """)
+        """
+        )
 
-        conn.execute("""
+        conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_mode 
             ON telemetry_events(mode)
-        """)
+        """
+        )
 
         # Migration: add output_text column to existing DBs
         try:
@@ -126,7 +134,9 @@ def log_event(
     event = TeEvent(
         timestamp=_now_iso(),
         agent_id=os.getenv("LLMC_TE_AGENT_ID", os.getenv("TE_AGENT_ID", "unknown")),
-        session_id=os.getenv("LLMC_TE_SESSION_ID", os.getenv("TE_SESSION_ID", "unknown")),
+        session_id=os.getenv(
+            "LLMC_TE_SESSION_ID", os.getenv("TE_SESSION_ID", "unknown")
+        ),
         cmd=cmd,
         mode=mode,
         input_size=input_size,

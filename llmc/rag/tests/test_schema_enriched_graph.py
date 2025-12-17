@@ -40,7 +40,9 @@ def _seed_index_with_matching_enrichment(db_path: Path) -> None:
             """,
             ("foo.py", "python", "hash", 10, 0.0),
         )
-        file_id = conn.execute("SELECT id FROM files WHERE path = ?", ("foo.py",)).fetchone()[0]
+        file_id = conn.execute(
+            "SELECT id FROM files WHERE path = ?", ("foo.py",)
+        ).fetchone()[0]
 
         conn.execute(
             """
@@ -60,7 +62,19 @@ def _seed_index_with_matching_enrichment(db_path: Path) -> None:
                 side_effects, pitfalls, usage_snippet
             ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?)
             """,
-            ("span1", "test summary", None, "[]", "test-model", "1", "[]", "[]", "[]", "[]", None),
+            (
+                "span1",
+                "test summary",
+                None,
+                "[]",
+                "test-model",
+                "1",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                None,
+            ),
         )
 
     db.close()
@@ -82,7 +96,9 @@ def _seed_index_without_matching_enrichment(db_path: Path) -> None:
             """,
             ("foo.py", "python", "hash", 10, 0.0),
         )
-        file_id = conn.execute("SELECT id FROM files WHERE path = ?", ("foo.py",)).fetchone()[0]
+        file_id = conn.execute(
+            "SELECT id FROM files WHERE path = ?", ("foo.py",)
+        ).fetchone()[0]
 
         conn.execute(
             """
@@ -123,7 +139,9 @@ def test_build_enriched_schema_graph_attaches_enrichment(tmp_path: Path) -> None
     assert entity.metadata.get("span_hash") == "span1"
 
 
-def test_build_enriched_schema_graph_missing_enrichment_is_graceful(tmp_path: Path) -> None:
+def test_build_enriched_schema_graph_missing_enrichment_is_graceful(
+    tmp_path: Path,
+) -> None:
     """When no enrichment exists for a span, integration is non-fatal.
 
     The graph should still be built, and the entity should not have any

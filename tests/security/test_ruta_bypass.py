@@ -1,6 +1,7 @@
-
 import unittest
+
 from llmc.ruta.judge import _safe_eval
+
 
 class TestRutaBypass(unittest.TestCase):
     def test_eval_import_blocked(self):
@@ -9,11 +10,11 @@ class TestRutaBypass(unittest.TestCase):
         """
         context = {}
         payload = "__import__('os').system('echo PWNED')"
-        
+
         try:
             _safe_eval(payload, context)
             print("\n[PoC] RUTA: Payload executed (Unexpected!)")
-            # If we get here, it might have returned None or failed silently, 
+            # If we get here, it might have returned None or failed silently,
             # but simpleeval usually raises an error for unknown names.
         except Exception as e:
             print(f"\n[PoC] RUTA: Payload blocked as expected. Error: {e}")
@@ -29,8 +30,8 @@ class TestRutaBypass(unittest.TestCase):
         try:
             _safe_eval(payload, context)
         except Exception as e:
-             print(f"\n[PoC] RUTA: Attribute access blocked/failed. Error: {e}")
+            print(f"\n[PoC] RUTA: Attribute access blocked/failed. Error: {e}")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
-

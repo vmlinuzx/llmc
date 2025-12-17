@@ -142,7 +142,11 @@ class MetricsCollector:
                     "calls": m.call_count,
                     "errors": m.error_count,
                     "avg_ms": round(m.avg_latency_ms, 2),
-                    "min_ms": round(m.min_latency_ms, 2) if m.min_latency_ms != float("inf") else 0,
+                    "min_ms": (
+                        round(m.min_latency_ms, 2)
+                        if m.min_latency_ms != float("inf")
+                        else 0
+                    ),
                     "max_ms": round(m.max_latency_ms, 2),
                 }
 
@@ -150,7 +154,9 @@ class MetricsCollector:
                 "uptime_s": round(uptime_s, 1),
                 "total_requests": self._total_requests,
                 "total_errors": self._total_errors,
-                "error_rate": round(self._total_errors / max(1, self._total_requests), 4),
+                "error_rate": round(
+                    self._total_errors / max(1, self._total_requests), 4
+                ),
                 "tokens_in": self._tokens_in,
                 "tokens_out": self._tokens_out,
                 "tools": tool_stats,
@@ -181,7 +187,8 @@ class SQLiteMetricsCollector:
         try:
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             with sqlite3.connect(self.db_path) as conn:
-                conn.execute("""
+                conn.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS tool_usage (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         timestamp TEXT NOT NULL,
@@ -192,9 +199,14 @@ class SQLiteMetricsCollector:
                         tokens_out INTEGER,
                         correlation_id TEXT
                     )
-                """)
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_tool_usage_ts ON tool_usage(timestamp)")
-                conn.execute("CREATE INDEX IF NOT EXISTS idx_tool_usage_tool ON tool_usage(tool)")
+                """
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_tool_usage_ts ON tool_usage(timestamp)"
+                )
+                conn.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_tool_usage_tool ON tool_usage(tool)"
+                )
         except Exception as e:
             logging.getLogger("llmc-mcp").error(f"Failed to init telemetry DB: {e}")
             self.enabled = False
@@ -265,7 +277,7 @@ class ObservabilityContext:
             csv_path=config.csv_path,
             enabled=config.enabled and config.csv_token_audit_enabled,
         )
-        
+
         # SQLite metrics
         self.sqlite = SQLiteMetricsCollector(
             db_path=config.sqlite_path,
@@ -305,7 +317,7 @@ class ObservabilityContext:
             latency_ms=latency_ms,
             success=success,
         )
-        
+
         self.sqlite.record(
             tool=tool,
             latency_ms=latency_ms,
@@ -335,7 +347,9 @@ class ObservabilityContext:
         return _scope()
 
 
-def setup_logging(config: McpObservabilityConfig, logger_name: str = "llmc-mcp") -> logging.Logger:
+def setup_logging(
+    config: McpObservabilityConfig, logger_name: str = "llmc-mcp"
+) -> logging.Logger:
     """Configure logging based on observability settings.
 
     Args:
@@ -360,9 +374,13 @@ def setup_logging(config: McpObservabilityConfig, logger_name: str = "llmc-mcp")
 
     # Use JSON or text formatter
     if config.log_format == "json":
-        handler.setFormatter(JsonLogFormatter(include_correlation_id=config.include_correlation_id))
+        handler.setFormatter(
+            JsonLogFormatter(include_correlation_id=config.include_correlation_id)
+        )
     else:
-        handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+        )
 
     logger.addHandler(handler)
 

@@ -240,7 +240,14 @@ class TestObservabilityContext(unittest.TestCase):
 
     def test_records_to_metrics_and_audit(self):
         obs = ObservabilityContext(self.config)
-        obs.record("abc123", "read_file", latency_ms=10.0, success=True, tokens_in=5, tokens_out=50)
+        obs.record(
+            "abc123",
+            "read_file",
+            latency_ms=10.0,
+            success=True,
+            tokens_in=5,
+            tokens_out=50,
+        )
 
         # Check metrics
         stats = obs.get_stats()

@@ -10,6 +10,7 @@ import tomlkit
 @dataclass
 class ConfigOptions:
     """User-specified overrides and context for config generation."""
+
     repo_path: Path
     custom_embeddings_url: str | None = None
     custom_embeddings_model: str | None = None
@@ -17,25 +18,28 @@ class ConfigOptions:
     custom_enrichment_model: str | None = None
     additional_excludes: list[str] = field(default_factory=list)
 
+
 class RepoConfigurator:
     """
     Generates per-repository llmc.toml configuration.
-    
+
     Uses an existing template (LLMC's own config or user-provided) as the base,
     applies minimal edits (paths, overrides), and preserves comments using tomlkit.
     """
-    
+
     def __init__(self, interactive: bool = True):
         self.interactive = interactive
-    
-    def configure(self, repo_path: Path, template_path: Path | None = None) -> Path | None:
+
+    def configure(
+        self, repo_path: Path, template_path: Path | None = None
+    ) -> Path | None:
         """
         Generate llmc.toml for the target repository.
-        
+
         Args:
             repo_path: The root directory of the repository being onboarded.
             template_path: Optional path to a custom template. If None, auto-discovery is used.
-            
+
         Returns:
             Path to the generated config file, or None if generation was skipped/aborted.
         """
@@ -50,7 +54,7 @@ class RepoConfigurator:
         # 2. Handle existing file
         target = repo_path / "llmc.toml"
         action = self._handle_existing(target)
-        
+
         if action == "skip":
             return None
         elif action == "abort":
@@ -70,13 +74,10 @@ class RepoConfigurator:
         return self._write_config(doc, repo_path, resolved_template)
 
     def _write_config(
-        self,
-        doc: tomlkit.TOMLDocument,
-        repo_path: Path,
-        template_path: Path
+        self, doc: tomlkit.TOMLDocument, repo_path: Path, template_path: Path
     ) -> Path:
         """Write config atomically with header."""
-        
+
         # Header
         timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         header = (
@@ -85,23 +86,19 @@ class RepoConfigurator:
             f"# Template: {template_path}\n"
             "#\n"
         )
-        
+
         # Serialize
         body = tomlkit.dumps(doc)
         output = header + "\n" + body
-        
+
         # Atomic write
         target = repo_path / "llmc.toml"
         with tempfile.NamedTemporaryFile(
-            mode='w',
-            dir=repo_path,
-            delete=False,
-            suffix='.tmp',
-            encoding='utf-8'
+            mode="w", dir=repo_path, delete=False, suffix=".tmp", encoding="utf-8"
         ) as f:
             f.write(output)
             tmp_path = Path(f.name)
-        
+
         tmp_path.rename(target)
         print(f"Created {target}")
         return target
@@ -109,14 +106,14 @@ class RepoConfigurator:
     def _transform(self, doc: tomlkit.TOMLDocument, options: ConfigOptions) -> None:
         """Apply transformations to parsed doc in-place."""
         repo_str = str(options.repo_path)
-        
+
         # Path substitution
         mcp_tools = self._ensure_table(doc, "mcp", "tools")
         mcp_tools["allowed_roots"] = [repo_str]
-        
+
         te_workspace = self._ensure_table(doc, "tool_envelope", "workspace")
         te_workspace["root"] = repo_str
-        
+
         # Embeddings override
         if options.custom_embeddings_url or options.custom_embeddings_model:
             try:
@@ -129,7 +126,7 @@ class RepoConfigurator:
                     profile["model"] = options.custom_embeddings_model
             except KeyError:
                 pass  # Profile doesn't exist, skip
-        
+
         # Enrichment override
         if options.custom_enrichment_url or options.custom_enrichment_model:
             enrichment = doc.get("enrichment", {})
@@ -141,7 +138,7 @@ class RepoConfigurator:
                             entry["url"] = options.custom_enrichment_url
                         if options.custom_enrichment_model:
                             entry["model"] = options.custom_enrichment_model
-        
+
         # Index excludes
         if options.additional_excludes:
             indexing = self._ensure_table(doc, "indexing")
@@ -161,87 +158,91 @@ class RepoConfigurator:
             current = current[key]
         return current
 
-    def _collect_options(self, repo_path: Path, doc: tomlkit.TOMLDocument) -> ConfigOptions:
+    def _collect_options(
+        self, repo_path: Path, doc: tomlkit.TOMLDocument
+    ) -> ConfigOptions:
         """Collect user options (interactive) or use defaults."""
         options = ConfigOptions(repo_path=repo_path)
-        
+
         if not self.interactive:
             return options
-        
+
         # Extract defaults from template
         emb_profile = doc.get("embeddings", {}).get("profiles", {}).get("docs", {})
         default_emb_url = emb_profile.get("ollama", {}).get("api_base", "<unset>")
         default_emb_model = emb_profile.get("model", "<unset>")
-        
+
         enrichment = doc.get("enrichment", {})
         default_chain = enrichment.get("default_chain", "<unset>")
         default_enrich_url = "<unset>"
         default_enrich_model = "<unset>"
-        
+
         if default_chain != "<unset>" and "chain" in enrichment:
             for entry in enrichment["chain"]:
                 if entry.get("chain") == default_chain:
                     default_enrich_url = entry.get("url", "<unset>")
                     default_enrich_model = entry.get("model", "<unset>")
                     break
-        
+
         print("🛠️  Repository Configurator")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("\nWe'll generate an llmc.toml config for your repository.")
         print("Using the template as sane defaults.\n")
         print("Press ENTER to accept defaults shown in [brackets].\n")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-        
+
         # Prompt for embeddings
         print("\n🤖 LLM Settings\n")
         print("1. Embeddings API (for vector search)")
         print(f"   Default URL:   {default_emb_url}")
         print(f"   Default model: {default_emb_model}")
-        
+
         try:
             use_default = input("\n   Use defaults? [Y/n]: ").strip().lower()
         except EOFError:
             use_default = "y"
-        
+
         if use_default in ("n", "no"):
             options.custom_embeddings_url = input("   URL: ").strip() or None
             options.custom_embeddings_model = input("   Model: ").strip() or None
-        
+
         # Prompt for enrichment
         print("\n2. Enrichment LLM (for code understanding)")
         print(f"   Default chain: {default_chain}")
         print(f"   URL:           {default_enrich_url}")
         print(f"   Model:         {default_enrich_model}")
-        
+
         try:
             use_default = input("\n   Use defaults? [Y/n]: ").strip().lower()
         except EOFError:
             use_default = "y"
-            
+
         if use_default in ("n", "no"):
             options.custom_enrichment_url = input("   URL: ").strip() or None
             options.custom_enrichment_model = input("   Model: ").strip() or None
-            
+
         # Prompt for exclude dirs
         print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("\n📁 Indexing\n")
         print("Additional directories to exclude from indexing")
         print("(comma-separated, or press Enter for none)")
-        
+
         try:
             excludes = input("\n   Excludes: ").strip()
         except EOFError:
             excludes = ""
-            
+
         if excludes:
-            options.additional_excludes = [d.strip() for d in excludes.split(",") if d.strip()]
-        
+            options.additional_excludes = [
+                d.strip() for d in excludes.split(",") if d.strip()
+            ]
+
         return options
 
     def _handle_existing(self, target: Path) -> str:
         """
         Handle existing llmc.toml.
-        
+
         Returns:
             "proceed" - continue with generation
             "skip" - skip generation, continue onboarding
@@ -249,21 +250,21 @@ class RepoConfigurator:
         """
         if not target.exists():
             return "proceed"
-        
+
         if not self.interactive:
             print(f"llmc.toml exists at {target}, skipping generation", file=sys.stderr)
             return "skip"
-        
+
         print(f"\nllmc.toml already exists at {target}\n")
         print("  (K)eep existing config and skip generation")
         print("  (R)eplace with new config (backup will be created)")
         print("  (A)bort onboarding\n")
-        
+
         try:
             choice = input("Choice [K/R/A]: ").strip().upper()
         except EOFError:
             choice = "A"
-        
+
         if choice == "K":
             print("Keeping existing config.")
             return "skip"
@@ -291,14 +292,14 @@ class RepoConfigurator:
                     "Provide a valid path with --template"
                 )
             return path
-        
+
         # Auto-discovery: walk up from this file
         current = Path(__file__).resolve().parent
         for parent in [current] + list(current.parents):
             candidate = parent / "llmc.toml"
             if candidate.exists():
                 return candidate
-        
+
         raise FileNotFoundError(
             "Could not find llmc.toml template.\n"
             "Provide a template with --template /path/to/llmc.toml"

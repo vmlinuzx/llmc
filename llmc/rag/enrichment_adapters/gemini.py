@@ -67,15 +67,7 @@ class GeminiBackend(RemoteBackend):
         endpoint = f"/models/{self._config.model}:generateContent"
 
         payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": prompt
-                        }
-                    ]
-                }
-            ],
+            "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.7,
                 "topK": 40,
@@ -86,7 +78,9 @@ class GeminiBackend(RemoteBackend):
 
         return endpoint, payload
 
-    def _parse_response(self, data: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
+    def _parse_response(
+        self, data: dict[str, Any], item: dict[str, Any]
+    ) -> dict[str, Any]:
         """Parse Gemini response into enrichment format.
 
         Gemini response structure:

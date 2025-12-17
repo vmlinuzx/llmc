@@ -163,7 +163,9 @@ def run_rag_doctor(repo_path: Path, verbose: bool = False) -> dict[str, Any]:
         if pending_embeddings:
             if status == "OK":
                 status = "WARN"
-            issues.append(f"{pending_embeddings} spans are pending embeddings (profile 'default').")
+            issues.append(
+                f"{pending_embeddings} spans are pending embeddings (profile 'default')."
+            )
 
         stats = {
             **base_stats,
@@ -228,7 +230,9 @@ if __name__ == "__main__":
     import sys as _sys
 
     parser = argparse.ArgumentParser(description="Run RAG doctor diagnostics.")
-    parser.add_argument("repo", type=Path, nargs="?", default=Path("."), help="Repository path")
+    parser.add_argument(
+        "repo", type=Path, nargs="?", default=Path("."), help="Repository path"
+    )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Show extra details in JSON output"
     )

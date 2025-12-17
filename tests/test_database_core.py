@@ -56,7 +56,9 @@ def test_upsert_file_and_get_file_hash_roundtrip(tmp_path: Path) -> None:
         db.close()
 
 
-def test_replace_spans_preserves_unchanged_and_reports_stats(tmp_path: Path, capsys) -> None:
+def test_replace_spans_preserves_unchanged_and_reports_stats(
+    tmp_path: Path, capsys
+) -> None:
     """replace_spans keeps unchanged spans and only inserts/deletes the delta."""
     db = _make_db(tmp_path)
     try:
@@ -77,7 +79,9 @@ def test_replace_spans_preserves_unchanged_and_reports_stats(tmp_path: Path, cap
         db.replace_spans(file_id, updated_spans)
 
         # We expect two spans total, with hashes span-a and span-c.
-        rows = db.conn.execute("SELECT span_hash, symbol FROM spans ORDER BY span_hash").fetchall()
+        rows = db.conn.execute(
+            "SELECT span_hash, symbol FROM spans ORDER BY span_hash"
+        ).fetchall()
         hashes = {row["span_hash"] for row in rows}
         symbols = {row["symbol"] for row in rows}
         assert hashes == {"span-a", "span-c"}

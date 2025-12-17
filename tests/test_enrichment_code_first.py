@@ -28,7 +28,9 @@ def _insert_file_and_span(
     )
     db.conn.commit()
 
-    file_id = db.conn.execute("SELECT id FROM files WHERE path = ?", (rel_path,)).fetchone()[0]
+    file_id = db.conn.execute(
+        "SELECT id FROM files WHERE path = ?", (rel_path,)
+    ).fetchone()[0]
 
     db.conn.execute(
         """
@@ -98,7 +100,9 @@ def _fake_llm_call() -> callable:
     return _call
 
 
-def test_execute_enrichment_respects_path_weights_when_code_first(tmp_path: Path) -> None:
+def test_execute_enrichment_respects_path_weights_when_code_first(
+    tmp_path: Path,
+) -> None:
     """execute_enrichment should process lower-weight (higher priority) paths first."""
     db, repo_root = _make_db(tmp_path)
 

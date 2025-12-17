@@ -40,9 +40,9 @@ class HealthChecker:
         """Ping an Ollama endpoint with minimal request."""
         start = time.time()
 
-        payload = json.dumps({"model": endpoint.model, "prompt": "ping", "stream": False}).encode(
-            "utf-8"
-        )
+        payload = json.dumps(
+            {"model": endpoint.model, "prompt": "ping", "stream": False}
+        ).encode("utf-8")
 
         req = urllib.request.Request(
             f"{endpoint.url}/api/generate",
@@ -56,10 +56,14 @@ class HealthChecker:
                 _ = resp.read(1)  # Just check we got bytes back
 
             latency_ms = (time.time() - start) * 1000
-            return HealthStatus(endpoint=endpoint, reachable=True, latency_ms=latency_ms)
+            return HealthStatus(
+                endpoint=endpoint, reachable=True, latency_ms=latency_ms
+            )
 
         except Exception as e:
-            return HealthStatus(endpoint=endpoint, reachable=False, latency_ms=0, error=str(e))
+            return HealthStatus(
+                endpoint=endpoint, reachable=False, latency_ms=0, error=str(e)
+            )
 
     def check_all(self, endpoints: list[OllamaEndpoint]) -> list[HealthStatus]:
         """Check all endpoints."""
@@ -78,7 +82,9 @@ class HealthChecker:
         if reachable:
             output.append("✅ Reachable Endpoints:")
             for r in reachable:
-                output.append(f"  {r.endpoint.label:15} {r.endpoint.url:40} ({r.latency_ms:.0f}ms)")
+                output.append(
+                    f"  {r.endpoint.label:15} {r.endpoint.url:40} ({r.latency_ms:.0f}ms)"
+                )
 
         if unreachable:
             output.append("")

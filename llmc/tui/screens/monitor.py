@@ -15,8 +15,8 @@ from textual.containers import Container, Grid, ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Button, Static
 
-from llmc.tui.screens.config import ConfigScreen
 from llmc.rag.analytics import QueryTracker
+from llmc.tui.screens.config import ConfigScreen
 
 
 class MonitorScreen(Screen):
@@ -157,7 +157,9 @@ class MonitorScreen(Screen):
                     yield Static("Navigation", classes="panel-title")
                     with ScrollableContainer(id="menu-list"):
                         for key, label, _ in self.menu_items:
-                            yield Button(f"[{key}] {label}", id=f"menu-{key}", classes="menu-btn")
+                            yield Button(
+                                f"[{key}] {label}", id=f"menu-{key}", classes="menu-btn"
+                            )
 
                 with Container(id="context-panel", classes="panel"):
                     yield Static("Context & Analytics", classes="panel-title")
@@ -176,7 +178,9 @@ class MonitorScreen(Screen):
 
     def on_mount(self) -> None:
         """Start timers when mounted."""
-        self.query_one("#header", Static).update(f"LLMC Monitor :: repo {self.app.repo_root}")
+        self.query_one("#header", Static).update(
+            f"LLMC Monitor :: repo {self.app.repo_root}"
+        )
         # Start log streaming from the RAG service (falls back to simulation if unavailable).
         self._start_log_stream()
         self.update_menu()
@@ -366,7 +370,9 @@ class MonitorScreen(Screen):
 
                 nodes, _ = _load_graph(repo_root)
                 stats["graph_nodes"] = len(nodes)
-                stats["files_tracked"] = len({n.get("path", "") for n in nodes if n.get("path")})
+                stats["files_tracked"] = len(
+                    {n.get("path", "") for n in nodes if n.get("path")}
+                )
 
                 total_content = sum(
                     len(str(n.get("metadata", {}).get("summary", ""))) for n in nodes

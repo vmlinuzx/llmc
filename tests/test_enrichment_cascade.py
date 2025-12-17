@@ -17,7 +17,9 @@ class _FakeBackend:
         self._label = label or config.name
         self.calls: list[str] = []
 
-    def generate(self, prompt: str, *, item: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    def generate(
+        self, prompt: str, *, item: dict[str, Any]
+    ) -> tuple[str, dict[str, Any]]:
         self.calls.append(prompt)
         if self._should_fail:
             raise BackendError(f"{self._label} failed")
@@ -28,8 +30,12 @@ class _FakeBackend:
 
 
 def test_cascade_tries_second_on_backend_error() -> None:
-    first = _FakeBackend(BackendConfig(name="first", provider="ollama"), should_fail=True)
-    second = _FakeBackend(BackendConfig(name="second", provider="ollama"), should_fail=False)
+    first = _FakeBackend(
+        BackendConfig(name="first", provider="ollama"), should_fail=True
+    )
+    second = _FakeBackend(
+        BackendConfig(name="second", provider="ollama"), should_fail=False
+    )
     cascade = BackendCascade([first, second])
 
     text, meta, attempts = cascade.generate_for_span("hello", item={"span_hash": "abc"})
@@ -44,8 +50,12 @@ def test_cascade_tries_second_on_backend_error() -> None:
 
 
 def test_cascade_raises_after_all_fail() -> None:
-    first = _FakeBackend(BackendConfig(name="first", provider="ollama"), should_fail=True)
-    second = _FakeBackend(BackendConfig(name="second", provider="gateway"), should_fail=True)
+    first = _FakeBackend(
+        BackendConfig(name="first", provider="ollama"), should_fail=True
+    )
+    second = _FakeBackend(
+        BackendConfig(name="second", provider="gateway"), should_fail=True
+    )
     cascade = BackendCascade([first, second])
 
     with pytest.raises(BackendError):
@@ -53,7 +63,9 @@ def test_cascade_raises_after_all_fail() -> None:
 
 
 def test_attempt_records_populated() -> None:
-    backend = _FakeBackend(BackendConfig(name="only", provider="ollama", model="qwen2.5:7b"))
+    backend = _FakeBackend(
+        BackendConfig(name="only", provider="ollama", model="qwen2.5:7b")
+    )
     cascade = BackendCascade([backend])
 
     text, meta, attempts = cascade.generate_for_span("hi", item={"span_hash": "abc"})

@@ -41,26 +41,32 @@ class TestRepoIntegration:
         repo_root.mkdir()
 
         # Create Python files
-        (repo_root / "module1.py").write_text("""
+        (repo_root / "module1.py").write_text(
+            """
 def function_a():
     return 1
 
 class ClassA:
     pass
-""")
+"""
+        )
 
         (repo_root / "submodule").mkdir()
-        (repo_root / "submodule" / "module2.py").write_text("""
+        (repo_root / "submodule" / "module2.py").write_text(
+            """
 from module1 import function_a
 
 def function_b():
     return function_a() + 1
-""")
+"""
+        )
 
-        (repo_root / "setup.py").write_text("""
+        (repo_root / "setup.py").write_text(
+            """
 from setuptools import setup
 setup(name='test')
-""")
+"""
+        )
 
         # Test workspace detection/creation
         repo_root / ".llmc" / "rag"
@@ -89,11 +95,19 @@ setup(name='test')
             capture_output=True,
         )
         subprocess.run(
-            ["git", "config", "user.name", "Test"], cwd=repo_root, check=True, capture_output=True
+            ["git", "config", "user.name", "Test"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
         )
-        subprocess.run(["git", "add", "."], cwd=repo_root, check=True, capture_output=True)
         subprocess.run(
-            ["git", "commit", "-m", "Initial"], cwd=repo_root, check=True, capture_output=True
+            ["git", "add", "."], cwd=repo_root, check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "Initial"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
         )
 
         # Verify git head exists
@@ -102,7 +116,11 @@ setup(name='test')
 
         # Get commit SHA
         result = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
         )
         commit_sha = result.stdout.strip()
         assert len(commit_sha) == 40  # Full SHA length

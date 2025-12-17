@@ -37,24 +37,34 @@ class TestFlagExclusivity:
 
     def test_nav_search_json_vs_jsonl_exclusivity(self, runner):
         """Test that --json and --jsonl are mutually exclusive for nav search."""
-        result = runner.invoke(cli, ["nav", "search", "--json", "--jsonl", "test query"])
+        result = runner.invoke(
+            cli, ["nav", "search", "--json", "--jsonl", "test query"]
+        )
 
         # Should exit with error code
         assert result.exit_code == 2
         # Should show error message
-        assert "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        assert (
+            "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        )
 
     def test_nav_search_json_vs_jsonl_compact_exclusivity(self, runner):
         """Test that --json and --jsonl-compact are mutually exclusive for nav search."""
-        result = runner.invoke(cli, ["nav", "search", "--json", "--jsonl-compact", "test query"])
+        result = runner.invoke(
+            cli, ["nav", "search", "--json", "--jsonl-compact", "test query"]
+        )
 
         assert result.exit_code == 2
-        assert "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        assert (
+            "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        )
 
     def test_nav_search_jsonl_and_jsonl_compact_together(self, runner):
         """Test that --jsonl and --jsonl-compact cannot be used together."""
         # Both jsonl flags together might be invalid
-        runner.invoke(cli, ["nav", "search", "--jsonl", "--jsonl-compact", "test query"])
+        runner.invoke(
+            cli, ["nav", "search", "--jsonl", "--jsonl-compact", "test query"]
+        )
 
         # May or may not error, but both compact flags should be handled
         # Click might handle this as the flags can be used together
@@ -62,17 +72,25 @@ class TestFlagExclusivity:
 
     def test_nav_where_used_json_vs_jsonl_exclusivity(self, runner):
         """Test that --json and --jsonl are mutually exclusive for nav where-used."""
-        result = runner.invoke(cli, ["nav", "where-used", "--json", "--jsonl", "test_symbol"])
+        result = runner.invoke(
+            cli, ["nav", "where-used", "--json", "--jsonl", "test_symbol"]
+        )
 
         assert result.exit_code == 2
-        assert "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        assert (
+            "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        )
 
     def test_nav_lineage_json_vs_jsonl_exclusivity(self, runner):
         """Test that --json and --jsonl are mutually exclusive for nav lineage."""
-        result = runner.invoke(cli, ["nav", "lineage", "--json", "--jsonl", "test_symbol"])
+        result = runner.invoke(
+            cli, ["nav", "lineage", "--json", "--jsonl", "test_symbol"]
+        )
 
         assert result.exit_code == 2
-        assert "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        assert (
+            "Choose either --json or --jsonl/--jsonl-compact, not both" in result.output
+        )
 
     def test_nav_search_no_flags_works(self, runner):
         """Test that nav search works without output flags (text mode)."""
@@ -421,7 +439,13 @@ class TestCompactModeShape:
         for path in test_paths:
             with patch("sys.stdout", captured):
                 _emit_jsonl_line(
-                    {"type": "item", "file": path, "path": path, "start_line": 1, "end_line": 5}
+                    {
+                        "type": "item",
+                        "file": path,
+                        "path": path,
+                        "start_line": 1,
+                        "end_line": 5,
+                    }
                 )
             captured.truncate(0)
             captured.seek(0)

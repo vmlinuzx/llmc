@@ -100,7 +100,11 @@ class ContextTrimmer:
             chunk.token_count = self.count_tokens(chunk.content)
 
         # Filter by minimum relevance threshold
-        filtered = [c for c in chunks if c.relevance_score >= self.config.min_relevance_threshold]
+        filtered = [
+            c
+            for c in chunks
+            if c.relevance_score >= self.config.min_relevance_threshold
+        ]
 
         stats = {
             "input_chunks": len(chunks),
@@ -162,7 +166,8 @@ class ContextTrimmer:
 
                 # Similarity to already selected (use content overlap as proxy)
                 max_sim = max(
-                    self._simple_similarity(candidate.content, s.content) for s in selected
+                    self._simple_similarity(candidate.content, s.content)
+                    for s in selected
                 )
 
                 # MMR score
@@ -193,7 +198,9 @@ class ContextTrimmer:
 
         return len(intersection) / len(union) if union else 0.0
 
-    def _enforce_budget(self, chunks: list[ChunkItem]) -> tuple[list[ChunkItem], dict[str, any]]:
+    def _enforce_budget(
+        self, chunks: list[ChunkItem]
+    ) -> tuple[list[ChunkItem], dict[str, any]]:
         """Enforce token budget with greedy selection.
 
         Args:
@@ -218,7 +225,9 @@ class ContextTrimmer:
             "selected_chunks": len(selected),
             "total_tokens": total_tokens,
             "budget_limit": budget,
-            "utilization_pct": round(total_tokens / budget * 100, 1) if budget > 0 else 0,
+            "utilization_pct": (
+                round(total_tokens / budget * 100, 1) if budget > 0 else 0
+            ),
             "dropped_budget_exceeded": len(chunks) - len(selected),
         }
 
@@ -293,7 +302,9 @@ def search_with_trimming(
 
     # Retrieve candidates
     repo = repo_root or find_repo_root()
-    results = search_spans(query, limit=limit, repo_root=repo, model_override=model_override)
+    results = search_spans(
+        query, limit=limit, repo_root=repo, model_override=model_override
+    )
 
     # Convert to ChunkItem format
     chunks: list[ChunkItem] = []

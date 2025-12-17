@@ -43,12 +43,13 @@ from llmc.rag_nav.tool_handlers import build_graph_for_repo
 # Event-driven mode imports
 try:
     from llmc.rag.watcher import (
-        RepoWatcher,
         ChangeQueue,
         FileFilter,
-        is_inotify_available,
+        RepoWatcher,
         get_inotify_watch_limit,
+        is_inotify_available,
     )
+
     WATCHER_AVAILABLE = True
 except ImportError:
     WATCHER_AVAILABLE = False
@@ -87,7 +88,8 @@ except ValueError:
 
 def print_help():
     """Print beautiful help screen."""
-    print("""
+    print(
+        """
 LLMC RAG Service
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 The intelligent RAG enrichment daemon for LLMC
@@ -130,7 +132,8 @@ Examples:
   llmc-rag disable
 
 For detailed help: llmc-rag help <command>
-""")
+"""
+    )
 
 
 class ServiceState:
@@ -232,7 +235,9 @@ class ServiceState:
     def update_last_vacuum(self, repo_path: str):
         """Record vacuum timestamp for a repo."""
         self._refresh_from_disk()
-        if "last_vacuum" not in self.state or not isinstance(self.state["last_vacuum"], dict):
+        if "last_vacuum" not in self.state or not isinstance(
+            self.state["last_vacuum"], dict
+        ):
             self.state["last_vacuum"] = {}
         self.state["last_vacuum"][repo_path] = time.time()
         self.save()
@@ -277,7 +282,8 @@ class FailureTracker:
         self.max_failures = max_failures
 
     def _init_db(self):
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS failures (
                 span_hash TEXT,
                 repo TEXT,
@@ -286,7 +292,8 @@ class FailureTracker:
                 reason TEXT,
                 PRIMARY KEY (span_hash, repo)
             )
-        """)
+        """
+        )
         self.conn.commit()
 
     def record_failure(self, span_hash: str, repo: str, reason: str):
@@ -314,7 +321,8 @@ class FailureTracker:
     def is_failed(self, span_hash: str, repo: str) -> bool:
         """Check if span has hit failure threshold."""
         cursor = self.conn.execute(
-            "SELECT failure_count FROM failures WHERE span_hash = ? AND repo = ?", (span_hash, repo)
+            "SELECT failure_count FROM failures WHERE span_hash = ? AND repo = ?",
+            (span_hash, repo),
         )
         row = cursor.fetchone()
         limit = getattr(self, "max_failures", MAX_FAILURES)
@@ -370,7 +378,9 @@ def _stream_systemd_logs_follow(lines: int) -> int:
         while True:
             result = subprocess.run(cmd, check=False, capture_output=True, text=True)
             if result.returncode != 0:
-                err = (result.stderr or "").strip() or f"journalctl exited with {result.returncode}"
+                err = (
+                    result.stderr or ""
+                ).strip() or f"journalctl exited with {result.returncode}"
                 print(f"[logs] journalctl error: {err}", file=sys.stderr)
                 return 1
 
@@ -503,7 +513,7 @@ class RAGService:
 
     def process_repo(self, repo_path: str) -> bool:
         """Process one repo: sync, enrich, embed with REAL LLMs.
-        
+
         Returns:
             bool: True if any work was done (changes synced, spans enriched, etc.), False otherwise.
         """
@@ -520,8 +530,6 @@ class RAGService:
 
         if str(repo) not in sys.path:
             sys.path.insert(0, str(repo))
-
-
 
         # Step 1: Detect and sync changed files
         try:
@@ -540,24 +548,26 @@ class RAGService:
         # Step 2: Enrich pending spans using EnrichmentPipeline
         # Load configuration from target repo (preferred) or service defaults
         repo_cfg = self._load_full_toml(repo)
-        enrichment_cfg = repo_cfg.get("enrichment") or self._toml_cfg.get("enrichment") or {}
-        
+        enrichment_cfg = (
+            repo_cfg.get("enrichment") or self._toml_cfg.get("enrichment") or {}
+        )
+
         batch_size = int(enrichment_cfg.get("batch_size", 50))
         cooldown = int(os.getenv("ENRICH_COOLDOWN", "0"))
-        
+
         runner_cfg = enrichment_cfg.get("runner", {})
         code_first = bool(runner_cfg.get("code_first_default", False))
         starvation_high = int(runner_cfg.get("starvation_ratio_high", 5))
         starvation_low = int(runner_cfg.get("starvation_ratio_low", 1))
-        
+
         # Get database
         index_path = index_path_for_write(repo)
         db = Database(index_path)
-        
+
         try:
             # Build router from repo config
             router = build_router_from_toml(repo)
-            
+
             # Create pipeline with new backend factory that supports all providers
             pipeline = EnrichmentPipeline(
                 db=db,
@@ -571,23 +581,28 @@ class RAGService:
                 starvation_ratio_high=starvation_high,
                 starvation_ratio_low=starvation_low,
             )
-            
-            print(f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})", flush=True)
-            
+
+            print(
+                f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})",
+                flush=True,
+            )
+
             def progress_cb(current, total):
                 if current % 5 == 0 or current == total:
                     print(f"    ... processed {current}/{total} spans", flush=True)
 
             result = pipeline.process_batch(
-                limit=batch_size, 
+                limit=batch_size,
                 stop_check=lambda: not self.running,
-                progress_callback=progress_cb
+                progress_callback=progress_cb,
             )
-            
+
             # Report results
             if result.attempted > 0:
                 work_done = True
-                print(f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)")
+                print(
+                    f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)"
+                )
                 if result.failed > 0:
                     print(f"     ⚠️  {result.failed} failures, {result.skipped} skipped")
             else:
@@ -598,7 +613,6 @@ class RAGService:
         # RAG doctor: quick index/enrichment health snapshot
         doctor_result = run_rag_doctor(repo)
         print(format_rag_doctor_summary(doctor_result, repo.name))
-
 
         # GPU Cooldown: Give Ollama time to unload enrichment LLM before loading embedding model
         # This prevents model runner crashes when both use the same Ollama server
@@ -649,7 +663,9 @@ class RAGService:
             vacuum_interval_hours = get_vacuum_interval_hours(repo)
             last_vacuum = self.state.get_last_vacuum(str(repo))
             now = time.time()
-            print(f"DEBUG: Vacuum check: now={now}, last_vacuum={last_vacuum}, interval={vacuum_interval_hours*3600}, condition={now - last_vacuum > vacuum_interval_hours * 3600}")
+            print(
+                f"DEBUG: Vacuum check: now={now}, last_vacuum={last_vacuum}, interval={vacuum_interval_hours*3600}, condition={now - last_vacuum > vacuum_interval_hours * 3600}"
+            )
             if now - last_vacuum > vacuum_interval_hours * 3600:
                 print("  🧹 Running database vacuum...")
                 db_path = index_path_for_write(repo)
@@ -667,7 +683,7 @@ class RAGService:
             print(f"  ℹ️  {repo.name}: Nothing to do")
         else:
             print(f"  ✅ {repo.name} processing complete")
-        
+
         return work_done
 
     def get_repo_stats(self, repo_path: str) -> dict:
@@ -689,12 +705,14 @@ class RAGService:
         if mode == "event" and WATCHER_AVAILABLE:
             return self.run_loop_event(interval)
         elif mode == "event" and not WATCHER_AVAILABLE:
-            print("⚠️  Event mode requested but inotify not available, falling back to poll mode")
+            print(
+                "⚠️  Event mode requested but inotify not available, falling back to poll mode"
+            )
         return self.run_loop_poll(interval)
 
     def run_loop_event(self, housekeeping_interval: int = 300):
         """Event-driven service loop using inotify.
-        
+
         Sleeps indefinitely until file changes are detected.
         ~0% CPU when idle, instant response to file changes.
         """
@@ -714,7 +732,7 @@ class RAGService:
         debounce_seconds = float(self._daemon_cfg.get("debounce_seconds", 2.0))
         queue = ChangeQueue(debounce_seconds=debounce_seconds)
         watchers: list[RepoWatcher] = []
-        
+
         for repo_path in self.state.state["repos"]:
             try:
                 repo = Path(repo_path)
@@ -733,11 +751,11 @@ class RAGService:
 
         self.state.set_running(os.getpid())
         print(f"🚀 RAG service started (PID {os.getpid()})")
-        print(f"   Mode: event-driven (inotify)")
+        print("   Mode: event-driven (inotify)")
         print(f"   Watching {len(watchers)} repos")
         print(f"   Debounce: {debounce_seconds}s")
         print(f"   Housekeeping interval: {housekeeping_interval}s")
-        
+
         watch_limit = get_inotify_watch_limit()
         if watch_limit:
             print(f"   inotify watch limit: {watch_limit}")
@@ -794,88 +812,95 @@ class RAGService:
         """Run periodic maintenance tasks (log rotation, vacuum check, idle enrichment)."""
         try:
             if self._log_manager is not None:
-                rotation_interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
+                rotation_interval = int(
+                    self._logging_cfg.get("auto_rotation_interval", 0)
+                )
                 log_dir_val = self._logging_cfg.get("log_directory", "logs")
                 log_dir = Path(str(log_dir_val))
                 if not log_dir.is_absolute():
                     log_dir = (self._repo_root / log_dir).resolve()
                 now = time.time()
-                if rotation_interval == 0 or now - self._last_rotate >= rotation_interval:
+                if (
+                    rotation_interval == 0
+                    or now - self._last_rotate >= rotation_interval
+                ):
                     result = self._log_manager.rotate_logs(log_dir)
                     self._last_rotate = now
                     if result.get("rotated_files", 0) > 0:
                         print(f"🔄 Rotated {result['rotated_files']} log files")
         except Exception as e:
             print(f"  ⚠️  Housekeeping failed: {e}")
-        
+
         # Idle enrichment - run enrichment when daemon is idle
         self._run_idle_enrichment()
-    
+
     def _run_idle_enrichment(self):
         """Run batch enrichment during idle periods if configured."""
         idle_cfg = self._daemon_cfg.get("idle_enrichment", {})
-        
+
         # Check if enabled
         if not idle_cfg.get("enabled", False):
             return
-        
+
         # Check interval
         interval = int(idle_cfg.get("interval_seconds", 600))
         now = time.time()
         last_run = getattr(self, "_last_idle_enrichment", 0)
         if now - last_run < interval:
             return
-        
+
         # Check dry-run mode
         dry_run = idle_cfg.get("dry_run", False)
-        
+
         # Get configuration
         batch_size = int(idle_cfg.get("batch_size", 10))
         code_first = idle_cfg.get("code_first", True)
         max_daily_cost = float(idle_cfg.get("max_daily_cost_usd", 1.00))
-        
+
         # Track daily cost (reset at midnight)
         today = time.strftime("%Y-%m-%d")
         if getattr(self, "_enrichment_cost_date", "") != today:
             self._enrichment_cost_date = today
             self._enrichment_daily_cost = 0.0
-        
+
         if self._enrichment_daily_cost >= max_daily_cost:
             return  # Cost limit reached for today
-        
+
         print(f"\n🧠 Idle enrichment: Processing up to {batch_size} spans...")
-        
+
         # Run enrichment for each registered repo
         total_enriched = 0
         total_cost = 0.0
-        
+
         for repo_path in self.state.state["repos"]:
             if not self.running:
                 break
-            
+
             repo = Path(repo_path)
             if not repo.exists():
                 continue
-            
+
             try:
                 # Get database
                 index_path = index_path_for_write(repo)
                 db = Database(index_path)
-                
+
                 try:
                     # Check if there's work to do
                     pending = db.pending_enrichments(limit=1)
                     if not pending:
                         continue
-                    
+
                     if dry_run:
                         pending_count = len(db.pending_enrichments(limit=batch_size))
-                        print(f"  📋 [DRY-RUN] {repo.name}: Would enrich {pending_count} spans")
+                        print(
+                            f"  📋 [DRY-RUN] {repo.name}: Would enrich {pending_count} spans"
+                        )
                         continue
-                    
+
                     # Build router and pipeline
                     router = build_router_from_toml(repo)
-                    
+
                     pipeline = EnrichmentPipeline(
                         db=db,
                         router=router,
@@ -886,33 +911,39 @@ class RAGService:
                         cooldown_seconds=0,
                         code_first=code_first,
                     )
-                    
+
                     result = pipeline.process_batch(
                         limit=batch_size,
                         stop_check=lambda: not self.running,
                     )
-                    
+
                     if result.attempted > 0:
                         total_enriched += result.succeeded
                         # Estimate cost (rough: $0.15/1M tokens, ~500 tokens/span)
                         estimated_cost = result.succeeded * 0.000075
                         total_cost += estimated_cost
-                        print(f"  ✅ {repo.name}: Enriched {result.succeeded}/{result.attempted} spans (~${estimated_cost:.4f})")
-                    
+                        print(
+                            f"  ✅ {repo.name}: Enriched {result.succeeded}/{result.attempted} spans (~${estimated_cost:.4f})"
+                        )
+
                 finally:
                     db.close()
-                    
+
             except Exception as e:
                 print(f"  ⚠️  {repo.name}: Idle enrichment failed: {e}")
-        
+
         # Update tracking
         self._last_idle_enrichment = now
-        self._enrichment_daily_cost = getattr(self, "_enrichment_daily_cost", 0.0) + total_cost
-        
+        self._enrichment_daily_cost = (
+            getattr(self, "_enrichment_daily_cost", 0.0) + total_cost
+        )
+
         if total_enriched > 0:
-            print(f"  📊 Idle enrichment complete: {total_enriched} spans, ~${total_cost:.4f} (daily: ${self._enrichment_daily_cost:.4f}/${max_daily_cost:.2f})")
+            print(
+                f"  📊 Idle enrichment complete: {total_enriched} spans, ~${total_cost:.4f} (daily: ${self._enrichment_daily_cost:.4f}/${max_daily_cost:.2f})"
+            )
         else:
-            print(f"  ℹ️  No spans pending enrichment")
+            print("  ℹ️  No spans pending enrichment")
 
     def run_loop_poll(self, interval: int):
         """Legacy polling service loop with idle throttling."""
@@ -932,7 +963,9 @@ class RAGService:
         print(f"🚀 RAG service started (PID {os.getpid()})")
         print(f"   Tracking {len(self.state.state['repos'])} repos")
         print(f"   Interval: {interval}s")
-        print(f"   Idle backoff: enabled (max {self._daemon_cfg.get('idle_backoff_max', 10)}x)")
+        print(
+            f"   Idle backoff: enabled (max {self._daemon_cfg.get('idle_backoff_max', 10)}x)"
+        )
         print()
 
         # Idle tracking
@@ -951,23 +984,28 @@ class RAGService:
                     work_done = True
 
             self.state.update_cycle()
-            
+
             # Backoff logic
             if work_done:
                 idle_cycles = 0  # Reset on any work
             else:
                 idle_cycles += 1
-            
+
             # Optional: auto-rotate service logs based on config
             try:
                 if self._log_manager is not None:
-                    rotation_interval = int(self._logging_cfg.get("auto_rotation_interval", 0))
+                    rotation_interval = int(
+                        self._logging_cfg.get("auto_rotation_interval", 0)
+                    )
                     log_dir_val = self._logging_cfg.get("log_directory", "logs")
                     log_dir = Path(str(log_dir_val))
                     if not log_dir.is_absolute():
                         log_dir = (self._repo_root / log_dir).resolve()
                     now = time.time()
-                    if rotation_interval == 0 or now - self._last_rotate >= rotation_interval:
+                    if (
+                        rotation_interval == 0
+                        or now - self._last_rotate >= rotation_interval
+                    ):
                         result = self._log_manager.rotate_logs(log_dir)
                         self._last_rotate = now
                         if result.get("rotated_files", 0) > 0:
@@ -976,7 +1014,7 @@ class RAGService:
                 print(f"  ⚠️  Log rotation check failed: {e}")
 
             # Calculate sleep with exponential backoff when idle
-            multiplier = min(base ** idle_cycles, max_mult)
+            multiplier = min(base**idle_cycles, max_mult)
             target_sleep = interval * multiplier
             elapsed = time.time() - cycle_start
             sleep_time = max(0, target_sleep - elapsed)
@@ -990,6 +1028,7 @@ class RAGService:
 
         self.state.set_stopped()
         print("👋 RAG service stopped")
+
     def _interruptible_sleep(self, seconds: float):
         """Sleep in 5s chunks so signals are handled promptly."""
         chunk = 5.0
@@ -997,7 +1036,6 @@ class RAGService:
         while remaining > 0 and self.running:
             time.sleep(min(chunk, remaining))
             remaining -= chunk
-
 
 
 def cmd_start(args, state: ServiceState, tracker: FailureTracker) -> int:
@@ -1275,7 +1313,9 @@ def cmd_failures(args, state: ServiceState, tracker: FailureTracker) -> int:
         for repo_path, repo_failures in by_repo.items():
             repo_name = Path(repo_path).name
             print(f"\n📁 {repo_name} ({len(repo_failures)} failures)")
-            for span_hash, fail_count, last_attempted, reason in repo_failures[:5]:  # Show first 5
+            for span_hash, fail_count, last_attempted, reason in repo_failures[
+                :5
+            ]:  # Show first 5
                 # Extract filename from span_hash if it's a repo-level failure
                 if span_hash.startswith("repo:"):
                     print(f"   ⚠️  Repository-level failure (x{fail_count})")
@@ -1354,7 +1394,9 @@ def cmd_logs(args, state: ServiceState, tracker: FailureTracker) -> int:
             "from previous runs.\n"
         )
         if args.follow:
-            subprocess.run(["tail", "-f", "-n", str(args.lines), str(log_file)], check=False)
+            subprocess.run(
+                ["tail", "-f", "-n", str(args.lines), str(log_file)], check=False
+            )
         else:
             subprocess.run(["tail", "-n", str(args.lines), str(log_file)], check=False)
         return 0
@@ -1494,7 +1536,8 @@ def cmd_force_cycle(args, state: ServiceState, tracker: FailureTracker) -> int:
 
 def print_repo_help():
     """Print help for repo command."""
-    print("""
+    print(
+        """
 Usage: llmc-rag repo <command> [options]
 
 Commands:
@@ -1505,7 +1548,9 @@ Commands:
 Examples:
   llmc-rag repo add /path/to/repo
   llmc-rag repo list
-""")
+"""
+    )
+
 
 def cmd_repo(args, state: ServiceState, tracker: FailureTracker) -> int:
     """Handle repo subcommands."""
@@ -1521,7 +1566,7 @@ def cmd_repo(args, state: ServiceState, tracker: FailureTracker) -> int:
         for repo in state.state["repos"]:
             print(f"  📁 {repo}")
         return 0
-    
+
     # No subcommand provided
     print_repo_help()
     return 0
@@ -1591,13 +1636,19 @@ def main(argv: list[str] | None | None = None):
 
     # Service management
     start_p = subparsers.add_parser("start", help="Start the service")
-    start_p.add_argument("--interval", type=int, default=180, help="Loop interval in seconds")
     start_p.add_argument(
-        "--mode", choices=["event", "poll"], default="event",
-        help="Service mode: 'event' (inotify, low CPU) or 'poll' (legacy)"
+        "--interval", type=int, default=180, help="Loop interval in seconds"
     )
     start_p.add_argument(
-        "--daemon", action="store_true", help="Run in background (deprecated, uses systemd)"
+        "--mode",
+        choices=["event", "poll"],
+        default="event",
+        help="Service mode: 'event' (inotify, low CPU) or 'poll' (legacy)",
+    )
+    start_p.add_argument(
+        "--daemon",
+        action="store_true",
+        help="Run in background (deprecated, uses systemd)",
     )
 
     subparsers.add_parser("stop", help="Stop the service")
@@ -1606,7 +1657,9 @@ def main(argv: list[str] | None | None = None):
 
     logs_p = subparsers.add_parser("logs", help="View service logs")
     logs_p.add_argument("-f", "--follow", action="store_true", help="Follow log output")
-    logs_p.add_argument("-n", "--lines", type=int, default=50, help="Number of lines to show")
+    logs_p.add_argument(
+        "-n", "--lines", type=int, default=50, help="Number of lines to show"
+    )
 
     # Repo management (NEW: subcommand style)
     repo_p = subparsers.add_parser("repo", help="Manage repositories")
@@ -1621,7 +1674,9 @@ def main(argv: list[str] | None | None = None):
     repo_sub.add_parser("list", help="List registered repositories")
 
     # Backwards compatibility - keep old commands
-    reg_p = subparsers.add_parser("register", help="Register a repo (deprecated, use 'repo add')")
+    reg_p = subparsers.add_parser(
+        "register", help="Register a repo (deprecated, use 'repo add')"
+    )
     reg_p.add_argument("repo_path", help="Path to repository")
 
     unreg_p = subparsers.add_parser(
@@ -1640,18 +1695,26 @@ def main(argv: list[str] | None | None = None):
     clear_fail_p.add_argument("--repo", help="Clear failures for specific repo only")
 
     # Backwards compat
-    clear_p = subparsers.add_parser("clear-failures", help="Clear failure cache (deprecated)")
+    clear_p = subparsers.add_parser(
+        "clear-failures", help="Clear failure cache (deprecated)"
+    )
     clear_p.add_argument("--repo", help="Clear failures for specific repo only")
 
     # Advanced
-    interval_p = subparsers.add_parser("interval", help="Change enrichment cycle interval")
+    interval_p = subparsers.add_parser(
+        "interval", help="Change enrichment cycle interval"
+    )
     interval_p.add_argument("seconds", type=int, help="Interval in seconds")
 
     subparsers.add_parser("force-cycle", help="Trigger immediate enrichment cycle")
 
-    exorcist_p = subparsers.add_parser("exorcist", help="Nuclear option: rebuild RAG database")
+    exorcist_p = subparsers.add_parser(
+        "exorcist", help="Nuclear option: rebuild RAG database"
+    )
     exorcist_p.add_argument("path", help="Path to repository")
-    exorcist_p.add_argument("--dry-run", action="store_true", help="Show what would be deleted")
+    exorcist_p.add_argument(
+        "--dry-run", action="store_true", help="Show what would be deleted"
+    )
 
     subparsers.add_parser("enable", help="Enable service to start on boot")
     subparsers.add_parser("disable", help="Disable service from starting on boot")

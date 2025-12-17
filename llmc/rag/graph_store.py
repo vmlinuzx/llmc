@@ -102,7 +102,9 @@ class GraphStore:
                 for target_id in target_ids:
                     key = (entity_id, edge_type, target_id)
                     if key not in seen:
-                        relations.append(Relation(src=entity_id, edge=edge_type, dst=target_id))
+                        relations.append(
+                            Relation(src=entity_id, edge=edge_type, dst=target_id)
+                        )
                         seen.add(key)
 
         return relations
@@ -176,7 +178,9 @@ class GraphStore:
         """Get entity by ID"""
         return self.entities.get(entity_id)
 
-    def find_entities_by_pattern(self, pattern: str, kind: str | None = None) -> list[Entity]:
+    def find_entities_by_pattern(
+        self, pattern: str, kind: str | None = None
+    ) -> list[Entity]:
         """
         Find entities matching a pattern (substring search).
 

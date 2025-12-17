@@ -5,9 +5,10 @@ These tests verify that malicious path inputs are properly blocked.
 """
 
 import os
-import pytest
 from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
 
 from llmc.docgen.gating import validate_source_path
 from llmc.docgen.orchestrator import DocgenOrchestrator
@@ -25,7 +26,7 @@ def test_path_traversal_basic(tmp_path):
         "/etc/shadow",
         "/dev/zero",
     ]
-    
+
     for malicious_path in malicious_paths:
         with pytest.raises(ValueError, match="Path traversal|Absolute paths"):
             validate_source_path(repo_root, Path(malicious_path))
@@ -80,10 +81,12 @@ def test_relative_path_normalization(tmp_path):
         "./.././../etc/passwd",
         "valid/./.././../../etc/passwd",
     ]
-    
+
     for path in tricky_paths:
         # Verify that the path is blocked after normalization
-        with pytest.raises(ValueError, match="outside repository root|Invalid path resolution"):
+        with pytest.raises(
+            ValueError, match="outside repository root|Invalid path resolution"
+        ):
             validate_source_path(repo_root, Path(path))
 
 
@@ -95,7 +98,7 @@ def test_null_byte_injection(tmp_path):
         "valid.txt\x00../../../../etc/passwd",
         "file.py\x00.txt",
     ]
-    
+
     for path in null_byte_paths:
         with pytest.raises(ValueError, match="Null byte"):
             validate_source_path(repo_root, Path(path))
@@ -111,7 +114,7 @@ def test_absolute_path_outside_repo(tmp_path):
         "/root/.ssh/id_rsa",
         "/tmp/evil",
     ]
-    
+
     for path in absolute_paths:
         with pytest.raises(ValueError, match="Absolute paths not allowed"):
             validate_source_path(repo_root, Path(path))
@@ -120,13 +123,13 @@ def test_absolute_path_outside_repo(tmp_path):
 class TestDocgenPathSecurity:
     """
     Security tests for docgen path handling.
-    
+
     These tests verify that malicious paths cannot:
     1. Read files outside repository
     2. Write files outside output directory
     3. Execute scripts outside allowed directory
     """
-    
+
     def test_source_path_traversal_blocked(self, tmp_path):
         """Docgen should block reading files via path traversal."""
         repo_root = tmp_path / "repo"
@@ -141,7 +144,7 @@ class TestDocgenPathSecurity:
             backend=backend,
             db=db,
             output_dir="docs",
-            require_rag_fresh=False
+            require_rag_fresh=False,
         )
 
         # Attempt traversal
@@ -149,7 +152,7 @@ class TestDocgenPathSecurity:
 
         assert result.status == "skipped"
         assert "Security validation failed" in result.reason
-    
+
     def test_symlink_reading_blocked(self, tmp_path):
         """Docgen should block reading files via symlinks."""
         repo_root = tmp_path / "repo"
@@ -169,7 +172,7 @@ class TestDocgenPathSecurity:
             backend=Mock(),
             db=Mock(),
             output_dir="docs",
-            require_rag_fresh=False
+            require_rag_fresh=False,
         )
 
         result = orchestrator.process_file(Path("link.py"))

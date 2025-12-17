@@ -179,14 +179,14 @@ def status():
     # Repo info with health status
     repos = state.state.get("repos", [])
     typer.echo(f"\n📂 Registered repos: {len(repos)}")
-    
+
     for repo in repos:
         repo_path = Path(repo)
         repo_name = repo_path.name
-        
+
         # Get health info if available
         health_line = _get_repo_health_summary(repo_path)
-        
+
         typer.echo(f"   • {repo}")
         if health_line:
             typer.echo(f"     {health_line}")
@@ -211,30 +211,30 @@ def _get_repo_health_summary(repo_path: Path) -> str:
     """Get a compact health summary for a single repo."""
     if run_rag_doctor is None:
         return ""
-    
+
     try:
         # Get doctor report
         report = run_rag_doctor(repo_path)
         status = report.get("status", "UNKNOWN")
         stats = report.get("stats")
-        
+
         if status == "NO_DB":
             return "⚪ No index (run: llmc repo add)"
-        
+
         if stats is None:
             return "❓ Unable to read stats"
-        
+
         files = stats.get("files", 0)
         spans = stats.get("spans", 0)
         enrichments = stats.get("enrichments", 0)
         embeddings = stats.get("embeddings", 0)
         pending_enrichments = stats.get("pending_enrichments", 0)
         pending_embeddings = stats.get("pending_embeddings", 0)
-        
+
         # Calculate enrichment percentage
         enrich_pct = (enrichments / spans * 100) if spans > 0 else 0
         embed_pct = (embeddings / spans * 100) if spans > 0 else 0
-        
+
         # Get quality score if available
         quality_str = ""
         if run_quality_check is not None and enrichments > 0:
@@ -246,7 +246,7 @@ def _get_repo_health_summary(repo_path: Path) -> str:
                     quality_str = f" | Quality: {q_emoji} {qscore:.0f}%"
             except Exception:
                 pass
-        
+
         # Status emoji
         if status == "OK":
             status_emoji = "✅"
@@ -256,7 +256,7 @@ def _get_repo_health_summary(repo_path: Path) -> str:
             status_emoji = "📭"
         else:
             status_emoji = "❓"
-        
+
         # Pending work indicator
         pending_str = ""
         if pending_enrichments > 0 or pending_embeddings > 0:
@@ -266,17 +266,15 @@ def _get_repo_health_summary(repo_path: Path) -> str:
             if pending_embeddings > 0:
                 pending_parts.append(f"{pending_embeddings} embed")
             pending_str = f" | Pending: {', '.join(pending_parts)}"
-        
+
         return (
             f"{status_emoji} {files} files, {spans} spans | "
             f"Enriched: {enrich_pct:.0f}% | Embedded: {embed_pct:.0f}%"
             f"{quality_str}{pending_str}"
         )
-        
+
     except Exception as e:
         return f"❌ Error checking health: {e}"
-
-
 
 
 def logs(

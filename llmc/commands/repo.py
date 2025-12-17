@@ -11,17 +11,14 @@ Commands:
     llmc repo validate <path>   - Validate repo config
 """
 
+from datetime import UTC, datetime
 import json
 import os
-import shutil
 from pathlib import Path
-from datetime import datetime, timezone
+import shutil
 
-import typer
 from rich.console import Console
-from rich.table import Table
-
-from llmc.core import find_repo_root
+import typer
 
 app = typer.Typer(
     help="Repository management: register, bootstrap, validate, and manage LLMC repos.",
@@ -40,7 +37,13 @@ def _get_state() -> dict:
             return json.loads(STATE_FILE.read_text())
         except Exception:
             pass
-    return {"repos": [], "pid": None, "status": "stopped", "last_cycle": None, "interval": 180}
+    return {
+        "repos": [],
+        "pid": None,
+        "status": "stopped",
+        "last_cycle": None,
+        "interval": 180,
+    }
 
 
 def _save_state(state: dict) -> None:
@@ -63,17 +66,17 @@ def _get_repo_stats(repo_path: Path) -> dict:
         "enriched": 0,
         "embedded": 0,
     }
-    
+
     if not repo_path.exists():
         return stats
-    
+
     # Check for LLMC artifacts
     llmc_dir = repo_path / ".llmc"
     config_file = repo_path / "llmc.toml"
-    
+
     stats["has_llmc"] = llmc_dir.exists()
     stats["has_config"] = config_file.exists()
-    
+
     # Find database - check .rag/ first (RAG indexer default), then .llmc/
     rag_dir = repo_path / ".rag"
     db_path = rag_dir / "index_v2.db"
@@ -81,88 +84,92 @@ def _get_repo_stats(repo_path: Path) -> dict:
         db_path = llmc_dir / "index_v2.db"
     if not db_path.exists():
         db_path = llmc_dir / "rag.db"
-    
+
     if db_path.exists():
         stats["has_db"] = True
         try:
             import sqlite3
+
             conn = sqlite3.connect(str(db_path))
             cursor = conn.cursor()
-            
+
             # Get file count
             try:
                 cursor.execute("SELECT COUNT(*) FROM files")
                 stats["files"] = cursor.fetchone()[0]
             except Exception:
                 pass
-            
+
             # Get span count
             try:
                 cursor.execute("SELECT COUNT(*) FROM spans")
                 stats["spans"] = cursor.fetchone()[0]
             except Exception:
                 pass
-            
+
             # Get enrichment count
             try:
                 cursor.execute("SELECT COUNT(*) FROM enrichments")
                 stats["enriched"] = cursor.fetchone()[0]
             except Exception:
                 pass
-            
+
             # Get embedding count
             try:
                 cursor.execute("SELECT COUNT(*) FROM embeddings")
                 stats["embedded"] = cursor.fetchone()[0]
             except Exception:
                 pass
-            
+
             conn.close()
         except Exception:
             pass
-    
+
     return stats
 
 
 @app.command("init")
 def init(
-    path: str = typer.Argument(".", help="Path to initialize (default: current directory)"),
+    path: str = typer.Argument(
+        ".", help="Path to initialize (default: current directory)"
+    ),
 ):
     """
     Quick init: create .llmc/ workspace and llmc.toml only.
-    
+
     This is the lightest-weight setup - just creates the workspace structure
     without indexing files or registering with the daemon.
-    
+
     For full setup, use: llmc repo register <path>
-    
+
     Examples:
         llmc repo init           # Init current directory
         llmc repo init /path     # Init specific path
     """
     import tomli_w
+
     from llmc.rag.database import Database
-    
+
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     if not repo_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     console.print(f"[bold]📁 Initializing LLMC workspace in: {repo_path.name}[/bold]")
-    
+
     # 1. Create .llmc/ directory
     llmc_dir = repo_path / ".llmc"
     llmc_dir.mkdir(parents=True, exist_ok=True)
-    console.print(f"  ✅ Created .llmc/ directory")
-    
+    console.print("  ✅ Created .llmc/ directory")
+
     # 2. Create logs subdirectory
     (llmc_dir / "logs").mkdir(exist_ok=True)
-    
+
     # 3. Create llmc.toml if missing
     config_path = repo_path / "llmc.toml"
     if not config_path.exists():
@@ -175,8 +182,14 @@ def init(
             },
             "indexing": {
                 "exclude_dirs": [
-                    ".git", ".llmc", ".venv", "__pycache__",
-                    "node_modules", "dist", "build", ".pytest_cache",
+                    ".git",
+                    ".llmc",
+                    ".venv",
+                    "__pycache__",
+                    "node_modules",
+                    "dist",
+                    "build",
+                    ".pytest_cache",
                 ]
             },
             "embeddings": {
@@ -193,10 +206,10 @@ def init(
         }
         with open(config_path, "wb") as f:
             tomli_w.dump(default_config, f)
-        console.print(f"  ✅ Created llmc.toml configuration")
+        console.print("  ✅ Created llmc.toml configuration")
     else:
-        console.print(f"  ℹ️  llmc.toml already exists")
-    
+        console.print("  ℹ️  llmc.toml already exists")
+
     # 4. Initialize database
     rag_dir = repo_path / ".rag"
     rag_dir.mkdir(parents=True, exist_ok=True)
@@ -204,26 +217,32 @@ def init(
     try:
         db = Database(db_path)
         db.close()
-        console.print(f"  ✅ Initialized database")
+        console.print("  ✅ Initialized database")
     except Exception as e:
         console.print(f"  [yellow]⚠️  Database init failed: {e}[/yellow]")
-    
-    console.print(f"\n[bold green]✨ Workspace initialized![/bold green]")
-    console.print(f"\nNext steps:")
-    console.print(f"  • Full setup with indexing: [cyan]llmc repo register {path}[/cyan]")
-    console.print(f"  • Start daemon:            [cyan]llmc service start[/cyan]")
+
+    console.print("\n[bold green]✨ Workspace initialized![/bold green]")
+    console.print("\nNext steps:")
+    console.print(
+        f"  • Full setup with indexing: [cyan]llmc repo register {path}[/cyan]"
+    )
+    console.print("  • Start daemon:            [cyan]llmc service start[/cyan]")
 
 
 @app.command("register")
 def register(
     path: str = typer.Argument(..., help="Path to repository to register"),
     skip_index: bool = typer.Option(False, "--no-index", help="Skip initial indexing"),
-    skip_enrich: bool = typer.Option(False, "--no-enrich", help="Skip initial enrichment"),
-    interactive: bool = typer.Option(False, "--interactive", "-i", help="Run interactive configuration wizard"),
+    skip_enrich: bool = typer.Option(
+        False, "--no-enrich", help="Skip initial enrichment"
+    ),
+    interactive: bool = typer.Option(
+        False, "--interactive", "-i", help="Run interactive configuration wizard"
+    ),
 ):
     """
     Register a repository with LLMC.
-    
+
     This does everything needed to get a repo working:
     1. Creates .llmc/ directory and llmc.toml config
     2. Initializes the database
@@ -231,29 +250,30 @@ def register(
     4. Registers with the daemon for ongoing enrichment
     """
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     if not repo_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
 
     if interactive:
         from llmc.commands.wizard import run_wizard
+
         run_wizard(repo_path)
-    
+
     console.print(f"[bold]🚀 Registering {repo_path.name} with LLMC[/bold]")
-    
+
     # Step 1: Create .llmc/ directory
     llmc_dir = repo_path / ".llmc"
     llmc_dir.mkdir(parents=True, exist_ok=True)
-    console.print(f"  ✅ Created .llmc/ directory")
-    
+    console.print("  ✅ Created .llmc/ directory")
+
     # Create logs subdirectory
     (llmc_dir / "logs").mkdir(exist_ok=True)
-    
+
     # Step 1a: Copy LLMCAGENTS.md for AI agent integration
     # Look for canonical file in llmc install location
     agents_source = None
@@ -265,17 +285,17 @@ def register(
         if candidate.exists():
             agents_source = candidate
             break
-    
+
     agents_dest = llmc_dir / "LLMCAGENTS.md"
     if agents_source and not agents_dest.exists():
         try:
             shutil.copy(agents_source, agents_dest)
-            console.print(f"  ✅ Installed LLMCAGENTS.md (for AI agent integration)")
+            console.print("  ✅ Installed LLMCAGENTS.md (for AI agent integration)")
         except Exception as e:
             console.print(f"  [yellow]⚠️  Could not copy LLMCAGENTS.md: {e}[/yellow]")
     elif agents_dest.exists():
-        console.print(f"  ℹ️  LLMCAGENTS.md already exists")
-    
+        console.print("  ℹ️  LLMCAGENTS.md already exists")
+
     # Step 1b: Update .gitignore
     gitignore_path = repo_path / ".gitignore"
     gitignore_entries = [".llmc/", ".rag/"]
@@ -291,15 +311,17 @@ def register(
                     f.write(f"{entry}\n")
             console.print(f"  ✅ Added {', '.join(missing)} to .gitignore")
         else:
-            console.print(f"  ℹ️  .gitignore already has LLMC entries")
+            console.print("  ℹ️  .gitignore already has LLMC entries")
     except Exception as e:
         console.print(f"  [yellow]⚠️  Could not update .gitignore: {e}[/yellow]")
-    
+
     # Step 2: Create llmc.toml if it doesn't exist
     config_path = repo_path / "llmc.toml"
     if not config_path.exists():
         default_config = {
-            "storage": {"index_path": ".rag/index_v2.db"},  # Must match RAG indexer default
+            "storage": {
+                "index_path": ".rag/index_v2.db"
+            },  # Must match RAG indexer default
             "logging": {
                 "log_directory": ".llmc/logs",
                 "enable_rotation": True,
@@ -307,8 +329,14 @@ def register(
             },
             "indexing": {
                 "exclude_dirs": [
-                    ".git", ".llmc", ".venv", "__pycache__",
-                    "node_modules", "dist", "build", ".pytest_cache",
+                    ".git",
+                    ".llmc",
+                    ".venv",
+                    "__pycache__",
+                    "node_modules",
+                    "dist",
+                    "build",
+                    ".pytest_cache",
                 ]
             },
             # ENRICHMENT CONFIG - Required for LLM-based code summarization
@@ -378,106 +406,113 @@ def register(
             "rag": {"enabled": True},
         }
         import tomli_w
+
         with open(config_path, "wb") as f:
             tomli_w.dump(default_config, f)
-        console.print(f"  ✅ Created llmc.toml configuration")
+        console.print("  ✅ Created llmc.toml configuration")
     else:
-        console.print(f"  ℹ️  llmc.toml already exists")
-    
+        console.print("  ℹ️  llmc.toml already exists")
+
     # Step 3: Initialize database
     db_path = llmc_dir / "index_v2.db"
     try:
         from llmc.rag.database import Database
+
         db = Database(db_path)
         db.close()
-        console.print(f"  ✅ Initialized database")
+        console.print("  ✅ Initialized database")
     except Exception as e:
         console.print(f"  [yellow]⚠️  Database init failed: {e}[/yellow]")
-    
+
     # Step 4: Run indexing
     if not skip_index:
-        console.print(f"  📂 Indexing files...")
+        console.print("  📂 Indexing files...")
         try:
             import os as _os
+
             from llmc.rag.indexer import index_repo
-            
+
             # Save CWD and change to target repo
             orig_cwd = Path.cwd()
             _os.chdir(repo_path)
-            
+
             try:
                 result = index_repo()
-                console.print(f"  ✅ Indexed {result.files} files, {result.spans} spans")
+                console.print(
+                    f"  ✅ Indexed {result.files} files, {result.spans} spans"
+                )
             finally:
                 _os.chdir(orig_cwd)
         except Exception as e:
             console.print(f"  [yellow]⚠️  Indexing failed: {e}[/yellow]")
     else:
-        console.print(f"  ⏭️  Skipped indexing (--no-index)")
-    
+        console.print("  ⏭️  Skipped indexing (--no-index)")
+
     # Step 5: Register with daemon
     state = _get_state()
     repo_str = str(repo_path)
     if repo_str not in state["repos"]:
         state["repos"].append(repo_str)
         _save_state(state)
-        console.print(f"  ✅ Registered with daemon")
+        console.print("  ✅ Registered with daemon")
     else:
-        console.print(f"  ℹ️  Already registered with daemon")
-    
+        console.print("  ℹ️  Already registered with daemon")
+
     # Show summary
     stats = _get_repo_stats(repo_path)
     console.print(f"\n[bold green]✨ {repo_path.name} is ready![/bold green]")
     console.print(f"   Spans indexed: {stats['spans']}")
     console.print(f"   Enriched: {stats['enriched']}")
-    
-    if not skip_enrich and stats['spans'] > 0:
-        console.print(f"\n💡 Start enrichment with: llmc service start")
+
+    if not skip_enrich and stats["spans"] > 0:
+        console.print("\n💡 Start enrichment with: llmc service start")
 
 
 @app.command("bootstrap")
 def bootstrap(
     path: str = typer.Argument(..., help="Path to repository to bootstrap"),
-    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing config"),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Overwrite existing config"
+    ),
     skip_index: bool = typer.Option(False, "--no-index", help="Skip re-indexing"),
 ):
     """
     Re-bootstrap an existing repository.
-    
+
     Use this to fix broken configs or regenerate LLMC workspace files.
     Unlike 'register', this does NOT add the repo to daemon tracking.
-    
+
     Steps performed:
     1. Recreates .llmc/ directory structure
     2. Regenerates llmc.toml (if --force or missing)
     3. Reinitializes the database
     4. Re-indexes files (unless --no-index)
-    
+
     Examples:
         llmc repo bootstrap .              # Fix current repo
         llmc repo bootstrap . --force      # Force regenerate config
         llmc repo bootstrap /path/to/repo  # Fix another repo
     """
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     if not repo_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     console.print(f"[bold]🔧 Re-bootstrapping {repo_path.name}[/bold]")
-    
+
     # Step 1: Ensure .llmc/ directory exists
     llmc_dir = repo_path / ".llmc"
     llmc_dir.mkdir(parents=True, exist_ok=True)
-    console.print(f"  ✅ Ensured .llmc/ directory")
-    
+    console.print("  ✅ Ensured .llmc/ directory")
+
     # Create logs subdirectory
     (llmc_dir / "logs").mkdir(exist_ok=True)
-    
+
     # Step 2: Copy LLMCAGENTS.md
     agents_source = None
     candidates = [
@@ -488,7 +523,7 @@ def bootstrap(
         if candidate.exists():
             agents_source = candidate
             break
-    
+
     agents_dest = llmc_dir / "LLMCAGENTS.md"
     if agents_source and (force or not agents_dest.exists()):
         try:
@@ -497,8 +532,8 @@ def bootstrap(
         except Exception as e:
             console.print(f"  [yellow]⚠️  Could not copy LLMCAGENTS.md: {e}[/yellow]")
     elif agents_dest.exists():
-        console.print(f"  ℹ️  LLMCAGENTS.md already exists (use --force to replace)")
-    
+        console.print("  ℹ️  LLMCAGENTS.md already exists (use --force to replace)")
+
     # Step 3: Update .gitignore
     gitignore_path = repo_path / ".gitignore"
     gitignore_entries = [".llmc/", ".rag/"]
@@ -514,10 +549,10 @@ def bootstrap(
                     f.write(f"{entry}\n")
             console.print(f"  ✅ Added {', '.join(missing)} to .gitignore")
         else:
-            console.print(f"  ℹ️  .gitignore already has LLMC entries")
+            console.print("  ℹ️  .gitignore already has LLMC entries")
     except Exception as e:
         console.print(f"  [yellow]⚠️  Could not update .gitignore: {e}[/yellow]")
-    
+
     # Step 4: Create/replace llmc.toml
     config_path = repo_path / "llmc.toml"
     if force or not config_path.exists():
@@ -530,8 +565,14 @@ def bootstrap(
             },
             "indexing": {
                 "exclude_dirs": [
-                    ".git", ".llmc", ".venv", "__pycache__",
-                    "node_modules", "dist", "build", ".pytest_cache",
+                    ".git",
+                    ".llmc",
+                    ".venv",
+                    "__pycache__",
+                    "node_modules",
+                    "dist",
+                    "build",
+                    ".pytest_cache",
                 ]
             },
             "enrichment": {
@@ -611,54 +652,63 @@ def bootstrap(
             "rag": {"enabled": True},
         }
         import tomli_w
+
         with open(config_path, "wb") as f:
             tomli_w.dump(default_config, f)
-        console.print(f"  ✅ {'Replaced' if force and config_path.exists() else 'Created'} llmc.toml")
+        console.print(
+            f"  ✅ {'Replaced' if force and config_path.exists() else 'Created'} llmc.toml"
+        )
     else:
-        console.print(f"  ℹ️  llmc.toml already exists (use --force to replace)")
-    
+        console.print("  ℹ️  llmc.toml already exists (use --force to replace)")
+
     # Step 5: Initialize/reinit database
     rag_dir = repo_path / ".rag"
     rag_dir.mkdir(parents=True, exist_ok=True)
     db_path = rag_dir / "index_v2.db"
     try:
         from llmc.rag.database import Database
+
         db = Database(db_path)
         db.close()
-        console.print(f"  ✅ Initialized database")
+        console.print("  ✅ Initialized database")
     except Exception as e:
         console.print(f"  [yellow]⚠️  Database init failed: {e}[/yellow]")
-    
+
     # Step 6: Re-index if requested
     if not skip_index:
-        console.print(f"  📂 Re-indexing files...")
+        console.print("  📂 Re-indexing files...")
         try:
             import os as _os
+
             from llmc.rag.indexer import index_repo
-            
+
             orig_cwd = Path.cwd()
             _os.chdir(repo_path)
-            
+
             try:
                 result = index_repo()
-                console.print(f"  ✅ Indexed {result.files} files, {result.spans} spans")
+                console.print(
+                    f"  ✅ Indexed {result.files} files, {result.spans} spans"
+                )
             finally:
                 _os.chdir(orig_cwd)
         except Exception as e:
             console.print(f"  [yellow]⚠️  Indexing failed: {e}[/yellow]")
     else:
-        console.print(f"  ⏭️  Skipped indexing (--no-index)")
-    
+        console.print("  ⏭️  Skipped indexing (--no-index)")
+
     # Show summary
     stats = _get_repo_stats(repo_path)
     console.print(f"\n[bold green]🔧 {repo_path.name} re-bootstrapped![/bold green]")
     console.print(f"   Spans: {stats['spans']}")
     console.print(f"   Enriched: {stats['enriched']}")
-    
+
     # Check if registered
     state = _get_state()
     if str(repo_path) not in state["repos"]:
-        console.print(f"\n[yellow]💡 Repo not registered with daemon. Run: llmc repo register {path}[/yellow]")
+        console.print(
+            f"\n[yellow]💡 Repo not registered with daemon. Run: llmc repo register {path}[/yellow]"
+        )
 
 
 @app.command("rm")
@@ -667,19 +717,19 @@ def rm(
 ):
     """
     Unregister a repository from the daemon.
-    
+
     This removes the repo from daemon tracking but keeps all .llmc/ artifacts.
     Use 'llmc repo clean' to completely remove LLMC from a repo.
     """
     repo_path = Path(path).resolve()
     state = _get_state()
     repo_str = str(repo_path)
-    
+
     if repo_str in state["repos"]:
         state["repos"].remove(repo_str)
         _save_state(state)
         console.print(f"[green]✅ Unregistered: {repo_path}[/green]")
-        console.print(f"   .llmc/ artifacts remain - use 'llmc repo clean' to remove")
+        console.print("   .llmc/ artifacts remain - use 'llmc repo clean' to remove")
     else:
         console.print(f"[yellow]ℹ️  Not registered: {repo_path}[/yellow]")
 
@@ -691,7 +741,7 @@ def clean(
 ):
     """
     Completely remove LLMC from a repository.
-    
+
     This deletes:
     - .llmc/ directory (logs, cache)
     - .rag/ directory (database, embeddings, graph)
@@ -699,55 +749,55 @@ def clean(
     - Removes from daemon tracking
     """
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     llmc_dir = repo_path / ".llmc"
     rag_dir = repo_path / ".rag"
     config_file = repo_path / "llmc.toml"
-    
+
     if not llmc_dir.exists() and not rag_dir.exists() and not config_file.exists():
         console.print(f"[yellow]ℹ️  No LLMC artifacts found in: {repo_path}[/yellow]")
         return
-    
+
     # Confirm
     if not force:
-        console.print(f"[bold red]⚠️  This will permanently delete:[/bold red]")
+        console.print("[bold red]⚠️  This will permanently delete:[/bold red]")
         if llmc_dir.exists():
             console.print(f"   - {llmc_dir}")
         if rag_dir.exists():
             console.print(f"   - {rag_dir}")
         if config_file.exists():
             console.print(f"   - {config_file}")
-        
+
         confirm = typer.confirm("Are you sure?")
         if not confirm:
             console.print("Cancelled.")
             raise typer.Exit(code=0)
-    
+
     # Unregister first
     state = _get_state()
     repo_str = str(repo_path)
     if repo_str in state["repos"]:
         state["repos"].remove(repo_str)
         _save_state(state)
-        console.print(f"  ✅ Unregistered from daemon")
-    
+        console.print("  ✅ Unregistered from daemon")
+
     # Delete artifacts
     if llmc_dir.exists():
         shutil.rmtree(llmc_dir)
-        console.print(f"  ✅ Deleted .llmc/")
-    
+        console.print("  ✅ Deleted .llmc/")
+
     if rag_dir.exists():
         shutil.rmtree(rag_dir)
-        console.print(f"  ✅ Deleted .rag/ (database)")
-    
+        console.print("  ✅ Deleted .rag/ (database)")
+
     if config_file.exists():
         config_file.unlink()
-        console.print(f"  ✅ Deleted llmc.toml")
-    
+        console.print("  ✅ Deleted llmc.toml")
+
     console.print(f"\n[green]✨ LLMC removed from {repo_path.name}[/green]")
 
 
@@ -758,30 +808,31 @@ def nukerag(
 ):
     """
     Clear all enrichment data for a repository.
-    
+
     This deletes enrichments and embeddings but keeps:
     - File index (no need to re-scan files)
     - Configuration (llmc.toml)
     - Daemon registration
-    
+
     Use this when enrichments are corrupted or you want to
     re-run enrichment with different models/prompts.
     """
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     rag_dir = repo_path / ".rag"
     db_path = rag_dir / "index_v2.db"
-    
+
     if not db_path.exists():
         console.print(f"[yellow]ℹ️  No RAG database found in: {repo_path}[/yellow]")
         return
-    
+
     # Count enrichments
     import sqlite3
+
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
@@ -793,25 +844,27 @@ def nukerag(
     except Exception as e:
         console.print(f"[red]❌ Failed to read database: {e}[/red]")
         raise typer.Exit(code=1)
-    
+
     if enrichment_count == 0 and embedding_count == 0:
-        console.print(f"[yellow]ℹ️  No enrichment data to clear[/yellow]")
+        console.print("[yellow]ℹ️  No enrichment data to clear[/yellow]")
         return
-    
+
     # Confirm
     if not force:
-        console.print(f"[bold red]⚠️  This will permanently delete:[/bold red]")
+        console.print("[bold red]⚠️  This will permanently delete:[/bold red]")
         console.print(f"   - {enrichment_count} enrichments")
         console.print(f"   - {embedding_count} embeddings")
         console.print(f"   in {repo_path}")
         console.print()
-        console.print("[dim]File index will be preserved - no need to re-scan files.[/dim]")
-        
+        console.print(
+            "[dim]File index will be preserved - no need to re-scan files.[/dim]"
+        )
+
         confirm = typer.confirm("Are you sure?")
         if not confirm:
             console.print("Cancelled.")
             raise typer.Exit(code=0)
-    
+
     # Clear enrichments and embeddings
     try:
         conn = sqlite3.connect(db_path)
@@ -820,7 +873,7 @@ def nukerag(
         cursor.execute("DELETE FROM embeddings")
         conn.commit()
         conn.close()
-        
+
         console.print(f"  ✅ Deleted {enrichment_count} enrichments")
         console.print(f"  ✅ Deleted {embedding_count} embeddings")
         console.print(f"\n[green]✨ RAG data cleared for {repo_path.name}[/green]")
@@ -836,16 +889,16 @@ def list_repos():
     Show status of all registered repositories.
     """
     state = _get_state()
-    
+
     if not state["repos"]:
         console.print("[yellow]No repositories registered.[/yellow]")
         console.print("\nAdd a repo: llmc repo add <path>")
         return
-    
+
     # Header
     console.print("[bold]LLMC Repository Status[/bold]")
     console.print("=" * 70)
-    
+
     # Service status
     pid = state.get("pid")
     daemon_running = False
@@ -857,34 +910,36 @@ def list_repos():
         except OSError:
             console.print(f"Daemon: [red]🔴 stopped[/red] (stale PID {pid})")
     else:
-        console.print(f"Daemon: [red]🔴 stopped[/red]")
-    
+        console.print("Daemon: [red]🔴 stopped[/red]")
+
     # Last cycle with human-readable time
     last_cycle = state.get("last_cycle")
     if last_cycle:
         try:
             last = datetime.fromisoformat(last_cycle)
-            ago = (datetime.now(timezone.utc) - last).total_seconds()
+            ago = (datetime.now(UTC) - last).total_seconds()
             if ago < 60:
                 ago_str = f"{int(ago)}s ago"
             elif ago < 3600:
                 ago_str = f"{int(ago/60)}m ago"
             else:
                 ago_str = f"{int(ago/3600)}h {int((ago%3600)/60)}m ago"
-            console.print(f"Last cycle: {ago_str} | Interval: {state.get('interval', 180)}s")
+            console.print(
+                f"Last cycle: {ago_str} | Interval: {state.get('interval', 180)}s"
+            )
         except Exception:
             pass
-    
+
     console.print()
-    
+
     # Per-repository detailed status
     for i, repo_str in enumerate(state["repos"]):
         repo_path = Path(repo_str)
         stats = _get_repo_stats(repo_path)
-        
+
         # Get quality info if available
         quality_info = _get_quality_info(repo_path)
-        
+
         # Status icon and text
         if not stats["exists"]:
             status_icon = "❌"
@@ -907,7 +962,9 @@ def list_repos():
             status_text = "INDEXED"
             status_color = "blue"
         else:
-            pct = (stats["enriched"] / stats["spans"] * 100) if stats["spans"] > 0 else 0
+            pct = (
+                (stats["enriched"] / stats["spans"] * 100) if stats["spans"] > 0 else 0
+            )
             if pct >= 100:
                 status_icon = "✅"
                 status_text = "READY"
@@ -920,14 +977,16 @@ def list_repos():
                 status_icon = "🔄"
                 status_text = f"{pct:.0f}%"
                 status_color = "yellow"
-        
+
         # Calculate pending work
         pending_enrich = max(0, stats["spans"] - stats["enriched"])
         pending_embed = max(0, stats["spans"] - stats["embedded"])
-        
+
         # Print repo header
-        console.print(f"[bold cyan]{status_icon} {stats['name']}[/bold cyan] [{status_color}]{status_text}[/{status_color}]")
-        
+        console.print(
+            f"[bold cyan]{status_icon} {stats['name']}[/bold cyan] [{status_color}]{status_text}[/{status_color}]"
+        )
+
         # Stats line
         stats_parts = [
             f"files={stats.get('files', '?')}",
@@ -940,22 +999,22 @@ def list_repos():
         if pending_embed > 0:
             stats_parts.append(f"[yellow]pending_embed={pending_embed}[/yellow]")
         console.print(f"   {', '.join(stats_parts)}")
-        
+
         # Quality line if available
         if quality_info:
             console.print(f"   [dim]quality={quality_info}[/dim]")
-        
+
         # Path (abbreviated)
         home = str(Path.home())
         display_path = repo_str.replace(home, "~")
         console.print(f"   [dim]{display_path}[/dim]")
-        
+
         if i < len(state["repos"]) - 1:
             console.print()  # spacing between repos
-    
+
     console.print()
     console.print(f"[bold]Total: {len(state['repos'])} repos[/bold]")
-    
+
     # Helpful hints
     if not daemon_running:
         console.print("\n[yellow]💡 Start daemon: llmc service start[/yellow]")
@@ -969,29 +1028,32 @@ def _get_quality_info(repo_path: Path) -> str | None:
         db_path = repo_path / ".llmc" / "index_v2.db"
     if not db_path.exists():
         return None
-    
+
     try:
         import sqlite3
+
         conn = sqlite3.connect(str(db_path))
         cursor = conn.cursor()
-        
+
         # Try to get quality metrics from enrichments
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN summary IS NULL OR summary = '' THEN 1 ELSE 0 END) as empty,
                 SUM(CASE WHEN summary LIKE '%placeholder%' OR summary LIKE '%TODO%' THEN 1 ELSE 0 END) as placeholder,
                 SUM(CASE WHEN LENGTH(summary) < 20 AND summary IS NOT NULL AND summary != '' THEN 1 ELSE 0 END) as short
             FROM enrichments
-        """)
+        """
+        )
         row = cursor.fetchone()
         conn.close()
-        
+
         if row and row[0] > 0:
             total, empty, placeholder, short = row
             issues = empty + placeholder + short
             quality_pct = ((total - issues) / total * 100) if total > 0 else 0
-            
+
             issue_parts = []
             if placeholder > 0:
                 issue_parts.append(f"{placeholder} placeholder")
@@ -999,47 +1061,53 @@ def _get_quality_info(repo_path: Path) -> str | None:
                 issue_parts.append(f"{empty} empty")
             if short > 0:
                 issue_parts.append(f"{short} short")
-            
+
             if issue_parts:
                 return f"{quality_pct:.1f}% ({', '.join(issue_parts)})"
             else:
                 return f"{quality_pct:.1f}%"
     except Exception:
         pass
-    
+
     return None
 
 
 @app.command("validate")
 def validate(
     path: str = typer.Argument(..., help="Path to repository to validate"),
-    fix_bom: bool = typer.Option(False, "--fix-bom", help="Auto-fix BOM characters in files"),
-    no_connectivity: bool = typer.Option(False, "--no-connectivity", help="Skip Ollama connectivity checks"),
-    verbose: bool = typer.Option(False, "-v", "--verbose", help="Show all diagnostic info"),
+    fix_bom: bool = typer.Option(
+        False, "--fix-bom", help="Auto-fix BOM characters in files"
+    ),
+    no_connectivity: bool = typer.Option(
+        False, "--no-connectivity", help="Skip Ollama connectivity checks"
+    ),
+    verbose: bool = typer.Option(
+        False, "-v", "--verbose", help="Show all diagnostic info"
+    ),
 ):
     """
     Validate repository configuration for LLMC.
-    
+
     Checks that llmc.toml has all required sections and that
     configured backends (like Ollama) are reachable.
-    
+
     Examples:
         llmc repo validate /path/to/repo
         llmc repo validate . --fix-bom
         llmc repo validate . --no-connectivity
     """
-    from llmc.commands.repo_validator import validate_repo, print_result
-    
+    from llmc.commands.repo_validator import print_result, validate_repo
+
     repo_path = Path(path).resolve()
-    
+
     if not repo_path.exists():
         console.print(f"[red]❌ Path does not exist: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     if not repo_path.is_dir():
         console.print(f"[red]❌ Path is not a directory: {path}[/red]")
         raise typer.Exit(code=1)
-    
+
     result = validate_repo(
         repo_path,
         check_connectivity=not no_connectivity,
@@ -1047,23 +1115,25 @@ def validate(
         fix_bom=fix_bom,
         verbose=verbose,
     )
-    
+
     print_result(result, verbose=verbose)
-    
+
     if not result.passed:
         raise typer.Exit(code=1)
 
 
 @app.command("sync-agents")
 def sync_agents(
-    force: bool = typer.Option(False, "--force", "-f", help="Overwrite existing LLMCAGENTS.md files"),
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Overwrite existing LLMCAGENTS.md files"
+    ),
 ):
     """
     Sync LLMCAGENTS.md to all registered repositories.
-    
+
     Updates or installs the agent instructions file in every registered repo.
     Use this after updating the canonical LLMCAGENTS.md in the LLMC repo.
-    
+
     Examples:
         llmc-cli repo sync-agents           # Install where missing
         llmc-cli repo sync-agents --force   # Update all repos
@@ -1078,39 +1148,39 @@ def sync_agents(
         if candidate.exists():
             agents_source = candidate
             break
-    
+
     if not agents_source:
         console.print("[red]❌ Cannot find canonical LLMCAGENTS.md[/red]")
         console.print("   Expected at: llmc repo root or ~/.llmc/")
         raise typer.Exit(code=1)
-    
+
     console.print(f"[bold]📋 Syncing LLMCAGENTS.md from: {agents_source}[/bold]")
-    
+
     state = _get_state()
     if not state["repos"]:
         console.print("[yellow]ℹ️  No repos registered[/yellow]")
         return
-    
+
     updated = 0
     skipped = 0
     failed = 0
-    
+
     for repo_str in state["repos"]:
         repo_path = Path(repo_str)
         if not repo_path.exists():
             console.print(f"  [yellow]⚠️  {repo_path.name}: repo missing[/yellow]")
             failed += 1
             continue
-        
+
         llmc_dir = repo_path / ".llmc"
         llmc_dir.mkdir(parents=True, exist_ok=True)
         agents_dest = llmc_dir / "LLMCAGENTS.md"
-        
+
         if agents_dest.exists() and not force:
             console.print(f"  ℹ️  {repo_path.name}: already exists (use --force)")
             skipped += 1
             continue
-        
+
         try:
             shutil.copy(agents_source, agents_dest)
             action = "updated" if agents_dest.exists() else "installed"
@@ -1119,5 +1189,7 @@ def sync_agents(
         except Exception as e:
             console.print(f"  [red]❌ {repo_path.name}: {e}[/red]")
             failed += 1
-    
-    console.print(f"\n[bold]Summary:[/bold] {updated} updated, {skipped} skipped, {failed} failed")
+
+    console.print(
+        f"\n[bold]Summary:[/bold] {updated} updated, {skipped} skipped, {failed} failed"
+    )

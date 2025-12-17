@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 
@@ -17,7 +16,7 @@ class TestResolveDocPathRen:
     def test_happy_path(self, repo_root):
         """Standard valid path should work."""
         (repo_root / "DOCS/REPODOCS").mkdir(parents=True)
-        
+
         result = resolve_doc_path(repo_root, Path("src/main.py"))
         expected = repo_root / "DOCS/REPODOCS/src/main.py.md"
         assert result == expected
@@ -37,13 +36,13 @@ class TestResolveDocPathRen:
         """Test absolute path injection."""
         # On Linux, joining an absolute path discards the left side
         abs_path = Path("/etc/passwd")
-        
+
         # The function does: output_base / f"{relative_path}.md"
         # If relative_path is absolute, f-string makes it a string
         # So output_base / "/etc/passwd.md" -> "/etc/passwd.md" (absolute)
         # resolve() keeps it absolute
         # relative_to() should fail
-        
+
         with pytest.raises(ValueError, match="Path traversal detected"):
             resolve_doc_path(repo_root, abs_path)
 
@@ -61,25 +60,25 @@ class TestResolveDocPathRen:
         """Test if resolving a symlink that points outside is caught."""
         # Setup:
         # repo/DOCS/REPODOCS/link.md -> /tmp/outside
-        
+
         docs_dir = repo_root / "DOCS/REPODOCS"
         docs_dir.mkdir(parents=True)
-        
+
         outside_target = repo_root.parent / "target"
         outside_target.touch()
-        
+
         # If the *input* path is a symlink pointing outside?
         # The function adds .md to it.
         # invalid_link -> /outside
         # We ask for "invalid_link"
         # Result: .../invalid_link.md
         # This doesn't exploit symlinks unless the .md file itself is a symlink?
-        
+
         # What if we ask for a path that *resolves* to outside?
         # resolve_doc_path calculates the OUTPUT path.
         # If I say relative_path="foo", output is ".../foo.md"
         # If ".../foo.md" already exists and is a symlink to /etc/passwd?
-        
+
         # Create the evil symlink
         evil_link = docs_dir / "evil.md"
         try:
@@ -90,7 +89,6 @@ class TestResolveDocPathRen:
         # Now ask for "evil" (which maps to evil.md)
         # resolve() should follow the symlink to /etc/passwd
         # relative_to() should fail
-        
+
         with pytest.raises(ValueError, match="Path traversal detected"):
             resolve_doc_path(repo_root, Path("evil"))
-

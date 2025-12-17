@@ -49,7 +49,11 @@ class TestDatabaseErrorHandling:
                 # If it doesn't crash, it might have recovered
                 # or the corruption was not severe enough
                 assert db is not None
-            except (sqlite3.DatabaseError, sqlite3.CorruptDatabaseError, Exception) as e:
+            except (
+                sqlite3.DatabaseError,
+                sqlite3.CorruptDatabaseError,
+                Exception,
+            ) as e:
                 # Expected - database is corrupted
                 assert e is not None
 
@@ -245,7 +249,9 @@ class TestDatabaseErrorHandling:
             assert count == 2
 
 
-@pytest.mark.skipif(not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented")
+@pytest.mark.skipif(
+    not ENRICHMENT_AVAILABLE, reason="Enrichment functions not yet implemented"
+)
 class TestNetworkFailureHandling:
     """Test network failure handling."""
 
@@ -430,11 +436,7 @@ class TestConfigurationErrorHandling:
         with tempfile.TemporaryDirectory() as tmpdir:
             registry_file = Path(tmpdir) / "invalid.yml"
             registry_file.write_text(
-                yaml.dump(
-                    [
-                        {"repo_path": "/tmp/repo"}  # Missing repo_id
-                    ]
-                )
+                yaml.dump([{"repo_path": "/tmp/repo"}])  # Missing repo_id
             )
 
             client = RegistryClient(path=registry_file)
@@ -518,11 +520,7 @@ class TestConfigurationErrorHandling:
         with tempfile.TemporaryDirectory() as tmpdir:
             config_file = Path(tmpdir) / "config.yml"
             config_file.write_text(
-                yaml.dump(
-                    {
-                        "registry_path": 123  # Should be string
-                    }
-                )
+                yaml.dump({"registry_path": 123})  # Should be string
             )
 
             # Should handle type mismatch
@@ -680,8 +678,10 @@ class TestInputValidationHandling:
             if vulnerabilities_found:
                 # This test reveals that path traversal is possible
                 # In production, paths MUST be validated before use
-                assert len(vulnerabilities_found) > 0, (
-                    "Path traversal vulnerability detected: " + ", ".join(vulnerabilities_found)
+                assert (
+                    len(vulnerabilities_found) > 0
+                ), "Path traversal vulnerability detected: " + ", ".join(
+                    vulnerabilities_found
                 )
 
             # Verify legitimate paths still work
@@ -988,7 +988,9 @@ class TestDataIntegrityHandling:
             # Later, try to verify with different hash
             # Functions should detect mismatch
             try:
-                cursor = db.conn.execute("SELECT file_hash FROM files WHERE path='test.py'")
+                cursor = db.conn.execute(
+                    "SELECT file_hash FROM files WHERE path='test.py'"
+                )
                 stored_hash = cursor.fetchone()[0]
                 expected_hash = "different_hash"
 

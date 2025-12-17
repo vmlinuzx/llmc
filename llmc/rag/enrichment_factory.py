@@ -133,7 +133,7 @@ def create_backend_from_spec(
 
 
 def create_cost_tracker_from_config(
-    enrichment_config: dict[str, Any]
+    enrichment_config: dict[str, Any],
 ) -> CostTracker | None:
     """Create cost tracker from enrichment configuration.
 
@@ -162,9 +162,7 @@ def create_cost_tracker_from_config(
         monthly_cap_usd=monthly_cap,
     )
 
-    logger.info(
-        f"Cost tracking enabled: daily=${daily_cap}, monthly=${monthly_cap}"
-    )
+    logger.info(f"Cost tracking enabled: daily=${daily_cap}, monthly=${monthly_cap}")
 
     return CostTracker(config)
 

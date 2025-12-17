@@ -20,7 +20,9 @@ class RagDbNotFound(FileNotFoundError):
     """Raised when no suitable RAG DB file can be found."""
 
 
-def _open_db(repo_root: Path, explicit: Path | None = None) -> tuple[sqlite3.Connection, Path]:
+def _open_db(
+    repo_root: Path, explicit: Path | None = None
+) -> tuple[sqlite3.Connection, Path]:
     """Open the RAG SQLite DB; try common locations."""
     if explicit:
         db_path = explicit
@@ -32,7 +34,9 @@ def _open_db(repo_root: Path, explicit: Path | None = None) -> tuple[sqlite3.Con
         db_path = (repo_root / rel).resolve()
         if db_path.exists():
             return sqlite3.connect(str(db_path)), db_path
-    raise RagDbNotFound("No RAG DB found (.rag/index_v2.db | .rag/index.db | .rag/index.db3)")
+    raise RagDbNotFound(
+        "No RAG DB found (.rag/index_v2.db | .rag/index.db | .rag/index.db3)"
+    )
 
 
 def _detect_fts_table(conn: sqlite3.Connection) -> str:
@@ -84,8 +88,13 @@ def _column_map(conn: sqlite3.Connection, table: str) -> dict[str, str]:
         raise RuntimeError(f"Required column not found in {table}: one of {candidates}")
 
     path_col = pick("path", "file", "filepath", "relpath")
-    start_col = pick("start_line", "start", "line_start", "lineno", default=None) or "start_line"
-    end_col = pick("end_line", "end", "line_end", "lineno_end", default=None) or "end_line"
+    start_col = (
+        pick("start_line", "start", "line_start", "lineno", default=None)
+        or "start_line"
+    )
+    end_col = (
+        pick("end_line", "end", "line_end", "lineno_end", default=None) or "end_line"
+    )
     text_col = pick("text", "content", "body", "span_text", "summary")
     return {"path": path_col, "start": start_col, "end": end_col, "text": text_col}
 
@@ -126,7 +135,6 @@ def fts_search(
             """
             cur.execute(sql, (query, int(limit)))
             rows = [(*r, 0.0) for r in cur.fetchall()]
-
 
         hits: list[FtsHit] = []
         for p, s, e, t, sc in rows:

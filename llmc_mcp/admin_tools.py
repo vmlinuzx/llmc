@@ -20,7 +20,7 @@ from .telemetry import get_telemetry_sink
 def maasl_locks() -> dict:
     """
     List all currently active MAASL locks.
-    
+
     Returns:
         Dict with:
         - count: Number of active locks
@@ -32,7 +32,7 @@ def maasl_locks() -> dict:
             - held_duration_ms: How long lock has been held
             - ttl_remaining_sec: Time until lease expires
             - is_expired: Whether lease has expired
-    
+
     Example:
         >>> result = maasl_locks()
         >>> print(f"{result['count']} active locks")
@@ -41,7 +41,7 @@ def maasl_locks() -> dict:
     """
     lock_manager = get_lock_manager()
     snapshot = lock_manager.snapshot()
-    
+
     return {
         "count": len(snapshot),
         "locks": snapshot,
@@ -52,7 +52,7 @@ def maasl_locks() -> dict:
 def maasl_stomp_stats() -> dict:
     """
     Get aggregated MAASL contention and coordination statistics.
-    
+
     Returns:
         Dict with:
         - lock_acquisitions: Total successful lock acquisitions
@@ -62,15 +62,15 @@ def maasl_stomp_stats() -> dict:
         - graph_merges: Graph merge statistics
         - docgen_operations: Docgen operation statistics
         - uptime_seconds: MAASL telemetry uptime
-    
+
     Example:
         >>> stats = maasl_stomp_stats()
         >>> print(f"Contention rate: {stats['lock_timeouts'] / stats['lock_acquisitions']:.2%}")
     """
     telemetry = get_telemetry_sink()
-    
+
     # Check if telemetry has stats (added in this phase)
-    if not hasattr(telemetry, '_stats'):
+    if not hasattr(telemetry, "_stats"):
         return {
             "error": "Stats collection not enabled",
             "message": "TelemetrySink stats tracking not initialized",
@@ -82,9 +82,9 @@ def maasl_stomp_stats() -> dict:
             "docgen_operations": {"generated": 0, "noop": 0, "error": 0},
             "uptime_seconds": telemetry._get_uptime(),
         }
-    
+
     stats = telemetry._stats
-    
+
     return {
         "lock_acquisitions": stats.get("lock_acquired", 0),
         "lock_timeouts": stats.get("lock_timeout", 0),
@@ -108,26 +108,25 @@ def maasl_stomp_stats() -> dict:
 
 
 def maasl_docgen_status(
-    coordinator: DocgenCoordinator | None = None,
-    limit: int = 10
+    coordinator: DocgenCoordinator | None = None, limit: int = 10
 ) -> dict:
     """
     Get recent documentation generation operations.
-    
+
     Args:
         coordinator: DocgenCoordinator instance (optional, for external callers)
         limit: Maximum number of recent operations to return
-    
+
     Returns:
         Dict with:
         - count: Number of operations returned
         - operations: List of DocgenResult objects as dicts
         - buffer_size: Maximum buffer size
-    
+
     Note:
         If coordinator is None, this returns a stub response.
         In production MCP context, the coordinator should be injected.
-    
+
     Example:
         >>> status = maasl_docgen_status(coordinator, limit=5)
         >>> for op in status['operations']:
@@ -140,9 +139,9 @@ def maasl_docgen_status(
             "count": 0,
             "operations": [],
         }
-    
+
     operations = coordinator.get_status(limit=limit)
-    
+
     return {
         "count": len(operations),
         "operations": [asdict(op) for op in operations],

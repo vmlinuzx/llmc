@@ -35,7 +35,13 @@ DEFAULT_CONFIG = {
     },
     "embeddings": {
         "default_profile": "docs",
-        "profiles": {"docs": {"provider": "ollama", "model": "nomic-embed-text", "dimension": 768}},
+        "profiles": {
+            "docs": {
+                "provider": "ollama",
+                "model": "nomic-embed-text",
+                "dimension": 768,
+            }
+        },
     },
     "rag": {"enabled": True},
 }
@@ -95,7 +101,9 @@ def init(
         with open(config_path, "rb") as f:
             config = tomllib.load(f)
 
-        index_rel_path = config.get("storage", {}).get("index_path", ".llmc/index_v2.db")
+        index_rel_path = config.get("storage", {}).get(
+            "index_path", ".llmc/index_v2.db"
+        )
         index_path = target_root / index_rel_path
 
         typer.echo(f"Initializing database: {index_path}")

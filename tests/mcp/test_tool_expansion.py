@@ -60,7 +60,9 @@ async def test_inspect_handler():
     mock_result = Mock()
     mock_result.to_dict.return_value = {"path": "test.py", "snippet": "code"}
 
-    with patch("llmc.rag.inspector.inspect_entity", return_value=mock_result) as mock_tool:
+    with patch(
+        "llmc.rag.inspector.inspect_entity", return_value=mock_result
+    ) as mock_tool:
         result = await server._handle_inspect({"path": "test.py"})
         assert len(result) == 1
         data = json.loads(result[0].text)
@@ -75,7 +77,9 @@ async def test_rag_stats_handler():
 
     mock_result = {"total_nodes": 100}
 
-    with patch("llmc.rag_nav.tool_handlers.tool_rag_stats", return_value=mock_result) as mock_tool:
+    with patch(
+        "llmc.rag_nav.tool_handlers.tool_rag_stats", return_value=mock_result
+    ) as mock_tool:
         result = await server._handle_rag_stats({})
         assert len(result) == 1
         data = json.loads(result[0].text)

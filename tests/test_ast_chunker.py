@@ -78,10 +78,12 @@ def test_ast_chunker_python():
         print(f"  Chunk: {chunk_meta.get('span_type', 'unknown')} - {chunk_text[:50]}")
 
     assert len(chunks) > 0, "No chunks generated from Python file"
-    assert any("function_one" in chunk_text for chunk_text, _ in chunks), (
-        "function_one not found in chunks"
-    )
-    assert any("MyClass" in chunk_text for chunk_text, _ in chunks), "MyClass not found in chunks"
+    assert any(
+        "function_one" in chunk_text for chunk_text, _ in chunks
+    ), "function_one not found in chunks"
+    assert any(
+        "MyClass" in chunk_text for chunk_text, _ in chunks
+    ), "MyClass not found in chunks"
 
 
 def test_ast_chunker_shell():
@@ -110,9 +112,9 @@ def test_ast_chunker_markdown():
         print(f"  Chunk: {chunk_meta.get('span_type', 'unknown')} - {chunk_text[:50]}")
 
     assert len(chunks) > 0, "No chunks generated from markdown file"
-    assert any("Section One" in chunk_text for chunk_text, _ in chunks), (
-        "Section One not found in chunks"
-    )
+    assert any(
+        "Section One" in chunk_text for chunk_text, _ in chunks
+    ), "Section One not found in chunks"
 
 
 def test_ast_chunker_syntax_error_robustness():

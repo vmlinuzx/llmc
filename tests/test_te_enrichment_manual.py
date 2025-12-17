@@ -51,8 +51,12 @@ def test_profile_isolation(fresh_db):
 
     # Config with multiple profiles using Hash provider for determinism
     profiles = {
-        "code": EmbeddingProfileConfig(name="code", raw={"provider": "hash", "dimension": 64}),
-        "docs": EmbeddingProfileConfig(name="docs", raw={"provider": "hash", "dimension": 128}),
+        "code": EmbeddingProfileConfig(
+            name="code", raw={"provider": "hash", "dimension": 64}
+        ),
+        "docs": EmbeddingProfileConfig(
+            name="docs", raw={"provider": "hash", "dimension": 128}
+        ),
     }
 
     manager = EmbeddingManager(profiles, default_profile="code")
@@ -90,7 +94,9 @@ def test_vector_integrity(fresh_db):
     """Verify stored binary blobs decode back to correct floats."""
 
     profiles = {
-        "test": EmbeddingProfileConfig(name="test", raw={"provider": "hash", "dimension": 4})
+        "test": EmbeddingProfileConfig(
+            name="test", raw={"provider": "hash", "dimension": 4}
+        )
     }
     manager = EmbeddingManager(profiles, default_profile="test")
 
@@ -101,7 +107,9 @@ def test_vector_integrity(fresh_db):
     fresh_db.store_embedding("span2", original_vec, "test")
 
     # Read back raw blob
-    blob = fresh_db.conn.execute("SELECT vec FROM embeddings WHERE span_hash='span2'").fetchone()[0]
+    blob = fresh_db.conn.execute(
+        "SELECT vec FROM embeddings WHERE span_hash='span2'"
+    ).fetchone()[0]
 
     # Decode manually
     decoded_vec = list(struct.unpack(f"<{len(original_vec)}f", blob))

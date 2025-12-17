@@ -8,8 +8,12 @@ from llmc.rag.eval.routing_eval import evaluate_routing
 
 def main():
     parser = argparse.ArgumentParser(description="LLMC Routing Evaluation")
-    parser.add_argument("--dataset", type=str, required=True, help="Path to JSONL dataset")
-    parser.add_argument("--top-k", type=int, default=10, help="Number of results to retrieve")
+    parser.add_argument(
+        "--dataset", type=str, required=True, help="Path to JSONL dataset"
+    )
+    parser.add_argument(
+        "--top-k", type=int, default=10, help="Number of results to retrieve"
+    )
     parser.add_argument("--json", action="store_true", help="Output results as JSON")
 
     args = parser.parse_args()

@@ -39,13 +39,9 @@ def _mock_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
     if "brand" in path.lower():
         summary = f"Brand enrichment function for {Path(path).name}. Handles brand data processing and validation."
     elif "worker" in path.lower():
-        summary = (
-            f"Worker module for {Path(path).name}. Processes data according to AEGIS pipeline."
-        )
+        summary = f"Worker module for {Path(path).name}. Processes data according to AEGIS pipeline."
     elif "loader" in path.lower():
-        summary = (
-            f"Data loader component in {Path(path).name}. Handles ingestion and transformation."
-        )
+        summary = f"Data loader component in {Path(path).name}. Handles ingestion and transformation."
     elif "capsule" in path.lower():
         summary = f"Capsule module in {Path(path).name}. Encapsulates specific AEGIS functionality."
     elif "core" in path.lower():
@@ -53,11 +49,11 @@ def _mock_llm_call(prompt: dict[str, Any]) -> dict[str, Any]:
     elif "discover" in path.lower():
         summary = f"Discovery module in {Path(path).name}. Handles web scraping and data discovery."
     elif "llm" in path.lower():
-        summary = f"LLM client module in {Path(path).name}. Manages AI service integration."
-    else:
         summary = (
-            f"Module {Path(path).name} from AEGIS repository. Contains implementation details."
+            f"LLM client module in {Path(path).name}. Manages AI service integration."
         )
+    else:
+        summary = f"Module {Path(path).name} from AEGIS repository. Contains implementation details."
 
     # Use actual line ranges from the prompt, with bounds checking
     start_line, end_line = lines
@@ -134,7 +130,9 @@ def test_enrich_aegis_repository_basic(tmp_path: Path) -> None:
         }
 
         required_tables = {"files", "spans"}
-        assert required_tables.issubset(tables), f"Missing required tables. Found: {tables}"
+        assert required_tables.issubset(
+            tables
+        ), f"Missing required tables. Found: {tables}"
 
         # Check span count
         span_count = db.conn.execute("SELECT COUNT(*) FROM spans").fetchone()[0]
@@ -411,7 +409,9 @@ def test_enrich_aegis_data_integrity(tmp_path: Path) -> None:
             """
         ).fetchone()[0]
 
-        total_enrichments = db.conn.execute("SELECT COUNT(*) FROM enrichments").fetchone()[0]
+        total_enrichments = db.conn.execute(
+            "SELECT COUNT(*) FROM enrichments"
+        ).fetchone()[0]
 
         print(f"    Records with evidence: {records_with_evidence}/{total_enrichments}")
         assert records_with_evidence > 0, "No records have evidence"

@@ -31,7 +31,9 @@ def test_ollama_live_roundtrip(clean_db):
     try:
         resp = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
         if resp.status_code != 200:
-            pytest.skip(f"Ollama server reachable but returned error: {resp.status_code}")
+            pytest.skip(
+                f"Ollama server reachable but returned error: {resp.status_code}"
+            )
     except Exception as e:
         print(f"\nConnection error: {e}")
         pytest.skip(f"Ollama server unreachable: {e}")

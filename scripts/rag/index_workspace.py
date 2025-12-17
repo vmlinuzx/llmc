@@ -159,7 +159,8 @@ class WorkspaceIndexer:
             print(f"✅ Loaded existing collection: {COLLECTION_NAME}")
         except:
             self.collection = self.client.create_collection(
-                name=COLLECTION_NAME, metadata={"description": "Workspace code embeddings"}
+                name=COLLECTION_NAME,
+                metadata={"description": "Workspace code embeddings"},
             )
             print(f"✅ Created new collection: {COLLECTION_NAME}")
 
@@ -205,7 +206,9 @@ class WorkspaceIndexer:
             return {
                 "last_commit": last_commit.hexsha[:8],
                 "last_author": last_commit.author.name,
-                "last_modified": datetime.fromtimestamp(last_commit.committed_date).isoformat(),
+                "last_modified": datetime.fromtimestamp(
+                    last_commit.committed_date
+                ).isoformat(),
             }
         except:
             return None
@@ -293,7 +296,10 @@ class WorkspaceIndexer:
                     normalize_embeddings=True,
                 )
                 self.collection.add(
-                    ids=ids, embeddings=embeddings.tolist(), documents=texts, metadatas=metadatas
+                    ids=ids,
+                    embeddings=embeddings.tolist(),
+                    documents=texts,
+                    metadatas=metadatas,
                 )
 
             return len(chunks)
@@ -339,7 +345,8 @@ class WorkspaceIndexer:
             print("🗑️  Clearing existing index...")
             self.client.delete_collection(COLLECTION_NAME)
             self.collection = self.client.create_collection(
-                name=COLLECTION_NAME, metadata={"description": "Workspace code embeddings"}
+                name=COLLECTION_NAME,
+                metadata={"description": "Workspace code embeddings"},
             )
 
         # Index files with progress bar
@@ -385,8 +392,12 @@ class WorkspaceIndexer:
 def main():
     parser = argparse.ArgumentParser(description="Index workspace for DeepSeek RAG")
     parser.add_argument("--project", help="Index specific project only")
-    parser.add_argument("--reindex", action="store_true", help="Force reindex all files")
-    parser.add_argument("--stats", action="store_true", help="Show collection statistics")
+    parser.add_argument(
+        "--reindex", action="store_true", help="Force reindex all files"
+    )
+    parser.add_argument(
+        "--stats", action="store_true", help="Show collection statistics"
+    )
 
     args = parser.parse_args()
 

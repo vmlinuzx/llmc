@@ -18,27 +18,27 @@ class PathSecurityError(ValueError):
 
 def normalize_path(repo_root: Path, target: str) -> Path:
     """Resolve target path relative to repo root, with fuzzy suffix matching.
-    
+
     Security: Rejects paths outside repo_root to prevent path traversal attacks.
-    
+
     Args:
         repo_root: The repository root directory (security boundary).
         target: The target path string (can be relative, absolute, or a suffix).
-        
+
     Returns:
         Path relative to repo_root.
-        
+
     Raises:
         PathSecurityError: If path is outside repo_root boundary or contains
             security-relevant characters (null bytes, etc.).
-            
+
     Example:
         >>> normalize_path(Path("/repo"), "src/main.py")
         PosixPath('src/main.py')
-        
+
         >>> normalize_path(Path("/repo"), "/repo/src/main.py")
         PosixPath('src/main.py')
-        
+
         >>> normalize_path(Path("/repo"), "../../../etc/passwd")
         PathSecurityError: Path '../../../etc/passwd' escapes repository boundary...
     """

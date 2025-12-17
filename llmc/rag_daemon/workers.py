@@ -164,7 +164,9 @@ class WorkerPool:
             stderr_tail=stderr_tail,
         )
 
-    def _update_state_from_result(self, repo: RepoDescriptor, result: JobResult) -> datetime:
+    def _update_state_from_result(
+        self, repo: RepoDescriptor, result: JobResult
+    ) -> datetime:
         finished_at = utc_now()
         guard = self._fresh_guard
 
@@ -189,7 +191,9 @@ class WorkerPool:
                     2 ** (state.consecutive_failures - 1)
                 )
                 backoff_seconds = min(backoff_seconds, self.config.max_backoff_seconds)
-                state.next_eligible_at = finished_at + timedelta(seconds=backoff_seconds) + guard
+                state.next_eligible_at = (
+                    finished_at + timedelta(seconds=backoff_seconds) + guard
+                )
 
             return state
 

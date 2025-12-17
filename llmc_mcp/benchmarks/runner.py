@@ -81,7 +81,16 @@ def _emit_csv(rows: list[BenchResult]) -> str:
 
         w = _csv.writer(f)
         w.writerow(
-            ["bench_id", "case", "tool", "ok", "returncode", "duration_s", "data_bytes", "note"]
+            [
+                "bench_id",
+                "case",
+                "tool",
+                "ok",
+                "returncode",
+                "duration_s",
+                "data_bytes",
+                "note",
+            ]
         )
         for r in rows:
             w.writerow(
@@ -111,7 +120,14 @@ def case_te_echo() -> BenchResult:
     start = time.time()
     if te_run is None:
         return BenchResult(
-            str(uuid.uuid4()), "te_echo", "te_run", False, -1, 0.0, 0, "te_run unavailable"
+            str(uuid.uuid4()),
+            "te_echo",
+            "te_run",
+            False,
+            -1,
+            0.0,
+            0,
+            "te_run unavailable",
         )
     res = te_run(["run", "echo", "hello-bench"])
     dur = time.time() - start
@@ -139,14 +155,23 @@ def case_repo_read_small() -> BenchResult:
     rc = int(res.get("meta", {}).get("returncode", -1))
     ok = rc == 0
     sz = _json_size(res.get("data"))
-    return BenchResult(str(uuid.uuid4()), "repo_read_small", "repo_read", ok, rc, dur, sz)
+    return BenchResult(
+        str(uuid.uuid4()), "repo_read_small", "repo_read", ok, rc, dur, sz
+    )
 
 
 def case_rag_top3() -> BenchResult:
     start = time.time()
     if rag_query is None:
         return BenchResult(
-            str(uuid.uuid4()), "rag_top3", "rag_query", False, -1, 0.0, 0, "rag_query unavailable"
+            str(uuid.uuid4()),
+            "rag_top3",
+            "rag_query",
+            False,
+            -1,
+            0.0,
+            0,
+            "rag_query unavailable",
         )
     res = rag_query("bench: quick sanity", k=3)
     dur = time.time() - start
@@ -171,7 +196,9 @@ def run_cases(selected: list[str] | None = None) -> list[BenchResult]:
         fn = CASES.get(name)
         if not fn:
             rows.append(
-                BenchResult(str(uuid.uuid4()), name, "-", False, -1, 0.0, 0, "unknown case")
+                BenchResult(
+                    str(uuid.uuid4()), name, "-", False, -1, 0.0, 0, "unknown case"
+                )
             )
             continue
         rows.append(fn())
@@ -183,7 +210,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = argparse.ArgumentParser(description="LLMC MCP Benchmarks")
     p.add_argument("--cases", type=str, help="Comma-separated case names")
-    p.add_argument("--quick", action="store_true", help="Run a minimal set (te_echo only)")
+    p.add_argument(
+        "--quick", action="store_true", help="Run a minimal set (te_echo only)"
+    )
     args = p.parse_args(argv or [])
 
     if args.quick:

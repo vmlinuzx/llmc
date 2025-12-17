@@ -58,7 +58,9 @@ def _is_definition(content: str) -> bool:
 
 def _is_test_file(path: str) -> bool:
     """Is this a test file?"""
-    return bool(re.search(r"(test_|_test\.|\.test\.|tests/|__tests__|spec\.)", path.lower()))
+    return bool(
+        re.search(r"(test_|_test\.|\.test\.|tests/|__tests__|spec\.)", path.lower())
+    )
 
 
 def _rank_match(match: GrepMatch) -> tuple[int, int]:
@@ -145,7 +147,8 @@ def _run_rg(
                 matches=[],
                 total_count=0,
                 raw_output="",
-                error=result.stderr.strip() or f"ripgrep error (code {result.returncode})",
+                error=result.stderr.strip()
+                or f"ripgrep error (code {result.returncode})",
             )
         matches = _parse_rg_output(output)
         return GrepResult(
@@ -271,7 +274,9 @@ def handle_grep(
         # Compute directory breakdown for remaining (using relative paths)
         remaining_dirs = Counter(relative_dir(m.path) for m in non_test[matches_shown:])
         dir_summary = ", ".join(f"{d} ({c})" for d, c in remaining_dirs.most_common(3))
-        breadcrumbs.append(format_breadcrumb(f"{remaining_non_test} more in: {dir_summary}"))
+        breadcrumbs.append(
+            format_breadcrumb(f"{remaining_non_test} more in: {dir_summary}")
+        )
         truncated = True
 
     # Add test matches summary

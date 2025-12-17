@@ -82,7 +82,9 @@ class OpenAICompatBackend(RemoteBackend):
 
         return endpoint, payload
 
-    def _parse_response(self, data: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
+    def _parse_response(
+        self, data: dict[str, Any], item: dict[str, Any]
+    ) -> dict[str, Any]:
         """Parse OpenAI-compatible response into enrichment format.
 
         OpenAI response structure:

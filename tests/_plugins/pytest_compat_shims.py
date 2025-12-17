@@ -91,7 +91,11 @@ def pytest_sessionstart(session):
     with contextlib.suppress(Exception):
         pkg = importlib.import_module("tools.rag_repo")
         if not hasattr(pkg, "cli"):
-            for mod_name in ("tools.rag_repo.cli", "tools.rag_repo.command", "tools.rag_repo.app"):
+            for mod_name in (
+                "tools.rag_repo.cli",
+                "tools.rag_repo.command",
+                "tools.rag_repo.app",
+            ):
                 with contextlib.suppress(Exception):
                     mod = importlib.import_module(mod_name)
                     for cand in ("cli", "main", "entrypoint", "app", "run"):

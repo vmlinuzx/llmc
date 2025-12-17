@@ -1,2 +1,7 @@
 #!/bin/bash
-exec python3 -m tools.rag.service "$@"
+from llmc.rag.service import main
+import sys
+
+if __name__ == "__main__":
+    sys.exit(main())
+

@@ -81,7 +81,9 @@ class AnthropicBackend(RemoteBackend):
 
         return endpoint, payload
 
-    def _parse_response(self, data: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
+    def _parse_response(
+        self, data: dict[str, Any], item: dict[str, Any]
+    ) -> dict[str, Any]:
         """Parse Anthropic response into enrichment format.
 
         Anthropic response structure:
@@ -121,7 +123,7 @@ class AnthropicBackend(RemoteBackend):
             # Prioritize "text" blocks, fall back to "thinking" only if no text found
             text = None
             thinking_fallback = None
-            
+
             for block in content_blocks:
                 block_type = block.get("type", "")
                 if block_type == "text":
@@ -131,14 +133,18 @@ class AnthropicBackend(RemoteBackend):
                 elif block_type == "thinking" and thinking_fallback is None:
                     # Store first thinking block as fallback
                     thinking_fallback = block.get("thinking", "")
-            
+
             # Use text if found, otherwise fall back to thinking
             if not text and thinking_fallback:
                 text = thinking_fallback
-                logger.debug("Using 'thinking' block as fallback (no 'text' block found)")
+                logger.debug(
+                    "Using 'thinking' block as fallback (no 'text' block found)"
+                )
 
             if not text:
-                logger.warning(f"No usable content in response blocks: {[b.get('type') for b in content_blocks]}")
+                logger.warning(
+                    f"No usable content in response blocks: {[b.get('type') for b in content_blocks]}"
+                )
                 return self._fallback_enrichment(item)
 
             # Parse the text as enrichment JSON

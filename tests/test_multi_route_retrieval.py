@@ -17,9 +17,7 @@ def mock_dependencies():
         patch("llmc.rag.search.create_router") as mock_create_router,
         patch("llmc.rag.search.resolve_route") as mock_resolve,
         patch("llmc.rag.search.get_multi_route_config") as mock_get_multi,
-        patch(
-            "llmc.rag.search.is_query_routing_enabled", return_value=True
-        ),
+        patch("llmc.rag.search.is_query_routing_enabled", return_value=True),
     ):
         # Setup basic mocks
         mock_root.return_value = Path("/tmp/mock_repo")
@@ -100,7 +98,9 @@ def test_search_single_route(mock_dependencies):
     # Setup: get_multi_route_config returns just the primary route
     mocks["get_multi"].return_value = [("route_a", 1.0)]
     mocks["resolve"].return_value = ("profile_a", "index_a")
-    mocks["load_config"].return_value = {"embeddings": {"profiles": {"profile_a": {"dim": 1}}}}
+    mocks["load_config"].return_value = {
+        "embeddings": {"profiles": {"profile_a": {"dim": 1}}}
+    }
 
     results = search_spans("query")
 
@@ -163,7 +163,9 @@ def test_search_multi_route_caching(mock_dependencies):
     # Both routes use SAME profile
     mocks["resolve"].return_value = ("common_profile", "index_a")
 
-    mocks["load_config"].return_value = {"embeddings": {"profiles": {"common_profile": {"dim": 1}}}}
+    mocks["load_config"].return_value = {
+        "embeddings": {"profiles": {"common_profile": {"dim": 1}}}
+    }
 
     search_spans("query")
 

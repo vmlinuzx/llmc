@@ -60,7 +60,9 @@ def test_scheduler_eligibility_basics(tmp_path: Path) -> None:
     eligible = scheduler._is_repo_eligible(repo, None, now, force=False)
     assert eligible is True
 
-    state = RepoState(repo_id="repo-1", last_run_status="success", last_run_finished_at=now)
+    state = RepoState(
+        repo_id="repo-1", last_run_status="success", last_run_finished_at=now
+    )
     later = now + timedelta(seconds=10)
     ineligible = scheduler._is_repo_eligible(repo, state, later, force=False)
     assert ineligible is False

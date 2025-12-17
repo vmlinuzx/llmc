@@ -176,7 +176,8 @@ class SchemaGraph:
         ]
 
         graph.relations = [
-            Relation(src=r["src"], edge=r["edge"], dst=r["dst"]) for r in data["relations"]
+            Relation(src=r["src"], edge=r["edge"], dst=r["dst"])
+            for r in data["relations"]
         ]
 
         return graph
@@ -246,7 +247,9 @@ class PythonSchemaExtractor:
             local_name = alias.asname or symbol
 
             if base_stem:
-                target = f"{base_stem}.{symbol}"  # e.g., "router.estimate_tokens_from_text"
+                target = (
+                    f"{base_stem}.{symbol}"  # e.g., "router.estimate_tokens_from_text"
+                )
             else:
                 target = symbol  # Fallback if no stem (e.g. from __future__ import annotations)
 
@@ -355,7 +358,9 @@ class PythonSchemaExtractor:
         for base in node.bases:
             if isinstance(base, ast.Name):
                 base_id = f"type:{self.module_name}.{base.id}"
-                self.relations.append(Relation(src=entity_id, edge="extends", dst=base_id))
+                self.relations.append(
+                    Relation(src=entity_id, edge="extends", dst=base_id)
+                )
 
         # Visit methods
         for item in node.body:
@@ -391,7 +396,7 @@ class PythonSchemaExtractor:
 
 class TreeSitterSchemaExtractor:
     """Base class for tree-sitter based schema extraction.
-    
+
     Subclasses implement language-specific entity and relation extraction
     using tree-sitter parsing.
     """
@@ -411,7 +416,9 @@ class TreeSitterSchemaExtractor:
 
     def _node_text(self, node: Node) -> str:
         """Extract text content from a tree-sitter node."""
-        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+        return self.source[node.start_byte : node.end_byte].decode(
+            "utf-8", errors="replace"
+        )
 
     def _make_entity(
         self,
@@ -438,7 +445,7 @@ class TreeSitterSchemaExtractor:
 
 class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
     """Extract entities and relations from TypeScript/JavaScript code.
-    
+
     Supports:
     - Functions (regular, arrow, methods)
     - Classes
@@ -484,7 +491,7 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
 
     def _process_import(self, node: Node):
         """Process an import statement and populate import_map.
-        
+
         Examples:
         - import { foo } from './bar'  -> foo: bar
         - import { foo as baz } from './bar' -> baz: bar.foo
@@ -496,7 +503,9 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
             if child.type == "string":
                 module_text = self._node_text(child).strip('"').strip("'")
                 # Strip ./ and file extension for cleaner module names
-                module_path = module_text.replace("./", "").replace("../", "").split(".")[0]
+                module_path = (
+                    module_text.replace("./", "").replace("../", "").split(".")[0]
+                )
                 break
 
         if not module_path:
@@ -569,8 +578,14 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
         formal_params = node.child_by_field_name("parameters")
         if formal_params:
             for param in formal_params.children:
-                if param.type in ("identifier", "required_parameter", "optional_parameter"):
-                    param_name = self._node_text(param).split(":")[0].strip()  # Strip type annotations
+                if param.type in (
+                    "identifier",
+                    "required_parameter",
+                    "optional_parameter",
+                ):
+                    param_name = (
+                        self._node_text(param).split(":")[0].strip()
+                    )  # Strip type annotations
                     if param_name and param_name not in ("(", ")", ","):
                         params.append(param_name)
 
@@ -619,7 +634,6 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
                                         dst=f"type:{base_symbol}",
                                     )
                                 )
-
 
         entity = self._make_entity(
             symbol=symbol,
@@ -729,7 +743,6 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
         if name in self.import_map:
             return self.import_map[name]
         return f"{self.module_name}.{name}"
-
 
 
 def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relation]]:
@@ -945,7 +958,9 @@ def build_enriched_schema_graph(
     if unmatched_entities and len(unmatched_entities) <= 10:
         print(f"    ⚠️  Unmatched entities: {unmatched_entities[:10]}")
     elif unmatched_entities:
-        print(f"    ⚠️  {len(unmatched_entities)} entities could not be matched to enrichments")
+        print(
+            f"    ⚠️  {len(unmatched_entities)} entities could not be matched to enrichments"
+        )
 
     return graph
 

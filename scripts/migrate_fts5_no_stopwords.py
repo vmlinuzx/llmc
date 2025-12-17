@@ -35,13 +35,13 @@ def migrate_fts5_index(repo_root: Path) -> None:
         return
 
     print(f"📂 Migrating FTS5 index: {db_path}")
-    
+
     db = Database(db_path)
     try:
         # Drop existing FTS table
         print("  🗑️  Dropping old enrichments_fts table...")
         db.conn.execute("DROP TABLE IF EXISTS enrichments_fts")
-        
+
         # Recreate with unicode61 tokenizer (no stopwords)
         print("  ✨ Creating new enrichments_fts table (unicode61, no stopwords)...")
         db.conn.execute(
@@ -57,17 +57,17 @@ def migrate_fts5_index(repo_root: Path) -> None:
             )
             """
         )
-        
+
         # Rebuild index
         print("  📊 Rebuilding FTS index from enrichment data...")
         count = db.rebuild_enrichments_fts()
-        
+
         # Commit
         db.conn.commit()
-        
+
         print(f"  ✅ Migration complete! Indexed {count} enrichments")
         print("  🎯 Keyword 'model' is now searchable!")
-        
+
     except Exception as e:
         print(f"  ❌ Migration failed: {e}")
         raise
@@ -85,18 +85,18 @@ def main() -> None:
         # Walk up to find .git directory
         while not (repo_root / ".git").exists() and repo_root != repo_root.parent:
             repo_root = repo_root.parent
-    
+
     print("=" * 70)
     print("FTS5 STOPWORDS MIGRATION")
     print("=" * 70)
     print()
-    
+
     if not repo_root.exists():
         print(f"❌ Repository not found: {repo_root}")
         sys.exit(1)
-    
+
     migrate_fts5_index(repo_root)
-    
+
     print()
     print("=" * 70)
     print("MIGRATION COMPLETE")

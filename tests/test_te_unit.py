@@ -208,7 +208,9 @@ class TestGrepHandler:
         """Grep finds matches."""
         from llmc.te.handlers.grep import handle_grep
 
-        result = handle_grep("def handle_grep", repo_root=Path("/home/vmlinux/src/llmc"))
+        result = handle_grep(
+            "def handle_grep", repo_root=Path("/home/vmlinux/src/llmc")
+        )
         assert "# TE_BEGIN_META" in result.header
         assert '"cmd": "grep"' in result.header or '"cmd":"grep"' in result.header
         assert "handle_grep" in result.content
@@ -228,7 +230,9 @@ class TestGrepHandler:
         """Raw mode skips enrichment."""
         from llmc.te.handlers.grep import handle_grep
 
-        result = handle_grep("def handle_grep", raw=True, repo_root=Path("/home/vmlinux/src/llmc"))
+        result = handle_grep(
+            "def handle_grep", raw=True, repo_root=Path("/home/vmlinux/src/llmc")
+        )
         # Raw mode has no header
         assert result.header == ""
         # Content is raw rg output

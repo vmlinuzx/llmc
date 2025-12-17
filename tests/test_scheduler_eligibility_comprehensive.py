@@ -67,7 +67,9 @@ def test_scheduler_eligibility_no_state(tmp_path: Path) -> None:
     scheduler = Scheduler(cfg, registry, None, workers)
 
     # With no state, should be eligible
-    assert scheduler._is_repo_eligible(repo, None, datetime.now(UTC), force=False) is True
+    assert (
+        scheduler._is_repo_eligible(repo, None, datetime.now(UTC), force=False) is True
+    )
 
 
 def test_scheduler_eligibility_running_state(tmp_path: Path) -> None:
@@ -86,10 +88,15 @@ def test_scheduler_eligibility_running_state(tmp_path: Path) -> None:
 
     # With running state, should NOT be eligible
     state = RepoState(repo_id="repo-running", last_run_status="running")
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is False
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False)
+        is False
+    )
 
     # Unless forced
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=True) is True
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=True) is True
+    )
 
 
 def test_scheduler_eligibility_consecutive_failures(tmp_path: Path) -> None:
@@ -112,10 +119,15 @@ def test_scheduler_eligibility_consecutive_failures(tmp_path: Path) -> None:
         last_run_status="error",
         consecutive_failures=3,  # max_consecutive_failures=3
     )
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is False
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False)
+        is False
+    )
 
     # But forced refresh should work
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=True) is True
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=True) is True
+    )
 
     # One below max should be eligible
     state_below = RepoState(
@@ -123,7 +135,10 @@ def test_scheduler_eligibility_consecutive_failures(tmp_path: Path) -> None:
         last_run_status="error",
         consecutive_failures=2,
     )
-    assert scheduler._is_repo_eligible(repo, state_below, datetime.now(UTC), force=False) is True
+    assert (
+        scheduler._is_repo_eligible(repo, state_below, datetime.now(UTC), force=False)
+        is True
+    )
 
 
 def test_scheduler_eligibility_next_eligible_in_future(tmp_path: Path) -> None:
@@ -326,7 +341,9 @@ def test_scheduler_run_tick_with_mixed_states(tmp_path: Path) -> None:
 
     # Mock the control and state store
     with patch("tools.rag_daemon.scheduler.read_control_events") as mock_control:
-        mock_control.return_value = Mock(refresh_all=False, refresh_repo_ids=set(), shutdown=False)
+        mock_control.return_value = Mock(
+            refresh_all=False, refresh_repo_ids=set(), shutdown=False
+        )
 
         with patch.object(scheduler.state_store, "load_all", return_value=states):
             with patch.object(workers, "running_repo_ids", return_value=set()):
@@ -373,7 +390,9 @@ def test_scheduler_run_tick_with_force_flags(tmp_path: Path) -> None:
 
     # Test with refresh_all flag
     with patch("tools.rag_daemon.scheduler.read_control_events") as mock_control:
-        mock_control.return_value = Mock(refresh_all=True, refresh_repo_ids=set(), shutdown=False)
+        mock_control.return_value = Mock(
+            refresh_all=True, refresh_repo_ids=set(), shutdown=False
+        )
 
         with patch.object(scheduler.state_store, "load_all", return_value=states):
             with patch.object(workers, "running_repo_ids", return_value=set()):
@@ -422,7 +441,9 @@ def test_scheduler_eligibility_error_state(tmp_path: Path) -> None:
     )
 
     # Should be eligible (below max failures, no next_eligible_at set)
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is True
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is True
+    )
 
 
 def test_scheduler_eligibility_skipped_state(tmp_path: Path) -> None:
@@ -446,4 +467,6 @@ def test_scheduler_eligibility_skipped_state(tmp_path: Path) -> None:
     )
 
     # Should be eligible (skipped doesn't prevent re-eligibility)
-    assert scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is True
+    assert (
+        scheduler._is_repo_eligible(repo, state, datetime.now(UTC), force=False) is True
+    )

@@ -207,6 +207,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 
 try:
     from llmc.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
+
     CLINICAL_LONGFORMER_AVAILABLE = True
 except ImportError:
     CLINICAL_LONGFORMER_AVAILABLE = False
@@ -229,11 +230,11 @@ class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
             )
 
         super().__init__(metadata)
-        
+
         self._config_path = config_path
         self._max_seq_tokens = max_seq_tokens
         self._adapter: LongContextAdapter | None = None
-        
+
         logger.info(
             "Configured ClinicalLongformerEmbeddingProvider (profile=%s, max_seq_tokens=%d)",
             metadata.profile or "<default>",
@@ -243,6 +244,7 @@ class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
     def _ensure_adapter(self) -> None:
         if self._adapter is None:
             from pathlib import Path
+
             config_path = self._config_path
             if config_path is None:
                 # Default path
@@ -307,7 +309,9 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         try:
             resp = requests.post(url, json=payload, timeout=self._timeout)
         except Exception as exc:  # pragma: no cover - network error path
-            raise EmbeddingError(f"Error calling Ollama embeddings endpoint: {exc}") from exc
+            raise EmbeddingError(
+                f"Error calling Ollama embeddings endpoint: {exc}"
+            ) from exc
 
         if resp.status_code != 200:
             raise EmbeddingError(
@@ -317,7 +321,9 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         try:
             data = resp.json()
         except Exception as exc:  # pragma: no cover - bad JSON
-            raise EmbeddingError(f"Invalid JSON from Ollama embeddings endpoint: {exc}") from exc
+            raise EmbeddingError(
+                f"Invalid JSON from Ollama embeddings endpoint: {exc}"
+            ) from exc
 
         if "embedding" in data:
             emb = data["embedding"]

@@ -20,7 +20,16 @@ from index_workspace import (
     WorkspaceIndexer,
 )
 
-EXCLUDE_DIRS = {".git", "__pycache__", ".venv", "node_modules", "dist", "build", ".rag", ".llmc"}
+EXCLUDE_DIRS = {
+    ".git",
+    "__pycache__",
+    ".venv",
+    "node_modules",
+    "dist",
+    "build",
+    ".rag",
+    ".llmc",
+}
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -68,7 +77,9 @@ class CodeFileHandler(FileSystemEventHandler):
         if not self.should_process(file_path):
             return
 
-        print(f"📝 {datetime.now().strftime('%H:%M:%S')} - File modified: {file_path.name}")
+        print(
+            f"📝 {datetime.now().strftime('%H:%M:%S')} - File modified: {file_path.name}"
+        )
 
         try:
             chunks = self.indexer.index_file(file_path)
@@ -86,7 +97,9 @@ class CodeFileHandler(FileSystemEventHandler):
         if not self.should_process(file_path):
             return
 
-        print(f"➕ {datetime.now().strftime('%H:%M:%S')} - File created: {file_path.name}")
+        print(
+            f"➕ {datetime.now().strftime('%H:%M:%S')} - File created: {file_path.name}"
+        )
 
         try:
             chunks = self.indexer.index_file(file_path)
@@ -98,7 +111,9 @@ class CodeFileHandler(FileSystemEventHandler):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Watch workspace and auto-reindex changes")
+    parser = argparse.ArgumentParser(
+        description="Watch workspace and auto-reindex changes"
+    )
     parser.add_argument("--project", help="Watch specific project only")
 
     args = parser.parse_args()

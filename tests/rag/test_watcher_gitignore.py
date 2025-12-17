@@ -1,6 +1,5 @@
-import pytest
-from pathlib import Path
 from llmc.rag.watcher import FileFilter
+
 
 def test_file_filter_basic(tmp_path):
     # Setup .gitignore
@@ -23,10 +22,12 @@ def test_file_filter_basic(tmp_path):
     assert ff.should_ignore(tmp_path / ".git" / "HEAD") is True
     assert ff.should_ignore(tmp_path / "node_modules" / "package.json") is True
 
+
 def test_file_filter_no_gitignore(tmp_path):
     ff = FileFilter(tmp_path)
     assert ff.should_ignore(tmp_path / "test.log") is False
     assert ff.should_ignore(tmp_path / ".git" / "HEAD") is True
+
 
 def test_file_filter_nested_patterns(tmp_path):
     # Setup .gitignore with globstar

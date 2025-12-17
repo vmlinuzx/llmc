@@ -117,7 +117,9 @@ class DashboardScreen(LLMCScreen):
             with actions:
                 with Container(id="action-buttons"):
                     yield Button("(s) Start", id="btn-start", classes="action-btn")
-                    yield Button("(x) Stop", id="btn-stop", classes="action-btn", variant="error")
+                    yield Button(
+                        "(x) Stop", id="btn-stop", classes="action-btn", variant="error"
+                    )
 
             # Log panel (spans both columns)
             logs = Container(id="log-panel", classes="panel")
@@ -132,7 +134,7 @@ class DashboardScreen(LLMCScreen):
         self._start_log_stream()
         self.update_stats()
         self.update_logs()
-        
+
         # Set up refresh timers
         self.set_interval(2.0, self.update_stats)
         self.set_interval(0.5, self.update_logs)
@@ -144,45 +146,57 @@ class DashboardScreen(LLMCScreen):
     def update_stats(self) -> None:
         """Refresh system statistics using RAG Doctor."""
         try:
-            repo_root = getattr(self.app, 'repo_root', Path.cwd())
+            repo_root = getattr(self.app, "repo_root", Path.cwd())
             report = self._get_doctor_report(repo_root)
-            
+
             # Check daemon status via systemd
             daemon_status = self._check_daemon_status()
             daemon_color = "green" if daemon_status == "ONLINE" else "red"
-            
+
             stats = report.get("stats") or {}
             status = report.get("status", "UNKNOWN")
-            
+
             # Calculate percentages
             total_spans = stats.get("spans", 0)
             enriched = stats.get("enrichments", 0)
             embedded = stats.get("embeddings", 0)
             pending_enrich = stats.get("pending_enrichments", 0)
             pending_embed = stats.get("pending_embeddings", 0)
-            
-            enrich_pct = f"{enriched / total_spans * 100:.0f}%" if total_spans > 0 else "N/A"
-            embed_pct = f"{embedded / total_spans * 100:.0f}%" if total_spans > 0 else "N/A"
-            
+
+            enrich_pct = (
+                f"{enriched / total_spans * 100:.0f}%" if total_spans > 0 else "N/A"
+            )
+            embed_pct = (
+                f"{embedded / total_spans * 100:.0f}%" if total_spans > 0 else "N/A"
+            )
+
             # Status color
-            status_color = "green" if status == "OK" else "yellow" if status == "WARN" else "red"
-            
-            uptime = str(datetime.now() - self.start_time).split('.')[0]
-            
-            content = "\n".join([
-                f"[#666680]Daemon:[/]     [bold {daemon_color}]{daemon_status}[/]   [#666680]Health:[/] [bold {status_color}]{status}[/]",
-                f"[#666680]Files:[/]      [bold]{stats.get('files', 0):,}[/]",
-                f"[#666680]Spans:[/]      [bold]{total_spans:,}[/]",
-                f"[#666680]Enriched:[/]   [bold green]{enriched:,}[/] ({enrich_pct})  [#666680]Pending:[/] [yellow]{pending_enrich:,}[/]",
-                f"[#666680]Embedded:[/]   [bold cyan]{embedded:,}[/] ({embed_pct})  [#666680]Pending:[/] [yellow]{pending_embed:,}[/]",
-                f"[#666680]Uptime:[/]     [bold]{uptime}[/]",
-            ])
-            
+            status_color = (
+                "green" if status == "OK" else "yellow" if status == "WARN" else "red"
+            )
+
+            uptime = str(datetime.now() - self.start_time).split(".")[0]
+
+            content = "\n".join(
+                [
+                    f"[#666680]Daemon:[/]     [bold {daemon_color}]{daemon_status}[/]   [#666680]Health:[/] [bold {status_color}]{status}[/]",
+                    f"[#666680]Files:[/]      [bold]{stats.get('files', 0):,}[/]",
+                    f"[#666680]Spans:[/]      [bold]{total_spans:,}[/]",
+                    f"[#666680]Enriched:[/]   [bold green]{enriched:,}[/] ({enrich_pct})  [#666680]Pending:[/] [yellow]{pending_enrich:,}[/]",
+                    f"[#666680]Embedded:[/]   [bold cyan]{embedded:,}[/] ({embed_pct})  [#666680]Pending:[/] [yellow]{pending_embed:,}[/]",
+                    f"[#666680]Uptime:[/]     [bold]{uptime}[/]",
+                ]
+            )
+
             # Add first issue if any
             issues = report.get("issues", [])
             if issues:
-                content += f"\n[#666680]Issue:[/]      [yellow]{issues[0][:50]}...[/]" if len(issues[0]) > 50 else f"\n[#666680]Issue:[/]      [yellow]{issues[0]}[/]"
-            
+                content += (
+                    f"\n[#666680]Issue:[/]      [yellow]{issues[0][:50]}...[/]"
+                    if len(issues[0]) > 50
+                    else f"\n[#666680]Issue:[/]      [yellow]{issues[0]}[/]"
+                )
+
             self.query_one("#stats-content", Static).update(content)
         except Exception as e:
             self.query_one("#stats-content", Static).update(
@@ -193,6 +207,7 @@ class DashboardScreen(LLMCScreen):
         """Get RAG doctor health report."""
         try:
             from llmc.rag.doctor import run_rag_doctor
+
             return run_rag_doctor(repo_root, verbose=False)
         except Exception as e:
             return {
@@ -206,7 +221,8 @@ class DashboardScreen(LLMCScreen):
         try:
             result = subprocess.run(
                 ["systemctl", "--user", "is-active", "llmc-rag.service"],
-                check=False, capture_output=True,
+                check=False,
+                capture_output=True,
                 text=True,
                 timeout=2,
             )
@@ -218,18 +234,26 @@ class DashboardScreen(LLMCScreen):
         """Start streaming logs from the RAG daemon."""
         if self._log_proc is not None:
             return
-        
+
         try:
             # Try to stream from journalctl
             self._log_proc = subprocess.Popen(
-                ["journalctl", "--user", "-u", "llmc-rag.service", 
-                 "-f", "-n", str(self._max_log_lines), "--no-pager"],
+                [
+                    "journalctl",
+                    "--user",
+                    "-u",
+                    "llmc-rag.service",
+                    "-f",
+                    "-n",
+                    str(self._max_log_lines),
+                    "--no-pager",
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
             )
-            
+
             def reader():
                 try:
                     for line in self._log_proc.stdout:
@@ -237,13 +261,13 @@ class DashboardScreen(LLMCScreen):
                         if line:
                             self.logs.append(line)
                             if len(self.logs) > self._max_log_lines * 2:
-                                self.logs = self.logs[-self._max_log_lines:]
+                                self.logs = self.logs[-self._max_log_lines :]
                 except Exception:
                     pass
-            
+
             self._log_thread = threading.Thread(target=reader, daemon=True)
             self._log_thread.start()
-            
+
         except Exception as e:
             self.logs.append(f"[Log stream error: {e}]")
 
@@ -261,11 +285,11 @@ class DashboardScreen(LLMCScreen):
         if not self.logs:
             content = "[dim]Waiting for logs...[/dim]"
         else:
-            content = "\n".join(self.logs[-self._max_log_lines:])
-        
+            content = "\n".join(self.logs[-self._max_log_lines :])
+
         log_widget = self.query_one("#log-content", Static)
         log_widget.update(content)
-        
+
         # Only auto-scroll if user hasn't scrolled up
         scroll = self.query_one("#log-scroll", ScrollableContainer)
         if not self._user_scrolled:
@@ -306,11 +330,13 @@ class DashboardScreen(LLMCScreen):
 
     def _run_systemctl(self, action: str) -> None:
         """Run a systemctl command asynchronously."""
+
         def run():
             try:
                 result = subprocess.run(
                     ["systemctl", "--user", action, "llmc-rag.service"],
-                    check=False, capture_output=True,
+                    check=False,
+                    capture_output=True,
                     text=True,
                     timeout=30,
                 )
@@ -322,6 +348,6 @@ class DashboardScreen(LLMCScreen):
                 self.call_from_thread(self.update_stats)
             except Exception as e:
                 self.logs.append(f"[ERR] Service {action}: {e}")
-        
+
         thread = threading.Thread(target=run, daemon=True)
         thread.start()

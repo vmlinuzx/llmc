@@ -69,7 +69,9 @@ def search_to_rag_result(res: models.SearchResult) -> RagResult[models.SearchIte
     return ok_result(items=items, source=source, freshness_state=freshness_state)
 
 
-def where_used_to_rag_result(res: models.WhereUsedResult) -> RagResult[models.WhereUsedItem]:
+def where_used_to_rag_result(
+    res: models.WhereUsedResult,
+) -> RagResult[models.WhereUsedItem]:
     """
     Adapt a concrete WhereUsedResult into a RagResult envelope.
     """

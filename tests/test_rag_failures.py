@@ -17,7 +17,13 @@ def run_cmd(cmd, cwd=str(REPO_ROOT), timeout=5):
     """Run a command and return result."""
     try:
         result = subprocess.run(
-            cmd, check=False, shell=True, capture_output=True, text=True, timeout=timeout, cwd=cwd
+            cmd,
+            check=False,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:

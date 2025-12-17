@@ -1,4 +1,3 @@
-
 import multiprocessing
 import time
 
@@ -20,48 +19,52 @@ def hold_lock(repo_root, duration):
         return True
     return False
 
+
 def test_lock_acquisition(tmp_path):
     lock = DocgenLock(tmp_path)
     assert lock.acquire()
     lock.release()
+
 
 @pytest.mark.allow_sleep
 def test_lock_contention_fail(tmp_path):
     # Start a process that holds the lock for 2 seconds
     p = multiprocessing.Process(target=hold_lock, args=(tmp_path, 2))
     p.start()
-    
+
     # Give it a moment to acquire
     time.sleep(0.5)
-    
+
     lock = DocgenLock(tmp_path)
     # Try to acquire with 0 timeout -> fail
     assert not lock.acquire(timeout=0)
-    
+
     # Try to acquire with 1s timeout -> fail (since holder holds for 2s)
     start = time.time()
     assert not lock.acquire(timeout=0.5)
     duration = time.time() - start
-    assert duration >= 0.5 # Should have waited at least 0.5s
-    
+    assert duration >= 0.5  # Should have waited at least 0.5s
+
     p.join()
+
 
 @pytest.mark.allow_sleep
 def test_lock_contention_succeed(tmp_path):
     # Start a process that holds the lock for 1 second
     p = multiprocessing.Process(target=hold_lock, args=(tmp_path, 1))
     p.start()
-    
+
     # Give it a moment to acquire
     time.sleep(0.2)
-    
+
     lock = DocgenLock(tmp_path)
     # Try to acquire with 2s timeout -> succeed
     time.time()
     assert lock.acquire(timeout=2.0)
     lock.release()
-    
+
     p.join()
+
 
 def test_hold_lock_without_marker(tmp_path):
     # Regression test: Ensure hold_lock works even if the test itself

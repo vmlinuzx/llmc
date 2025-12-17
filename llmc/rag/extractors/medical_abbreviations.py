@@ -3,9 +3,7 @@ Medical Abbreviations Dictionary.
 Used for expansion and normalization.
 """
 
-from typing import Dict
-
-MEDICAL_ABBREVIATIONS: Dict[str, str] = {
+MEDICAL_ABBREVIATIONS: dict[str, str] = {
     "htn": "hypertension",
     "dm": "diabetes mellitus",
     "dm2": "type 2 diabetes mellitus",
@@ -22,7 +20,6 @@ MEDICAL_ABBREVIATIONS: Dict[str, str] = {
     "uri": "upper respiratory infection",
     "uti": "urinary tract infection",
     "gerd": "gastroesophageal reflux disease",
-    
     # Medications / Prescriptions
     "bid": "twice a day",
     "tid": "three times a day",
@@ -37,7 +34,6 @@ MEDICAL_ABBREVIATIONS: Dict[str, str] = {
     "mg": "milligrams",
     "mcg": "micrograms",
     "g": "grams",
-    
     # Vitals
     "bp": "blood pressure",
     "hr": "heart rate",
@@ -47,6 +43,7 @@ MEDICAL_ABBREVIATIONS: Dict[str, str] = {
     "ht": "height",
     "bmi": "body mass index",
 }
+
 
 def expand_abbreviation(token: str) -> str:
     """Expand a medical abbreviation if found."""

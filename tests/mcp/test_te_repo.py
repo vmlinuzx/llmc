@@ -31,7 +31,9 @@ def test_rag_query_builds_args_and_filters(monkeypatch):
         return {"data": {"ok": True}, "meta": {"returncode": 0}}
 
     monkeypatch.setattr(te_repo, "te_run", fake_te_run)
-    res = te_repo.rag_query("howdy", k=3, index="default", filters={"lang": "py"})  # noqa: F841
+    res = te_repo.rag_query(
+        "howdy", k=3, index="default", filters={"lang": "py"}
+    )  # noqa: F841
     assert captured["args"][:2] == ["rag", "query"]
     assert "--q" in captured["args"]
     assert "--k" in captured["args"]

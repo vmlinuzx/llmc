@@ -87,7 +87,8 @@ def _export_chunks(db_path: Path, output_file: Path) -> int:
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
 
-    cursor = conn.execute("""
+    cursor = conn.execute(
+        """
         SELECT 
             files.path,
             files.lang,
@@ -100,7 +101,8 @@ def _export_chunks(db_path: Path, output_file: Path) -> int:
         FROM spans
         JOIN files ON spans.file_id = files.id
         ORDER BY files.path, spans.start_line
-    """)
+    """
+    )
 
     count = 0
     with open(output_file, "w", encoding="utf-8") as f:

@@ -67,7 +67,9 @@ def test_load_config_explicit_path(tmp_path: Path) -> None:
     expanded_path = str(config_file)
 
     with patch("os.path.expanduser") as mock_expand:
-        mock_expand.side_effect = lambda x: str(tmp_path / x.replace("~", "")) if "~" in x else x
+        mock_expand.side_effect = lambda x: (
+            str(tmp_path / x.replace("~", "")) if "~" in x else x
+        )
         config = load_config(expanded_path)
 
     assert config.tick_interval_seconds == 90

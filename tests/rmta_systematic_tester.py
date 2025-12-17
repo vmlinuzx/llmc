@@ -4,16 +4,18 @@ RMTA - Ruthless MCP Testing Agent
 Systematic testing of LLMC MCP Server through agent experience
 """
 
+from datetime import datetime
 import json
 import subprocess
-import sys
 import threading
 import time
-from datetime import datetime
 
 # Configuration
 SERVER_CMD = ["python", "-m", "llmc_mcp.server"]
-REPORT_FILE = f"tests/REPORTS/mcp/rmta_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+REPORT_FILE = (
+    f"tests/REPORTS/mcp/rmta_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+)
+
 
 class MCPClient:
     def __init__(self):
@@ -23,7 +25,7 @@ class MCPClient:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            bufsize=1
+            bufsize=1,
         )
         self.request_id = 0
         self.lock = threading.Lock()
@@ -51,7 +53,7 @@ class MCPClient:
             "jsonrpc": "2.0",
             "id": rid,
             "method": method,
-            "params": params or {}
+            "params": params or {},
         }
 
         json_str = json.dumps(payload)
@@ -64,11 +66,7 @@ class MCPClient:
         return self._read_response(rid)
 
     def send_notification(self, method, params=None):
-        payload = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "params": params or {}
-        }
+        payload = {"jsonrpc": "2.0", "method": method, "params": params or {}}
         json_str = json.dumps(payload)
         try:
             self.process.stdin.write(json_str + "\n")
@@ -98,12 +96,7 @@ class MCPClient:
 
 def run_rmta_tests():
     """Main RMTA testing workflow"""
-    results = {
-        "bootstrap": [],
-        "direct_tools": [],
-        "stub_tools": [],
-        "incidents": []
-    }
+    results = {"bootstrap": [], "direct_tools": [], "stub_tools": [], "incidents": []}
 
     client = MCPClient()
 
@@ -112,27 +105,34 @@ def run_rmta_tests():
         print("=== PHASE 1: Bootstrap Validation ===")
 
         # Initialize
-        init_resp = client.send_request("initialize", {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "RMTA", "version": "1.0"}
-        })
+        init_resp = client.send_request(
+            "initialize",
+            {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {"name": "RMTA", "version": "1.0"},
+            },
+        )
 
         if not init_resp or "error" in init_resp:
-            results["incidents"].append({
-                "id": "RMTA-001",
-                "severity": "P0",
-                "title": "Protocol handshake failed",
-                "details": init_resp
-            })
+            results["incidents"].append(
+                {
+                    "id": "RMTA-001",
+                    "severity": "P0",
+                    "title": "Protocol handshake failed",
+                    "details": init_resp,
+                }
+            )
             print("❌ P0: Protocol handshake failed")
             return results
         else:
-            results["bootstrap"].append({
-                "name": "Protocol Handshake",
-                "status": "✅ Working",
-                "details": "Server initialized successfully"
-            })
+            results["bootstrap"].append(
+                {
+                    "name": "Protocol Handshake",
+                    "status": "✅ Working",
+                    "details": "Server initialized successfully",
+                }
+            )
             print("✅ Protocol Handshake")
 
         client.send_notification("notifications/initialized")
@@ -140,12 +140,14 @@ def run_rmta_tests():
         # List tools
         tools_resp = client.send_request("tools/list")
         if not tools_resp or "result" not in tools_resp:
-            results["incidents"].append({
-                "id": "RMTA-002",
-                "severity": "P0",
-                "title": "Cannot list tools",
-                "details": tools_resp
-            })
+            results["incidents"].append(
+                {
+                    "id": "RMTA-002",
+                    "severity": "P0",
+                    "title": "Cannot list tools",
+                    "details": tools_resp,
+                }
+            )
             print("❌ P0: Cannot list tools")
             return results
 
@@ -155,29 +157,37 @@ def run_rmta_tests():
 
         # Test 00_INIT
         if "00_INIT" in tool_map:
-            resp = client.send_request("tools/call", {"name": "00_INIT", "arguments": {}})
+            resp = client.send_request(
+                "tools/call", {"name": "00_INIT", "arguments": {}}
+            )
             if resp and "result" in resp and not resp["result"].get("isError"):
-                results["bootstrap"].append({
-                    "name": "00_INIT",
-                    "status": "✅ Working",
-                    "details": "Bootstrap instructions received"
-                })
+                results["bootstrap"].append(
+                    {
+                        "name": "00_INIT",
+                        "status": "✅ Working",
+                        "details": "Bootstrap instructions received",
+                    }
+                )
                 print("✅ 00_INIT tool works")
             else:
-                results["incidents"].append({
-                    "id": "RMTA-003",
-                    "severity": "P1",
-                    "title": "00_INIT tool failed",
-                    "details": resp
-                })
+                results["incidents"].append(
+                    {
+                        "id": "RMTA-003",
+                        "severity": "P1",
+                        "title": "00_INIT tool failed",
+                        "details": resp,
+                    }
+                )
                 print("⚠️ P1: 00_INIT tool failed")
         else:
-            results["incidents"].append({
-                "id": "RMTA-004",
-                "severity": "P0",
-                "title": "00_INIT tool missing",
-                "details": "Bootstrap tool not found in tool list"
-            })
+            results["incidents"].append(
+                {
+                    "id": "RMTA-004",
+                    "severity": "P0",
+                    "title": "00_INIT tool missing",
+                    "details": "Bootstrap tool not found in tool list",
+                }
+            )
             print("❌ P0: 00_INIT tool missing")
 
         # === PHASE 2: Direct MCP Tools Testing ===
@@ -190,12 +200,14 @@ def run_rmta_tests():
 
         for name, args in direct_tests:
             if name not in tool_map:
-                results["incidents"].append({
-                    "id": f"RMTA-DIRECT-{name.upper()}",
-                    "severity": "P1",
-                    "title": f"{name} not available",
-                    "details": "Tool not in registered tools list"
-                })
+                results["incidents"].append(
+                    {
+                        "id": f"RMTA-DIRECT-{name.upper()}",
+                        "severity": "P1",
+                        "title": f"{name} not available",
+                        "details": "Tool not in registered tools list",
+                    }
+                )
                 print(f"❌ {name}: Not available")
                 continue
 
@@ -204,20 +216,24 @@ def run_rmta_tests():
             status = "✅ Working"
             if not resp:
                 status = "❌ Broken"
-                results["incidents"].append({
-                    "id": f"RMTA-DIRECT-{name.upper()}-NO-RESPONSE",
-                    "severity": "P1",
-                    "title": f"{name} returned no response",
-                    "details": "No response from server"
-                })
+                results["incidents"].append(
+                    {
+                        "id": f"RMTA-DIRECT-{name.upper()}-NO-RESPONSE",
+                        "severity": "P1",
+                        "title": f"{name} returned no response",
+                        "details": "No response from server",
+                    }
+                )
             elif "error" in resp:
                 status = "❌ Broken"
-                results["incidents"].append({
-                    "id": f"RMTA-DIRECT-{name.upper()}-ERROR",
-                    "severity": "P1",
-                    "title": f"{name} protocol error",
-                    "details": resp["error"]
-                })
+                results["incidents"].append(
+                    {
+                        "id": f"RMTA-DIRECT-{name.upper()}-ERROR",
+                        "severity": "P1",
+                        "title": f"{name} protocol error",
+                        "details": resp["error"],
+                    }
+                )
             elif resp.get("result", {}).get("isError"):
                 status = "⚠️ Buggy"
                 content = resp["result"].get("content", [])
@@ -231,11 +247,9 @@ def run_rmta_tests():
                     except:
                         pass
 
-            results["direct_tools"].append({
-                "name": name,
-                "status": status,
-                "args": args
-            })
+            results["direct_tools"].append(
+                {"name": name, "status": status, "args": args}
+            )
             print(f"{status} {name}")
 
         # === PHASE 3: Stubs Testing via execute_code ===
@@ -249,10 +263,9 @@ from stubs import list_dir
 result = list_dir(path='.', max_entries=5)
 print(f"SUCCESS: Found {len(result.get('data', []))} entries")
 """
-            resp = client.send_request("tools/call", {
-                "name": "execute_code",
-                "arguments": {"code": test_code}
-            })
+            resp = client.send_request(
+                "tools/call", {"name": "execute_code", "arguments": {"code": test_code}}
+            )
 
             if resp and "result" in resp and not resp["result"].get("isError"):
                 content = resp["result"].get("content", [])
@@ -261,124 +274,173 @@ print(f"SUCCESS: Found {len(result.get('data', []))} entries")
                     try:
                         data = json.loads(text)
                         if data.get("success"):
-                            results["direct_tools"].append({
-                                "name": "execute_code",
-                                "status": "✅ Working",
-                                "details": "Successfully executed Python code"
-                            })
+                            results["direct_tools"].append(
+                                {
+                                    "name": "execute_code",
+                                    "status": "✅ Working",
+                                    "details": "Successfully executed Python code",
+                                }
+                            )
                             print("✅ execute_code works")
                         else:
-                            results["incidents"].append({
-                                "id": "RMTA-005",
-                                "severity": "P1",
-                                "title": "execute_code failed",
-                                "details": data
-                            })
-                            print(f"⚠️ P1: execute_code failed: {data.get('stderr', '')[:100]}")
+                            results["incidents"].append(
+                                {
+                                    "id": "RMTA-005",
+                                    "severity": "P1",
+                                    "title": "execute_code failed",
+                                    "details": data,
+                                }
+                            )
+                            print(
+                                f"⚠️ P1: execute_code failed: {data.get('stderr', '')[:100]}"
+                            )
                     except:
-                        results["incidents"].append({
-                            "id": "RMTA-006",
-                            "severity": "P2",
-                            "title": "execute_code response malformed",
-                            "details": text[:200]
-                        })
-                        print(f"⚠️ P2: execute_code response malformed")
+                        results["incidents"].append(
+                            {
+                                "id": "RMTA-006",
+                                "severity": "P2",
+                                "title": "execute_code response malformed",
+                                "details": text[:200],
+                            }
+                        )
+                        print("⚠️ P2: execute_code response malformed")
             else:
-                results["incidents"].append({
-                    "id": "RMTA-007",
-                    "severity": "P1",
-                    "title": "execute_code crashed",
-                    "details": resp
-                })
+                results["incidents"].append(
+                    {
+                        "id": "RMTA-007",
+                        "severity": "P1",
+                        "title": "execute_code crashed",
+                        "details": resp,
+                    }
+                )
                 print("❌ P1: execute_code crashed")
 
         # Test various stubs through execute_code
         stub_tests = [
-            ("rag_search", """
+            (
+                "rag_search",
+                """
 from stubs import rag_search
 result = rag_search(query="router", limit=3)
 print(f"RAG search found {len(result.get('data', []))} results")
-"""),
-            ("rag_query", """
+""",
+            ),
+            (
+                "rag_query",
+                """
 from stubs import rag_query
 result = rag_query(query="class definition", k=2)
 print(f"RAG query found {len(result.get('data', []))} results")
-"""),
-            ("stat", """
+""",
+            ),
+            (
+                "stat",
+                """
 from stubs import stat
 result = stat(path="pyproject.toml")
 print(f"Stat successful: {result.get('data') is not None}")
-"""),
-            ("run_cmd", """
+""",
+            ),
+            (
+                "run_cmd",
+                """
 from stubs import run_cmd
 result = run_cmd(command="echo 'Hello MCP'")
 print(f"Run cmd exit code: {result.get('exit_code')}")
-"""),
-            ("linux_proc_list", """
+""",
+            ),
+            (
+                "linux_proc_list",
+                """
 from stubs import linux_proc_list
 result = linux_proc_list(max_results=5)
 print(f"Process list found {len(result.get('data', []))} processes")
-"""),
-            ("linux_sys_snapshot", """
+""",
+            ),
+            (
+                "linux_sys_snapshot",
+                """
 from stubs import linux_sys_snapshot
 result = linux_sys_snapshot()
 print(f"Sys snapshot CPU: {result.get('cpu_percent')}")
-"""),
-            ("linux_fs_mkdir", """
+""",
+            ),
+            (
+                "linux_fs_mkdir",
+                """
 from stubs import linux_fs_mkdir
 result = linux_fs_mkdir(path=".llmc/tmp/rmta_test", exist_ok=True)
 print(f"Mkdir success: {result.get('data') is not None}")
-"""),
-            ("linux_fs_write", """
+""",
+            ),
+            (
+                "linux_fs_write",
+                """
 from stubs import linux_fs_write
 result = linux_fs_write(path=".llmc/tmp/rmta_test/file.txt", content="RMTA test", mode="rewrite")
 print(f"Write success: {result.get('data') is not None}")
-"""),
-            ("linux_fs_read", """
+""",
+            ),
+            (
+                "linux_fs_read",
+                """
 from stubs import read_file
 result = read_file(path=".llmc/tmp/rmta_test/file.txt")
 print(f"Read success: {result.get('data') == 'RMTA test'}")
-"""),
-            ("linux_fs_delete", """
+""",
+            ),
+            (
+                "linux_fs_delete",
+                """
 from stubs import linux_fs_delete
 result = linux_fs_delete(path=".llmc/tmp/rmta_test", recursive=True)
 print(f"Delete success: {result.get('data') is not None}")
-"""),
-            ("rag_stats", """
+""",
+            ),
+            (
+                "rag_stats",
+                """
 from stubs import rag_stats
 result = rag_stats()
 print(f"RAG stats retrieved: {len(result) > 0}")
-"""),
-            ("inspect", """
+""",
+            ),
+            (
+                "inspect",
+                """
 from stubs import inspect
 result = inspect(path="pyproject.toml", max_neighbors=2)
 print(f"Inspect successful: {result.get('data') is not None}")
-"""),
+""",
+            ),
         ]
 
         for stub_name, code in stub_tests:
-            resp = client.send_request("tools/call", {
-                "name": "execute_code",
-                "arguments": {"code": code}
-            })
+            resp = client.send_request(
+                "tools/call", {"name": "execute_code", "arguments": {"code": code}}
+            )
 
             status = "✅ Working"
             if not resp or "error" in resp:
                 status = "❌ Broken"
-                results["incidents"].append({
-                    "id": f"RMTA-STUB-{stub_name.upper()}-CRASH",
-                    "severity": "P1",
-                    "title": f"{stub_name} via execute_code crashed",
-                    "details": resp
-                })
+                results["incidents"].append(
+                    {
+                        "id": f"RMTA-STUB-{stub_name.upper()}-CRASH",
+                        "severity": "P1",
+                        "title": f"{stub_name} via execute_code crashed",
+                        "details": resp,
+                    }
+                )
             elif resp.get("result", {}).get("isError"):
                 status = "❌ Broken"
-                results["incidents"].append({
-                    "id": f"RMTA-STUB-{stub_name.upper()}-ERROR",
-                    "severity": "P1",
-                    "title": f"{stub_name} via execute_code error",
-                    "details": resp["result"]
-                })
+                results["incidents"].append(
+                    {
+                        "id": f"RMTA-STUB-{stub_name.upper()}-ERROR",
+                        "severity": "P1",
+                        "title": f"{stub_name} via execute_code error",
+                        "details": resp["result"],
+                    }
+                )
             else:
                 content = resp["result"].get("content", [])
                 if content:
@@ -387,35 +449,40 @@ print(f"Inspect successful: {result.get('data') is not None}")
                         data = json.loads(text)
                         if not data.get("success"):
                             status = "⚠️ Buggy"
-                            error = data.get("error", data.get("stderr", "Unknown error"))
-                            results["incidents"].append({
-                                "id": f"RMTA-STUB-{stub_name.upper()}-FAIL",
-                                "severity": "P2",
-                                "title": f"{stub_name} failed",
-                                "details": error[:200]
-                            })
+                            error = data.get(
+                                "error", data.get("stderr", "Unknown error")
+                            )
+                            results["incidents"].append(
+                                {
+                                    "id": f"RMTA-STUB-{stub_name.upper()}-FAIL",
+                                    "severity": "P2",
+                                    "title": f"{stub_name} failed",
+                                    "details": error[:200],
+                                }
+                            )
                     except:
                         status = "⚠️ Buggy"
-                        results["incidents"].append({
-                            "id": f"RMTA-STUB-{stub_name.upper()}-MALFORMED",
-                            "severity": "P2",
-                            "title": f"{stub_name} response malformed",
-                            "details": text[:200]
-                        })
+                        results["incidents"].append(
+                            {
+                                "id": f"RMTA-STUB-{stub_name.upper()}-MALFORMED",
+                                "severity": "P2",
+                                "title": f"{stub_name} response malformed",
+                                "details": text[:200],
+                            }
+                        )
 
-            results["stub_tools"].append({
-                "name": stub_name,
-                "status": status
-            })
+            results["stub_tools"].append({"name": stub_name, "status": status})
             print(f"{status} {stub_name}")
 
     except Exception as e:
-        results["incidents"].append({
-            "id": "RMTA-SYSTEM",
-            "severity": "P0",
-            "title": "Test driver crashed",
-            "details": str(e)
-        })
+        results["incidents"].append(
+            {
+                "id": "RMTA-SYSTEM",
+                "severity": "P0",
+                "title": "Test driver crashed",
+                "details": str(e),
+            }
+        )
         print(f"❌ P0: Test driver crashed: {e}")
     finally:
         client.close()
@@ -432,7 +499,9 @@ def generate_report(results):
     p1_count = sum(1 for i in results["incidents"] if i["severity"] == "P1")
     p2_count = sum(1 for i in results["incidents"] if i["severity"] == "P2")
 
-    direct_working = sum(1 for t in results["direct_tools"] if t["status"] == "✅ Working")
+    direct_working = sum(
+        1 for t in results["direct_tools"] if t["status"] == "✅ Working"
+    )
     stub_working = sum(1 for t in results["stub_tools"] if t["status"] == "✅ Working")
 
     md = f"""# RMTA Report - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -480,7 +549,7 @@ def generate_report(results):
 
     for tool in results["direct_tools"]:
         md += f"**{tool['name']}** ({tool['status']})\n"
-        if tool.get('args'):
+        if tool.get("args"):
             md += f"  - Args: `{tool['args']}`\n"
         md += "\n"
 

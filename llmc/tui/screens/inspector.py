@@ -139,7 +139,9 @@ class InspectorScreen(Screen):
             with ScrollableContainer(id="results-container"):
                 yield Static("Enter a target to inspect.", id="placeholder-text")
 
-        yield Static(" [esc] Back  [1] Monitor  [2] Search  [3] Inspect ", id="status-bar")
+        yield Static(
+            " [esc] Back  [1] Monitor  [2] Search  [3] Inspect ", id="status-bar"
+        )
 
     def on_mount(self) -> None:
         self.query_one("#path-input").focus()
@@ -173,9 +175,13 @@ class InspectorScreen(Screen):
             is_path = "/" in target or target.endswith(".py") or target.endswith(".md")
 
             if is_path:
-                result = inspect_entity(repo_root, path=target, include_full_source=full_source)
+                result = inspect_entity(
+                    repo_root, path=target, include_full_source=full_source
+                )
             else:
-                result = inspect_entity(repo_root, symbol=target, include_full_source=full_source)
+                result = inspect_entity(
+                    repo_root, symbol=target, include_full_source=full_source
+                )
 
             self._render_result(result)
 
@@ -187,7 +193,9 @@ class InspectorScreen(Screen):
         container.remove_children()
 
         # Header
-        container.mount(Static(f"FILE: {res.path} ({res.source_mode})", classes="section-header"))
+        container.mount(
+            Static(f"FILE: {res.path} ({res.source_mode})", classes="section-header")
+        )
 
         # Summary
         summary = res.file_summary or res.enrichment.get("summary")
@@ -197,7 +205,9 @@ class InspectorScreen(Screen):
         # Defined Symbols (Brief)
         if res.defined_symbols:
             container.mount(Static("Defined Symbols:", classes="section-header"))
-            lines = [f"- {s.name} ([blue]{s.type}[/blue])" for s in res.defined_symbols[:5]]
+            lines = [
+                f"- {s.name} ([blue]{s.type}[/blue])" for s in res.defined_symbols[:5]
+            ]
             if len(res.defined_symbols) > 5:
                 lines.append(f"... ({len(res.defined_symbols) - 5} more)")
             container.mount(Static("\n".join(lines), classes="data-row"))
@@ -229,7 +239,9 @@ class InspectorScreen(Screen):
             generic_placeholders = {"params", "returns", "args", "kwargs", "none"}
 
             if isinstance(val, list):
-                filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
+                filtered_list = [
+                    str(x) for x in val if str(x).lower() not in generic_placeholders
+                ]
                 if not filtered_list:
                     return None
                 return ", ".join(filtered_list)
@@ -244,7 +256,9 @@ class InspectorScreen(Screen):
                 enrich_lines.append(f"[bold]{key.capitalize()}[/bold]: {val_str}")
 
         if enrich.get("evidence_count"):
-            enrich_lines.append(f"[dim]Evidence spans: {enrich['evidence_count']}[/dim]")
+            enrich_lines.append(
+                f"[dim]Evidence spans: {enrich['evidence_count']}[/dim]"
+            )
 
         if enrich_lines:
             self.query_one("#tips-box", Static).update("\n\n".join(enrich_lines))
@@ -258,7 +272,9 @@ class InspectorScreen(Screen):
         code_text = res.full_source if res.full_source else res.snippet
         container.mount(Static(code_text, classes="snippet-box"))
 
-    def _render_rel_section(self, container: ScrollableContainer, title: str, items: list) -> None:
+    def _render_rel_section(
+        self, container: ScrollableContainer, title: str, items: list
+    ) -> None:
         if not items:
             return
         container.mount(Static(f"{title}:", classes="section-header"))

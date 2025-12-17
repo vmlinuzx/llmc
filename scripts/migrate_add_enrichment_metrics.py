@@ -22,10 +22,9 @@ Usage:
     python scripts/migrate_add_enrichment_metrics.py  # using cwd
 """
 
+from pathlib import Path
 import sqlite3
 import sys
-from pathlib import Path
-
 
 COLUMNS_TO_ADD = [
     ("tokens_per_second", "REAL"),
@@ -40,15 +39,15 @@ COLUMNS_TO_ADD = [
 def migrate_database(db_path: Path) -> None:
     """Add metrics columns to enrichments table."""
     print(f"Migrating: {db_path}")
-    
+
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    
+
     # Check existing columns
     cur.execute("PRAGMA table_info(enrichments)")
     existing = {row[1] for row in cur.fetchall()}
     print(f"  Existing columns: {len(existing)}")
-    
+
     added = 0
     for col_name, col_type in COLUMNS_TO_ADD:
         if col_name in existing:
@@ -60,10 +59,10 @@ def migrate_database(db_path: Path) -> None:
                 added += 1
             except sqlite3.OperationalError as e:
                 print(f"  ✗ Failed to add {col_name}: {e}")
-    
+
     conn.commit()
     conn.close()
-    
+
     print(f"Migration complete: {added} columns added")
 
 
@@ -75,11 +74,11 @@ def find_rag_database(repo_path: Path) -> Path | None:
         repo_path / ".llmc" / "rag" / "index.db",
         repo_path / ".llmc" / "index_v2.db",
     ]
-    
+
     for candidate in candidates:
         if candidate.exists():
             return candidate
-    
+
     return None
 
 
@@ -89,23 +88,23 @@ def main():
         repo_path = Path(sys.argv[1]).resolve()
     else:
         repo_path = Path.cwd()
-    
+
     if not repo_path.exists():
         print(f"Error: Path does not exist: {repo_path}")
         sys.exit(1)
-    
+
     # Handle direct DB path
     if repo_path.suffix == ".db":
         migrate_database(repo_path)
         return
-    
+
     # Find database
     db_path = find_rag_database(repo_path)
     if not db_path:
         print(f"Error: Could not find RAG database in {repo_path}")
         print("Searched: .rag/index_v2.db, .llmc/rag/index.db, .llmc/index_v2.db")
         sys.exit(1)
-    
+
     migrate_database(db_path)
 
 

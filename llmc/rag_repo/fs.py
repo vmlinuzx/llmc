@@ -80,7 +80,10 @@ class SafeFS:
         path = self.resolve(user_path)
 
         if self.policy is not None and self.policy.dry_run:
-            summary: dict[str, list[str] | str] = {"path": str(path), "would_delete": []}
+            summary: dict[str, list[str] | str] = {
+                "path": str(path),
+                "would_delete": [],
+            }
             if path.exists():
                 summary["would_delete"] = [str(child) for child in path.iterdir()]
             return summary
@@ -104,7 +107,9 @@ class SafeFS:
             except FileNotFoundError:
                 pass
 
-    def copy_into(self, src_rel: str | Path, dst_rel: str | Path, *, overwrite: bool = False):
+    def copy_into(
+        self, src_rel: str | Path, dst_rel: str | Path, *, overwrite: bool = False
+    ):
         """Copy file/dir inside base with policy + overwrite support."""
         src = self.resolve(src_rel)
         dst = self.resolve(dst_rel)
@@ -121,7 +126,9 @@ class SafeFS:
             shutil.copy2(src, dst)
         return dst
 
-    def move_into(self, src_rel: str | Path, dst_rel: str | Path, *, overwrite: bool = False):
+    def move_into(
+        self, src_rel: str | Path, dst_rel: str | Path, *, overwrite: bool = False
+    ):
         """Move file/dir inside base with policy + overwrite support."""
         src = self.resolve(src_rel)
         dst = self.resolve(dst_rel)

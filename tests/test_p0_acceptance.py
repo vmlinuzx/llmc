@@ -50,13 +50,17 @@ def _mk_enrich_db(repo: Path) -> Path:
     return db
 
 
-def test_public_api_delegates(hermetic_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_public_api_delegates(
+    hermetic_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     repo = _mk_repo(hermetic_env)
     monkeypatch.setenv("LLMC_ENRICH", "0")
     q = "foo"
     s = tool_rag_search(repo_root=str(repo), query=q, limit=5)
     w = tool_rag_where_used(repo_root=str(repo), symbol=q, limit=5)
-    l = tool_rag_lineage(repo_root=str(repo), symbol=q, direction="downstream", max_results=5)
+    l = tool_rag_lineage(
+        repo_root=str(repo), symbol=q, direction="downstream", max_results=5
+    )
     for res in (s, w, l):
         assert hasattr(res, "items")
         # meta.status is optional; when present it should be a known value.
@@ -68,7 +72,9 @@ def test_public_api_delegates(hermetic_env: Path, monkeypatch: pytest.MonkeyPatc
 
 
 @pytest.mark.integration
-def test_search_attaches_enrichment(hermetic_env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_search_attaches_enrichment(
+    hermetic_env: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     repo = _mk_repo(hermetic_env)
     db = _mk_enrich_db(repo)
     monkeypatch.setenv("LLMC_ENRICH", "1")
@@ -77,5 +83,6 @@ def test_search_attaches_enrichment(hermetic_env: Path, monkeypatch: pytest.Monk
     res = tool_rag_search(repo_root=str(repo), query="foo", limit=5)
     if res.items:
         assert any(
-            getattr(it, "enrichment", None) and "summary" in it.enrichment for it in res.items
+            getattr(it, "enrichment", None) and "summary" in it.enrichment
+            for it in res.items
         )

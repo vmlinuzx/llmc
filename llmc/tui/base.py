@@ -11,7 +11,7 @@ from textual.widgets import Header, Static
 class LLMCScreen(Screen):
     """
     Base class for all LLMC TUI screens.
-    
+
     Provides:
     - Standard navigation bindings (1-8 for screens, q to quit, esc to go back)
     - Header with centered title
@@ -33,7 +33,7 @@ class LLMCScreen(Screen):
 
     # Override in subclass
     SCREEN_TITLE = "LLMC"
-    
+
     CSS = """
     .nav-bar {
         height: 3;
@@ -43,7 +43,7 @@ class LLMCScreen(Screen):
         dock: bottom;
     }
     """
-    
+
     def compose(self) -> ComposeResult:
         """Compose: Header + content + nav bar menu."""
         yield Header()
@@ -79,22 +79,26 @@ class LLMCScreen(Screen):
     def action_goto_dashboard(self) -> None:
         """Switch to dashboard screen."""
         from llmc.tui.screens.dashboard import DashboardScreen
+
         self.app.switch_screen(DashboardScreen())
 
     def action_goto_search(self) -> None:
         """Switch to search screen."""
         from llmc.tui.screens.search import SearchScreen
+
         self.app.switch_screen(SearchScreen())
 
     def action_goto_service(self) -> None:
         """Switch to service management screen."""
         from llmc.tui.screens.service import ServiceScreen
+
         self.app.switch_screen(ServiceScreen())
 
     def action_goto_nav(self) -> None:
         """Switch to code navigation screen."""
         try:
             from llmc.tui.screens.navigate import NavigateScreen
+
             self.app.switch_screen(NavigateScreen())
         except ImportError:
             self.notify("Navigate screen not available", severity="warning")
@@ -102,12 +106,14 @@ class LLMCScreen(Screen):
     def action_goto_docs(self) -> None:
         """Switch to docs generation screen."""
         from llmc.tui.screens.docs import DocsScreen
+
         self.app.switch_screen(DocsScreen())
 
     def action_goto_ruta(self) -> None:
         """Switch to RUTA testing screen."""
         try:
             from llmc.tui.screens.ruta import RUTAScreen
+
             self.app.switch_screen(RUTAScreen())
         except ImportError as e:
             self.notify(f"RUTA screen not available: {e}", severity="warning")
@@ -116,6 +122,7 @@ class LLMCScreen(Screen):
         """Switch to analytics screen."""
         try:
             from llmc.tui.screens.analytics import AnalyticsScreen
+
             self.app.switch_screen(AnalyticsScreen())
         except ImportError:
             self.notify("Analytics screen not available", severity="warning")
@@ -124,6 +131,7 @@ class LLMCScreen(Screen):
         """Switch to config editor screen."""
         try:
             from llmc.tui.screens.config import ConfigScreen
+
             self.app.switch_screen(ConfigScreen())
         except ImportError:
             self.notify("Config screen not available", severity="warning")

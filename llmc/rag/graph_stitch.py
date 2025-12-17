@@ -49,9 +49,17 @@ def _index_edges(graph: dict) -> dict[str, set[str]]:
         src_path = id_to_path.get(str(src), None) if src is not None else None
         dst_path = id_to_path.get(str(dst), None) if dst is not None else None
 
-        if src_path is None and isinstance(src, str) and ("/" in src or src.endswith(".py")):
+        if (
+            src_path is None
+            and isinstance(src, str)
+            and ("/" in src or src.endswith(".py"))
+        ):
             src_path = _normalize_path(src)
-        if dst_path is None and isinstance(dst, str) and ("/" in dst or dst.endswith(".py")):
+        if (
+            dst_path is None
+            and isinstance(dst, str)
+            and ("/" in dst or dst.endswith(".py"))
+        ):
             dst_path = _normalize_path(dst)
 
         if not src_path or not dst_path or src_path == dst_path:
@@ -97,7 +105,9 @@ def stitch_neighbors(
     return out
 
 
-def expand_search_items(repo_root: Path, items: list, max_expansion: int = 20, hops: int = 1):
+def expand_search_items(
+    repo_root: Path, items: list, max_expansion: int = 20, hops: int = 1
+):
     """Expand search results with neighbor files from the graph.
 
     - If the graph is missing/unreadable, returns the original items.
@@ -106,7 +116,9 @@ def expand_search_items(repo_root: Path, items: list, max_expansion: int = 20, h
     try:
         raw_seed = [getattr(it, "file", None) for it in items]
         seed: list[str] = [str(s) for s in raw_seed if s]
-        neighbors = stitch_neighbors(repo_root, seed_paths=seed, limit=max_expansion, hops=hops)
+        neighbors = stitch_neighbors(
+            repo_root, seed_paths=seed, limit=max_expansion, hops=hops
+        )
     except Exception:
         return items
 

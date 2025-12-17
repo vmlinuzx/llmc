@@ -235,7 +235,9 @@ def _merge_into_metadata(
         meta["span_hash"] = span_hash
 
 
-def enrich_graph_entities(graph: Any, repo_root: Path, *, max_per_entity: int = 1) -> Any:
+def enrich_graph_entities(
+    graph: Any, repo_root: Path, *, max_per_entity: int = 1
+) -> Any:
     """
     Merge enrichment snippets from the DB into graph entities.
 
@@ -304,7 +306,9 @@ def enrich_graph_file(graph_json_path: Path, repo_root: Path) -> None:
         def __init__(self, payload: dict[str, Any]) -> None:
             self.__dict__.update(payload)
 
-    graph = type("GraphWrapper", (object,), {"entities": [_EntityWrapper(d) for d in entities]})()
+    graph = type(
+        "GraphWrapper", (object,), {"entities": [_EntityWrapper(d) for d in entities]}
+    )()
     enrich_graph_entities(graph, repo_root)
 
     for idx, entity in enumerate(graph.entities):

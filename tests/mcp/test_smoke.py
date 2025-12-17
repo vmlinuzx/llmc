@@ -32,9 +32,13 @@ async def test_config_load():
 
     assert config.enabled, "MCP should be enabled"
     assert config.config_version == "v0", f"Expected v0, got {config.config_version}"
-    assert config.server.transport == "stdio", f"Expected stdio, got {config.server.transport}"
+    assert (
+        config.server.transport == "stdio"
+    ), f"Expected stdio, got {config.server.transport}"
 
-    print(f"  ✓ Config loaded: {config.config_version}, transport={config.server.transport}")
+    print(
+        f"  ✓ Config loaded: {config.config_version}, transport={config.server.transport}"
+    )
 
 
 async def test_health_handler():
@@ -81,7 +85,10 @@ async def test_read_file_security():
     data = json.loads(result[0].text)
 
     assert "error" in data, f"Expected error for /etc/passwd: {data}"
-    assert "outside allowed roots" in data["error"].lower() or "security" in data["error"].lower()
+    assert (
+        "outside allowed roots" in data["error"].lower()
+        or "security" in data["error"].lower()
+    )
 
     print("  ✓ Security: blocked /etc/passwd access")
 

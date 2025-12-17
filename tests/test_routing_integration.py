@@ -3,7 +3,6 @@ import struct
 
 import pytest
 
-from llmc.routing import router as routing_router
 from llmc.rag.config import (
     ConfigError,
     ConfigWarningFilter,
@@ -13,6 +12,7 @@ from llmc.rag.config import (
 from llmc.rag.database import Database
 from llmc.rag.indexer import index_repo
 from llmc.rag.workers import execute_embeddings, execute_enrichment
+from llmc.routing import router as routing_router
 
 
 def clear_config_warning_filter():
@@ -21,6 +21,7 @@ def clear_config_warning_filter():
         if isinstance(f, ConfigWarningFilter):
             f.seen.clear()
 
+
 @pytest.fixture
 def create_llmc_toml(tmp_path):
     """Fixture to create and return the path to a test llmc.toml."""
@@ -28,7 +29,9 @@ def create_llmc_toml(tmp_path):
     def _creator(content: str):
         repo_root = tmp_path / "repo"
         repo_root.mkdir(exist_ok=True)
-        (repo_root / ".git").mkdir(exist_ok=True)  # ensure .git exists for _find_repo_root
+        (repo_root / ".git").mkdir(
+            exist_ok=True
+        )  # ensure .git exists for _find_repo_root
         config_path = repo_root / "llmc.toml"
         config_path.write_text(content)
         return repo_root, config_path
@@ -47,7 +50,8 @@ def test_routing_integration(tmp_path, monkeypatch):
     (repo_root / "doc.md").write_text("# Doc")
 
     # Config
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [embeddings]
 default_profile = "docs"
 
@@ -73,7 +77,8 @@ index = "embeddings"
 [routing.slice_type_to_route]
 code = "code"
 docs = "docs"
-""")
+"""
+    )
 
     monkeypatch.chdir(repo_root)
 
@@ -138,11 +143,13 @@ docs = "docs"
 
 
 def test_get_route_for_slice_type_missing_entry(create_llmc_toml, caplog):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 [routing.slice_type_to_route]
 code = "code"
 # "docs" is intentionally missing for "weird_type"
-""")
+"""
+    )
     clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
@@ -158,7 +165,8 @@ code = "code"
 
 
 def test_resolve_route_missing_route_config_fallback(create_llmc_toml, caplog):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 [embeddings.profiles.default_docs]
 provider = "hash"
 dim = 64
@@ -168,7 +176,8 @@ profile = "default_docs"
 index = "emb_docs"
 
 # embeddings.routes.code is intentionally missing
-""")
+"""
+    )
     clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
@@ -185,18 +194,23 @@ index = "emb_docs"
 
 
 def test_resolve_route_critical_missing_docs_route(create_llmc_toml):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 # embeddings.routes.docs is intentionally missing
-""")
+"""
+    )
     clear_config_warning_filter()
 
     with pytest.raises(ConfigError) as excinfo:
         resolve_route("docs", "query", repo_root)
-    assert "Critical Config Error: 'embeddings.routes.docs' is missing" in str(excinfo.value)
+    assert "Critical Config Error: 'embeddings.routes.docs' is missing" in str(
+        excinfo.value
+    )
 
 
 def test_resolve_route_incomplete_route_definition_fallback(create_llmc_toml, caplog):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 [embeddings.profiles.default_docs]
 provider = "hash"
 dim = 64
@@ -207,7 +221,8 @@ index = "emb_docs"
 
 [embeddings.routes.code]
 profile = "code_jina" # Index is missing
-""")
+"""
+    )
     clear_config_warning_filter()
 
     with caplog.at_level(logging.WARNING):
@@ -220,11 +235,14 @@ profile = "code_jina" # Index is missing
         )
         # Ensure that the ConfigWarningFilter works
         profile, index = resolve_route("code", "query", repo_root)
-        assert caplog.text.count("Route 'code' for query has incomplete definition") == 1
+        assert (
+            caplog.text.count("Route 'code' for query has incomplete definition") == 1
+        )
 
 
 def test_resolve_route_critical_missing_profile_non_docs_route(create_llmc_toml):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 [embeddings.profiles.default_docs]
 provider = "hash"
 dim = 64
@@ -236,7 +254,8 @@ index = "emb_docs"
 [embeddings.routes.code]
 profile = "missing_profile" # This profile does not exist
 index = "emb_code"
-""")
+"""
+    )
     clear_config_warning_filter()
 
     with pytest.raises(ConfigError) as excinfo:
@@ -253,7 +272,8 @@ def test_routing_metrics_ingest(tmp_path, monkeypatch, caplog):
     (repo_root / ".git").mkdir()
 
     # Create config that forces some fallbacks
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [tool_envelope]
 telemetry_enabled = true
 capture_output = false
@@ -274,7 +294,8 @@ index = "embeddings"
 code = "missing_code_route"
 docs = "docs"
 weird_type = "non_existent_profile_route"
-""")
+"""
+    )
 
     # Create files
     (repo_root / "code.py").write_text(
@@ -312,7 +333,8 @@ weird_type = "non_existent_profile_route"
 
 
 def test_query_routing_fallback(tmp_path, monkeypatch, caplog, create_llmc_toml):
-    repo_root, _ = create_llmc_toml("""
+    repo_root, _ = create_llmc_toml(
+        """
 [tool_envelope]
 telemetry_enabled = true
 capture_output = false
@@ -330,7 +352,8 @@ enable_query_routing = true
 
 # Intentionally omit [embeddings.routes.code] and [embeddings.profiles.code_jina]
 # to force fallback for code-classified queries.
-""")
+"""
+    )
     monkeypatch.chdir(repo_root)
     monkeypatch.setenv("TE_AGENT_ID", "test-agent")
     clear_config_warning_filter()
@@ -413,4 +436,6 @@ enable_query_routing = true
             "Config: Missing 'embeddings.routes.code' for query. Falling back to 'docs' route."
             in caplog.text
         )
-        assert "Embedding query for route='code' (profile='default_docs')" in caplog.text
+        assert (
+            "Embedding query for route='code' (profile='default_docs')" in caplog.text
+        )

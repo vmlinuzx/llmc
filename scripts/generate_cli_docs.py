@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Generate CLI reference documentation from --help output."""
-import subprocess
-import os
-import sys
 from datetime import datetime
+import os
+import subprocess
 
 # CLI entry points from pyproject.toml [project.scripts]
 CLI_COMMANDS = [
@@ -22,6 +21,7 @@ def run_help(command_name):
     try:
         result = subprocess.run(
             [command_name, "--help"],
+            check=False,
             capture_output=True,
             text=True,
             timeout=10,
@@ -39,7 +39,7 @@ def run_help(command_name):
 
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
+
     index_lines = [
         "# CLI Reference",
         "",
@@ -50,19 +50,19 @@ def main():
         "| Command | Description |",
         "|---------|-------------|",
     ]
-    
+
     for cmd_name, module, description in CLI_COMMANDS:
         index_lines.append(f"| [`{cmd_name}`]({cmd_name}.md) | {description} |")
-    
+
     index_lines.extend(["", "---", ""])
-    
+
     for cmd_name, module, description in CLI_COMMANDS:
         print(f"Generating docs for {cmd_name}...")
         help_text = run_help(cmd_name)
-        
+
         filename = f"{cmd_name}.md"
         filepath = os.path.join(OUTPUT_DIR, filename)
-        
+
         with open(filepath, "w") as f:
             f.write(f"# {cmd_name}\n\n")
             f.write(f"{description}\n\n")
@@ -71,9 +71,9 @@ def main():
             f.write("```text\n")
             f.write(help_text)
             f.write("```\n")
-        
+
         print(f"  Wrote {filepath}")
-    
+
     # Write index
     index_path = os.path.join(OUTPUT_DIR, "index.md")
     with open(index_path, "w") as f:

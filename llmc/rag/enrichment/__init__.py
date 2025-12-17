@@ -21,7 +21,6 @@ from ..database import Database
 # GraphNeighbor and GraphStore live in graph_store.py
 # (Renamed from graph.py to avoid shadowing by the graph/ package)
 from ..graph_store import GraphNeighbor, GraphStore
-
 from ..types import SpanRecord
 from ..workers import enrichment_plan, execute_enrichment
 
@@ -93,7 +92,9 @@ class QueryAnalyzer:
 
         # Detect relationship keywords
         query_lower = query.lower()
-        features.relation_task = any(keyword in query_lower for keyword in self.RELATION_KEYWORDS)
+        features.relation_task = any(
+            keyword in query_lower for keyword in self.RELATION_KEYWORDS
+        )
 
         # Detect entities (camelCase, snake_case, or quoted identifiers)
         features.detected_entities = self._detect_entities(query)
@@ -160,7 +161,9 @@ class QueryAnalyzer:
         score += min(len(features.detected_entities), 4)
 
         # Relation keyword count (0-3 points)
-        relation_count = sum(1 for keyword in self.RELATION_KEYWORDS if keyword in query.lower())
+        relation_count = sum(
+            1 for keyword in self.RELATION_KEYWORDS if keyword in query.lower()
+        )
         score += min(relation_count, 3)
 
         # Multi-hop indicators (0-2 points)
@@ -351,7 +354,9 @@ def enrich_spans(
     # keep planning and execution loosely coupled in Phase 1 – tighter
     # integration is handled in a later phase.
     try:
-        planned = enrichment_plan(db, repo_root, limit=limit, cooldown_seconds=cooldown_seconds)
+        planned = enrichment_plan(
+            db, repo_root, limit=limit, cooldown_seconds=cooldown_seconds
+        )
         total_planned = len(planned)
     except Exception:
         # Planning is best-effort here; we never want it to block execution.

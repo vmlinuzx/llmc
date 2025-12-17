@@ -1,6 +1,6 @@
-
-import shlex
 from pathlib import Path
+import shlex
+
 
 def validate_command(cmd_parts, blacklist):
     if not cmd_parts:
@@ -9,11 +9,12 @@ def validate_command(cmd_parts, blacklist):
     binary = cmd_parts[0]
     binary_name = Path(binary).name
     print(f"Binary detected: '{binary_name}'")
-    
+
     if binary_name in blacklist:
         print(f"BLOCKED: {binary_name} is blacklisted")
         return False
     return True
+
 
 blacklist = ["rm", "evil"]
 

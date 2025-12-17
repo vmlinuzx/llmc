@@ -12,7 +12,9 @@ from .doctor import doctor_paths
 from .fs import SafeFS
 
 
-def doctor_paths_cmd(repo_root: Path, workspace: str | None, export: str | None) -> dict[str, Any]:
+def doctor_paths_cmd(
+    repo_root: Path, workspace: str | None, export: str | None
+) -> dict[str, Any]:
     return doctor_paths(repo_root, workspace, export)
 
 
@@ -78,7 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     p_snap.add_argument("--force", action="store_true")
     p_snap.add_argument("--json", action="store_true")
 
-    p_clean = sub.add_parser("clean", help="Clean workspace contents (requires --force)")
+    p_clean = sub.add_parser(
+        "clean", help="Clean workspace contents (requires --force)"
+    )
     p_clean.add_argument("--repo", required=True)
     p_clean.add_argument("--workspace", default=None)
     p_clean.add_argument("--force", action="store_true")
@@ -111,7 +115,12 @@ def main(argv: list[str] | None = None) -> int:
     except Exception as exc:  # noqa: BLE001
         # Map known user errors to exit code 2
         name = exc.__class__.__name__
-        known = {"PathTraversalError", "PathPolicyError", "RuntimeError", "FileExistsError"}
+        known = {
+            "PathTraversalError",
+            "PathPolicyError",
+            "RuntimeError",
+            "FileExistsError",
+        }
         if name in known:
             print(f"ERROR: {exc}", file=sys.stderr)
             return 2

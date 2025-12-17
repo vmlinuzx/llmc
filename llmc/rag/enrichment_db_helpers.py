@@ -65,7 +65,9 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
 
             tables = {
                 row[0]
-                for row in cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                for row in cursor.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                )
             }
             enrichment_columns = {
                 row[1] for row in cursor.execute("PRAGMA table_info(enrichments)")
@@ -79,7 +81,9 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
             rows = []
             if {"spans", "files"}.issubset(tables):
                 usage_expr = (
-                    f"e.{usage_column} AS usage_text" if usage_column else "NULL AS usage_text"
+                    f"e.{usage_column} AS usage_text"
+                    if usage_column
+                    else "NULL AS usage_text"
                 )
                 query = f"""
                     SELECT 

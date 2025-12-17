@@ -41,7 +41,9 @@ def _format_result_text(result: dict[str, Any]) -> str:
     norm_score = float(result.get("normalized_score", 0.0) or 0.0)
 
     text_parts = []
-    text_parts.append(f"[yellow bold]#{rank}[/yellow bold] [cyan bold]{path}[/cyan bold]")
+    text_parts.append(
+        f"[yellow bold]#{rank}[/yellow bold] [cyan bold]{path}[/cyan bold]"
+    )
 
     if symbol:
         text_parts.append(f"   Symbol: [magenta]{symbol}[/magenta]")
@@ -50,7 +52,9 @@ def _format_result_text(result: dict[str, Any]) -> str:
         line_range = f"{lines[0]}-{lines[1]}" if len(lines) > 1 else str(lines[0])
         text_parts.append(f"   Lines: {line_range}")
 
-    text_parts.append(f"   Score: [green]{norm_score:.1f}[/green] [dim]({score:.4f})[/dim]")
+    text_parts.append(
+        f"   Score: [green]{norm_score:.1f}[/green] [dim]({score:.4f})[/dim]"
+    )
 
     if summary:
         text_parts.append(f"\n   [dim]{summary}[/dim]")
@@ -68,7 +72,9 @@ class ResultWidget(Static):
     """Clickable result block."""
 
     def __init__(self, result: dict[str, Any]) -> None:
-        super().__init__(_format_result_text(result), classes="result-item", expand=True)
+        super().__init__(
+            _format_result_text(result), classes="result-item", expand=True
+        )
         self.result = result
 
     def on_click(self, _: events.Click) -> None:
@@ -262,7 +268,9 @@ class SearchScreen(LLMCScreen):
 
     def on_mount(self) -> None:
         """Focus the search input when mounted"""
-        self.query_one("#header", Static).update(f"LLMC Search :: repo {self.app.repo_root}")
+        self.query_one("#header", Static).update(
+            f"LLMC Search :: repo {self.app.repo_root}"
+        )
         self.query_one("#query-input", Input).focus()
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
@@ -316,7 +324,12 @@ class SearchScreen(LLMCScreen):
             ]
 
             result = subprocess.run(
-                cmd, check=False, cwd=repo_root, capture_output=True, text=True, timeout=30
+                cmd,
+                check=False,
+                cwd=repo_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
             )
 
             if result.returncode != 0:
@@ -352,7 +365,8 @@ class SearchScreen(LLMCScreen):
         results_container.remove_children()
 
         header = Static(
-            f"Found {len(results)} results for: [bold]{query}[/bold]\n", classes="results-header"
+            f"Found {len(results)} results for: [bold]{query}[/bold]\n",
+            classes="results-header",
         )
         results_container.mount(header)
 
@@ -393,7 +407,11 @@ class SearchScreen(LLMCScreen):
         parts.append(f"[bold cyan]{path}[/bold cyan]")
         graph_info = debug.get("graph") or {}
         node_type = graph_info.get("node_type", "unknown")
-        line_str = f"{lines[0]}-{lines[1]}" if len(lines) > 1 else str(lines[0]) if lines else "?"
+        line_str = (
+            f"{lines[0]}-{lines[1]}"
+            if len(lines) > 1
+            else str(lines[0]) if lines else "?"
+        )
         parts.append(
             f"Symbol: [magenta]{symbol}[/magenta] ([blue]{node_type}[/blue])  Span: {line_str}"
         )
@@ -452,7 +470,9 @@ class SearchScreen(LLMCScreen):
 
             if isinstance(val, list):
                 # Filter out generic placeholders and format
-                filtered_list = [str(x) for x in val if str(x).lower() not in generic_placeholders]
+                filtered_list = [
+                    str(x) for x in val if str(x).lower() not in generic_placeholders
+                ]
                 if not filtered_list:
                     return None
                 return ", ".join(filtered_list)
@@ -520,7 +540,9 @@ class SearchScreen(LLMCScreen):
                 start, end = 1, min(len(file_lines), 80)
 
             snippet_lines = file_lines[start - 1 : end]
-            numbered = [f"{i:>5} | {line}" for i, line in enumerate(snippet_lines, start=start)]
+            numbered = [
+                f"{i:>5} | {line}" for i, line in enumerate(snippet_lines, start=start)
+            ]
             return "\n".join(numbered)
         except Exception as exc:
             return f"[red]Error reading file[/red]: {exc}"

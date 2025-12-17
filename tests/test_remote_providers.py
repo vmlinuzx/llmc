@@ -32,12 +32,16 @@ def test_backoff_calculation():
     assert abs(delay2 - 4.0) < 0.01, f"Expected ~4s, got {delay2}"
 
     # Test max delay cap
-    delay10 = calculate_backoff_delay(10, base_seconds=1.0, max_delay_seconds=60.0, jitter_pct=0.0)
+    delay10 = calculate_backoff_delay(
+        10, base_seconds=1.0, max_delay_seconds=60.0, jitter_pct=0.0
+    )
     assert delay10 == 60.0, f"Expected 60s cap, got {delay10}"
 
     # Test with jitter
     delay_jitter = calculate_backoff_delay(1, base_seconds=1.0, jitter_pct=0.1)
-    assert 2.0 <= delay_jitter <= 2.2, f"Expected 2.0-2.2s with jitter, got {delay_jitter}"
+    assert (
+        2.0 <= delay_jitter <= 2.2
+    ), f"Expected 2.0-2.2s with jitter, got {delay_jitter}"
 
     print("   ✓ Backoff calculation works correctly")
 

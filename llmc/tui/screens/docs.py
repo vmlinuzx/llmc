@@ -6,20 +6,21 @@ Maps to: llmc docs status, llmc docs generate
 
 from datetime import datetime
 from pathlib import Path
-import threading
-from typing import Any
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Grid, ScrollableContainer
-from textual.widgets import Button, Static, Label
-from textual.worker import Worker, WorkerState
+from textual.widgets import Button, Static
 
-from llmc.tui.base import LLMCScreen
-from llmc.docgen.config import get_output_dir, get_require_rag_fresh, load_docgen_backend
+from llmc.core import find_repo_root, load_config
+from llmc.docgen.config import (
+    get_output_dir,
+    get_require_rag_fresh,
+    load_docgen_backend,
+)
 from llmc.docgen.orchestrator import DocgenOrchestrator
 from llmc.rag.database import Database
-from llmc.core import find_repo_root, load_config
+from llmc.tui.base import LLMCScreen
 
 
 class DocsScreen(LLMCScreen):
@@ -120,8 +121,18 @@ class DocsScreen(LLMCScreen):
             controls.border_title = "Controls"
             with controls:
                 with Container(id="control-buttons"):
-                    yield Button("(g) Generate All", id="btn-generate", classes="control-btn", variant="primary")
-                    yield Button("(f) Force All", id="btn-force", classes="control-btn", variant="warning")
+                    yield Button(
+                        "(g) Generate All",
+                        id="btn-generate",
+                        classes="control-btn",
+                        variant="primary",
+                    )
+                    yield Button(
+                        "(f) Force All",
+                        id="btn-force",
+                        classes="control-btn",
+                        variant="warning",
+                    )
 
             # Output panel
             output = Container(id="output-panel", classes="panel")
@@ -179,16 +190,18 @@ class DocsScreen(LLMCScreen):
             if total_files > 0:
                 coverage = (doc_count / total_files) * 100
 
-            content = "\n".join([
-                f"[#666680]Status:[/]           {enabled_str}",
-                f"[#666680]Output Dir:[/]       [bold]{output_dir}[/]",
-                f"[#666680]Require Fresh:[/]    [bold]{require_rag}[/]",
-                f"[#666680]RAG DB:[/]           {db_status}",
-                "",
-                f"[#666680]Source Files:[/]     [bold]{total_files:,}[/]",
-                f"[#666680]Generated Docs:[/]   [bold]{doc_count:,}[/]",
-                f"[#666680]Coverage:[/]         [bold cyan]{coverage:.1f}%[/]",
-            ])
+            content = "\n".join(
+                [
+                    f"[#666680]Status:[/]           {enabled_str}",
+                    f"[#666680]Output Dir:[/]       [bold]{output_dir}[/]",
+                    f"[#666680]Require Fresh:[/]    [bold]{require_rag}[/]",
+                    f"[#666680]RAG DB:[/]           {db_status}",
+                    "",
+                    f"[#666680]Source Files:[/]     [bold]{total_files:,}[/]",
+                    f"[#666680]Generated Docs:[/]   [bold]{doc_count:,}[/]",
+                    f"[#666680]Coverage:[/]         [bold cyan]{coverage:.1f}%[/]",
+                ]
+            )
 
             self.query_one("#status-content", Static).update(content)
 
@@ -202,7 +215,7 @@ class DocsScreen(LLMCScreen):
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.logs.append(f"[{timestamp}] {message}")
         if len(self.logs) > self._max_log_lines:
-            self.logs = self.logs[-self._max_log_lines:]
+            self.logs = self.logs[-self._max_log_lines :]
 
         content = "\n".join(self.logs)
         self.query_one("#output-content", Static).update(content)
@@ -249,10 +262,7 @@ class DocsScreen(LLMCScreen):
         self.notify(f"Docgen started{force_str}...")
 
         self.run_worker(
-            self._generate_worker(force),
-            exclusive=True,
-            thread=True,
-            group="docgen"
+            self._generate_worker(force), exclusive=True, thread=True, group="docgen"
         )
 
     def _generate_worker(self, force: bool):
@@ -261,7 +271,9 @@ class DocsScreen(LLMCScreen):
             # Re-check backend/db in worker to be safe
             backend = load_docgen_backend(self.repo_root, self.config)
             if not backend:
-                self.call_from_thread(self.log_message, "Error: Docgen disabled in config")
+                self.call_from_thread(
+                    self.log_message, "Error: Docgen disabled in config"
+                )
                 return
 
             candidates = [
@@ -304,6 +316,7 @@ class DocsScreen(LLMCScreen):
             # Ideally, we'd process one by one here to update UI.
 
             from llmc.docgen.graph_context import load_graph_indices
+
             self.call_from_thread(self.log_message, "Loading graph context...")
             cached_graph = load_graph_indices(self.repo_root)
 
@@ -316,19 +329,25 @@ class DocsScreen(LLMCScreen):
 
             for rel_path in file_paths:
                 try:
-                    result = orchestrator.process_file(rel_path, force=force, cached_graph=cached_graph)
+                    result = orchestrator.process_file(
+                        rel_path, force=force, cached_graph=cached_graph
+                    )
                     processed += 1
 
                     if result.status == "generated":
                         generated += 1
-                        self.call_from_thread(self.log_message, f"Generated: {rel_path}")
+                        self.call_from_thread(
+                            self.log_message, f"Generated: {rel_path}"
+                        )
                     elif result.status == "noop":
                         noop += 1
                     elif result.status == "skipped":
                         skipped += 1
                     elif result.status == "error":
                         errors += 1
-                        self.call_from_thread(self.log_message, f"Error {rel_path}: {result.reason}")
+                        self.call_from_thread(
+                            self.log_message, f"Error {rel_path}: {result.reason}"
+                        )
 
                     # Update status periodically
                     if processed % 10 == 0:
@@ -336,7 +355,9 @@ class DocsScreen(LLMCScreen):
 
                 except Exception as e:
                     errors += 1
-                    self.call_from_thread(self.log_message, f"Exception processing {rel_path}: {e}")
+                    self.call_from_thread(
+                        self.log_message, f"Exception processing {rel_path}: {e}"
+                    )
 
             self.call_from_thread(self.log_message, "-" * 40)
             self.call_from_thread(self.log_message, "Batch Complete:")

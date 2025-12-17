@@ -100,7 +100,11 @@ def detect_truncation(
     output_text: str, max_tokens_used: int | None, finish_reason: str | None
 ) -> bool:
     """Heuristically detect truncated JSON output."""
-    if finish_reason and finish_reason.lower() in {"length", "max_tokens", "token_limit"}:
+    if finish_reason and finish_reason.lower() in {
+        "length",
+        "max_tokens",
+        "token_limit",
+    }:
         return True
     if not output_text:
         return False
@@ -142,7 +146,9 @@ class RouterSettings:
 
         self.context_limit = _read_int_env("ROUTER_CONTEXT_LIMIT", self.context_limit)
         self.headroom = _read_int_env("ROUTER_MAX_TOKENS_HEADROOM", self.headroom)
-        self.preflight_limit = _read_int_env("ROUTER_PRE_FLIGHT_LIMIT", self.preflight_limit)
+        self.preflight_limit = _read_int_env(
+            "ROUTER_PRE_FLIGHT_LIMIT", self.preflight_limit
+        )
         self.node_limit = _read_int_env("ROUTER_NODE_LIMIT", self.node_limit)
         self.depth_limit = _read_int_env("ROUTER_DEPTH_LIMIT", self.depth_limit)
         self.array_limit = _read_int_env("ROUTER_ARRAY_LIMIT", self.array_limit)

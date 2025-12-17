@@ -138,7 +138,9 @@ class RAGDoctorScreen(Screen):
             with Vertical(id="right-panel"):
                 with TabbedContent():
                     with TabPane("Summary", id="tab-summary"):
-                        yield Static("Select 'Refresh' to load data.", id="summary-text")
+                        yield Static(
+                            "Select 'Refresh' to load data.", id="summary-text"
+                        )
                     with TabPane("Top Offenders", id="tab-offenders"):
                         yield DataTable(id="offenders-table")
                     with TabPane("Guidance", id="tab-guidance"):
@@ -146,20 +148,26 @@ class RAGDoctorScreen(Screen):
                         with Vertical(id="action-buttons", classes="hidden"):
                             yield Label("\nActions:", classes="section-header")
                             yield Button(
-                                "Dry Run: Embed Pending", id="btn-embed-dry", variant="default"
+                                "Dry Run: Embed Pending",
+                                id="btn-embed-dry",
+                                variant="default",
                             )
                             yield Label(
                                 "  - Shows a plan of up to 20 spans that would be embedded, without making changes.",
                                 classes="description",
                             )
                             yield Button(
-                                "Execute: Embed Pending", id="btn-embed-exec", variant="error"
+                                "Execute: Embed Pending",
+                                id="btn-embed-exec",
+                                variant="error",
                             )
                             yield Label(
                                 "  - Processes up to 100 pending spans, creating their embeddings.",
                                 classes="description",
                             )
-                        yield Label("\nCommand Output:", id="output-label", classes="hidden")
+                        yield Label(
+                            "\nCommand Output:", id="output-label", classes="hidden"
+                        )
                         yield RichLog(id="command-log", classes="hidden", markup=True)
         yield Footer()
 
@@ -178,11 +186,14 @@ class RAGDoctorScreen(Screen):
             self.action_refresh()
         elif event.button.id == "btn-embed-dry":
             self.run_worker(
-                lambda: self._run_te_cmd("python3 -m llmc.rag.cli embed --limit 20"), thread=True
+                lambda: self._run_te_cmd("python3 -m llmc.rag.cli embed --limit 20"),
+                thread=True,
             )
         elif event.button.id == "btn-embed-exec":
             self.run_worker(
-                lambda: self._run_te_cmd("python3 -m llmc.rag.cli embed --execute --limit 100"),
+                lambda: self._run_te_cmd(
+                    "python3 -m llmc.rag.cli embed --execute --limit 100"
+                ),
                 thread=True,
             )
 
@@ -215,9 +226,13 @@ class RAGDoctorScreen(Screen):
         """Execute a TE command and stream output to the log."""
         log = self.query_one("#command-log", RichLog)
         self.app.call_from_thread(log.remove_class, "hidden")
-        self.app.call_from_thread(self.query_one("#output-label").remove_class, "hidden")
+        self.app.call_from_thread(
+            self.query_one("#output-label").remove_class, "hidden"
+        )
         self.app.call_from_thread(log.clear)
-        self.app.call_from_thread(log.write, f"[bold cyan]Running: ./scripts/te {cmd_suffix}[/]\n")
+        self.app.call_from_thread(
+            log.write, f"[bold cyan]Running: ./scripts/te {cmd_suffix}[/]\n"
+        )
 
         try:
             # Construct command: use TE wrapper
@@ -254,7 +269,9 @@ class RAGDoctorScreen(Screen):
                 )
 
         except Exception as e:
-            self.app.call_from_thread(log.write, f"\n[bold red]Error launching command: {e}[/]")
+            self.app.call_from_thread(
+                log.write, f"\n[bold red]Error launching command: {e}[/]"
+            )
 
     def update_ui(self, report: dict[str, Any]) -> None:
         self.report = report
@@ -304,7 +321,9 @@ class RAGDoctorScreen(Screen):
         top_files = report.get("top_pending_files", [])
         if top_files:
             for f in top_files:
-                offenders_table.add_row(f.get("path", "?"), str(f.get("pending_spans", 0)))
+                offenders_table.add_row(
+                    f.get("path", "?"), str(f.get("pending_spans", 0))
+                )
         else:
             # If no top files but we have pending, it might be distributed or not captured
             pass

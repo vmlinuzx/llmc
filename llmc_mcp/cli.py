@@ -142,8 +142,8 @@ def show_key() -> None:
         key = key_path.read_text().strip()
         console.print("\n[bold]API Key:[/]", key)
         console.print("\n[dim]Use in client with:[/dim]")
-        console.print(f'  [cyan]X-API-Key: {key}[/cyan]')
-        console.print(f'  [cyan]curl http://localhost:8765/sse?api_key={key}[/cyan]')
+        console.print(f"  [cyan]X-API-Key: {key}[/cyan]")
+        console.print(f"  [cyan]curl http://localhost:8765/sse?api_key={key}[/cyan]")
     else:
         console.print(
             "[yellow]No API key generated yet. Start the daemon first:[/] [bold]llmc-mcp start[/]"

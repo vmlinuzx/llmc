@@ -21,7 +21,9 @@ def test_classify_query_natural_language():
 
 
 def test_classify_query_tool_context_code():
-    result = classify_query("some ambiguous text", tool_context={"tool_id": "code_refactor"})
+    result = classify_query(
+        "some ambiguous text", tool_context={"tool_id": "code_refactor"}
+    )
     assert result["route_name"] == "code"
     assert result["confidence"] == 1.0
     assert "tool-context=code" in result["reasons"]

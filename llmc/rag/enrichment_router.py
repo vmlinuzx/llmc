@@ -300,7 +300,9 @@ class EnrichmentRouter:
                 effective_tier = self.max_tier
                 reasons.append(f"filtered for max_tier={self.max_tier!r}")
             else:
-                reasons.append(f"no backends match max_tier={self.max_tier!r}, using all")
+                reasons.append(
+                    f"no backends match max_tier={self.max_tier!r}, using all"
+                )
 
         return EnrichmentRouteDecision(
             slice_type=slice_type,

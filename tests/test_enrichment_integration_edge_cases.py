@@ -30,16 +30,19 @@ def create_test_db(tmp_path: Path, db_name: str = "enrichment.db") -> Path:
     conn = sqlite3.connect(str(db_path))
 
     # Create basic enrichment schema
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS enrichments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             file_path TEXT NOT NULL,
             content TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    """
+    )
 
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS metrics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             operation TEXT NOT NULL,
@@ -47,7 +50,8 @@ def create_test_db(tmp_path: Path, db_name: str = "enrichment.db") -> Path:
             attached_count INTEGER,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    """
+    )
 
     conn.commit()
     conn.close()
@@ -69,14 +73,18 @@ class TestEnrichmentEnvironmentVariables:
             flag = str(os.getenv("LLMC_ENRICH", "")).lower()
             assert flag not in {"1", "true", "yes", "on"}
 
-    @pytest.mark.parametrize("value", ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"])
+    @pytest.mark.parametrize(
+        "value", ["1", "true", "TRUE", "True", "yes", "YES", "on", "ON"]
+    )
     def test_llmc_enrich_enabled_with_various_values(self, value):
         """Test that enrichment is enabled with various truthy values."""
         with patch.dict(os.environ, {"LLMC_ENRICH": value}):
             flag = str(os.getenv("LLMC_ENRICH", "")).lower()
             assert flag in {"1", "true", "yes", "on"}
 
-    @pytest.mark.parametrize("value", ["0", "false", "FALSE", "no", "off", "OFF", "", "invalid"])
+    @pytest.mark.parametrize(
+        "value", ["0", "false", "FALSE", "no", "off", "OFF", "", "invalid"]
+    )
     def test_llmc_enrich_disabled_with_falsy_values(self, value):
         """Test that enrichment is disabled with falsy values."""
         with patch.dict(os.environ, {"LLMC_ENRICH": value}):
@@ -256,11 +264,13 @@ class TestEnrichmentDatabaseDiscovery:
         conn = sqlite3.connect(str(db_path))
 
         # Add version table
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS schema_version (
                 version INTEGER NOT NULL
             )
-        """)
+        """
+        )
         conn.execute("INSERT INTO schema_version (version) VALUES (1)")
         conn.commit()
         conn.close()
@@ -347,10 +357,12 @@ class TestEnrichmentAttachment:
 
         # Add enrichment data
         conn = sqlite3.connect(str(db_path))
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO enrichments (file_path, content)
             VALUES ('test.py', 'Enriched content for test.py')
-        """)
+        """
+        )
         conn.commit()
         conn.close()
 
@@ -411,7 +423,8 @@ class TestEnrichmentAttachment:
         conn = sqlite3.connect(str(db_path))
         large_content = "x" * 10000
         conn.execute(
-            "INSERT INTO enrichments (file_path, content) VALUES (?, ?)", ("test.py", large_content)
+            "INSERT INTO enrichments (file_path, content) VALUES (?, ?)",
+            ("test.py", large_content),
         )
         conn.commit()
         conn.close()
@@ -602,7 +615,9 @@ class TestEnrichmentMetrics:
 
         # Verify persisted
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute("SELECT operation, items_count, attached_count FROM metrics")
+        cursor = conn.execute(
+            "SELECT operation, items_count, attached_count FROM metrics"
+        )
         row = cursor.fetchone()
         conn.close()
 
@@ -630,14 +645,16 @@ class TestEnrichmentMetrics:
 
         # Aggregate metrics
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute("""
+        cursor = conn.execute(
+            """
             SELECT
                 SUM(items_count) as total_items,
                 SUM(attached_count) as total_attached,
                 COUNT(*) as operation_count
             FROM metrics
             WHERE operation = 'search'
-        """)
+        """
+        )
         result = cursor.fetchone()
         conn.close()
 
@@ -674,9 +691,7 @@ class TestEnrichmentMetrics:
 
     def test_metrics_logging_format(self, tmp_path: Path):
         """Test that log format is consistent."""
-        log_format = (
-            "enrich attach (operation): db={} items={} attached={} line={} path={} truncated={}"
-        )
+        log_format = "enrich attach (operation): db={} items={} attached={} line={} path={} truncated={}"
 
         # Test format with placeholders
         msg = log_format.format("/path/db.db", 10, 5, 20, 10, 3)
@@ -766,14 +781,17 @@ class TestEnrichmentEdgeCases:
         # Update existing enrichment
         conn = sqlite3.connect(str(db_path))
         conn.execute(
-            "UPDATE enrichments SET content = ? WHERE file_path = ?", ("Updated content", "test.py")
+            "UPDATE enrichments SET content = ? WHERE file_path = ?",
+            ("Updated content", "test.py"),
         )
         conn.commit()
         conn.close()
 
         # Verify updated
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute("SELECT content FROM enrichments WHERE file_path = ?", ("test.py",))
+        cursor = conn.execute(
+            "SELECT content FROM enrichments WHERE file_path = ?", ("test.py",)
+        )
         content = cursor.fetchone()[0]
         conn.close()
 
@@ -814,7 +832,9 @@ class TestEnrichmentEdgeCases:
 
         # Should deduplicate or handle gracefully
         conn = sqlite3.connect(str(db_path))
-        cursor = conn.execute("SELECT COUNT(*) FROM enrichments WHERE file_path = ?", ("test.py",))
+        cursor = conn.execute(
+            "SELECT COUNT(*) FROM enrichments WHERE file_path = ?", ("test.py",)
+        )
         cursor.fetchone()[0]
         conn.close()
 

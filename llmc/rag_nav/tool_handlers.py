@@ -147,7 +147,8 @@ def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
             metadata = best_node.get("metadata")
             if metadata:
                 enrich = EnrichmentData(
-                    summary=metadata.get("summary"), usage_guide=metadata.get("usage_guide")
+                    summary=metadata.get("summary"),
+                    usage_guide=metadata.get("usage_guide"),
                 )
                 if enrich.summary or enrich.usage_guide:
                     item.enrichment = enrich
@@ -213,9 +214,17 @@ def _node_path(n: dict) -> str:
 def _node_span(n: dict) -> tuple[int | None, int | None]:
     span = n.get("span") or n.get("loc") or {}
     start = (
-        span.get("start_line") or span.get("start") or span.get("line_start") or n.get("start_line")
+        span.get("start_line")
+        or span.get("start")
+        or span.get("line_start")
+        or n.get("start_line")
     )
-    end = span.get("end_line") or span.get("end") or span.get("line_end") or n.get("end_line")
+    end = (
+        span.get("end_line")
+        or span.get("end")
+        or span.get("line_end")
+        or n.get("end_line")
+    )
     try:
         start_i = int(start) if start is not None else None
         end_i = int(end) if end is not None else None
@@ -242,7 +251,9 @@ def _read_snippet(
             text = "".join(lines[sl - 1 : el])
         except Exception:
             text = ""
-    return Snippet(text=text, location=SnippetLocation(path=path or "", start_line=sl, end_line=el))
+    return Snippet(
+        text=text, location=SnippetLocation(path=path or "", start_line=sl, end_line=el)
+    )
 
 
 def _max_n(max_results: int | None, default: int = 20) -> int:
@@ -326,7 +337,9 @@ def build_graph_for_repo(repo_root: Path | str):
         return status
     except Exception as e:
         # Fallback to legacy behavior if enrichment fails (e.g. no DB)
-        _enrich_log.warning(f"Enriched graph build failed, falling back to AST-only: {e}")
+        _enrich_log.warning(
+            f"Enriched graph build failed, falling back to AST-only: {e}"
+        )
 
     # Next, build an AST-only schema graph (no DB required) and derive a
     # minimal nodes/edges representation for RAG Nav.
@@ -334,7 +347,9 @@ def build_graph_for_repo(repo_root: Path | str):
     edges: list[dict[str, Any]] = []
 
     try:
-        schema_graph = _schema_build_graph_for_repo(repo_root_path, require_enrichment=False)
+        schema_graph = _schema_build_graph_for_repo(
+            repo_root_path, require_enrichment=False
+        )
     except Exception:
         schema_graph = None
 
@@ -413,7 +428,9 @@ def build_graph_for_repo(repo_root: Path | str):
         for file_path in file_paths:
             rel_path = str(file_path.relative_to(repo_root_path))
             try:
-                lines = file_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+                lines = file_path.read_text(
+                    encoding="utf-8", errors="ignore"
+                ).splitlines()
             except OSError:
                 continue
             for idx, line in enumerate(lines, start=1):
@@ -711,7 +728,10 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
             if remaining > 0:
                 try:
                     res = expand_search_items(
-                        repo_root_path, items, max_expansion=min(remaining, max_results), hops=1
+                        repo_root_path,
+                        items,
+                        max_expansion=min(remaining, max_results),
+                        hops=1,
                     )
                     if isinstance(res, tuple):
                         _, neigh = res
@@ -767,11 +787,15 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
     return _maybe_attach_enrichment_search(repo_root, res)
 
 
-def tool_rag_where_used(repo_root, symbol: str, limit: int | None = None) -> WhereUsedResult:
+def tool_rag_where_used(
+    repo_root, symbol: str, limit: int | None = None
+) -> WhereUsedResult:
     """Where-used query using graph indices when the Context Gateway allows RAG."""
     route = _compute_route(Path(repo_root))
     max_results = _max_n(limit, default=50)
-    source: SourceTag = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
+    source: SourceTag = (
+        "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
+    )
     if getattr(route, "use_rag", False):
         try:
             indices = load_graph_indices(Path(repo_root))
@@ -827,8 +851,12 @@ def tool_rag_lineage(
     route = _compute_route(Path(repo_root))
     limit = _max_n(max_results, default=50)
     dir_norm = (direction or "downstream").lower().strip()
-    normalized_direction = "upstream" if dir_norm in ("upstream", "callers") else "downstream"
-    source: SourceTag = "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
+    normalized_direction = (
+        "upstream" if dir_norm in ("upstream", "callers") else "downstream"
+    )
+    source: SourceTag = (
+        "RAG_GRAPH" if getattr(route, "use_rag", False) else "LOCAL_FALLBACK"
+    )
 
     if getattr(route, "use_rag", False):
         try:
@@ -892,7 +920,9 @@ def tool_rag_stats(repo_root: Path | str) -> dict[str, Any]:
     return {
         "total_nodes": total_nodes,
         "enriched_nodes": enriched_nodes,
-        "coverage_pct": (enriched_nodes / total_nodes * 100) if total_nodes > 0 else 0.0,
+        "coverage_pct": (
+            (enriched_nodes / total_nodes * 100) if total_nodes > 0 else 0.0
+        ),
     }
 
 
@@ -927,7 +957,9 @@ def _maybe_attach_enrichment_search(repo_root: str, res: SearchResult) -> Search
         db_env = os.getenv("LLMC_ENRICH_DB")
         db_path: Path | None
         if not db_env or not Path(db_env).exists():
-            db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
+            db_path = discover_enrichment_db(
+                Path(repo_root), getattr(res, "items", None)
+            )
         else:
             db_path = Path(db_env)
         if not db_path or not db_path.exists():
@@ -956,7 +988,9 @@ def _maybe_attach_enrichment_search(repo_root: str, res: SearchResult) -> Search
     return res
 
 
-def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) -> WhereUsedResult:
+def _maybe_attach_enrichment_where_used(
+    repo_root: str, res: WhereUsedResult
+) -> WhereUsedResult:
     if not _enrichment_enabled():
         return res
     try:
@@ -970,7 +1004,9 @@ def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) ->
         db_env = os.getenv("LLMC_ENRICH_DB")
         db_path: Path | None
         if not db_env or not Path(db_env).exists():
-            db_path = discover_enrichment_db(Path(repo_root), getattr(res, "items", None))
+            db_path = discover_enrichment_db(
+                Path(repo_root), getattr(res, "items", None)
+            )
         else:
             db_path = Path(db_env)
         if not db_path or not db_path.exists():
@@ -998,7 +1034,9 @@ def _maybe_attach_enrichment_where_used(repo_root: str, res: WhereUsedResult) ->
     return res
 
 
-def _maybe_attach_enrichment_lineage(repo_root: str, res: LineageResult) -> LineageResult:
+def _maybe_attach_enrichment_lineage(
+    repo_root: str, res: LineageResult
+) -> LineageResult:
     if not _enrichment_enabled():
         return res
     try:

@@ -55,7 +55,9 @@ def load_path_weight_map(config: Mapping[str, Any] | None) -> dict[str, int]:
         try:
             value = int(raw)
         except (TypeError, ValueError):
-            log.warning("Ignoring non-integer path weight %r for pattern %r", raw, pattern)
+            log.warning(
+                "Ignoring non-integer path weight %r for pattern %r", raw, pattern
+            )
             continue
 
         try:

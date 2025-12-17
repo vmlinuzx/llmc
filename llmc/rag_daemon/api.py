@@ -34,14 +34,18 @@ def validate_job_paths(
     workspace_path: Path | None = None
     if raw_workspace_path is not None:
         if getattr(config, "workspaces_root", None) is not None:
-            workspace_path = safe_subpath(Path(config.workspaces_root), raw_workspace_path)
+            workspace_path = safe_subpath(
+                Path(config.workspaces_root), raw_workspace_path
+            )
         else:
             workspace_path = canonical_repo_path(Path(raw_workspace_path))
 
     return repo_path, workspace_path
 
 
-def purge_workspace(config: Any, raw_workspace_path: str | Path, *, force: bool = False) -> dict:
+def purge_workspace(
+    config: Any, raw_workspace_path: str | Path, *, force: bool = False
+) -> dict:
     """Purge a workspace via daemon API. Requires force=True."""
     if not force:
         raise RuntimeError("Refusing to purge without force=True")

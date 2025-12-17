@@ -37,7 +37,9 @@ def test_attach_enrichment_sets_metadata():
 
 def test_attach_enrichment_handles_missing_optional_fields():
     entity = make_entity()
-    enrich = SimpleNamespace(summary=None, usage_guide=None, span_hash="abc123", symbol=None)
+    enrich = SimpleNamespace(
+        summary=None, usage_guide=None, span_hash="abc123", symbol=None
+    )
 
     _attach_enrichment_to_entity(entity, enrich)
 

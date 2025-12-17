@@ -45,7 +45,9 @@ class StateStore:
         tmp.write_text(payload, encoding="utf-8")
         tmp.replace(path)
 
-    def update(self, repo_id: str, mutator: Callable[[RepoState], RepoState]) -> RepoState:
+    def update(
+        self, repo_id: str, mutator: Callable[[RepoState], RepoState]
+    ) -> RepoState:
         state = self.get(repo_id) or RepoState(repo_id=repo_id)
         new_state = mutator(state)
         self.upsert(new_state)

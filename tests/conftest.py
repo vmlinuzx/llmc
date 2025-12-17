@@ -77,7 +77,9 @@ def _cleanup_repo_caches(request: pytest.FixtureRequest) -> None:
 
 def pytest_collection_modifyitems(config, items):
     """Skip standalone test scripts that have their own main() function."""
-    skip_standalone = pytest.mark.skip(reason="Standalone test script - run directly with python")
+    skip_standalone = pytest.mark.skip(
+        reason="Standalone test script - run directly with python"
+    )
     skip_wrapper_scripts = pytest.mark.skip(
         reason="Personal wrapper scripts - not part of production code"
     )

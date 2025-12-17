@@ -14,8 +14,11 @@ Core commands: config, tui, monitor
 
 import typer
 
-from llmc.commands import config as config_commands, service as service_commands
-from llmc.commands import repo as repo_commands
+from llmc.commands import (
+    config as config_commands,
+    repo as repo_commands,
+    service as service_commands,
+)
 from llmc.commands.rag import (
     benchmark,
     doctor,
@@ -62,8 +65,12 @@ def chat(
     prompt: str = typer.Argument(None, help="Question to ask about the codebase"),
     new: bool = typer.Option(False, "-n", "--new", help="Start a new session"),
     recall: bool = typer.Option(False, "-r", "--recall", help="Show last exchange"),
-    list_sessions: bool = typer.Option(False, "-l", "--list", help="List recent sessions"),
-    session_id: str = typer.Option(None, "-s", "--session", help="Use specific session"),
+    list_sessions: bool = typer.Option(
+        False, "-l", "--list", help="List recent sessions"
+    ),
+    session_id: str = typer.Option(
+        None, "-s", "--session", help="Use specific session"
+    ),
     status: bool = typer.Option(False, "--status", help="Show status"),
     json_output: bool = typer.Option(False, "--json", help="JSON output"),
     quiet: bool = typer.Option(False, "-q", "--quiet", help="Suppress metadata"),
@@ -72,7 +79,7 @@ def chat(
     model: str = typer.Option(None, "--model", help="Override model"),
 ):
     """AI coding assistant with RAG-powered context.
-    
+
     Examples:
         llmc chat "where is the routing logic"
         llmc chat "tell me more"
@@ -81,7 +88,7 @@ def chat(
         llmc chat -l
     """
     import sys
-    
+
     # Build args for the click CLI
     args = []
     if prompt:
@@ -106,16 +113,16 @@ def chat(
         args.append("--no-session")
     if model:
         args.extend(["--model", model])
-    
+
     # Import and run the click CLI
     from llmc_agent.cli import main as agent_main
+
     sys.argv = ["llmc-chat"] + args
     try:
         agent_main(standalone_mode=False)
     except SystemExit as e:
         if e.code != 0:
             raise typer.Exit(e.code)
-
 
 
 # ============================================================================
@@ -167,6 +174,7 @@ analytics_app.command(name="lineage")(nav_lineage)
 
 # Model comparison and performance metrics
 from llmc.commands.model_compare import compare_models, metrics as model_metrics
+
 analytics_app.command(name="compare-models")(compare_models)
 analytics_app.command(name="metrics")(model_metrics)
 
@@ -224,7 +232,8 @@ def docs_quickstart():
         typer.echo(quickstart_path.read_text())
     else:
         # Fallback: show inline quickstart
-        typer.echo("""
+        typer.echo(
+            """
 # LLMC Quickstart
 
 ## 1. Initialize workspace
@@ -243,32 +252,36 @@ def docs_quickstart():
     llmc debug doctor
 
 For full documentation: llmc docs userguide
-""")
+"""
+        )
 
 
 @docs_app.command(name="userguide")
 def docs_userguide():
     """Display the user guide or open in browser."""
     repo_root = find_repo_root()
-    
+
     # Try several possible locations
     candidates = [
         repo_root / "DOCS" / "USERGUIDE.md",
         repo_root / "DOCS" / "CLI_REFERENCE.md",
         repo_root / "DOCS" / "README.md",
     ]
-    
+
     for path in candidates:
         if path.exists():
             typer.echo(path.read_text())
             return
-    
-    typer.echo("User guide not found. Run 'llmc docs quickstart' for basic usage.", err=True)
+
+    typer.echo(
+        "User guide not found. Run 'llmc docs quickstart' for basic usage.", err=True
+    )
     raise typer.Exit(1)
 
 
 # Docgen commands
 from llmc.commands import docs as docs_commands
+
 docs_app.command(name="generate")(docs_commands.generate)
 docs_app.command(name="status")(docs_commands.status)
 
@@ -296,18 +309,22 @@ def version_callback(value: bool):
 def common(
     ctx: typer.Context,
     version: bool = typer.Option(
-        None, "--version", "-v", callback=version_callback, help="Show version and exit."
+        None,
+        "--version",
+        "-v",
+        callback=version_callback,
+        help="Show version and exit.",
     ),
 ):
     """
     LLMC Unified CLI - Organized Command Structure
-    
+
     Core commands: init, config, tui, monitor
-    
+
     Command groups:
       service    - Manage the RAG daemon
       analytics  - Search, stats, benchmarks
-      debug      - Troubleshooting & internals  
+      debug      - Troubleshooting & internals
       docs       - Documentation & guides
       usertest   - RUTA testing framework
     """

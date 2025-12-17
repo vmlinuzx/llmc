@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generate config reference documentation from llmc.toml."""
+from datetime import datetime
 import os
 import sys
-from datetime import datetime
 
 try:
     import tomli
@@ -31,10 +31,10 @@ def format_value(value):
 def extract_sections(config, prefix=""):
     """Recursively extract config sections."""
     sections = []
-    
+
     for key, value in config.items():
         full_key = f"{prefix}.{key}" if prefix else key
-        
+
         if isinstance(value, dict):
             # Check if it's a table or has nested values
             has_nested_dicts = any(isinstance(v, dict) for v in value.values())
@@ -47,7 +47,7 @@ def extract_sections(config, prefix=""):
             # Array of tables
             sections.append((f"[[{full_key}]]", value[0]))
         # Skip scalar values at top level
-    
+
     return sections
 
 
@@ -55,10 +55,10 @@ def main():
     if not os.path.exists(SOURCE_TOML):
         print(f"Error: {SOURCE_TOML} not found. Run from repo root.")
         sys.exit(1)
-    
+
     with open(SOURCE_TOML, "rb") as f:
         config = tomli.load(f)
-    
+
     lines = [
         "# llmc.toml Reference",
         "",
@@ -70,23 +70,27 @@ def main():
         "---",
         "",
     ]
-    
+
     # Document top-level sections
     for section_name in sorted(config.keys()):
         section = config[section_name]
         lines.append(f"## [{section_name}]")
         lines.append("")
-        
+
         if isinstance(section, dict):
             # Find scalar values in this section
-            scalars = {k: v for k, v in section.items() if not isinstance(v, (dict, list))}
+            scalars = {
+                k: v for k, v in section.items() if not isinstance(v, (dict, list))
+            }
             if scalars:
                 lines.append("| Key | Type | Value |")
                 lines.append("|-----|------|-------|")
                 for k, v in scalars.items():
-                    lines.append(f"| `{k}` | `{type(v).__name__}` | `{format_value(v)}` |")
+                    lines.append(
+                        f"| `{k}` | `{type(v).__name__}` | `{format_value(v)}` |"
+                    )
                 lines.append("")
-            
+
             # Find nested tables
             for k, v in section.items():
                 if isinstance(v, dict):
@@ -96,7 +100,9 @@ def main():
                     lines.append("|-----|------|-------|")
                     for sk, sv in v.items():
                         if not isinstance(sv, dict):
-                            lines.append(f"| `{sk}` | `{type(sv).__name__}` | `{format_value(sv)}` |")
+                            lines.append(
+                                f"| `{sk}` | `{type(sv).__name__}` | `{format_value(sv)}` |"
+                            )
                     lines.append("")
         elif isinstance(section, list):
             lines.append(f"_Array of {len(section)} entries_")
@@ -104,14 +110,14 @@ def main():
         else:
             lines.append(f"Value: `{format_value(section)}`")
             lines.append("")
-    
+
     # Write output
     output_dir = os.path.dirname(OUTPUT_FILE)
     os.makedirs(output_dir, exist_ok=True)
-    
+
     with open(OUTPUT_FILE, "w") as f:
         f.write("\n".join(lines))
-    
+
     print(f"Wrote {OUTPUT_FILE}")
 
 

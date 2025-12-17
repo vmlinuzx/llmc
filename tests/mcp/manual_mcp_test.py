@@ -3,11 +3,11 @@
 RMTA Manual Test - Direct MCP server testing via stdio
 """
 import asyncio
+from datetime import datetime
 import json
+from pathlib import Path
 import subprocess
 import sys
-from datetime import datetime
-from pathlib import Path
 
 
 def send_mcp_request(request):
@@ -20,7 +20,7 @@ def send_mcp_request(request):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True
+        text=True,
     )
 
     # Send the request
@@ -53,10 +53,7 @@ async def test_00_init():
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "00_INIT",
-            "arguments": {}
-        }
+        "params": {"name": "00_INIT", "arguments": {}},
     }
 
     responses, stderr = send_mcp_request(request)
@@ -73,7 +70,7 @@ async def test_00_init():
                 content = resp["result"].get("content", [])
                 if content and len(content) > 0:
                     text = content[0].get("text", "")
-                    print(f"\nBootstrap prompt preview (first 500 chars):")
+                    print("\nBootstrap prompt preview (first 500 chars):")
                     print("-" * 80)
                     print(text[:500])
                     print("-" * 80)
@@ -91,11 +88,7 @@ def test_list_tools():
     print("TESTING: list_tools (Tool Discovery)")
     print("=" * 80)
 
-    request = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/list"
-    }
+    request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list"}
 
     responses, stderr = send_mcp_request(request)
 
@@ -128,12 +121,7 @@ async def test_read_file():
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "read_file",
-            "arguments": {
-                "path": "README.md"
-            }
-        }
+        "params": {"name": "read_file", "arguments": {"path": "README.md"}},
     }
 
     responses, stderr = send_mcp_request(request)
@@ -147,14 +135,14 @@ async def test_read_file():
                 content = resp["result"].get("content", [])
                 if content:
                     text = content[0].get("text", "")
-                    print(f"\nFile content preview (first 300 chars):")
+                    print("\nFile content preview (first 300 chars):")
                     print("-" * 80)
                     print(text[:300])
                     print("-" * 80)
                     return True, "SUCCESS"
             elif "error" in resp:
                 print(f"\n❌ Error: {resp['error']}")
-                return False, resp['error']
+                return False, resp["error"]
 
     return True, "SUCCESS"
 
@@ -169,13 +157,7 @@ async def test_list_dir():
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "list_dir",
-            "arguments": {
-                "path": ".",
-                "max_entries": 5
-            }
-        }
+        "params": {"name": "list_dir", "arguments": {"path": ".", "max_entries": 5}},
     }
 
     responses, stderr = send_mcp_request(request)
@@ -189,14 +171,14 @@ async def test_list_dir():
                 content = resp["result"].get("content", [])
                 if content:
                     text = content[0].get("text", "")
-                    print(f"\nDirectory listing:")
+                    print("\nDirectory listing:")
                     print("-" * 80)
                     print(text[:500])
                     print("-" * 80)
                     return True, "SUCCESS"
             elif "error" in resp:
                 print(f"\n❌ Error: {resp['error']}")
-                return False, resp['error']
+                return False, resp["error"]
 
     return True, "SUCCESS"
 
@@ -211,10 +193,7 @@ async def test_get_metrics():
         "jsonrpc": "2.0",
         "id": 1,
         "method": "tools/call",
-        "params": {
-            "name": "get_metrics",
-            "arguments": {}
-        }
+        "params": {"name": "get_metrics", "arguments": {}},
     }
 
     responses, stderr = send_mcp_request(request)
@@ -225,11 +204,11 @@ async def test_get_metrics():
     if responses:
         for resp in responses:
             if "result" in resp:
-                print(f"\n✅ SUCCESS - Bug has been fixed!")
+                print("\n✅ SUCCESS - Bug has been fixed!")
                 print(f"Response: {json.dumps(resp, indent=2)}")
                 return True, "FIXED"
             elif "error" in resp:
-                print(f"\n❌ ERROR - Bug still exists")
+                print("\n❌ ERROR - Bug still exists")
                 print(f"Error: {resp['error']}")
                 return False, "BUG_EXISTS"
 
@@ -248,7 +227,7 @@ async def main():
         "list_tools": None,
         "read_file": None,
         "list_dir": None,
-        "get_metrics": None
+        "get_metrics": None,
     }
 
     # Test 00_INIT
@@ -313,7 +292,9 @@ async def generate_report(tools, test_results):
         report_content += "- **Bootstrap tool available:** ✅ YES\n"
         report_content += "- **Instructions accurate:** ✅ YES\n"
         report_content += "- **Issues found:** None\n\n"
-        report_content += "The `00_INIT` tool provides comprehensive bootstrap instructions.\n\n"
+        report_content += (
+            "The `00_INIT` tool provides comprehensive bootstrap instructions.\n\n"
+        )
     else:
         report_content += "- **Bootstrap tool available:** ❌ NO\n"
         report_content += "- **Instructions accurate:** ❌ NO\n"
@@ -342,7 +323,9 @@ async def generate_report(tools, test_results):
 
     success, msg = test_results.get("get_metrics", (False, "Not tested"))
     if not success and msg == "BUG_EXISTS":
-        report_content += "### RMTA-001: [P1] get_metrics Handler Signature Mismatch (UNRESOLVED)\n"
+        report_content += (
+            "### RMTA-001: [P1] get_metrics Handler Signature Mismatch (UNRESOLVED)\n"
+        )
         report_content += "**Status:** ❌ Still broken\n"
         report_content += "**Issue:** Handler signature mismatch in server.py:1042\n"
         report_content += "**Fix:** Change signature to accept args parameter\n\n"
@@ -354,7 +337,9 @@ async def generate_report(tools, test_results):
 """
 
     if passed == total:
-        report_content += "All critical tests passed! The MCP server is functioning correctly.\n\n"
+        report_content += (
+            "All critical tests passed! The MCP server is functioning correctly.\n\n"
+        )
     elif passed >= total * 0.8:
         report_content += f"Most tests passed ({passed}/{total}). The server is mostly functional.\n\n"
     else:

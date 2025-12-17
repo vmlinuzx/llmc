@@ -86,7 +86,9 @@ class TestPromoteOnce:
                 settings=settings,
                 promote_once=False,
             )
-            assert next_tier is None, f"Should not promote from {tier} on {failure_type}"
+            assert (
+                next_tier is None
+            ), f"Should not promote from {tier} on {failure_type}"
 
 
 class TestRoundRobinMaxRetries:
@@ -311,7 +313,9 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 settings=settings,
                 promote_once=True,
             )
-            assert next_tier_7b == "nano", f"Failure {failure_type} from 7b should demote to nano"
+            assert (
+                next_tier_7b == "nano"
+            ), f"Failure {failure_type} from 7b should demote to nano"
 
             next_tier_14b = choose_next_tier_on_failure(
                 failure_type=failure_type,
@@ -320,7 +324,9 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 settings=settings,
                 promote_once=True,
             )
-            assert next_tier_14b == "nano", f"Failure {failure_type} from 14b should demote to nano"
+            assert (
+                next_tier_14b == "nano"
+            ), f"Failure {failure_type} from 14b should demote to nano"
 
         # Parse/validation from 7b should promote to 14b (more context)
         for failure_type in ["parse", "validation"]:
@@ -331,7 +337,9 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 settings=settings,
                 promote_once=True,
             )
-            assert next_tier_7b == "14b", f"Failure {failure_type} from 7b should promote to 14b"
+            assert (
+                next_tier_7b == "14b"
+            ), f"Failure {failure_type} from 7b should promote to 14b"
 
         # Parse/validation from 14b should demote to nano
         for failure_type in ["parse", "validation"]:
@@ -342,7 +350,9 @@ class TestDemoteOnTimeoutRespectsPolicy:
                 settings=settings,
                 promote_once=True,
             )
-            assert next_tier_14b == "nano", f"Failure {failure_type} from 14b should demote to nano"
+            assert (
+                next_tier_14b == "nano"
+            ), f"Failure {failure_type} from 14b should demote to nano"
 
     def test_demote_preserves_promote_once_flag(self):
         """Test that demotion respects promote_once flag."""
@@ -369,7 +379,14 @@ class TestTierTransitionMatrix:
         settings = RouterSettings()
 
         tiers = ["7b", "14b", "nano"]
-        failure_types = ["truncation", "parse", "validation", "no_evidence", "timeout", "unknown"]
+        failure_types = [
+            "truncation",
+            "parse",
+            "validation",
+            "no_evidence",
+            "timeout",
+            "unknown",
+        ]
 
         expected = {
             ("7b", "truncation"): "nano",
@@ -402,9 +419,9 @@ class TestTierTransitionMatrix:
                     promote_once=True,
                 )
                 expected_result = expected.get((current_tier, failure_type))
-                assert result == expected_result, (
-                    f"Failed: {current_tier} + {failure_type} -> {result}, expected {expected_result}"
-                )
+                assert (
+                    result == expected_result
+                ), f"Failed: {current_tier} + {failure_type} -> {result}, expected {expected_result}"
 
 
 class TestClassifyFailure:

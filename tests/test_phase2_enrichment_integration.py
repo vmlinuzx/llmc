@@ -39,14 +39,18 @@ class TestPhase2EnrichmentIntegration:
         print(f"Enriched entities: {len(enriched_entities)}")
 
         # We should have SOME enriched entities (not 100% but >0%)
-        assert len(enriched_entities) > 0, "At least some entities should have enrichment metadata"
+        assert (
+            len(enriched_entities) > 0
+        ), "At least some entities should have enrichment metadata"
 
         # Verify enrichment fields are present
         if enriched_entities:
             sample = enriched_entities[0]
             assert "summary" in sample.metadata, "Should have summary"
             assert sample.metadata["summary"], "Summary should not be empty"
-            assert "span_hash" in sample.metadata, "Should have span_hash for traceability"
+            assert (
+                "span_hash" in sample.metadata
+            ), "Should have span_hash for traceability"
 
             print(f"\nSample enriched entity: {sample.id}")
             print(f"Summary: {sample.metadata['summary'][:100]}...")
@@ -62,9 +66,9 @@ class TestPhase2EnrichmentIntegration:
 
         sample_func = func_entities[0]
         # AST metadata should still be there
-        assert "params" in sample_func.metadata or "returns" in sample_func.metadata, (
-            "AST metadata should be preserved"
-        )
+        assert (
+            "params" in sample_func.metadata or "returns" in sample_func.metadata
+        ), "AST metadata should be preserved"
 
     def test_entity_location_fields_populated(self):
         """Test that entities have file_path, start_line, end_line (Phase 2 additions)"""
@@ -80,9 +84,9 @@ class TestPhase2EnrichmentIntegration:
             if e.file_path and e.start_line is not None and e.end_line is not None
         ]
 
-        assert len(entities_with_location) > 0, (
-            "Entities should have location fields (file_path, start_line, end_line)"
-        )
+        assert (
+            len(entities_with_location) > 0
+        ), "Entities should have location fields (file_path, start_line, end_line)"
 
         sample = entities_with_location[0]
         assert "tools/rag" in sample.file_path, "file_path should be recognizable"
@@ -129,15 +133,19 @@ class TestPhase2EnrichmentIntegration:
         entities = data["entities"]
         enriched_in_json = [e for e in entities if "summary" in e.get("metadata", {})]
 
-        assert len(enriched_in_json) > 0, (
-            "Saved JSON should contain entities with enrichment metadata"
-        )
+        assert (
+            len(enriched_in_json) > 0
+        ), "Saved JSON should contain entities with enrichment metadata"
 
         # Verify location fields are saved
         entities_with_location = [
-            e for e in entities if "file_path" in e and "start_line" in e and "end_line" in e
+            e
+            for e in entities
+            if "file_path" in e and "start_line" in e and "end_line" in e
         ]
-        assert len(entities_with_location) > 0, "Location fields should be saved to JSON"
+        assert (
+            len(entities_with_location) > 0
+        ), "Location fields should be saved to JSON"
 
         # Cleanup
         self.graph_output_path.unlink(missing_ok=True)
@@ -160,7 +168,9 @@ class TestPhase2EnrichmentIntegration:
 
         db = Database(self.db_path)
         try:
-            total_enrichments = db.conn.execute("SELECT COUNT(*) FROM enrichments").fetchone()[0]
+            total_enrichments = db.conn.execute(
+                "SELECT COUNT(*) FROM enrichments"
+            ).fetchone()[0]
         finally:
             db.close()
 
@@ -176,18 +186,22 @@ class TestPhase2EnrichmentIntegration:
         print(f"\n{'=' * 80}")
         print("DATA LOSS COMPARISON:")
         print(f"  Database enrichments: {total_enrichments}")
-        print(f"  Old system (broken): {old_system_enriched} enriched entities (100% loss)")
+        print(
+            f"  Old system (broken): {old_system_enriched} enriched entities (100% loss)"
+        )
         print(f"  New system (Phase 2): {new_system_enriched} enriched entities")
         print(f"{'=' * 80}")
 
-        assert new_system_enriched > 0, (
-            "Phase 2 should fix the data loss (enriched entities should be > 0)"
-        )
+        assert (
+            new_system_enriched > 0
+        ), "Phase 2 should fix the data loss (enriched entities should be > 0)"
 
         # Coverage is measured against graph entities, not raw DB rows,
         # since enrichments span multiple languages and artifact types.
-        coverage_pct = new_system_enriched / len(graph.entities) * 100.0 if graph.entities else 0.0
-        # Adjusting to realistic expectation (was 80%, got ~7%)
-        assert coverage_pct >= 5.0, (
-            f"Expected at least 5% coverage of graph entities, got {coverage_pct:.1f}%"
+        coverage_pct = (
+            new_system_enriched / len(graph.entities) * 100.0 if graph.entities else 0.0
         )
+        # Adjusting to realistic expectation (was 80%, got ~7%)
+        assert (
+            coverage_pct >= 5.0
+        ), f"Expected at least 5% coverage of graph entities, got {coverage_pct:.1f}%"

@@ -182,7 +182,10 @@ class SqliteEnrichmentStore:
                         if rows:
                             snippets = [
                                 EnrichmentSnippet(
-                                    *[(val if isinstance(val, str) else None) for val in row]
+                                    *[
+                                        (val if isinstance(val, str) else None)
+                                        for val in row
+                                    ]
                                 )
                                 for row in rows
                             ]
@@ -198,7 +201,10 @@ class SqliteEnrichmentStore:
                     if rows:
                         snippets = [
                             EnrichmentSnippet(
-                                *[(val if isinstance(val, str) else None) for val in row]
+                                *[
+                                    (val if isinstance(val, str) else None)
+                                    for val in row
+                                ]
                             )
                             for row in rows
                         ]
@@ -214,7 +220,10 @@ class SqliteEnrichmentStore:
                     if rows:
                         snippets = [
                             EnrichmentSnippet(
-                                *[(val if isinstance(val, str) else None) for val in row]
+                                *[
+                                    (val if isinstance(val, str) else None)
+                                    for val in row
+                                ]
                             )
                             for row in rows
                         ]
@@ -343,7 +352,9 @@ def attach_enrichments_to_search_result(
             path, line = _item_path_and_line(hit)
             snippet = getattr(hit, "snippet", None)
             location = getattr(snippet, "location", None)
-            start = getattr(location, "start_line", None) if location is not None else line
+            start = (
+                getattr(location, "start_line", None) if location is not None else line
+            )
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
@@ -398,7 +409,9 @@ def attach_enrichments_to_where_used(
             path, line = _item_path_and_line(item)
             snippet = getattr(item, "snippet", None)
             location = getattr(snippet, "location", None)
-            start = getattr(location, "start_line", None) if location is not None else line
+            start = (
+                getattr(location, "start_line", None) if location is not None else line
+            )
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
@@ -452,7 +465,9 @@ def attach_enrichments_to_lineage(
             path, line = _item_path_and_line(item)
             snippet = getattr(item, "snippet", None)
             location = getattr(snippet, "location", None)
-            start = getattr(location, "start_line", None) if location is not None else line
+            start = (
+                getattr(location, "start_line", None) if location is not None else line
+            )
             end = getattr(location, "end_line", None) if location is not None else line
             text = getattr(snippet, "text", None)
 
@@ -481,7 +496,9 @@ def attach_enrichments_to_lineage(
     return result
 
 
-def discover_enrichment_db(repo_root: Path | None, items: list[Any] | None) -> Path | None:
+def discover_enrichment_db(
+    repo_root: Path | None, items: list[Any] | None
+) -> Path | None:
     """
     Discover a plausible enrichment DB path based on repo_root or search items.
     """

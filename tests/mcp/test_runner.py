@@ -14,14 +14,18 @@ def test_run_cases_with_monkeypatched_wrappers(monkeypatch, tmp_path):
     monkeypatch.setenv("LLMC_BENCH_OUTDIR", str(tmp_path))
 
     # Monkeypatch wrapper functions to avoid real subprocess/TE
-    monkeypatch.setattr(runner, "te_run", lambda args: _ok(data={"echo": args[-1]}), raising=False)
+    monkeypatch.setattr(
+        runner, "te_run", lambda args: _ok(data={"echo": args[-1]}), raising=False
+    )
     monkeypatch.setattr(
         runner,
         "repo_read",
         lambda root, path, max_bytes=None: _ok(data={"path": path}),
         raising=False,
     )
-    monkeypatch.setattr(runner, "rag_query", lambda q, k=3: _ok(data={"k": k}), raising=False)
+    monkeypatch.setattr(
+        runner, "rag_query", lambda q, k=3: _ok(data={"k": k}), raising=False
+    )
 
     rows = runner.run_cases(["te_echo", "repo_read_small", "rag_top3"])
     assert len(rows) == 3

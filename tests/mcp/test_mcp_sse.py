@@ -3,17 +3,18 @@
 RMTA SSE Test - Test MCP server via MCP over SSE
 """
 import asyncio
-import json
-import sys
 from datetime import datetime
 from pathlib import Path
+import sys
 
 try:
-    from mcp.client.sse import sse_client
     from mcp import ClientSession
+    from mcp.client.sse import sse_client
 except ImportError as e:
     print(f"ERROR: Failed to import MCP client: {e}")
-    print("Make sure you're running in the virtual environment with 'mcp' package installed")
+    print(
+        "Make sure you're running in the virtual environment with 'mcp' package installed"
+    )
     sys.exit(1)
 
 
@@ -39,12 +40,13 @@ async def test_mcp_via_sse():
     # Connect via SSE
     print(f"\n{'='*80}")
     print("PHASE 1: CONNECTING TO MCP SERVER")
-    print('='*80)
+    print("=" * 80)
 
     try:
-        async with sse_client(
-            f"{base_url}/sse?api_key={api_key}"
-        ) as (read_stream, write_stream):
+        async with sse_client(f"{base_url}/sse?api_key={api_key}") as (
+            read_stream,
+            write_stream,
+        ):
 
             # Create client session
             client = ClientSession(read_stream, write_stream)
@@ -65,24 +67,23 @@ async def test_mcp_via_sse():
             # Print tool inventory
             print(f"\n{'='*80}")
             print("TOOL INVENTORY")
-            print('='*80)
+            print("=" * 80)
             print(f"{'Tool Name':<30} {'Description'}")
             print("-" * 80)
             for tool in tools:
-                desc = tool.description[:50] + "..." if len(tool.description) > 50 else tool.description
+                desc = (
+                    tool.description[:50] + "..."
+                    if len(tool.description) > 50
+                    else tool.description
+                )
                 print(f"{tool.name:<30} {desc}")
 
             # Test each tool
             print(f"\n{'='*80}")
             print("PHASE 2: TESTING TOOLS")
-            print('='*80)
+            print("=" * 80)
 
-            test_results = {
-                "working": [],
-                "buggy": [],
-                "broken": [],
-                "not_tested": []
-            }
+            test_results = {"working": [], "buggy": [], "broken": [], "not_tested": []}
 
             # Test cases for each tool
             test_cases = {
@@ -111,11 +112,21 @@ async def test_mcp_via_sse():
                 "linux_proc_send": {},
                 "linux_proc_read": {},
                 "linux_proc_stop": {},
-                "linux_fs_write": {"path": "/tmp/rmta_test.txt", "content": "test content"},
+                "linux_fs_write": {
+                    "path": "/tmp/rmta_test.txt",
+                    "content": "test content",
+                },
                 "linux_fs_mkdir": {"path": "/tmp/rmta_test_dir"},
-                "linux_fs_move": {"source": "/tmp/rmta_test.txt", "destination": "/tmp/rmta_test_moved.txt"},
+                "linux_fs_move": {
+                    "source": "/tmp/rmta_test.txt",
+                    "destination": "/tmp/rmta_test_moved.txt",
+                },
                 "linux_fs_delete": {"path": "/tmp/rmta_test_moved.txt"},
-                "linux_fs_edit": {"path": "/tmp/rmta_test_dir/test.txt", "old_text": "", "new_text": "new content"},
+                "linux_fs_edit": {
+                    "path": "/tmp/rmta_test_dir/test.txt",
+                    "old_text": "",
+                    "new_text": "new content",
+                },
                 "inspect": {"target": "README.md"},
             }
 
@@ -135,19 +146,21 @@ async def test_mcp_via_sse():
 
                         # Check if response contains an error
                         if '"error"' in response_text.lower():
-                            print(f"  ❌ BROKEN: Tool returned error")
+                            print("  ❌ BROKEN: Tool returned error")
                             print(f"     Response: {response_text[:200]}")
                             test_results["broken"].append(tool_name)
                         else:
                             # Success!
-                            print(f"  ✅ WORKING: Tool executed successfully")
+                            print("  ✅ WORKING: Tool executed successfully")
                             if len(response_text) < 200:
                                 print(f"     Response: {response_text}")
                             else:
-                                print(f"     Response length: {len(response_text)} chars")
+                                print(
+                                    f"     Response length: {len(response_text)} chars"
+                                )
                             test_results["working"].append(tool_name)
                     else:
-                        print(f"  ⚠️  BUGGY: Tool returned empty result")
+                        print("  ⚠️  BUGGY: Tool returned empty result")
                         test_results["buggy"].append(tool_name)
 
                 except Exception as e:
@@ -157,7 +170,7 @@ async def test_mcp_via_sse():
             # Generate report
             print(f"\n{'='*80}")
             print("TEST RESULTS SUMMARY")
-            print('='*80)
+            print("=" * 80)
             print(f"✅ Working: {len(test_results['working'])}")
             print(f"⚠️  Buggy: {len(test_results['buggy'])}")
             print(f"❌ Broken: {len(test_results['broken'])}")
@@ -169,6 +182,7 @@ async def test_mcp_via_sse():
     except Exception as e:
         print(f"\n❌ ERROR: Failed to connect or communicate with MCP server: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -179,7 +193,11 @@ async def generate_report(tools, test_results):
     report_path = Path("tests/REPORTS/mcp") / f"rmta_report_{timestamp}.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
-    total_tested = len(test_results['working']) + len(test_results['buggy']) + len(test_results['broken'])
+    total_tested = (
+        len(test_results["working"])
+        + len(test_results["buggy"])
+        + len(test_results["broken"])
+    )
     total_expected = len(tools)
 
     report_content = f"""# RMTA Report - {timestamp}
@@ -210,27 +228,27 @@ async def generate_report(tools, test_results):
 
     report_content += "\n## Test Results\n\n"
 
-    if test_results['working']:
+    if test_results["working"]:
         report_content += "### Working Tools (✅)\n\n"
-        for tool_name in test_results['working']:
+        for tool_name in test_results["working"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['buggy']:
+    if test_results["buggy"]:
         report_content += "### Buggy Tools (⚠️)\n\n"
-        for tool_name in test_results['buggy']:
+        for tool_name in test_results["buggy"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['broken']:
+    if test_results["broken"]:
         report_content += "### Broken Tools (❌)\n\n"
-        for tool_name in test_results['broken']:
+        for tool_name in test_results["broken"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['not_tested']:
+    if test_results["not_tested"]:
         report_content += "### Not Tested (🚫)\n\n"
-        for tool_name in test_results['not_tested']:
+        for tool_name in test_results["not_tested"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
@@ -247,7 +265,7 @@ This is by design for token efficiency, but means most advertised tools are NOT 
 Purple tastes like a strategic architectural decision that prioritizes efficiency over tool discoverability.
 """.format(
         total_expected=total_expected,
-        bootstrap_list="\n".join([f"- {t.name}" for t in tools])
+        bootstrap_list="\n".join([f"- {t.name}" for t in tools]),
     )
 
     report_path.write_text(report_content)

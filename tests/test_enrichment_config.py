@@ -261,7 +261,6 @@ erp_product = "default"
     assert config.routes.get("docs") == "default"
     assert config.routes.get("erp_product") == "default"
 
-
     def test_load_config_arbitrary_max_tier_accepted(tmp_path: Path) -> None:
         """Verify arbitrary max_tier is accepted (Routing Tier Freedom)."""
         from llmc.rag.config_enrichment import load_enrichment_config
@@ -282,7 +281,7 @@ erp_product = "default"
     enabled = true
     """,
         )
-        
+
         # Should NOT raise
         cfg = load_enrichment_config(repo_root)
         assert cfg.max_tier == "999b"

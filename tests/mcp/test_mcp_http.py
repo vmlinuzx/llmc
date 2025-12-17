@@ -3,8 +3,6 @@
 RMTA HTTP Test - Test MCP server via HTTP API
 """
 import asyncio
-import json
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -35,13 +33,12 @@ async def test_mcp_via_http():
         # Step 1: List available tools
         print(f"\n{'='*80}")
         print("PHASE 1: DISCOVERING TOOLS")
-        print('='*80)
+        print("=" * 80)
 
         print("\n→ Listing available tools...")
         try:
             resp = await client.get(
-                f"{base_url}/tools/list",
-                headers={"X-API-Key": api_key}
+                f"{base_url}/tools/list", headers={"X-API-Key": api_key}
             )
 
             if resp.status_code == 200:
@@ -52,7 +49,7 @@ async def test_mcp_via_http():
                 # Print tool inventory
                 print(f"\n{'='*80}")
                 print("TOOL INVENTORY")
-                print('='*80)
+                print("=" * 80)
                 print(f"{'Tool Name':<30} {'Description'}")
                 print("-" * 80)
                 for tool in tools:
@@ -72,14 +69,9 @@ async def test_mcp_via_http():
         # Step 2: Test each tool
         print(f"\n{'='*80}")
         print("PHASE 2: TESTING TOOLS")
-        print('='*80)
+        print("=" * 80)
 
-        test_results = {
-            "working": [],
-            "buggy": [],
-            "broken": [],
-            "not_tested": []
-        }
+        test_results = {"working": [], "buggy": [], "broken": [], "not_tested": []}
 
         # Test cases for each tool
         test_cases = {
@@ -110,9 +102,16 @@ async def test_mcp_via_http():
             "linux_proc_stop": {},
             "linux_fs_write": {"path": "/tmp/rmta_test.txt", "content": "test content"},
             "linux_fs_mkdir": {"path": "/tmp/rmta_test_dir"},
-            "linux_fs_move": {"source": "/tmp/rmta_test.txt", "destination": "/tmp/rmta_test_moved.txt"},
+            "linux_fs_move": {
+                "source": "/tmp/rmta_test.txt",
+                "destination": "/tmp/rmta_test_moved.txt",
+            },
             "linux_fs_delete": {"path": "/tmp/rmta_test_moved.txt"},
-            "linux_fs_edit": {"path": "/tmp/rmta_test_dir/test.txt", "old_text": "", "new_text": "new content"},
+            "linux_fs_edit": {
+                "path": "/tmp/rmta_test_dir/test.txt",
+                "old_text": "",
+                "new_text": "new content",
+            },
             "inspect": {"target": "README.md"},
         }
 
@@ -128,7 +127,7 @@ async def test_mcp_via_http():
                 resp = await client.post(
                     f"{base_url}/tools/call",
                     headers={"X-API-Key": api_key},
-                    json={"name": tool_name, "arguments": test_args}
+                    json={"name": tool_name, "arguments": test_args},
                 )
 
                 if resp.status_code == 200:
@@ -136,13 +135,13 @@ async def test_mcp_via_http():
 
                     # Check if response contains an error
                     if "error" in result_data:
-                        print(f"  ❌ BROKEN: Tool returned error")
+                        print("  ❌ BROKEN: Tool returned error")
                         error_msg = result_data.get("error", "")[:200]
                         print(f"     Error: {error_msg}")
                         test_results["broken"].append(tool_name)
                     else:
                         # Success!
-                        print(f"  ✅ WORKING: Tool executed successfully")
+                        print("  ✅ WORKING: Tool executed successfully")
 
                         # Show response preview
                         content = result_data.get("content", [])
@@ -156,7 +155,7 @@ async def test_mcp_via_http():
                         test_results["working"].append(tool_name)
 
                 elif resp.status_code == 404:
-                    print(f"  ❌ BROKEN: Tool not found (404)")
+                    print("  ❌ BROKEN: Tool not found (404)")
                     test_results["broken"].append(tool_name)
                 else:
                     print(f"  ❌ BROKEN: HTTP {resp.status_code}")
@@ -170,7 +169,7 @@ async def test_mcp_via_http():
         # Step 3: Generate report
         print(f"\n{'='*80}")
         print("TEST RESULTS SUMMARY")
-        print('='*80)
+        print("=" * 80)
         print(f"✅ Working: {len(test_results['working'])}")
         print(f"⚠️  Buggy: {len(test_results['buggy'])}")
         print(f"❌ Broken: {len(test_results['broken'])}")
@@ -187,7 +186,11 @@ async def generate_report(tools, test_results):
     report_path = Path("tests/REPORTS/mcp") / f"rmta_report_{timestamp}.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
 
-    total_tested = len(test_results['working']) + len(test_results['buggy']) + len(test_results['broken'])
+    total_tested = (
+        len(test_results["working"])
+        + len(test_results["buggy"])
+        + len(test_results["broken"])
+    )
     total_expected = len(tools)
 
     report_content = f"""# RMTA Report - {timestamp}
@@ -218,27 +221,27 @@ async def generate_report(tools, test_results):
 
     report_content += "\n## Test Results\n\n"
 
-    if test_results['working']:
+    if test_results["working"]:
         report_content += "### Working Tools (✅)\n\n"
-        for tool_name in test_results['working']:
+        for tool_name in test_results["working"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['buggy']:
+    if test_results["buggy"]:
         report_content += "### Buggy Tools (⚠️)\n\n"
-        for tool_name in test_results['buggy']:
+        for tool_name in test_results["buggy"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['broken']:
+    if test_results["broken"]:
         report_content += "### Broken Tools (❌)\n\n"
-        for tool_name in test_results['broken']:
+        for tool_name in test_results["broken"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 
-    if test_results['not_tested']:
+    if test_results["not_tested"]:
         report_content += "### Not Tested (🚫)\n\n"
-        for tool_name in test_results['not_tested']:
+        for tool_name in test_results["not_tested"]:
             report_content += f"- {tool_name}\n"
         report_content += "\n"
 

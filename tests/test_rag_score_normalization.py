@@ -66,7 +66,9 @@ def test_score_normalization_basic():
     r1 = results[0]
     assert r1.span_hash == "h1"
     assert r1.score == pytest.approx(1.0, 0.001)
-    assert hasattr(r1, "normalized_score"), "SpanSearchResult must have normalized_score"
+    assert hasattr(
+        r1, "normalized_score"
+    ), "SpanSearchResult must have normalized_score"
     assert r1.normalized_score == pytest.approx(100.0, 0.1)
 
     # Check Result 2 (Middle)
@@ -115,6 +117,6 @@ def test_score_normalization_clamping():
     assert r.score > 1.0
     # 1.0 (cosine) + 0.15 (stem match) - 0.08 (test penalty) = 1.07
     assert r.score == pytest.approx(1.07, 0.001)
-    
+
     # Normalized score should be clamped
     assert r.normalized_score == 100.0

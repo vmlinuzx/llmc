@@ -47,7 +47,8 @@ class TestComputeRoute:
 
             # Mock load_status to raise exception
             with patch(
-                "llmc.rag_nav.gateway.load_status", side_effect=Exception("Module not found")
+                "llmc.rag_nav.gateway.load_status",
+                side_effect=Exception("Module not found"),
             ):
                 decision = compute_route(repo_root)
 
@@ -87,7 +88,9 @@ class TestComputeRoute:
             mock_status.last_indexed_commit = test_sha
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value=test_sha):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value=test_sha
+                ):
                     decision = compute_route(repo_root)
 
                     assert decision.use_rag is True
@@ -109,7 +112,9 @@ class TestComputeRoute:
             mock_status.last_indexed_commit = indexed_sha
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value=current_sha):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value=current_sha
+                ):
                     decision = compute_route(repo_root)
 
                     assert decision.use_rag is False
@@ -145,8 +150,12 @@ class TestComputeRoute:
             # last_indexed_commit is None or missing
 
             with patch.object(mock_status, "last_indexed_commit", None):
-                with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                    with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway.load_status", return_value=mock_status
+                ):
+                    with patch(
+                        "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                    ):
                         decision = compute_route(repo_root)
 
                         assert decision.use_rag is False
@@ -167,8 +176,12 @@ class TestComputeRoute:
                 mock_status.index_state = index_state
                 mock_status.last_indexed_commit = test_sha
 
-                with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                    with patch("llmc.rag_nav.gateway._detect_git_head", return_value=test_sha):
+                with patch(
+                    "llmc.rag_nav.gateway.load_status", return_value=mock_status
+                ):
+                    with patch(
+                        "llmc.rag_nav.gateway._detect_git_head", return_value=test_sha
+                    ):
                         decision = compute_route(repo_root)
 
                         assert decision.use_rag is True
@@ -210,7 +223,9 @@ class TestComputeRoute:
                 mock_status = Mock()
                 mock_status.index_state = state
 
-                with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
+                with patch(
+                    "llmc.rag_nav.gateway.load_status", return_value=mock_status
+                ):
                     decision = compute_route(repo_root)
 
                     assert decision.use_rag is False
@@ -227,7 +242,9 @@ class TestComputeRoute:
             mock_status.last_indexed_commit = "abc123"
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                ):
                     decision = compute_route(repo_root)
 
                     # Verify it's a RouteDecision dataclass
@@ -351,7 +368,9 @@ class TestMissingGraphWhenUseRagTrue:
             mock_status.last_indexed_commit = "abc123"
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                ):
                     decision = compute_route(repo_root)
 
                     # Decision says use RAG
@@ -379,7 +398,9 @@ class TestMissingGraphWhenUseRagTrue:
             mock_status.last_indexed_commit = "abc123"
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                ):
                     decision = compute_route(repo_root)
 
                     # Still says use RAG based on status
@@ -404,7 +425,9 @@ class TestMissingGraphWhenUseRagTrue:
             mock_status.last_indexed_commit = "abc123"
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                ):
                     decision = compute_route(repo_root)
 
                     assert decision.use_rag is True
@@ -431,7 +454,9 @@ class TestMissingGraphWhenUseRagTrue:
             mock_status.last_indexed_commit = "abc123"
 
             with patch("llmc.rag_nav.gateway.load_status", return_value=mock_status):
-                with patch("llmc.rag_nav.gateway._detect_git_head", return_value="abc123"):
+                with patch(
+                    "llmc.rag_nav.gateway._detect_git_head", return_value="abc123"
+                ):
                     decision = compute_route(repo_root)
 
                     assert decision.use_rag is True

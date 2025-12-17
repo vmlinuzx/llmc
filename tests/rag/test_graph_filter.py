@@ -17,6 +17,7 @@ def sample_edges():
         GraphEdge("s4", "t4", "REFERENCES", 0.6),
     ]
 
+
 def test_filter_by_confidence_keeps_high(sample_edges):
     """Test filtering keeps edges above or equal to threshold."""
     filtered = filter_edges_by_confidence(sample_edges, 0.8)
@@ -24,16 +25,19 @@ def test_filter_by_confidence_keeps_high(sample_edges):
     assert filtered[0].score == 0.9
     assert filtered[1].score == 0.8
 
+
 def test_filter_by_confidence_removes_low(sample_edges):
     """Test filtering removes edges below threshold."""
     filtered = filter_edges_by_confidence(sample_edges, 0.95)
     assert len(filtered) == 0
+
 
 def test_filter_by_type_single(sample_edges):
     """Test filtering by a single type."""
     filtered = filter_edges_by_type(sample_edges, {"REQUIRES"})
     assert len(filtered) == 1
     assert filtered[0].edge_type == "REQUIRES"
+
 
 def test_filter_by_type_multiple(sample_edges):
     """Test filtering by multiple types."""
@@ -43,6 +47,7 @@ def test_filter_by_type_multiple(sample_edges):
     assert "REFERENCES" in types
     assert "RELATED_TO" in types
     assert "REQUIRES" not in types
+
 
 def test_filter_llm_edges(sample_edges):
     """Test filtering only LLM extracted edges."""

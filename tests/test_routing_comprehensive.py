@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
+from llmc.rag.config import is_query_routing_enabled
 from llmc.routing.content_type import classify_slice
 from llmc.routing.query_type import classify_query
-from llmc.rag.config import is_query_routing_enabled
 
 # ==============================================================================
 # Slice Classification Tests
@@ -14,7 +14,9 @@ from llmc.rag.config import is_query_routing_enabled
 def test_classify_slice_shebang_override():
     """Test that a shebang overrides the extension or lack thereof."""
     # .txt file but has python shebang
-    res = classify_slice(Path("script.txt"), None, "#!/usr/bin/env python3\nprint('hi')")
+    res = classify_slice(
+        Path("script.txt"), None, "#!/usr/bin/env python3\nprint('hi')"
+    )
     assert res.slice_type == "code"
     assert res.slice_language == "python"
     assert res.confidence == 1.0
@@ -81,7 +83,9 @@ def test_classify_query_mixed_code_text():
     assert res["route_name"] == "code"
     # Updated to accept code-structure reason which is produced by current classifier
     reasons = str(res["reasons"])
-    assert "keywords=" in reasons or "pattern=" in reasons or "code-structure=" in reasons
+    assert (
+        "keywords=" in reasons or "pattern=" in reasons or "code-structure=" in reasons
+    )
 
 
 def test_classify_query_erp_keywords_no_context():
@@ -90,7 +94,9 @@ def test_classify_query_erp_keywords_no_context():
     res = classify_query(query)
     assert res["route_name"] == "erp"
     reasons = str(res["reasons"])
-    assert "sku_pattern=" in reasons or "erp_keywords=" in reasons or "erp:sku=" in reasons
+    assert (
+        "sku_pattern=" in reasons or "erp_keywords=" in reasons or "erp:sku=" in reasons
+    )
 
 
 def test_classify_query_ambiguous_fallback():
@@ -111,10 +117,12 @@ def test_classify_query_ambiguous_fallback():
 def mock_config_disable_routing(monkeypatch, tmp_path):
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [routing.options]
 enable_query_routing = false
-""")
+"""
+    )
     return repo_root
 
 
@@ -127,10 +135,12 @@ def test_is_query_routing_enabled_false(mock_config_disable_routing):
 def mock_config_enable_routing(monkeypatch, tmp_path):
     repo_root = tmp_path / "repo"
     repo_root.mkdir()
-    (repo_root / "llmc.toml").write_text("""
+    (repo_root / "llmc.toml").write_text(
+        """
 [routing.options]
 enable_query_routing = true
-""")
+"""
+    )
     return repo_root
 
 

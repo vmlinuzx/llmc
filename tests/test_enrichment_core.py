@@ -26,7 +26,9 @@ def _make_db_with_single_span(tmpdir: Path) -> tuple[Database, Path, str]:
     )
     db.conn.commit()
 
-    file_id = db.conn.execute("SELECT id FROM files WHERE path=?", (str(file_rel),)).fetchone()[0]
+    file_id = db.conn.execute(
+        "SELECT id FROM files WHERE path=?", (str(file_rel),)
+    ).fetchone()[0]
 
     span_hash = "span_hello"
     db.conn.execute(

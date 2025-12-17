@@ -170,7 +170,9 @@ class Scheduler:
 
         slots = max(self.config.max_concurrent_jobs - len(running), 0)
         if slots <= 0:
-            self.logger.debug("Worker pool is full; deferring %d jobs", len(eligible_jobs))
+            self.logger.debug(
+                "Worker pool is full; deferring %d jobs", len(eligible_jobs)
+            )
             return
 
         to_run = eligible_jobs[:slots]
@@ -190,7 +192,10 @@ class Scheduler:
         if state.last_run_status == "running" and not force:
             return False
 
-        if state.consecutive_failures >= self.config.max_consecutive_failures and not force:
+        if (
+            state.consecutive_failures >= self.config.max_consecutive_failures
+            and not force
+        ):
             return False
 
         if state.next_eligible_at and now < state.next_eligible_at and not force:

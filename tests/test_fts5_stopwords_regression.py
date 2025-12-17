@@ -33,7 +33,7 @@ def test_db(tmp_path: Path) -> Database:
     """Create a test database with sample enrichments."""
     db_path = tmp_path / "test.db"
     db = Database(db_path)
-    
+
     # Add a test file
     file_rec = FileRecord(
         path=Path("test/model_router.py"),
@@ -43,7 +43,7 @@ def test_db(tmp_path: Path) -> Database:
         mtime=1234567890.0,
     )
     file_id = db.upsert_file(file_rec)
-    
+
     # Add spans with enrichments containing critical keywords
     test_cases = [
         ("ModelRouter", "class", "Handles model selection and routing logic"),
@@ -51,7 +51,7 @@ def test_db(tmp_path: Path) -> Database:
         ("DataPipeline", "class", "Data preprocessing and batching system"),
         ("train_system", "function", "Training system initialization and execution"),
     ]
-    
+
     for symbol, kind, summary in test_cases:
         span = SpanRecord(
             file_path=file_rec.path,
@@ -65,7 +65,7 @@ def test_db(tmp_path: Path) -> Database:
             span_hash=f"hash_{symbol}",
             slice_type="code",
         )
-        
+
         db.conn.execute(
             """
             INSERT INTO spans (
@@ -85,7 +85,7 @@ def test_db(tmp_path: Path) -> Database:
                 span.slice_type,
             ),
         )
-        
+
         # Add enrichment
         db.store_enrichment(
             span.span_hash,
@@ -95,13 +95,15 @@ def test_db(tmp_path: Path) -> Database:
                 "schema_version": "1.0",
             },
         )
-    
+
     db.conn.commit()
-    
+
     # Rebuild FTS index
     count = db.rebuild_enrichments_fts()
-    assert count == len(test_cases), f"FTS rebuild should index {len(test_cases)} enrichments"
-    
+    assert count == len(
+        test_cases
+    ), f"FTS rebuild should index {len(test_cases)} enrichments"
+
     return db
 
 
@@ -109,13 +111,13 @@ def test_fts5_no_stopwords_single_keyword(test_db: Database) -> None:
     """Test that single critical keywords return results (not filtered as stopwords)."""
     for keyword in CRITICAL_KEYWORDS[:4]:  # Test subset for speed
         results = test_db.search_enrichments_fts(keyword, limit=10)
-        
+
         # Should return at least one result
         assert len(results) > 0, (
             f"FAIL: Keyword '{keyword}' returned zero results. "
             f"This indicates FTS5 stopword filtering is still active!"
         )
-        
+
         # Verify result contains the keyword
         found_keyword = False
         for symbol, summary, _score in results:
@@ -125,7 +127,7 @@ def test_fts5_no_stopwords_single_keyword(test_db: Database) -> None:
             if symbol and keyword.lower() in symbol.lower():
                 found_keyword = True
                 break
-        
+
         assert found_keyword, (
             f"FAIL: Keyword '{keyword}' in results but not in content. "
             f"Results: {results}"
@@ -135,18 +137,18 @@ def test_fts5_no_stopwords_single_keyword(test_db: Database) -> None:
 def test_fts5_no_stopwords_model_specific(test_db: Database) -> None:
     """Specific test for 'model' keyword (the original P0 bug)."""
     results = test_db.search_enrichments_fts("model", limit=10)
-    
+
     assert len(results) >= 2, (
         f"FAIL: Query 'model' returned only {len(results)} results. "
         f"Expected at least 2 (ModelRouter + select_model). "
         f"FTS5 stopword filtering may still be active!"
     )
-    
+
     # Check that ModelRouter and select_model are in results
     symbols = {r[0] for r in results}
-    assert "ModelRouter" in symbols or "select_model" in symbols, (
-        f"FAIL: Expected symbols not found in results. Got: {symbols}"
-    )
+    assert (
+        "ModelRouter" in symbols or "select_model" in symbols
+    ), f"FAIL: Expected symbols not found in results. Got: {symbols}"
 
 
 def test_fts5_no_stopwords_multi_word(test_db: Database) -> None:
@@ -156,10 +158,10 @@ def test_fts5_no_stopwords_multi_word(test_db: Database) -> None:
         "data system",
         "training pipeline",
     ]
-    
+
     for query in test_queries:
         results = test_db.search_enrichments_fts(query, limit=10)
-        
+
         # Should return at least one result
         # Note: Not all queries will match, but none should return zero due to stopword filtering
         # The key is that the query executes without FTS5 syntax errors
@@ -178,30 +180,30 @@ def test_fts5_unicode61_tokenizer_active(test_db: Database) -> None:
         WHERE type='table' AND name='enrichments_fts'
         """
     ).fetchall()
-    
+
     assert len(rows) == 1, "enrichments_fts table should exist"
-    
+
     sql = rows[0][0].lower()
     assert "unicode61" in sql, (
         f"FAIL: FTS table not using unicode61 tokenizer. "
         f"This means stopwords may still be active! SQL: {sql}"
     )
-    assert "porter" not in sql, (
-        f"FAIL: FTS table using porter tokenizer which has stopwords! SQL: {sql}"
-    )
+    assert (
+        "porter" not in sql
+    ), f"FAIL: FTS table using porter tokenizer which has stopwords! SQL: {sql}"
 
 
 def test_fts5_critical_keywords_comprehensive(test_db: Database) -> None:
     """Comprehensive test of all critical keywords."""
     failed_keywords = []
-    
+
     for keyword in CRITICAL_KEYWORDS:
         results = test_db.search_enrichments_fts(keyword, limit=10)
         if len(results) == 0:
             # Not all keywords will  have results, but "model" and "data" should
             if keyword in ["model", "data", "system"]:
                 failed_keywords.append(keyword)
-    
+
     assert len(failed_keywords) == 0, (
         f"FAIL: Critical keywords returned zero results: {failed_keywords}. "
         f"FTS5 stopword filtering may still be active!"

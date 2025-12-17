@@ -30,7 +30,12 @@ def test_graph_node_coverage():
                     "path": "file1.py:1-10",
                     "metadata": {},
                 },
-                {"id": "file2:class_b", "kind": "class", "path": "file2.py:5-20", "metadata": {}},
+                {
+                    "id": "file2:class_b",
+                    "kind": "class",
+                    "path": "file2.py:5-20",
+                    "metadata": {},
+                },
             ],
             "relations": [],
         }
@@ -81,11 +86,20 @@ def test_graph_edge_construction():
                     "path": "module.py:15-25",
                     "metadata": {},
                 },
-                {"id": "module:ClassA", "kind": "class", "path": "module.py:30-50", "metadata": {}},
+                {
+                    "id": "module:ClassA",
+                    "kind": "class",
+                    "path": "module.py:30-50",
+                    "metadata": {},
+                },
             ],
             "relations": [
                 {"src": "module:func_a", "edge": "calls", "dst": "module:func_b"},
-                {"src": "module:func_b", "edge": "instantiates", "dst": "module:ClassA"},
+                {
+                    "src": "module:func_b",
+                    "edge": "instantiates",
+                    "dst": "module:ClassA",
+                },
             ],
         }
         json.dump(graph_data, f)
@@ -124,7 +138,12 @@ def test_graph_self_consistency():
             "indexed_at": "2025-11-16T00:00:00",
             "repo": str(REPO_ROOT),
             "entities": [
-                {"id": "known:entity", "kind": "function", "path": "test.py:1-10", "metadata": {}}
+                {
+                    "id": "known:entity",
+                    "kind": "function",
+                    "path": "test.py:1-10",
+                    "metadata": {},
+                }
             ],
             "relations": [
                 {

@@ -4,10 +4,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from llmc.routing.router import create_router
 from llmc.rag.config import load_config
 from llmc.rag.search import search_spans
-from llmc.rag.utils import find_repo_root
+from llmc.core import find_repo_root
+from llmc.routing.router import create_router
 
 log = logging.getLogger(__name__)
 
@@ -119,15 +119,19 @@ def evaluate_routing(
 
     metrics = {
         "total_examples": total,
-        "routing_accuracy": (routing_correct_count / routing_total_evaluated)
-        if routing_total_evaluated
-        else 0.0,
-        "retrieval_hit_at_k": (retrieval_hit_count / retrieval_total_evaluated)
-        if retrieval_total_evaluated
-        else 0.0,
-        "retrieval_mrr": (mrr_sum / retrieval_total_evaluated)
-        if retrieval_total_evaluated
-        else 0.0,
+        "routing_accuracy": (
+            (routing_correct_count / routing_total_evaluated)
+            if routing_total_evaluated
+            else 0.0
+        ),
+        "retrieval_hit_at_k": (
+            (retrieval_hit_count / retrieval_total_evaluated)
+            if retrieval_total_evaluated
+            else 0.0
+        ),
+        "retrieval_mrr": (
+            (mrr_sum / retrieval_total_evaluated) if retrieval_total_evaluated else 0.0
+        ),
     }
 
     return metrics

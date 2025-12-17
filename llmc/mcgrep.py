@@ -20,11 +20,11 @@ This is a thin UX wrapper around LLMC's semantic search with:
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
+import sys
 
-import typer
 from rich.console import Console
+import typer
 
 from llmc.core import find_repo_root
 
@@ -52,14 +52,14 @@ def _format_source_indicator(source: str, freshness: str) -> str:
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
     """Core search logic."""
     from llmc.rag_nav.tool_handlers import tool_rag_search
-    
+
     try:
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcgrep init")
         raise typer.Exit(1)
-    
+
     # Run search with freshness-aware fallback
     try:
         result = tool_rag_search(repo_root, query, limit=limit)
@@ -69,11 +69,11 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
     except Exception as e:
         console.print(f"[red]Search error:[/red] {e}")
         raise typer.Exit(1)
-    
+
     source = getattr(result, "source", "UNKNOWN")
     freshness = getattr(result, "freshness_state", "UNKNOWN")
     items = getattr(result, "items", []) or []
-    
+
     # Filter by path if provided
     if path:
         path_filter = Path(path).resolve()
@@ -83,26 +83,30 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         except (ValueError, TypeError):
             pass
         items = [it for it in items if str(path_filter) in str(it.file)]
-    
+
     if not items:
         console.print(f"[dim]No results for:[/dim] {query}")
-        console.print(f"[dim]Source: {_format_source_indicator(source, freshness)}[/dim]")
+        console.print(
+            f"[dim]Source: {_format_source_indicator(source, freshness)}[/dim]"
+        )
         return
-    
+
     # Header
     indicator = _format_source_indicator(source, freshness)
     console.print(f"[bold]{len(items)} results[/bold] {indicator}\n")
-    
+
     # Results
     for i, item in enumerate(items, 1):
         loc = item.snippet.location
         file_path = loc.path
         start = loc.start_line
         end = loc.end_line
-        
+
         # File location
-        console.print(f"[bold cyan]{i}.[/bold cyan] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]")
-        
+        console.print(
+            f"[bold cyan]{i}.[/bold cyan] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]"
+        )
+
         # Snippet preview (first 2 lines)
         text = (item.snippet.text or "").strip()
         if text:
@@ -112,7 +116,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
                 if len(line) > 100:
                     line = line[:97] + "..."
                 console.print(f"   [dim]{line}[/dim]")
-        
+
         # Enrichment summary if available
         if show_summary:
             enrichment = getattr(item, "enrichment", None)
@@ -124,7 +128,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
                     if len(summary) > 120:
                         summary = summary[:117] + "..."
                     console.print(f"   [green]→ {summary}[/green]")
-        
+
         console.print()  # spacing
 
 
@@ -133,11 +137,13 @@ def search(
     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
     limit: int = typer.Option(10, "-n", "-m", "--limit", help="Max results"),
     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
-    summary: bool = typer.Option(True, "--summary/--no-summary", "-s", help="Show enrichment summaries"),
+    summary: bool = typer.Option(
+        True, "--summary/--no-summary", "-s", help="Show enrichment summaries"
+    ),
 ):
     """
     Semantic search over your codebase.
-    
+
     Examples:
         mcgrep search "where is authentication handled?"
         mcgrep search "database connection" -n 20
@@ -150,10 +156,11 @@ def search(
 def watch():
     """
     Start background indexer (alias for 'llmc service start').
-    
+
     Keeps the semantic index updated as files change.
     """
     from llmc.commands.service import start
+
     console.print("[bold]Starting mcgrep watcher...[/bold]")
     start()
 
@@ -164,15 +171,15 @@ def status():
     Check index health and freshness.
     """
     from llmc.rag.doctor import run_rag_doctor
-    
+
     try:
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         raise typer.Exit(1)
-    
+
     report = run_rag_doctor(repo_root)
-    
+
     status_val = report.get("status", "UNKNOWN")
     if status_val == "OK":
         console.print("[green]● Index healthy[/green]")
@@ -182,14 +189,14 @@ def status():
         console.print("[yellow]● Index empty[/yellow] - run: mcgrep watch")
     else:
         console.print(f"[red]● {status_val}[/red]")
-    
+
     # Stats
     if "spans" in report:
         console.print(f"  Files: {report.get('files', '?')}")
         console.print(f"  Spans: {report.get('spans', '?')}")
         console.print(f"  Enriched: {report.get('enriched', '?')}")
         console.print(f"  Embedded: {report.get('embedded', '?')}")
-    
+
     # Pending work
     pending = report.get("pending_enrichment", 0)
     if pending > 0:
@@ -200,12 +207,12 @@ def status():
 def init():
     """
     Register the current directory with LLMC.
-    
+
     Creates .llmc/ workspace, generates config, and starts initial index.
     Equivalent to: llmc repo register .
     """
     from llmc.commands.repo import register
-    
+
     console.print("[bold]Registering repository with LLMC...[/bold]")
     register(path=".", skip_index=False, skip_enrich=True)
     console.print("\n[green]Ready![/green] Run: mcgrep watch")
@@ -215,6 +222,7 @@ def init():
 def stop():
     """Stop the background indexer."""
     from llmc.commands.service import stop as service_stop
+
     service_stop()
 
 
@@ -222,33 +230,43 @@ def main():
     """Entry point with mgrep-style default behavior."""
     # Handle no args - show friendly help instead of error
     if len(sys.argv) == 1:
-        console.print("[bold]mcgrep[/bold] - Semantic grep for code. Private. Local. No cloud.\n")
+        console.print(
+            "[bold]mcgrep[/bold] - Semantic grep for code. Private. Local. No cloud.\n"
+        )
         console.print("[dim]Usage:[/dim]")
-        console.print("  mcgrep [green]\"your query\"[/green]          Search for code semantically")
-        console.print("  mcgrep [green]status[/green]                 Check index health")
-        console.print("  mcgrep [green]watch[/green]                  Start background indexer")
-        console.print("  mcgrep [green]init[/green]                   Register current repo")
+        console.print(
+            '  mcgrep [green]"your query"[/green]          Search for code semantically'
+        )
+        console.print(
+            "  mcgrep [green]status[/green]                 Check index health"
+        )
+        console.print(
+            "  mcgrep [green]watch[/green]                  Start background indexer"
+        )
+        console.print(
+            "  mcgrep [green]init[/green]                   Register current repo"
+        )
         console.print()
         console.print("[dim]Examples:[/dim]")
-        console.print("  mcgrep \"authentication flow\"")
-        console.print("  mcgrep \"database connection\" --limit 10")
-        console.print("  mcgrep -n 5 \"error handling\"")
+        console.print('  mcgrep "authentication flow"')
+        console.print('  mcgrep "database connection" --limit 10')
+        console.print('  mcgrep -n 5 "error handling"')
         console.print()
         console.print("[dim]Traditional grep (for exact matches):[/dim]")
-        console.print("  grep -rn \"pattern\" .              Recursive with line numbers")
-        console.print("  grep -ri \"Pattern\" .              Case insensitive")
-        console.print("  grep -rn --include=\"*.py\" \"x\" .   Filter by file type")
+        console.print('  grep -rn "pattern" .              Recursive with line numbers')
+        console.print('  grep -ri "Pattern" .              Case insensitive')
+        console.print('  grep -rn --include="*.py" "x" .   Filter by file type')
         console.print()
         console.print("[dim]Run 'mcgrep --help' for full options.[/dim]")
         return
-    
+
     # Handle bare query without 'search' subcommand
     # e.g., `mcgrep "my query"` instead of `mcgrep search "my query"`
     # Also handles: `mcgrep -n 5 "my query"`
     first_arg = sys.argv[1]
     known_commands = {"search", "watch", "status", "init", "stop"}
     help_flags = {"--help", "-h"}
-    
+
     # If first arg is a help flag, let typer handle it
     if first_arg in help_flags:
         pass
@@ -258,7 +276,7 @@ def main():
     # Otherwise, insert 'search' - could be a query or a search flag like -n
     else:
         sys.argv.insert(1, "search")
-    
+
     app()
 
 

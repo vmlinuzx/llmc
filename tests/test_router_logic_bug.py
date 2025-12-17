@@ -13,7 +13,11 @@ def test_router_promote_once_false_should_return_none():
 
     # Test with 7b tier and a failure that would normally promote
     next_tier = choose_next_tier_on_failure(
-        failure_type="parse", current_tier="7b", metrics={}, settings=settings, promote_once=False
+        failure_type="parse",
+        current_tier="7b",
+        metrics={},
+        settings=settings,
+        promote_once=False,
     )
 
     # When promote_once=False, we should NOT promote at all.
@@ -28,7 +32,11 @@ def test_router_promote_once_true_should_promote():
 
     # Test with 7b tier and a failure that would promote
     next_tier = choose_next_tier_on_failure(
-        failure_type="parse", current_tier="7b", metrics={}, settings=settings, promote_once=True
+        failure_type="parse",
+        current_tier="7b",
+        metrics={},
+        settings=settings,
+        promote_once=True,
     )
 
     # Should promote to 14b
@@ -57,7 +65,11 @@ def test_router_promote_once_with_14b():
 
     # 14b should always go to nano (downgrade)
     next_tier = choose_next_tier_on_failure(
-        failure_type="parse", current_tier="14b", metrics={}, settings=settings, promote_once=True
+        failure_type="parse",
+        current_tier="14b",
+        metrics={},
+        settings=settings,
+        promote_once=True,
     )
 
     assert next_tier == "nano"
@@ -69,7 +81,11 @@ def test_router_promote_once_with_nano():
 
     # Nano can't be promoted further
     next_tier = choose_next_tier_on_failure(
-        failure_type="parse", current_tier="nano", metrics={}, settings=settings, promote_once=True
+        failure_type="parse",
+        current_tier="nano",
+        metrics={},
+        settings=settings,
+        promote_once=True,
     )
 
     assert next_tier is None

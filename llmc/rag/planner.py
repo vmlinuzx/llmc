@@ -137,7 +137,9 @@ def _fetch_candidates(db: Database) -> Iterable[SpanCandidate]:
         )
 
 
-def _score_candidate(tokens: Sequence[str], candidate: SpanCandidate) -> tuple[float, list[str]]:
+def _score_candidate(
+    tokens: Sequence[str], candidate: SpanCandidate
+) -> tuple[float, list[str]]:
     if not tokens:
         return 0.0, []
 
@@ -277,7 +279,9 @@ def generate_plan(
     if selected:
         rationale.extend(selected[0].rationale)
     if fallback:
-        rationale.append("confidence below threshold; include broader fallback context.")
+        rationale.append(
+            "confidence below threshold; include broader fallback context."
+        )
 
     plan = PlanResult(
         query=query,

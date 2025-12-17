@@ -5,8 +5,8 @@ Handles communication with local Ollama server for LLM inference.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 import json
-from typing import AsyncIterator
 
 import httpx
 
@@ -15,7 +15,7 @@ from llmc_agent.backends.base import Backend, GenerateRequest, GenerateResponse
 
 class OllamaBackend(Backend):
     """Ollama LLM backend."""
-    
+
     def __init__(
         self,
         base_url: str = "http://localhost:11434",
@@ -29,16 +29,16 @@ class OllamaBackend(Backend):
             "temperature": temperature,
             "num_ctx": num_ctx,
         }
-    
+
     async def generate(self, request: GenerateRequest) -> GenerateResponse:
         """Generate a response (non-streaming)."""
-        
+
         # Build messages in Ollama format
         messages = [
             {"role": "system", "content": request.system},
             *request.messages,
         ]
-        
+
         payload = {
             "model": request.model,
             "messages": messages,
@@ -49,7 +49,7 @@ class OllamaBackend(Backend):
                 "temperature": request.temperature,
             },
         }
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/chat",
@@ -57,7 +57,7 @@ class OllamaBackend(Backend):
             )
             response.raise_for_status()
             data = response.json()
-        
+
         return GenerateResponse(
             content=data["message"]["content"],
             tokens_prompt=data.get("prompt_eval_count", 0),
@@ -65,15 +65,15 @@ class OllamaBackend(Backend):
             model=data.get("model", request.model),
             finish_reason="stop" if data.get("done", False) else "unknown",
         )
-    
+
     async def generate_stream(self, request: GenerateRequest) -> AsyncIterator[str]:
         """Generate a response with streaming."""
-        
+
         messages = [
             {"role": "system", "content": request.system},
             *request.messages,
         ]
-        
+
         payload = {
             "model": request.model,
             "messages": messages,
@@ -84,7 +84,7 @@ class OllamaBackend(Backend):
                 "temperature": request.temperature,
             },
         }
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             async with client.stream(
                 "POST",
@@ -100,28 +100,28 @@ class OllamaBackend(Backend):
                                 yield data["message"]["content"]
                         except json.JSONDecodeError:
                             continue
-    
+
     async def generate_with_tools(
         self,
         request: GenerateRequest,
         tools: list[dict],
     ) -> GenerateResponse:
         """Generate a response with tool support.
-        
+
         Args:
             request: The generation request
             tools: List of tools in Ollama format
-        
+
         Returns:
             GenerateResponse with tool_calls populated if model used tools
         """
-        
+
         # Build messages in Ollama format
         messages = [
             {"role": "system", "content": request.system},
             *request.messages,
         ]
-        
+
         payload = {
             "model": request.model,
             "messages": messages,
@@ -132,11 +132,11 @@ class OllamaBackend(Backend):
                 "temperature": request.temperature,
             },
         }
-        
+
         # Add tools if provided
         if tools:
             payload["tools"] = tools
-        
+
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
                 f"{self.base_url}/api/chat",
@@ -144,12 +144,12 @@ class OllamaBackend(Backend):
             )
             response.raise_for_status()
             data = response.json()
-        
+
         # Extract tool calls if present
         message = data.get("message", {})
         tool_calls = message.get("tool_calls", [])
         content = message.get("content", "")
-        
+
         # Determine finish reason
         if tool_calls:
             finish_reason = "tool_calls"
@@ -157,7 +157,7 @@ class OllamaBackend(Backend):
             finish_reason = "stop"
         else:
             finish_reason = "unknown"
-        
+
         return GenerateResponse(
             content=content,
             tokens_prompt=data.get("prompt_eval_count", 0),
@@ -166,7 +166,7 @@ class OllamaBackend(Backend):
             finish_reason=finish_reason,
             tool_calls=tool_calls,
         )
-    
+
     async def health_check(self) -> bool:
         """Check if Ollama is available."""
         try:
@@ -175,7 +175,7 @@ class OllamaBackend(Backend):
                 return response.status_code == 200
         except Exception:
             return False
-    
+
     async def list_models(self) -> list[str]:
         """List available models."""
         try:

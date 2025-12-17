@@ -8,9 +8,10 @@ import os
 from pathlib import Path
 import time
 
+from llmc.rag.routing import is_format_allowed, resolve_domain
+
 # Import classification logic
 from llmc.routing.content_type import classify_slice
-from llmc.rag.routing import is_format_allowed, resolve_domain
 
 from .config import (
     ensure_rag_storage,
@@ -22,9 +23,9 @@ from .database import Database
 from .index_naming import resolve_index_name
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
+from llmc.core import find_repo_root
 from .utils import (
     _gitignore_matcher,
-    find_repo_root,
     git_changed_paths,
     git_commit_sha,
     iter_source_files,
@@ -91,7 +92,9 @@ def populate_span_hashes(spans: list[SpanRecord], source: bytes, lang: str) -> N
         span.span_hash = f"sha256:{h.hexdigest()}"
 
 
-def build_file_record(file_path: Path, lang: str, repo_root: Path, source: bytes) -> FileRecord:
+def build_file_record(
+    file_path: Path, lang: str, repo_root: Path, source: bytes
+) -> FileRecord:
     stat = (repo_root / file_path).stat()
     return FileRecord(
         path=file_path,
@@ -139,7 +142,9 @@ def generate_sidecar_if_enabled(
         # Silently fail sidecar generation - don't break indexing
         import sys
 
-        print(f"Warning: Failed to generate sidecar for {file_path}: {e}", file=sys.stderr)
+        print(
+            f"Warning: Failed to generate sidecar for {file_path}: {e}", file=sys.stderr
+        )
         return None
 
 
@@ -184,11 +189,15 @@ def index_repo(
             absolute_path = repo_root / relative_path
 
             # Gating check (Phase 1: block HL7/CCDA)
-            domain, reason_type, reason_detail = resolve_domain(relative_path, repo_root)
+            domain, reason_type, reason_detail = resolve_domain(
+                relative_path, repo_root
+            )
             if not is_format_allowed(domain, absolute_path, repo_root):
                 counts["skipped"] += 1
                 if show_domain_decisions:
-                    print(f"INFO indexer: file={relative_path} domain={domain} action=SKIP reason=gated_format")
+                    print(
+                        f"INFO indexer: file={relative_path} domain={domain} action=SKIP reason=gated_format"
+                    )
                 continue
 
             lang = language_for_path(relative_path)
@@ -221,23 +230,29 @@ def index_repo(
 
             # Domain logging
             index_name = resolve_index_name(f"emb_{domain}", repo_root.name, "per-repo")
-            
+
             if show_domain_decisions:
-                reason_str = f"{reason_type}:{reason_detail}" if reason_detail else reason_type
-                print(f"INFO indexer: file={relative_path} domain={domain} reason={reason_str}")
+                reason_str = (
+                    f"{reason_type}:{reason_detail}" if reason_detail else reason_type
+                )
+                print(
+                    f"INFO indexer: file={relative_path} domain={domain} reason={reason_str}"
+                )
 
             file_ms = int((time.time() - file_process_start) * 1000)
             log.info(
                 f"domain={domain} "
-                f"override=\"{reason_detail if reason_detail else reason_type}\" "
-                f"index=\"{index_name}\" "
-                f"extractor=\"TreeSitter\" "
+                f'override="{reason_detail if reason_detail else reason_type}" '
+                f'index="{index_name}" '
+                f'extractor="TreeSitter" '
                 f"chunks={len(spans)} "
                 f"ms={file_ms}"
             )
 
             # Generate sidecar (using same loaded content)
-            sidecar_path = generate_sidecar_if_enabled(relative_path, lang, source, repo_root)
+            sidecar_path = generate_sidecar_if_enabled(
+                relative_path, lang, source, repo_root
+            )
             if sidecar_path:
                 counts["sidecars"] += 1
 
@@ -293,11 +308,11 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
                     db.delete_file(rel)
                 counts["deleted"] += 1
                 continue
-            
+
             # Gating check
             domain, _, _ = resolve_domain(rel, repo_root)
             if not is_format_allowed(domain, absolute, repo_root):
-                counts["deleted"] += 1 # Effectively treated as not indexed
+                counts["deleted"] += 1  # Effectively treated as not indexed
                 # Ensure it is removed from DB if it was there
                 with db.transaction():
                     db.delete_file(rel)

@@ -39,7 +39,10 @@ class TestRagRefresh:
         """Test that script has valid bash syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -79,7 +82,9 @@ class TestRagRefreshCron:
         """Test that rag_refresh_cron.sh exists and is executable."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         assert script_path.exists(), "rag_refresh_cron.sh should exist"
-        assert os.access(script_path, os.X_OK), "rag_refresh_cron.sh should be executable"
+        assert os.access(
+            script_path, os.X_OK
+        ), "rag_refresh_cron.sh should be executable"
 
     def test_has_proper_shebang(self):
         """Test that script has proper bash shebang."""
@@ -92,7 +97,10 @@ class TestRagRefreshCron:
         """Test that script has valid bash syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -110,7 +118,10 @@ class TestRagRefreshCron:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
             subprocess.run(
-                [str(script_path), "--repo", tmpdir], check=False, capture_output=True, text=True
+                [str(script_path), "--repo", tmpdir],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # May fail without proper setup, but should accept --repo
 
@@ -119,7 +130,10 @@ class TestRagRefreshCron:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_cron.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
             subprocess.run(
-                [str(script_path), f"--repo={tmpdir}"], check=False, capture_output=True, text=True
+                [str(script_path), f"--repo={tmpdir}"],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should accept this syntax
 
@@ -224,7 +238,9 @@ class TestRagRefreshWatch:
         """Test that rag_refresh_watch.sh exists and is executable."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_watch.sh"
         assert script_path.exists(), "rag_refresh_watch.sh should exist"
-        assert os.access(script_path, os.X_OK), "rag_refresh_watch.sh should be executable"
+        assert os.access(
+            script_path, os.X_OK
+        ), "rag_refresh_watch.sh should be executable"
 
     def test_has_proper_shebang(self):
         """Test that script has proper bash shebang."""
@@ -237,7 +253,10 @@ class TestRagRefreshWatch:
         """Test that script has valid bash syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_refresh_watch.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -372,7 +391,10 @@ class TestRagSync:
         """Test that script has valid bash syntax."""
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -400,7 +422,10 @@ class TestRagSync:
         with tempfile.TemporaryDirectory() as tmpdir:
             # Test without providing path args (should fail)
             result = subprocess.run(
-                [str(script_path), "--repo", tmpdir], check=False, capture_output=True, text=True
+                [str(script_path), "--repo", tmpdir],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should fail due to missing path args
             assert result.returncode != 0
@@ -410,7 +435,10 @@ class TestRagSync:
         script_path = Path(__file__).parent.parent / "scripts" / "rag_sync.sh"
         with tempfile.TemporaryDirectory() as tmpdir:
             subprocess.run(
-                [str(script_path), f"--repo={tmpdir}"], check=False, capture_output=True, text=True
+                [str(script_path), f"--repo={tmpdir}"],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should fail due to missing path args
 

@@ -81,26 +81,28 @@ class RouteTreeView(Static):
         # Display unrouted chains
         routed_groups = set(routes.values())
         unrouted_groups = set(chain_groups.keys()) - routed_groups
-        
+
         if unrouted_groups:
             unrouted_node = tree.root.add("⚠️  Unrouted Chains", expand=False)
             for chain_group in sorted(unrouted_groups):
                 group_label = f"[yellow]{chain_group}[/]"
                 group_node = unrouted_node.add(group_label)
-                
+
                 for chain in chain_groups[chain_group]:
                     name = chain.get("name", "unknown")
                     enabled = chain.get("enabled", True)
                     status = "✓" if enabled else "✗"
                     color = "yellow" if enabled else "dim"
-                    
+
                     chain_label = f"[{color}]{status} {name}[/]"
                     group_node.add_leaf(chain_label)
 
         # Display default chain info
         info_node = tree.root.add("ℹ️  Configuration Info")
         info_node.add_leaf(f"Default Chain: {default_chain}")
-        info_node.add_leaf(f"Routing Enabled: {enrichment.get('enable_routing', False)}")
+        info_node.add_leaf(
+            f"Routing Enabled: {enrichment.get('enable_routing', False)}"
+        )
         info_node.add_leaf(f"Total Chains: {len(chains)}")
         info_node.add_leaf(f"Total Routes: {len(routes)}")
 
@@ -229,7 +231,7 @@ class ConfigTUI(App):
 def run_tui(config_path: Path | None = None) -> None:
     """
     Launch the enrichment config TUI.
-    
+
     Args:
         config_path: Path to llmc.toml. If None, searches for it in repo root.
     """
@@ -242,12 +244,12 @@ def run_tui(config_path: Path | None = None) -> None:
                 config_path = candidate
                 break
             current = current.parent
-        
+
         if config_path is None:
             raise FileNotFoundError(
                 "Could not find llmc.toml. Please run from repo root or specify path."
             )
-    
+
     app = ConfigTUI(config_path)
     app.run()
 

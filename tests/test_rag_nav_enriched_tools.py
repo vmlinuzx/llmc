@@ -10,7 +10,12 @@ class TestEnrichedTools:
     def test_model_enrichment_field(self):
         """Test that SearchItem accepts and serializes enrichment data."""
         try:
-            from llmc.rag_nav.models import EnrichmentData, SearchItem, Snippet, SnippetLocation
+            from llmc.rag_nav.models import (
+                EnrichmentData,
+                SearchItem,
+                Snippet,
+                SnippetLocation,
+            )
         except ImportError:
             pytest.fail("Models not updated yet")
 
@@ -18,7 +23,8 @@ class TestEnrichedTools:
         item = SearchItem(
             file="test.py",
             snippet=Snippet(
-                text="code", location=SnippetLocation(path="test.py", start_line=1, end_line=2)
+                text="code",
+                location=SnippetLocation(path="test.py", start_line=1, end_line=2),
             ),
             enrichment=enrich,
         )
@@ -31,7 +37,12 @@ class TestEnrichedTools:
     def test_tool_search_attaches_graph_enrichment(self, tmp_path):
         """Test that tool_rag_search attaches enrichment from graph nodes."""
         try:
-            from llmc.rag_nav.models import SearchItem, SearchResult, Snippet, SnippetLocation
+            from llmc.rag_nav.models import (
+                SearchItem,
+                SearchResult,
+                Snippet,
+                SnippetLocation,
+            )
             from llmc.rag_nav.tool_handlers import tool_rag_search
         except ImportError:
             pytest.fail("Modules not found")
@@ -72,9 +83,14 @@ class TestEnrichedTools:
         with (
             patch("llmc.rag_nav.tool_handlers._compute_route", return_value=mock_route),
             patch("llmc.rag_nav.tool_handlers.fts_search", return_value=[mock_hit]),
-            patch("llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
+            patch(
+                "llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])
+            ),
             patch("llmc.rag_nav.tool_handlers.load_rerank_weights", return_value={}),
-            patch("llmc.rag_nav.tool_handlers.rerank_hits", side_effect=lambda q, h, **k: h),
+            patch(
+                "llmc.rag_nav.tool_handlers.rerank_hits",
+                side_effect=lambda q, h, **k: h,
+            ),
         ):  # Pass-through
             result = tool_rag_search(repo_root, "login")
 
@@ -120,7 +136,9 @@ class TestEnrichedTools:
                 "llmc.rag_nav.tool_handlers.where_used_files_from_index",
                 return_value=["src/main.py"],
             ),
-            patch("llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])),
+            patch(
+                "llmc.rag_nav.tool_handlers._load_graph", return_value=(mock_nodes, [])
+            ),
         ):
             result = tool_rag_where_used(repo_root, "login")
 

@@ -21,20 +21,37 @@ _WORD = re.compile(r"[A-Za-z0-9_]+")
 
 # Extension-based scoring
 # TODO: Needs proper research - see ROADMAP
-CODE_EXTENSIONS = {'.py', '.ts', '.js', '.rs', '.go', '.c', '.cpp', '.h', '.tsx', '.jsx', '.vue', '.rb', '.java', '.kt', '.swift'}
-DOC_EXTENSIONS = {'.md', '.rst', '.txt'}
+CODE_EXTENSIONS = {
+    ".py",
+    ".ts",
+    ".js",
+    ".rs",
+    ".go",
+    ".c",
+    ".cpp",
+    ".h",
+    ".tsx",
+    ".jsx",
+    ".vue",
+    ".rb",
+    ".java",
+    ".kt",
+    ".swift",
+}
+DOC_EXTENSIONS = {".md", ".rst", ".txt"}
 
 
 def _extension_boost(path_str: str) -> float:
     """Return score modifier based on file extension and path."""
     from pathlib import Path
+
     path_lower = path_str.lower()
     ext = Path(path_str).suffix.lower()
-    
+
     # Penalize tests - zombie army suppression
-    if 'test' in path_lower or '/tests/' in path_lower:
+    if "test" in path_lower or "/tests/" in path_lower:
         return 0.2  # Heavy penalty for tests
-    
+
     if ext in CODE_EXTENSIONS:
         return 1.0  # Full weight for code
     if ext in DOC_EXTENSIONS:
@@ -47,7 +64,11 @@ def _tokens(s: str) -> list[str]:
 
 
 def _bigrams(tokens: list[str]) -> list[tuple[str, str]]:
-    return [(tokens[i], tokens[i + 1]) for i in range(len(tokens) - 1)] if len(tokens) > 1 else []
+    return (
+        [(tokens[i], tokens[i + 1]) for i in range(len(tokens) - 1)]
+        if len(tokens) > 1
+        else []
+    )
 
 
 def _jaccard(a: Iterable, b: Iterable) -> float:

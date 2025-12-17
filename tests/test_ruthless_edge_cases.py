@@ -113,7 +113,9 @@ def test_sku_regex_very_short():
         if should_match:
             assert len(matches) > 0, f"Pattern {pattern} should match but didn't"
         else:
-            assert len(matches) == 0, f"Pattern {pattern} shouldn't match but got {matches}"
+            assert (
+                len(matches) == 0
+            ), f"Pattern {pattern} shouldn't match but got {matches}"
 
 
 def test_sku_regex_weird_but_valid():
@@ -163,7 +165,9 @@ def test_code_struct_regex_pathological():
         if should_match:
             assert found_any, f"Pattern '{pattern}' should match CODE_STRUCT_REGEX"
         else:
-            assert not found_any, f"Pattern '{pattern}' shouldn't match but got {all_matches}"
+            assert (
+                not found_any
+            ), f"Pattern '{pattern}' shouldn't match but got {all_matches}"
 
 
 # ==============================================================================
@@ -426,7 +430,10 @@ def test_classify_query_alphanumeric_codes():
         print(f"'{query}' -> {result}")
         # None should match ERP pattern
         # Should default to docs
-        assert result["route_name"] in ["docs", "code"]  # Could match code if patterns match
+        assert result["route_name"] in [
+            "docs",
+            "code",
+        ]  # Could match code if patterns match
 
 
 def test_classify_query_version_numbers():
@@ -446,7 +453,9 @@ def test_classify_query_deeply_nested_structures():
     """Deeply nested code structures"""
     query = "\n".join(["    " * i + "return x" for i in range(1000)])
     result = classify_query(query)
-    print(f"Deeply nested: route={result['route_name']}, confidence={result['confidence']}")
+    print(
+        f"Deeply nested: route={result['route_name']}, confidence={result['confidence']}"
+    )
     # Should handle without crashing
     assert "route_name" in result
 

@@ -4,7 +4,6 @@ from collections.abc import Callable
 from functools import cache
 from pathlib import Path
 import re
-from typing import Any
 
 from tree_sitter import Node, Parser
 from tree_sitter_languages import get_language
@@ -142,7 +141,9 @@ def _collect_python(
         body = node.child_by_field_name("body")
         if body:
             for child in body.children:
-                spans.extend(_collect_python(child, source, file_path, scope + [class_name]))
+                spans.extend(
+                    _collect_python(child, source, file_path, scope + [class_name])
+                )
         return spans
 
     if node.type in {"function_definition", "async_function_definition"}:
@@ -156,7 +157,11 @@ def _collect_python(
                 file_path,
                 "python",
                 symbol,
-                "async_function" if node.type == "async_function_definition" else "function",
+                (
+                    "async_function"
+                    if node.type == "async_function_definition"
+                    else "function"
+                ),
                 node,
                 source,
                 _python_doc_hint(node, source),
@@ -168,7 +173,11 @@ def _collect_python(
 
 
 def _collect_js(
-    node: Node, source: bytes, file_path: Path, lang: str, scope: list[str] | None = None
+    node: Node,
+    source: bytes,
+    file_path: Path,
+    lang: str,
+    scope: list[str] | None = None,
 ) -> list[SpanRecord]:
     scope = scope or []
     spans: list[SpanRecord] = []
@@ -182,7 +191,9 @@ def _collect_js(
         body = node.child_by_field_name("body")
         if body:
             for child in body.children:
-                spans.extend(_collect_js(child, source, file_path, lang, scope + [class_name]))
+                spans.extend(
+                    _collect_js(child, source, file_path, lang, scope + [class_name])
+                )
         return spans
 
     if node.type in {"method_definition", "public_field_definition"}:
@@ -237,11 +248,15 @@ def _collect_go(
         if name_node is None:
             return spans
         receiver = node.child_by_field_name("receiver")
-        receiver_name = _node_text(receiver, source).strip().replace(" ", "") if receiver else ""
+        receiver_name = (
+            _node_text(receiver, source).strip().replace(" ", "") if receiver else ""
+        )
         func_name = _node_text(name_node, source).strip()
         symbol_parts = scope + ([receiver_name] if receiver_name else []) + [func_name]
         symbol = ".".join(part for part in symbol_parts if part)
-        spans.append(_make_span(file_path, "go", symbol or func_name, "method", node, source))
+        spans.append(
+            _make_span(file_path, "go", symbol or func_name, "method", node, source)
+        )
         return spans
 
     if node.type == "function_declaration":
@@ -275,7 +290,9 @@ def _collect_java(
         body = node.child_by_field_name("body")
         if body:
             for child in body.children:
-                spans.extend(_collect_java(child, source, file_path, scope + [class_name]))
+                spans.extend(
+                    _collect_java(child, source, file_path, scope + [class_name])
+                )
         return spans
 
     if node.type in {"method_declaration", "constructor_declaration"}:
@@ -303,34 +320,42 @@ def _slugify(text: str) -> str:
 
 def _collect_markdown(file_path: Path, source: bytes) -> list[SpanRecord]:
     """Extract spans from markdown using TechDocsExtractor.
-    
+
     Uses heading-aware chunking with size limits (2500 chars default)
     instead of creating one span per heading.
     """
     if not source:
         return []
-    
+
     try:
         from .extractors.tech_docs import TechDocsExtractor
-        
+
         extractor = TechDocsExtractor(max_chunk_chars=2500)
         content = source.decode("utf-8", errors="replace")
-        
+
         spans: list[SpanRecord] = []
-        
+
         # Pre-calculate line offsets for byte position mapping
         lines = source.splitlines(keepends=True)
         line_offsets = [0]
         for line in lines:
             line_offsets.append(line_offsets[-1] + len(line))
-        
+
         for idx, tech_span in enumerate(extractor.extract(file_path, content)):
             # Calculate byte offsets from line numbers
             start_line_idx = min(tech_span.start_line - 1, len(lines))
             end_line_idx = min(tech_span.end_line, len(lines))
-            start_byte = line_offsets[start_line_idx] if start_line_idx < len(line_offsets) else len(source)
-            end_byte = line_offsets[end_line_idx] if end_line_idx < len(line_offsets) else len(source)
-            
+            start_byte = (
+                line_offsets[start_line_idx]
+                if start_line_idx < len(line_offsets)
+                else len(source)
+            )
+            end_byte = (
+                line_offsets[end_line_idx]
+                if end_line_idx < len(line_offsets)
+                else len(source)
+            )
+
             # For split spans (section_part), we need unique byte ranges
             # Use the content itself to find actual byte position
             if tech_span.span_type == "section_part" and tech_span.content:
@@ -340,13 +365,13 @@ def _collect_markdown(file_path: Path, source: bytes) -> list[SpanRecord]:
                 # This is a workaround - ideally we'd track actual byte positions
                 start_byte = start_byte + idx
                 end_byte = start_byte + len(content_bytes)
-            
+
             # Use section_path as symbol for better searchability
             symbol = tech_span.section_path or file_path.stem
             # Truncate long section paths for symbol field
             if len(symbol) > 100:
                 symbol = symbol[:97] + "..."
-            
+
             spans.append(
                 SpanRecord(
                     file_path=file_path,
@@ -362,7 +387,7 @@ def _collect_markdown(file_path: Path, source: bytes) -> list[SpanRecord]:
                 )
             )
         return spans
-        
+
     except ImportError:
         # Fallback to empty if mistune not available
         return []

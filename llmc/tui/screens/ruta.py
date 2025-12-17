@@ -2,18 +2,18 @@
 LLMC TUI RUTA Screen - User Testing Interface.
 """
 
-import sys
 import subprocess
+import sys
 import threading
-from pathlib import Path
+
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Grid, Vertical, Horizontal
-from textual.widgets import Button, DataTable, RichLog, Static, Label
+from textual.containers import Container, Grid, Vertical
 from textual.message import Message
+from textual.widgets import Button, DataTable, RichLog
 
-from llmc.tui.base import LLMCScreen
 from llmc.core import find_repo_root
+from llmc.tui.base import LLMCScreen
 
 
 class RUTAScreen(LLMCScreen):
@@ -80,6 +80,7 @@ class RUTAScreen(LLMCScreen):
 
     class RunFinished(Message):
         """Message sent when a RUTA run finishes."""
+
         def __init__(self, success: bool, output: str) -> None:
             self.success = success
             self.output = output
@@ -98,7 +99,12 @@ class RUTAScreen(LLMCScreen):
                 left.border_title = "Scenarios"
                 yield DataTable(id="scenario-table", cursor_type="row")
                 with Container(id="controls"):
-                    yield Button("Run Selected (r)", id="btn-run", classes="action-btn", variant="primary")
+                    yield Button(
+                        "Run Selected (r)",
+                        id="btn-run",
+                        classes="action-btn",
+                        variant="primary",
+                    )
 
             # Right Panel: Output Logs
             with Vertical(id="right-panel") as right:
@@ -120,7 +126,9 @@ class RUTAScreen(LLMCScreen):
             repo_root = find_repo_root()
             scenario_dir = repo_root / "tests/usertests"
             if not scenario_dir.exists():
-                self.notify(f"No scenario directory found at {scenario_dir}", severity="warning")
+                self.notify(
+                    f"No scenario directory found at {scenario_dir}", severity="warning"
+                )
                 return
 
             # Find all yaml files
@@ -130,7 +138,8 @@ class RUTAScreen(LLMCScreen):
                 desc = "No description"
                 try:
                     import yaml
-                    with open(file, "r") as f:
+
+                    with open(file) as f:
                         data = yaml.safe_load(f)
                         desc = data.get("description", desc)
                 except Exception:
@@ -158,7 +167,7 @@ class RUTAScreen(LLMCScreen):
             else:
                 self.notify("No scenario selected.", severity="warning")
         except Exception:
-             self.notify("Please select a scenario first.", severity="warning")
+            self.notify("Please select a scenario first.", severity="warning")
 
     def action_clear_logs(self) -> None:
         """Clear the log output."""
@@ -182,7 +191,14 @@ class RUTAScreen(LLMCScreen):
             try:
                 # Construct command: python -m llmc.main usertest run <scenario>
                 # We use sys.executable to ensure we use the same python environment
-                cmd = [sys.executable, "-m", "llmc.main", "usertest", "run", scenario_name]
+                cmd = [
+                    sys.executable,
+                    "-m",
+                    "llmc.main",
+                    "usertest",
+                    "run",
+                    scenario_name,
+                ]
 
                 process = subprocess.Popen(
                     cmd,
@@ -190,7 +206,7 @@ class RUTAScreen(LLMCScreen):
                     stderr=subprocess.STDOUT,
                     text=True,
                     bufsize=1,
-                    cwd=find_repo_root() # Run from repo root
+                    cwd=find_repo_root(),  # Run from repo root
                 )
 
                 for line in process.stdout:
@@ -217,10 +233,14 @@ class RUTAScreen(LLMCScreen):
                 self.app.call_from_thread(cleanup)
 
             except Exception as e:
-                self.app.call_from_thread(log.write, f"[bold red]Execution error: {e}[/]")
+                self.app.call_from_thread(
+                    log.write, f"[bold red]Execution error: {e}[/]"
+                )
+
                 def cleanup_error():
                     self._is_running = False
                     self.query_one("#btn-run", Button).disabled = False
+
                 self.app.call_from_thread(cleanup_error)
 
         self._run_thread = threading.Thread(target=run_thread, daemon=True)

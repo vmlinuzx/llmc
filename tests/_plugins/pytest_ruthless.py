@@ -17,12 +17,16 @@ def pytest_addoption(parser):
         help="Allow network sockets in tests (default: blocked)",
     )
     grp.addoption(
-        "--allow-sleep", action="store_true", help="Allow time.sleep in tests (default: blocked)"
+        "--allow-sleep",
+        action="store_true",
+        help="Allow time.sleep in tests (default: blocked)",
     )
 
 
 def pytest_configure(config):
-    config.addinivalue_line("markers", "allow_network: permit network access for this test")
+    config.addinivalue_line(
+        "markers", "allow_network: permit network access for this test"
+    )
     config.addinivalue_line("markers", "allow_sleep: permit time.sleep in this test")
     config.addinivalue_line("markers", "slow: marks tests as slow")
     config.addinivalue_line("markers", "requires_git: test requires git installed")

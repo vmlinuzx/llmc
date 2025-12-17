@@ -75,7 +75,8 @@ EXT_LANG_MAP = {
 
 SHEBANG_REGEX = re.compile(r"^#!.*(python|bash|sh|node|env python|env bash)")
 ERP_KEY_REGEX = re.compile(
-    r'["\']?(sku|upc|asin|model_number|product_id|catalog_ref)["\']?\s*[:=]', re.IGNORECASE
+    r'["\']?(sku|upc|asin|model_number|product_id|catalog_ref)["\']?\s*[:=]',
+    re.IGNORECASE,
 )
 
 
@@ -88,10 +89,18 @@ def classify_slice(path: Path, mime: str | None, text: str) -> ClassificationRes
     # 0. ERP/Product check (High priority)
     # Path heuristics
     str(path).lower()
-    is_erp_path = any(part in path.parts for part in ["erp", "pim", "products", "catalog"])
+    is_erp_path = any(
+        part in path.parts for part in ["erp", "pim", "products", "catalog"]
+    )
 
     # Content heuristics for structured files
-    is_structured_ext = path.suffix.lower() in [".json", ".yaml", ".yml", ".csv", ".xml"]
+    is_structured_ext = path.suffix.lower() in [
+        ".json",
+        ".yaml",
+        ".yml",
+        ".csv",
+        ".xml",
+    ]
     has_erp_keys = False
     if is_structured_ext and text:
         # Scan first 2k chars for speed
@@ -142,5 +151,8 @@ def classify_slice(path: Path, mime: str | None, text: str) -> ClassificationRes
                 slice_language = "shell"
 
     return ClassificationResult(
-        slice_type=slice_type, slice_language=slice_language, confidence=confidence, reasons=reasons
+        slice_type=slice_type,
+        slice_language=slice_language,
+        confidence=confidence,
+        reasons=reasons,
     )

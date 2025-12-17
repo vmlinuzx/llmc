@@ -30,7 +30,8 @@ def test_e2e_daemon_tick_with_dummy_runner(tmp_path: Path) -> None:
 
         # Create dummy job runner that logs calls
         dummy_runner = home / "dummy_runner.py"
-        dummy_runner.write_text("""#!/usr/bin/env python3
+        dummy_runner.write_text(
+            """#!/usr/bin/env python3
 import json
 import sys
 from pathlib import Path
@@ -46,7 +47,8 @@ with open(log_file, "a") as f:
 
 # Success
 sys.exit(0)
-""")
+"""
+        )
         dummy_runner.chmod(0o755)
 
         # Create test repo
@@ -88,7 +90,9 @@ sys.exit(0)
 
         # Create daemon components
         (
-            RegistryAdapter(cfg.registry_path) if hasattr(RegistryAdapter, "__init__") else None
+            RegistryAdapter(cfg.registry_path)
+            if hasattr(RegistryAdapter, "__init__")
+            else None
         )
         from llmc.rag_daemon.registry import RegistryClient
 
@@ -126,10 +130,12 @@ def test_e2e_daemon_multiple_repos(tmp_path: Path) -> None:
 
         # Create dummy runner
         dummy_runner = home / "runner.sh"
-        dummy_runner.write_text("""#!/bin/bash
+        dummy_runner.write_text(
+            """#!/bin/bash
 echo "Running for $@"
 exit 0
-""")
+"""
+        )
         dummy_runner.chmod(0o755)
 
         # Create multiple repos
@@ -213,10 +219,12 @@ def test_e2e_daemon_with_failures(tmp_path: Path) -> None:
 
         # Create failing runner
         failing_runner = home / "failing_runner.sh"
-        failing_runner.write_text("""#!/bin/bash
+        failing_runner.write_text(
+            """#!/bin/bash
 echo "Failing job"
 exit 1
-""")
+"""
+        )
         failing_runner.chmod(0o755)
 
         # Create test repo
@@ -291,10 +299,12 @@ def test_e2e_daemon_control_flags(tmp_path: Path) -> None:
 
         # Create runner
         runner = home / "runner.sh"
-        runner.write_text("""#!/bin/bash
+        runner.write_text(
+            """#!/bin/bash
 echo "Running"
 exit 0
-""")
+"""
+        )
         runner.chmod(0o755)
 
         # Create test repo
@@ -381,9 +391,11 @@ def test_e2e_daemon_state_persistence(tmp_path: Path) -> None:
 
         # Create runner
         runner = home / "runner.sh"
-        runner.write_text("""#!/bin/bash
+        runner.write_text(
+            """#!/bin/bash
 exit 0
-""")
+"""
+        )
         runner.chmod(0o755)
 
         # Create test repo
@@ -461,10 +473,12 @@ def test_e2e_daemon_max_concurrent_jobs(tmp_path: Path) -> None:
 
         # Create slow runner
         runner = home / "slow_runner.sh"
-        runner.write_text("""#!/bin/bash
+        runner.write_text(
+            """#!/bin/bash
 sleep 2
 exit 0
-""")
+"""
+        )
         runner.chmod(0o755)
 
         # Create 5 repos
@@ -545,9 +559,11 @@ def test_e2e_daemon_with_fake_home(tmp_path: Path) -> None:
         try:
             # Create runner
             runner = temp_home / "runner.sh"
-            runner.write_text("""#!/bin/bash
+            runner.write_text(
+                """#!/bin/bash
 exit 0
-""")
+"""
+            )
             runner.chmod(0o755)
 
             # Create test repo in temp home
@@ -629,14 +645,16 @@ def test_e2e_full_workflow(tmp_path: Path) -> None:
 
         # Step 1: Create job runner
         runner = home / "job_runner.sh"
-        runner.write_text("""#!/bin/bash
+        runner.write_text(
+            """#!/bin/bash
 # Simulate RAG indexing
 echo "Indexing $@"
 # Fake some work
 sleep 1
 echo "Indexed $(date)" > "${WORKSPACE}/index/status.txt"
 exit 0
-""")
+"""
+        )
         runner.chmod(0o755)
 
         # Step 2: Create repo

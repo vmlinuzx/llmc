@@ -9,7 +9,12 @@ import pytest  # noqa: F401 - Required for pytest collection (see conftest.py)
 # Add parent to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from llmc_mcp.tools.cmd import DEFAULT_BLACKLIST, CommandSecurityError, run_cmd, validate_command
+from llmc_mcp.tools.cmd import (
+    DEFAULT_BLACKLIST,
+    CommandSecurityError,
+    run_cmd,
+    validate_command,
+)
 
 
 def test_blacklist_validation():
@@ -19,7 +24,10 @@ def test_blacklist_validation():
     # With empty blacklist, everything should be allowed
     assert validate_command(["ls", "-la"], DEFAULT_BLACKLIST) == "ls"
     assert validate_command(["rg", "pattern"], DEFAULT_BLACKLIST) == "rg"
-    assert validate_command(["/usr/bin/python", "-c", "print(1)"], DEFAULT_BLACKLIST) == "python"
+    assert (
+        validate_command(["/usr/bin/python", "-c", "print(1)"], DEFAULT_BLACKLIST)
+        == "python"
+    )
     assert validate_command(["curl", "http://example.com"], DEFAULT_BLACKLIST) == "curl"
     assert validate_command(["sed", "-i", "s/foo/bar/"], DEFAULT_BLACKLIST) == "sed"
 
@@ -44,10 +52,15 @@ def test_blacklist_validation():
 
     # Test allowlist mode
     test_allowlist = ["ls", "cat", "grep"]
-    assert validate_command(["ls", "-la"], DEFAULT_BLACKLIST, allowlist=test_allowlist) == "ls"
+    assert (
+        validate_command(["ls", "-la"], DEFAULT_BLACKLIST, allowlist=test_allowlist)
+        == "ls"
+    )
 
     try:
-        validate_command(["curl", "http://example.com"], DEFAULT_BLACKLIST, allowlist=test_allowlist)
+        validate_command(
+            ["curl", "http://example.com"], DEFAULT_BLACKLIST, allowlist=test_allowlist
+        )
         raise AssertionError("Should have raised for curl (not in allowlist)")
     except CommandSecurityError as e:
         assert "not in allowlist" in str(e)
@@ -82,7 +95,9 @@ def test_run_cmd_allowed():
     # sed should work now (was blocked by allowlist before)
     result = run_cmd("echo 'hello' | sed 's/hello/world/'", cwd, host_mode=True)
     # Note: This runs through bash, so it should work
-    assert result.success or "sed" not in result.error, f"Unexpected error: {result.error}"
+    assert (
+        result.success or "sed" not in result.error
+    ), f"Unexpected error: {result.error}"
 
     print("  ✓ Commands execute successfully")
 
@@ -95,12 +110,16 @@ def test_run_cmd_with_blacklist():
     test_blacklist = ["curl", "wget"]
 
     # curl is blacklisted - use host_mode=True to skip isolation
-    result = run_cmd("curl http://example.com", cwd, blacklist=test_blacklist, host_mode=True)
+    result = run_cmd(
+        "curl http://example.com", cwd, blacklist=test_blacklist, host_mode=True
+    )
     assert not result.success
     assert "blacklisted" in result.error
 
     # wget is blacklisted
-    result = run_cmd("wget http://example.com", cwd, blacklist=test_blacklist, host_mode=True)
+    result = run_cmd(
+        "wget http://example.com", cwd, blacklist=test_blacklist, host_mode=True
+    )
     assert not result.success
     assert "blacklisted" in result.error
 
@@ -201,12 +220,16 @@ def test_run_cmd_allowlist_blocks_unlisted():
     test_allowlist = ["ls", "cat"]  # wget and curl not in list
 
     # wget should be blocked
-    result = run_cmd("wget http://example.com", cwd, allowlist=test_allowlist, host_mode=True)
+    result = run_cmd(
+        "wget http://example.com", cwd, allowlist=test_allowlist, host_mode=True
+    )
     assert not result.success
     assert "not in allowlist" in result.error or "hard-blocked" in result.error
 
     # curl should be blocked
-    result = run_cmd("curl http://example.com", cwd, allowlist=test_allowlist, host_mode=True)
+    result = run_cmd(
+        "curl http://example.com", cwd, allowlist=test_allowlist, host_mode=True
+    )
     assert not result.success
     assert "not in allowlist" in result.error or "hard-blocked" in result.error
 
@@ -253,7 +276,7 @@ def test_config_loads_run_cmd_allowlist():
     cfg = McpConfig()
 
     # Check default allowlist is set
-    assert hasattr(cfg.tools, 'run_cmd_allowlist')
+    assert hasattr(cfg.tools, "run_cmd_allowlist")
     assert isinstance(cfg.tools.run_cmd_allowlist, list)
     # Default should include safe commands
     assert "ls" in cfg.tools.run_cmd_allowlist

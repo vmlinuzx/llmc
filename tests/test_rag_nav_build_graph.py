@@ -16,7 +16,9 @@ from llmc.rag_nav.tool_handlers import (  # type: ignore  # noqa: E402
 def test_build_graph_creates_graph_and_status(tmp_path: Path) -> None:
     # Arrange: create a tiny fake repo with a couple of .py files.
     repo_root = tmp_path
-    (repo_root / "module_a.py").write_text("def foo():\n    return 1\n", encoding="utf-8")
+    (repo_root / "module_a.py").write_text(
+        "def foo():\n    return 1\n", encoding="utf-8"
+    )
     pkg_dir = repo_root / "pkg"
     pkg_dir.mkdir()
     (pkg_dir / "__init__.py").write_text("", encoding="utf-8")

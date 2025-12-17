@@ -87,7 +87,9 @@ class TestLocalDevWorkflow:
             rag_dir = repo_path / ".rag"
             rag_dir.mkdir()
 
-            helper_script = Path(__file__).parent.parent / "scripts" / "rag_plan_helper.sh"
+            helper_script = (
+                Path(__file__).parent.parent / "scripts" / "rag_plan_helper.sh"
+            )
             if helper_script.exists():
                 subprocess.run(
                     [str(helper_script), "--repo", str(repo_path)],
@@ -104,19 +106,29 @@ class TestLocalDevWorkflow:
         # Create failing mock wrapper
         cmw = Path(__file__).parent / "fixtures" / "mock_fail_wrapper.sh"
         cmw.parent.mkdir(exist_ok=True, parents=True)
-        cmw.write_text("#!/bin/bash\necho 'Error: ANTHROPIC_AUTH_TOKEN not set' >&2\nexit 1")
+        cmw.write_text(
+            "#!/bin/bash\necho 'Error: ANTHROPIC_AUTH_TOKEN not set' >&2\nexit 1"
+        )
         cmw.chmod(0o755)
 
         if cmw.exists():
             # Test with no auth token (should fail with clear error)
             env = {}
             result = subprocess.run(
-                [str(cmw), "test"], check=False, capture_output=True, text=True, env=env, timeout=10
+                [str(cmw), "test"],
+                check=False,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=10,
             )
 
             # Should fail and provide clear error message
             assert result.returncode != 0
-            assert "ANTHROPIC_AUTH_TOKEN" in result.stderr or "not set" in result.stderr.lower()
+            assert (
+                "ANTHROPIC_AUTH_TOKEN" in result.stderr
+                or "not set" in result.stderr.lower()
+            )
 
     def test_codex_wrapper_repo_detection(self):
         """Test that codex wrapper can detect repo context."""
@@ -174,7 +186,9 @@ class TestLocalDevWorkflow:
             llmc_dir.mkdir()
 
             # Create living history
-            (llmc_dir / "living_history.md").write_text("# Living History\nTest entries")
+            (llmc_dir / "living_history.md").write_text(
+                "# Living History\nTest entries"
+            )
 
             cmw = Path(__file__).parent / "fixtures" / "mock_wrapper.sh"
             if cmw.exists():
@@ -276,7 +290,11 @@ class TestCronDrivenRefreshWorkflow:
 
                 # Should require path arguments
                 result = subprocess.run(
-                    [str(sync_script)], check=False, capture_output=True, text=True, timeout=10
+                    [str(sync_script)],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 # Should fail due to missing args
                 assert result.returncode != 0
@@ -344,7 +362,9 @@ class TestWorkflowIntegration:
     def test_log_rotation_integration(self):
         """Test log rotation scripts work together."""
         clean_script = Path(__file__).parent.parent / "scripts" / "llmc-clean-logs.sh"
-        manager_script = Path(__file__).parent.parent / "scripts" / "llmc_log_manager.py"
+        manager_script = (
+            Path(__file__).parent.parent / "scripts" / "llmc_log_manager.py"
+        )
 
         assert clean_script.exists(), "Clean logs script should exist"
         assert manager_script.exists(), "Log manager should exist"
@@ -358,7 +378,9 @@ class TestWorkflowIntegration:
             if not script.name.startswith("."):
                 with open(script) as f:
                     first_line = f.readline().strip()
-                    assert first_line.startswith("#!"), f"{script.name} should have a shebang"
+                    assert first_line.startswith(
+                        "#!"
+                    ), f"{script.name} should have a shebang"
 
     def test_scripts_use_set_euo_pipefail(self):
         """Test that shell scripts use strict error handling."""

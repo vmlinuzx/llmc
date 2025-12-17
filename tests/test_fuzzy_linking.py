@@ -9,11 +9,13 @@ except ImportError:
 
 class TestFuzzyLinking:
     def test_identify_simple_function(self):
-        source = textwrap.dedent("""
+        source = textwrap.dedent(
+            """
         def foo():
             print("hello")
             return 1
-        """).strip()
+        """
+        ).strip()
         # Line 1: def foo():
         symbol = identify_symbol_at_line(source, 1)
         assert symbol == "foo"
@@ -23,11 +25,13 @@ class TestFuzzyLinking:
         assert symbol == "foo"
 
     def test_identify_class_method(self):
-        source = textwrap.dedent("""
+        source = textwrap.dedent(
+            """
         class MyClass:
             def method(self):
                 pass
-        """).strip()
+        """
+        ).strip()
         # Line 1: class
         symbol = identify_symbol_at_line(source, 1)
         assert symbol == "MyClass"
@@ -37,11 +41,13 @@ class TestFuzzyLinking:
         assert symbol == "MyClass.method"
 
     def test_identify_module_level(self):
-        source = textwrap.dedent("""
+        source = textwrap.dedent(
+            """
         import os
         
         x = 1
-        """).strip()
+        """
+        ).strip()
         # Line 3: x = 1 (outside any def)
         symbol = identify_symbol_at_line(source, 3)
         # Should return None or special module indicator?
@@ -49,11 +55,13 @@ class TestFuzzyLinking:
         assert symbol is None
 
     def test_identify_nested_function(self):
-        source = textwrap.dedent("""
+        source = textwrap.dedent(
+            """
         def outer():
             def inner():
                 pass
-        """).strip()
+        """
+        ).strip()
         symbol = identify_symbol_at_line(source, 2)
         assert symbol == "outer.inner"
 

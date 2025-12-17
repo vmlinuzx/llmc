@@ -8,7 +8,9 @@ Provides:
 """
 
 from pathlib import Path
+
 import typer
+
 from llmc.core import find_repo_root
 
 app = typer.Typer(
@@ -16,9 +18,12 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+
 @app.command("wizard")
 def wizard(
-    models_only: bool = typer.Option(False, "--models-only", help="Only configure models (updates existing config)"),
+    models_only: bool = typer.Option(
+        False, "--models-only", help="Only configure models (updates existing config)"
+    ),
 ):
     """
     Run interactive configuration wizard.
@@ -53,7 +58,7 @@ def edit(
 ) -> None:
     """
     Launch the interactive enrichment config TUI.
-    
+
     Provides a visual editor for managing enrichment chains, routes, and cascades
     in llmc.toml without manual TOML editing.
     """
@@ -66,11 +71,11 @@ def edit(
             typer.echo(f"Error: Could not find llmc.toml: {e}", err=True)
             typer.echo("Hint: Run from repo root or use --config-path", err=True)
             raise typer.Exit(1)
-    
+
     if not config_path.exists():
         typer.echo(f"Error: Config file not found: {config_path}", err=True)
         raise typer.Exit(1)
-    
+
     # Check if textual is installed
     try:
         from llmc.config.tui import run_tui
@@ -79,7 +84,7 @@ def edit(
         typer.echo(f"  {e}", err=True)
         typer.echo("\nInstall with: pip install textual", err=True)
         raise typer.Exit(1)
-    
+
     # Launch TUI
     try:
         run_tui(config_path)
@@ -89,8 +94,10 @@ def edit(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         import traceback
+
         traceback.print_exc()
         raise typer.Exit(1)
+
 
 if __name__ == "__main__":
     app()

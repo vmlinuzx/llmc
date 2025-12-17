@@ -44,8 +44,9 @@ class SystemdManager:
 
         # Use python -m tools.rag.service instead of missing script
         import sys
+
         python_exe = sys.executable
-        
+
         service_content = f"""[Unit]
 Description=LLMC RAG Enrichment Service
 After=network.target
@@ -176,7 +177,9 @@ WantedBy=default.target
         except subprocess.CalledProcessError as e:
             return False, e.stderr
 
-    def get_logs(self, lines: int = 50, follow: bool = False) -> subprocess.Popen | None:
+    def get_logs(
+        self, lines: int = 50, follow: bool = False
+    ) -> subprocess.Popen | None:
         """Get logs via journalctl."""
         cmd = ["journalctl", "--user", "-u", SERVICE_NAME, "-n", str(lines)]
 

@@ -57,7 +57,7 @@ from llmc.rag.config import ConfigError  # Added import
 
 from ..database import Database
 from ..embeddings import HASH_MODELS, build_embedding_backend
-from ..utils import find_repo_root
+from llmc.core import find_repo_root
 
 logger = logging.getLogger(__name__)
 
@@ -104,33 +104,50 @@ def _filename_boost(query: str, path_str: str) -> float:
     return 0.0
 
 
-
 # Extension-based scoring adjustments
 # TODO: This is a stopgap - needs proper research (see ROADMAP)
-CODE_EXTENSIONS = {'.py', '.ts', '.js', '.rs', '.go', '.c', '.cpp', '.h', '.tsx', '.jsx', '.vue', '.rb', '.java', '.kt', '.swift'}
-DOC_EXTENSIONS = {'.md', '.rst', '.txt'}
+CODE_EXTENSIONS = {
+    ".py",
+    ".ts",
+    ".js",
+    ".rs",
+    ".go",
+    ".c",
+    ".cpp",
+    ".h",
+    ".tsx",
+    ".jsx",
+    ".vue",
+    ".rb",
+    ".java",
+    ".kt",
+    ".swift",
+}
+DOC_EXTENSIONS = {".md", ".rst", ".txt"}
 
 
 def _extension_boost(path_str: str) -> float:
     """Boost code files, penalize verbose docs and tests in search results.
-    
+
     Rationale: Docs are keyword-rich and dominate BM25/semantic search,
     but users searching for 'mcp bootstrap' usually want the implementation.
     Tests are a zombie army that should not outrank actual code.
     """
     import os
+
     path_lower = path_str.lower()
     ext = os.path.splitext(path_str)[1].lower()
-    
+
     # Penalize tests first (they are often .py so check before extension boost)
-    if 'test' in path_lower or '/tests/' in path_lower:
+    if "test" in path_lower or "/tests/" in path_lower:
         return -0.08  # Penalize test files
-    
+
     if ext in CODE_EXTENSIONS:
         return 0.08  # Boost code files
     if ext in DOC_EXTENSIONS:
         return -0.06  # Penalize markdown/docs
     return 0.0
+
 
 @dataclass(frozen=True)
 class SpanSearchResult:
@@ -162,7 +179,7 @@ def _score_candidates(
 
         if query_text:
             similarity += _filename_boost(query_text, row["file_path"])
-        
+
         # Apply extension-based boost (code files up, docs down)
         similarity += _extension_boost(row["file_path"])
 
@@ -217,9 +234,9 @@ def _enrich_debug_info(
                         "outputs": _safe_load(row["outputs"]),
                         "side_effects": _safe_load(row["side_effects"]),
                         "pitfalls": _safe_load(row["pitfalls"]),
-                        "evidence_count": len(json.loads(row["evidence"]))
-                        if row["evidence"]
-                        else 0,
+                        "evidence_count": (
+                            len(json.loads(row["evidence"])) if row["evidence"] else 0
+                        ),
                     }
         except Exception:
             pass
@@ -451,7 +468,9 @@ def search_spans(
             try:
                 profile_name, index_name = resolve_route(route_name, "query", repo)
             except ConfigError as e:
-                logger.warning(f"Skipping route '{route_name}' due to config error: {e}")
+                logger.warning(
+                    f"Skipping route '{route_name}' due to config error: {e}"
+                )
                 continue
 
             # Get profile config to find model/dim
@@ -462,7 +481,9 @@ def search_spans(
             if profile_name in embedding_cache:
                 query_vector, query_norm = embedding_cache[profile_name]
             else:
-                resolved_model = resolved_profile_cfg.get("model") or embedding_model_name()
+                resolved_model = (
+                    resolved_profile_cfg.get("model") or embedding_model_name()
+                )
                 resolved_dim = resolved_profile_cfg.get("dim") or embedding_model_dim()
                 if resolved_model in HASH_MODELS:
                     resolved_dim = 64
@@ -491,7 +512,9 @@ def search_spans(
                 ]
 
             except ValueError:
-                logger.warning(f"Query search against '{index_name}' failed. Skipping this route.")
+                logger.warning(
+                    f"Query search against '{index_name}' failed. Skipping this route."
+                )
                 continue
 
     finally:
@@ -525,7 +548,9 @@ def search_spans(
                 # Add target_index based on primary route if not multi-route
                 if not (len(routes_to_query) > 1):  # If single route
                     try:
-                        _, primary_index_name = resolve_route(primary_route, "query", repo)
+                        _, primary_index_name = resolve_route(
+                            primary_route, "query", repo
+                        )
                         search_info["target_index"] = primary_index_name
                     except ConfigError:
                         logger.warning(

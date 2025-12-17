@@ -39,7 +39,9 @@ def save_status(repo_root: Path, status: object) -> None:
     payload = {
         "repo": getattr(status, "repo", str(repo_root)),
         "index_state": getattr(status, "index_state", "fresh"),
-        "last_indexed_at": getattr(status, "last_indexed_at", datetime.now().isoformat()),
+        "last_indexed_at": getattr(
+            status, "last_indexed_at", datetime.now().isoformat()
+        ),
         "last_indexed_commit": getattr(status, "last_indexed_commit", None),
         "schema_version": getattr(status, "schema_version", "1"),
         "last_error": getattr(status, "last_error", None),
@@ -115,7 +117,9 @@ def build_graph_for_repo(repo_root: Path) -> object:
                                 # Add relation
                                 relations.append(
                                     {
-                                        "from": file_path_str.replace("/", ".").replace(".py", ""),
+                                        "from": file_path_str.replace("/", ".").replace(
+                                            ".py", ""
+                                        ),
                                         "to": base_part,
                                         "edge": "extends",
                                     }
@@ -182,4 +186,6 @@ def tool_rag_lineage(
     """
     from llmc.rag_nav.tool_handlers import tool_rag_lineage as _impl
 
-    return _impl(symbol=symbol, direction=direction, repo_root=repo_root, max_results=max_results)
+    return _impl(
+        symbol=symbol, direction=direction, repo_root=repo_root, max_results=max_results
+    )

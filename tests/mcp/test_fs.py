@@ -91,7 +91,9 @@ def test_read_file_missing():
     """Test read_file on non-existent file."""
     print("Testing read_file on missing file...")
 
-    result = read_file("/home/vmlinux/src/llmc/nonexistent.txt", ["/home/vmlinux/src/llmc"])
+    result = read_file(
+        "/home/vmlinux/src/llmc/nonexistent.txt", ["/home/vmlinux/src/llmc"]
+    )
     assert not result.success
     assert "not found" in result.error.lower()
 
@@ -102,14 +104,18 @@ def test_list_dir_filters_hidden():
     """Test that hidden files are filtered by default."""
     print("Testing hidden file filtering...")
 
-    result = list_dir("/home/vmlinux/src/llmc", ["/home/vmlinux/src/llmc"], include_hidden=False)
+    result = list_dir(
+        "/home/vmlinux/src/llmc", ["/home/vmlinux/src/llmc"], include_hidden=False
+    )
     assert result.success
 
     names = {e["name"] for e in result.data}
     assert ".git" not in names, "Hidden dirs should be filtered"
 
     # With include_hidden=True
-    result2 = list_dir("/home/vmlinux/src/llmc", ["/home/vmlinux/src/llmc"], include_hidden=True)
+    result2 = list_dir(
+        "/home/vmlinux/src/llmc", ["/home/vmlinux/src/llmc"], include_hidden=True
+    )
     names2 = {e["name"] for e in result2.data}
     assert ".git" in names2, "Hidden dirs should be included with flag"
 

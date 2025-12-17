@@ -6,7 +6,9 @@ from . import code_heuristics as ch, erp_heuristics as eh
 from .common import load_routing_config, record_decision
 
 
-def classify_query(text: str | None, tool_context: dict[str, Any] | None = None) -> dict[str, Any]:
+def classify_query(
+    text: str | None, tool_context: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Return a deterministic classification for a query."""
     reasons: list[str] = []
     route_name = "docs"
@@ -30,9 +32,17 @@ def classify_query(text: str | None, tool_context: dict[str, Any] | None = None)
         if raw_tool_id:
             tool_id = raw_tool_id.lower()
             if "code" in tool_id or "refactor" in tool_id or "analyze" in tool_id:
-                return {"route_name": "code", "confidence": 1.0, "reasons": ["tool-context=code"]}
+                return {
+                    "route_name": "code",
+                    "confidence": 1.0,
+                    "reasons": ["tool-context=code"],
+                }
             elif "erp" in tool_id or "product" in tool_id or "lookup" in tool_id:
-                return {"route_name": "erp", "confidence": 1.0, "reasons": ["tool-context=erp"]}
+                return {
+                    "route_name": "erp",
+                    "confidence": 1.0,
+                    "reasons": ["tool-context=erp"],
+                }
 
     # Load config
     cfg = load_routing_config()

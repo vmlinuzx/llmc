@@ -1,4 +1,3 @@
-
 from llmc.rag.config_enrichment import (
     EnrichmentBackendSpec,
     _parse_backend_spec,
@@ -14,7 +13,7 @@ class TestRoutingTierFreedomRen:
         raw = {
             "name": "test-backend",
             "provider": "ollama",
-            "routing_tier": "garbage_tier_9000"
+            "routing_tier": "garbage_tier_9000",
         }
         spec = _parse_backend_spec(raw, default_chain="default")
         assert spec.routing_tier == "garbage_tier_9000"
@@ -27,10 +26,10 @@ class TestRoutingTierFreedomRen:
         spec2 = EnrichmentBackendSpec(
             name="b2", chain="c1", provider="ollama", routing_tier="regular_7b"
         )
-        
+
         chain = [spec1, spec2]
         filtered = filter_chain_for_tier(chain, "garbage_tier_9000")
-        
+
         assert len(filtered) == 1
         assert filtered[0].name == "b1"
 
@@ -41,7 +40,7 @@ class TestRoutingTierFreedomRen:
             name="b_none", chain="c1", provider="ollama", routing_tier=None
         )
         chain = [spec_none]
-        
+
         filtered = filter_chain_for_tier(chain, "7b")
         assert len(filtered) == 1
         assert filtered[0].name == "b_none"
@@ -52,7 +51,7 @@ class TestRoutingTierFreedomRen:
             name="b_none", chain="c1", provider="ollama", routing_tier=None
         )
         chain = [spec_none]
-        
+
         # Asking for "8b" should NOT return the None backend
         filtered = filter_chain_for_tier(chain, "8b")
         assert len(filtered) == 0
@@ -60,12 +59,7 @@ class TestRoutingTierFreedomRen:
     def test_numeric_tier_handling(self):
         """Test that numeric tiers in TOML/dict are converted to strings safely."""
         # If user puts `routing_tier = 70` (integer) in TOML
-        raw = {
-            "name": "test-backend",
-            "provider": "ollama",
-            "routing_tier": 70
-        }
+        raw = {"name": "test-backend", "provider": "ollama", "routing_tier": 70}
         spec = _parse_backend_spec(raw, default_chain="default")
         assert spec.routing_tier == "70"
         assert isinstance(spec.routing_tier, str)
-

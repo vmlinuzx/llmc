@@ -9,7 +9,9 @@ def test_ok_error_factories():
     assert hasattr(core_nav_meta, "RagToolMeta")
 
     meta = RagToolMeta(status="OK", source="RAG_GRAPH", freshness_state="FRESH")
-    ok_res = ok_result(items=[1, 2, 3], source=meta.source, freshness_state=meta.freshness_state)
+    ok_res = ok_result(
+        items=[1, 2, 3], source=meta.source, freshness_state=meta.freshness_state
+    )
     assert ok_res.meta.status == "OK"
     assert len(ok_res.items) == 3
 

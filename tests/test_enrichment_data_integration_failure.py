@@ -70,7 +70,9 @@ class TestEnrichmentDataIntegrationSuccess:
         if enriched_count == 0:
             # Check DB
             db = Database(self.db_path)
-            enrich_count = db.conn.execute("SELECT COUNT(*) FROM enrichments").fetchone()[0]
+            enrich_count = db.conn.execute(
+                "SELECT COUNT(*) FROM enrichments"
+            ).fetchone()[0]
             db.close()
             if enrich_count > 0:
                 # This is a failure: DB has data, Graph has none.

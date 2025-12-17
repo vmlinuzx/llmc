@@ -119,7 +119,9 @@ def check_placeholder(text: str) -> QualityResult | None:
     for pattern in PLACEHOLDER_PATTERNS:
         if re.search(pattern, text_lower):
             return QualityResult(
-                classification="PLACEHOLDER", reason=f"pattern={pattern}", rule_version=RULE_VERSION
+                classification="PLACEHOLDER",
+                reason=f"pattern={pattern}",
+                rule_version=RULE_VERSION,
             )
 
     return None
@@ -149,7 +151,9 @@ def classify_quality(summary: str, normalized_text: str | None = None) -> Qualit
         QualityResult with classification, reason, and rule_version
     """
     if not summary or not summary.strip():
-        return QualityResult(classification="EMPTY", reason="no-content", rule_version=RULE_VERSION)
+        return QualityResult(
+            classification="EMPTY", reason="no-content", rule_version=RULE_VERSION
+        )
 
     # Check for placeholders FIRST (before normalization)
     # This catches cases like "—" and "..." that normalize to empty
@@ -175,7 +179,9 @@ def classify_quality(summary: str, normalized_text: str | None = None) -> Qualit
         cjk_length = len(normalized_text)
         if cjk_length >= 10:
             return QualityResult(
-                classification="OK", reason=f"cjk={cjk_length} chars", rule_version=RULE_VERSION
+                classification="OK",
+                reason=f"cjk={cjk_length} chars",
+                rule_version=RULE_VERSION,
             )
         else:
             return QualityResult(
@@ -191,7 +197,9 @@ def classify_quality(summary: str, normalized_text: str | None = None) -> Qualit
         # OK if ≥2 tokens (allows "Initialize configuration")
         if token_count >= 2:
             return QualityResult(
-                classification="OK", reason=f"en={token_count} tokens", rule_version=RULE_VERSION
+                classification="OK",
+                reason=f"en={token_count} tokens",
+                rule_version=RULE_VERSION,
             )
         # SHORT if <5 tokens AND very short total length
         elif token_count < 5 and total_length < 10:

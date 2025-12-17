@@ -39,7 +39,9 @@ def load_tool_config(path: str | None = None) -> ToolConfig:
 
     return ToolConfig(
         registry_path=registry_path,
-        default_workspace_folder_name=raw.get("default_workspace_folder_name", ".llmc/rag"),
+        default_workspace_folder_name=raw.get(
+            "default_workspace_folder_name", ".llmc/rag"
+        ),
         default_rag_profile=raw.get("default_rag_profile", "default"),
         daemon_control_path=_expand(daemon_control),
         log_level=str(raw.get("log_level", "INFO")),

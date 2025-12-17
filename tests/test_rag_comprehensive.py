@@ -93,7 +93,8 @@ class RagTestRunner:
 
         # Create some test files
         (self.temp_dir / "src").mkdir()
-        (self.temp_dir / "src" / "test.py").write_text("""
+        (self.temp_dir / "src" / "test.py").write_text(
+            """
 def hello_world():
     '''Simple hello world function'''
     return "Hello, World!"
@@ -101,7 +102,8 @@ def hello_world():
 class TestClass:
     def method(self):
         pass
-""")
+"""
+        )
 
         (self.temp_dir / "README.md").write_text(
             "# Test Repo\nThis is a test repository for RAG testing."
@@ -141,7 +143,9 @@ class TestClass:
         start = time.time()
         try:
             # Try different CLI entry points
-            result = self.run([sys.executable, "-m", "llmc.rag.cli", "--help"], check=False)
+            result = self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "--help"], check=False
+            )
 
             if result.returncode == 0 and b"Commands:" in result.stdout.encode():
                 self.add_result(
@@ -177,7 +181,9 @@ class TestClass:
         failed = []
 
         for cmd in commands:
-            result = self.run([sys.executable, "-m", "llmc.rag.cli", cmd, "--help"], check=False)
+            result = self.run(
+                [sys.executable, "-m", "llmc.rag.cli", cmd, "--help"], check=False
+            )
             if result.returncode != 0 or b"Usage:" not in result.stdout.encode():
                 failed.append(cmd)
 
@@ -204,7 +210,8 @@ class TestClass:
         """Test 1.3: Misconfigured or invalid flags produce errors"""
         start = time.time()
         result = self.run(
-            [sys.executable, "-m", "llmc.rag.cli", "search", "--invalid-flag"], check=False
+            [sys.executable, "-m", "llmc.rag.cli", "search", "--invalid-flag"],
+            check=False,
         )
 
         if result.returncode != 0:
@@ -271,7 +278,11 @@ class TestClass:
                         False,
                         f"Missing tables: {missing}",
                         (time.time() - start) * 1000,
-                        {"db_path": str(db_file), "found_tables": tables, "missing": missing},
+                        {
+                            "db_path": str(db_file),
+                            "found_tables": tables,
+                            "missing": missing,
+                        },
                     )
             else:
                 self.add_result(
@@ -298,7 +309,11 @@ class TestClass:
 
         try:
             # First index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Get initial stats
             result1 = self.run(
@@ -307,7 +322,11 @@ class TestClass:
             stats1 = json.loads(result1.stdout)
 
             # Second index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Get stats again
             result2 = self.run(
@@ -350,7 +369,11 @@ class TestClass:
 
         try:
             # Create index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Find and corrupt the DB
             db_file = test_repo / ".rag" / "llmc.sqlite"
@@ -360,11 +383,16 @@ class TestClass:
 
                 # Try to run stats (should handle corruption)
                 result = self.run(
-                    [sys.executable, "-m", "llmc.rag.cli", "stats"], cwd=test_repo, check=False
+                    [sys.executable, "-m", "llmc.rag.cli", "stats"],
+                    cwd=test_repo,
+                    check=False,
                 )
 
                 # Should either fail gracefully or detect corruption
-                if "corrupt" in result.stderr.lower() or "error" in result.stderr.lower():
+                if (
+                    "corrupt" in result.stderr.lower()
+                    or "error" in result.stderr.lower()
+                ):
                     self.add_result(
                         "corrupt_db_behavior",
                         "Database & Index",
@@ -399,11 +427,22 @@ class TestClass:
 
         try:
             # Index repo
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Run embed (dry run to see what would be embedded)
             result = self.run(
-                [sys.executable, "-m", "llmc.rag.cli", "embed", "--dry-run", "--execute"],
+                [
+                    sys.executable,
+                    "-m",
+                    "llmc.rag.cli",
+                    "embed",
+                    "--dry-run",
+                    "--execute",
+                ],
                 cwd=test_repo,
                 check=False,
                 timeout=120,
@@ -440,7 +479,9 @@ class TestClass:
 
             # Index
             result = self.run(
-                [sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
             )
             output = result.stdout
 
@@ -485,7 +526,11 @@ class TestClass:
 
         try:
             # First index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Modify one file
             test_file = test_repo / "src" / "test.py"
@@ -494,7 +539,14 @@ class TestClass:
 
             # Sync
             result = self.run(
-                [sys.executable, "-m", "llmc.rag.cli", "sync", "--path", str(test_file)],
+                [
+                    sys.executable,
+                    "-m",
+                    "llmc.rag.cli",
+                    "sync",
+                    "--path",
+                    str(test_file),
+                ],
                 cwd=test_repo,
                 timeout=60,
             )
@@ -535,7 +587,11 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Generate a plan
             result = self.run(
@@ -580,7 +636,11 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Search
             result = self.run(
@@ -634,11 +694,22 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Semantic search
             result = self.run(
-                [sys.executable, "-m", "llmc.rag.cli", "search", "greeting function", "--json"],
+                [
+                    sys.executable,
+                    "-m",
+                    "llmc.rag.cli",
+                    "search",
+                    "greeting function",
+                    "--json",
+                ],
                 cwd=test_repo,
                 timeout=30,
             )
@@ -678,7 +749,11 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Search for non-existent
             result = self.run(
@@ -739,7 +814,11 @@ class TestClass:
 
         try:
             # Index first
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Try to start server (just check if it responds)
             server_script = self.repo_root / "scripts" / "rag" / "rag_server.py"
@@ -835,7 +914,11 @@ class TestClass:
 
         try:
             # Step 1: index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Step 2: search
             result = self.run(
@@ -879,11 +962,21 @@ class TestClass:
 
         try:
             # Index
-            self.run([sys.executable, "-m", "llmc.rag.cli", "index"], cwd=test_repo, timeout=60)
+            self.run(
+                [sys.executable, "-m", "llmc.rag.cli", "index"],
+                cwd=test_repo,
+                timeout=60,
+            )
 
             # Ask a question
             result = self.run(
-                [sys.executable, "-m", "llmc.rag.cli", "plan", "what functions are defined"],
+                [
+                    sys.executable,
+                    "-m",
+                    "llmc.rag.cli",
+                    "plan",
+                    "what functions are defined",
+                ],
                 cwd=test_repo,
                 timeout=30,
             )

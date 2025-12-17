@@ -442,11 +442,13 @@ def test_worker_captures_output(tmp_path: Path) -> None:
 
     # Create runner that produces output
     output_runner = tmp_path / "output_runner.sh"
-    output_runner.write_text("""#!/bin/bash
+    output_runner.write_text(
+        """#!/bin/bash
 echo "STDOUT output"
 echo "STDERR error" >&2
 exit 0
-""")
+"""
+    )
     output_runner.chmod(0o755)
 
     cfg = DaemonConfig(

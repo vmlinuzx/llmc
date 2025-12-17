@@ -10,7 +10,9 @@ def assert_ok_envelope(res: Any) -> None:
     source = getattr(res, "source", getattr(res.meta, "source", None))
     assert source in {"RAG_GRAPH", "LOCAL_FALLBACK"}
 
-    freshness = getattr(res, "freshness_state", getattr(res.meta, "freshness_state", "UNKNOWN"))
+    freshness = getattr(
+        res, "freshness_state", getattr(res.meta, "freshness_state", "UNKNOWN")
+    )
     assert freshness in {"FRESH", "STALE", "UNKNOWN"}
 
 

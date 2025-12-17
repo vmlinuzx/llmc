@@ -1,4 +1,3 @@
-
 import os
 
 import pytest
@@ -20,7 +19,7 @@ class TestLockTruncationRen:
         target_file = repo_root / "valuable_data.txt"
         original_content = "This data should not be lost."
         target_file.write_text(original_content)
-        
+
         # 2. Create a symlink from lock file to valuable file (ATTACK)
         lock_file = repo_root / ".llmc" / "docgen.lock"
         try:
@@ -30,11 +29,11 @@ class TestLockTruncationRen:
 
         # 3. Try to acquire lock - should FAIL due to symlink detection
         lock = DocgenLock(repo_root)
-        
+
         # The security fix should prevent acquiring lock on symlinks
         acquired = lock.acquire()
         assert acquired is False, "Lock should refuse symlinked files"
-        
+
         # 4. Verify target file content is preserved (wasn't even opened)
         new_content = target_file.read_text()
         assert new_content == original_content, "Target file should be untouched"
@@ -44,13 +43,12 @@ class TestLockTruncationRen:
         lock_file = repo_root / ".llmc" / "docgen.lock"
         original_content = "PID: 12345"
         lock_file.write_text(original_content)
-        
+
         lock = DocgenLock(repo_root)
         acquired = lock.acquire()
         assert acquired is True
         lock.release()
-        
+
         # Content should be preserved (no truncation)
         content = lock_file.read_text()
         assert content == original_content, "Lock file should not be truncated"
-

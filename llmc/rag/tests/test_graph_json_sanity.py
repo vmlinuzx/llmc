@@ -153,9 +153,9 @@ def test_graph_json_enriched_entities_have_consistent_locations(tmp_path: Path) 
 
     for entity in enriched_entities:
         # file_path should be a non-empty string, usually repo-relative.
-        assert isinstance(entity.file_path, str) and entity.file_path, (
-            f"Expected non-empty file_path for enriched entity {entity.id}"
-        )
+        assert (
+            isinstance(entity.file_path, str) and entity.file_path
+        ), f"Expected non-empty file_path for enriched entity {entity.id}"
 
         # start_line and end_line should be integers with start <= end.
         assert isinstance(entity.start_line, int), "Expected int start_line"

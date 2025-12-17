@@ -126,7 +126,10 @@ class LiveMonitorScreen(Screen):
             yield Static("[dim]Select a row to view details[/dim]", id="detail-content")
 
         yield Static("Waiting for data...", id="stats-bar")
-        yield Static("[p] Pause  [c] Clear  [r] Refresh  [↑↓] Select  [esc] Back", id="footer-help")
+        yield Static(
+            "[p] Pause  [c] Clear  [r] Refresh  [↑↓] Select  [esc] Back",
+            id="footer-help",
+        )
 
     def on_mount(self) -> None:
         """Start the refresh timer on mount."""
@@ -164,13 +167,15 @@ class LiveMonitorScreen(Screen):
         if not conn:
             return
         try:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT id, timestamp, agent_id, session_id, cmd, mode, 
                        input_size, output_size, truncated, latency_ms, error, output_text
                 FROM telemetry_events
                 ORDER BY id DESC
                 LIMIT 50
-            """)
+            """
+            )
             rows = cursor.fetchall()
             for row in reversed(rows):
                 self._add_row(row)
@@ -364,7 +369,8 @@ class LiveMonitorScreen(Screen):
             output = data["output_text"]
             if len(output) > 2000:
                 output = (
-                    output[:2000] + f"\n[dim]... ({len(data['output_text'])} bytes total)[/dim]"
+                    output[:2000]
+                    + f"\n[dim]... ({len(data['output_text'])} bytes total)[/dim]"
                 )
             lines.append(output)
         else:
@@ -379,7 +385,9 @@ class LiveMonitorScreen(Screen):
     def _update_stats(self) -> None:
         """Update the stats bar."""
         avg_lat = self._total_latency / self._total_calls if self._total_calls else 0
-        enr_pct = (self._enriched_count / self._total_calls * 100) if self._total_calls else 0
+        enr_pct = (
+            (self._enriched_count / self._total_calls * 100) if self._total_calls else 0
+        )
 
         filled = int(enr_pct / 10)
         bar = "█" * filled + "░" * (10 - filled)
@@ -416,7 +424,9 @@ class LiveMonitorScreen(Screen):
         self._total_latency = 0.0
         self._enriched_count = 0
         self._update_stats()
-        self.query_one("#detail-content", Static).update("[dim]Select a row to view details[/dim]")
+        self.query_one("#detail-content", Static).update(
+            "[dim]Select a row to view details[/dim]"
+        )
 
     def action_force_refresh(self) -> None:
         """Force an immediate poll."""

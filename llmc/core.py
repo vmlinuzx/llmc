@@ -31,9 +31,5 @@ def load_config(repo_root: Path | None = None) -> dict[str, Any]:
     if not config_path.exists():
         return {}
 
-    try:
-        with open(config_path, "rb") as f:
-            return tomllib.load(f)
-    except Exception:
-        # Return empty config on error for now, let caller handle
-        return {}
+    with open(config_path, "rb") as f:
+        return tomllib.load(f)

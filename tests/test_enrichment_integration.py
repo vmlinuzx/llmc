@@ -55,11 +55,19 @@ def _insert_file_and_span(
         """        INSERT INTO files (path, lang, file_hash, size, mtime)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (str(rel_path), "python", "hash-" + span_hash, len(code.encode("utf-8")), 123456.0),
+        (
+            str(rel_path),
+            "python",
+            "hash-" + span_hash,
+            len(code.encode("utf-8")),
+            123456.0,
+        ),
     )
     db.conn.commit()
 
-    file_id = db.conn.execute("SELECT id FROM files WHERE path = ?", (str(rel_path),)).fetchone()[0]
+    file_id = db.conn.execute(
+        "SELECT id FROM files WHERE path = ?", (str(rel_path),)
+    ).fetchone()[0]
 
     db.conn.execute(
         """        INSERT INTO spans (
@@ -232,7 +240,9 @@ def test_multiple_spans_batch_integration(tmp_path: Path) -> None:
     assert result3.failed == 0
 
     # All span hashes should now have enrichment rows.
-    rows = db.conn.execute("SELECT span_hash FROM enrichments ORDER BY span_hash").fetchall()
+    rows = db.conn.execute(
+        "SELECT span_hash FROM enrichments ORDER BY span_hash"
+    ).fetchall()
     enriched = [row["span_hash"] for row in rows]
     assert enriched == sorted(span_hashes)
 

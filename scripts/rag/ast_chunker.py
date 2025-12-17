@@ -304,7 +304,9 @@ class ASTChunker:
                         depth=depth + 1,
                     )
                 )
-            records.extend(self._emit_node(child, language, parent_span=span_id, depth=depth + 1))
+            records.extend(
+                self._emit_node(child, language, parent_span=span_id, depth=depth + 1)
+            )
             cursor = max(cursor, child.end_byte)
 
         if cursor < node.end_byte:

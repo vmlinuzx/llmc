@@ -61,8 +61,12 @@ class TeConfig:
     # Telemetry
     telemetry_enabled: bool = True
     telemetry_path: str = ".llmc/te_telemetry.db"
-    capture_output: bool = False  # Store actual command output (privacy/storage tradeoff)
-    output_max_bytes: int = 8192  # Max bytes to capture per command when capture_output=True
+    capture_output: bool = (
+        False  # Store actual command output (privacy/storage tradeoff)
+    )
+    output_max_bytes: int = (
+        8192  # Max bytes to capture per command when capture_output=True
+    )
 
     # Tool-specific enabled flags (False = passthrough with logging)
     grep_enabled: bool = True
@@ -82,7 +86,9 @@ class TeConfig:
     passthrough_timeout_seconds: int = 30
 
     # Agent budgets
-    agent_budgets: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_AGENT_BUDGETS))
+    agent_budgets: dict[str, int] = field(
+        default_factory=lambda: dict(DEFAULT_AGENT_BUDGETS)
+    )
 
 
 def get_te_config(repo_root: Path | None = None) -> TeConfig:
@@ -123,6 +129,11 @@ def get_te_config(repo_root: Path | None = None) -> TeConfig:
 
 def get_output_budget(agent_id: str | None, repo_root: Path | None = None) -> int:
     """Get output budget for an agent (respects LLMC_TE_AGENT_ID/TE_AGENT_ID env)."""
-    agent = agent_id or os.getenv("LLMC_TE_AGENT_ID") or os.getenv("TE_AGENT_ID") or "unknown"
+    agent = (
+        agent_id
+        or os.getenv("LLMC_TE_AGENT_ID")
+        or os.getenv("TE_AGENT_ID")
+        or "unknown"
+    )
     cfg = get_te_config(repo_root)
     return cfg.agent_budgets.get(agent, cfg.agent_budgets.get("unknown", 16_000))

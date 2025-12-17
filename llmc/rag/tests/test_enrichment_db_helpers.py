@@ -27,7 +27,9 @@ def _seed_simple_index(db_path: Path) -> Database:
             """,
             ("foo.py", "python", "hash", 10, time.time()),
         )
-        file_id = conn.execute("SELECT id FROM files WHERE path = ?", ("foo.py",)).fetchone()[0]
+        file_id = conn.execute(
+            "SELECT id FROM files WHERE path = ?", ("foo.py",)
+        ).fetchone()[0]
 
         conn.execute(
             """
@@ -47,7 +49,19 @@ def _seed_simple_index(db_path: Path) -> Database:
                 side_effects, pitfalls, usage_snippet
             ) VALUES (?, ?, ?, ?, ?, strftime('%s','now'), ?, ?, ?, ?, ?, ?)
             """,
-            ("span1", "test summary", None, "[]", "test-model", "1", "[]", "[]", "[]", "[]", None),
+            (
+                "span1",
+                "test summary",
+                None,
+                "[]",
+                "test-model",
+                "1",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                None,
+            ),
         )
 
     return db

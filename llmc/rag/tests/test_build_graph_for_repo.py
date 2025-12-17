@@ -38,7 +38,9 @@ def test_build_graph_for_repo_plain_mode_allows_empty_db(tmp_path: Path) -> None
     assert all("summary" not in e.metadata for e in graph.entities)
 
 
-def test_build_graph_for_repo_require_enrichment_raises_on_empty_db(tmp_path: Path) -> None:
+def test_build_graph_for_repo_require_enrichment_raises_on_empty_db(
+    tmp_path: Path,
+) -> None:
     """When require_enrichment=True and DB has 0 enrichments, raise.
 
     This encodes the Phase 2 guard-rail: if we *think* we are in enriched
@@ -55,7 +57,9 @@ def test_build_graph_for_repo_require_enrichment_raises_on_empty_db(tmp_path: Pa
     assert "require_enrichment=True" in msg
 
 
-def test_build_graph_for_repo_require_enrichment_succeeds_with_enrichment(tmp_path: Path) -> None:
+def test_build_graph_for_repo_require_enrichment_succeeds_with_enrichment(
+    tmp_path: Path,
+) -> None:
     """Happy path: enrichment rows exist and at least one entity is enriched.
 
     This wires together:
@@ -167,7 +171,9 @@ def test_build_graph_for_repo_require_enrichment_succeeds_with_enrichment(tmp_pa
     graph = build_graph_for_repo(repo_root, require_enrichment=True, db_path=db_path)
 
     # At least one entity (foo.bar) should now have enrichment metadata attached.
-    enriched = [e for e in graph.entities if e.metadata.get("summary") == "test summary"]
+    enriched = [
+        e for e in graph.entities if e.metadata.get("summary") == "test summary"
+    ]
     assert enriched, "Expected at least one entity with attached enrichment summary"
 
 
@@ -197,9 +203,17 @@ def test_build_graph_for_repo_exports_enriched_metadata_to_json(tmp_path: Path) 
         # Insert file row
         conn.execute(
             "INSERT INTO files(path, lang, file_hash, size, mtime) VALUES (?, ?, ?, ?, ?)",
-            ("foo.py", "python", "dummy-hash", len(source_text.encode("utf-8")), 1234567890.0),
+            (
+                "foo.py",
+                "python",
+                "dummy-hash",
+                len(source_text.encode("utf-8")),
+                1234567890.0,
+            ),
         )
-        file_id = conn.execute("SELECT id FROM files WHERE path = ?", ("foo.py",)).fetchone()[0]
+        file_id = conn.execute(
+            "SELECT id FROM files WHERE path = ?", ("foo.py",)
+        ).fetchone()[0]
 
         span_hash = "test-span-123"
 
@@ -274,24 +288,33 @@ def test_build_graph_for_repo_exports_enriched_metadata_to_json(tmp_path: Path) 
 
     assert "summary" in metadata, "Expected 'summary' in metadata"
     assert (
-        metadata["summary"] == "Returns the ultimate answer to life, the universe, and everything"
+        metadata["summary"]
+        == "Returns the ultimate answer to life, the universe, and everything"
     ), "Expected correct summary text"
 
     assert "tags" in metadata, "Expected 'tags' in metadata"
     assert metadata["tags"] == '["math", "hitchhiker"]', "Expected tags to be preserved"
 
     assert "usage_snippet" in metadata, "Expected 'usage_snippet' in metadata"
-    assert metadata["usage_snippet"] == "result = bar()", "Expected usage snippet to be preserved"
+    assert (
+        metadata["usage_snippet"] == "result = bar()"
+    ), "Expected usage snippet to be preserved"
 
     assert "evidence" in metadata, "Expected 'evidence' in metadata"
     assert metadata["evidence"] == ["42"], "Expected evidence list to be preserved"
 
     # Symbol and span_hash should be present for downstream tools
-    assert metadata.get("symbol") == "foo.bar", "Expected symbol to be attached in metadata"
-    assert metadata.get("span_hash") == span_hash, "Expected span_hash to be attached in metadata"
+    assert (
+        metadata.get("symbol") == "foo.bar"
+    ), "Expected symbol to be attached in metadata"
+    assert (
+        metadata.get("span_hash") == span_hash
+    ), "Expected span_hash to be attached in metadata"
 
     # Location fields should be present at the entity level with repo-relative paths
     assert "file_path" in foo_bar, "Expected file_path on exported entity"
-    assert foo_bar["file_path"] == "foo.py", "Expected repo-relative file_path in exported JSON"
+    assert (
+        foo_bar["file_path"] == "foo.py"
+    ), "Expected repo-relative file_path in exported JSON"
     assert foo_bar["start_line"] == 1, "Expected correct start_line for foo.bar"
     assert foo_bar["end_line"] == 2, "Expected correct end_line for foo.bar"

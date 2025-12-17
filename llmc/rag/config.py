@@ -62,9 +62,7 @@ DEFAULT_SPANS_NAME = "spans.jsonl"
 DEFAULT_EST_TOKENS_PER_SPAN = 350
 
 
-
 # _find_repo_root and load_config removed - imported from llmc.core
-
 
 
 def get_est_tokens_per_span(repo_root: Path | None = None) -> int:
@@ -187,7 +185,9 @@ def resolve_route(
 
     # Fallback logic for missing route_name
     if route_details is None:
-        if route_name != "docs":  # Avoid infinite recursion if "docs" route itself is missing
+        if (
+            route_name != "docs"
+        ):  # Avoid infinite recursion if "docs" route itself is missing
             log.warning(
                 f"Config: Missing 'embeddings.routes.{route_name}' for {operation_type}. "
                 "Falling back to 'docs' route."
@@ -268,7 +268,9 @@ def resolve_route(
     profile_details = profiles_cfg.get(profile_name)
 
     if profile_details is None:
-        if route_name == "docs":  # Fallback to default_docs only if the target route is "docs"
+        if (
+            route_name == "docs"
+        ):  # Fallback to default_docs only if the target route is "docs"
             log.warning(
                 f"Config: Profile '{profile_name}' referenced by route '{route_name}' "
                 f"for {operation_type} is missing. Attempting to use 'default_docs' profile."
@@ -551,12 +553,16 @@ def embedding_gpu_min_free_mb(repo_root: Path | None = None) -> int:
 def is_query_routing_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
     # Default to False if the flag is omitted (backwards-compatible behavior)
-    return bool(cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False))
+    return bool(
+        cfg.get("routing", {}).get("options", {}).get("enable_query_routing", False)
+    )
 
 
 def is_multi_route_enabled(repo_root: Path | None = None) -> bool:
     cfg = load_config(repo_root)
-    return bool(cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False))
+    return bool(
+        cfg.get("routing", {}).get("options", {}).get("enable_multi_route", False)
+    )
 
 
 def get_multi_route_config(
@@ -670,7 +676,9 @@ def load_rerank_weights(repo_root: Path | None = None) -> dict[str, float]:
                     section = parser[INI_SECTION]
                     for key in list(weights.keys()):
                         if key in section:
-                            weights[key] = _parse_float(section.get(key, ""), weights[key])
+                            weights[key] = _parse_float(
+                                section.get(key, ""), weights[key]
+                            )
             except Exception:
                 # Treat config errors as "use defaults".
                 pass

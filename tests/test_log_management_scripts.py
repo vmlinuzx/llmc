@@ -29,7 +29,9 @@ class TestLLMCCleanLogs:
         """Test that llmc-clean-logs.sh exists and is executable."""
         script_path = scripts_dir / "llmc-clean-logs.sh"
         assert script_path.exists(), "llmc-clean-logs.sh should exist"
-        assert os.access(script_path, os.X_OK), "llmc-clean-logs.sh should be executable"
+        assert os.access(
+            script_path, os.X_OK
+        ), "llmc-clean-logs.sh should be executable"
 
     def test_has_proper_shebang(self):
         """Test that script has proper bash shebang."""
@@ -42,7 +44,10 @@ class TestLLMCCleanLogs:
         """Test that script has valid bash syntax."""
         script_path = scripts_dir / "llmc-clean-logs.sh"
         result = subprocess.run(
-            ["bash", "-n", str(script_path)], check=False, capture_output=True, text=True
+            ["bash", "-n", str(script_path)],
+            check=False,
+            capture_output=True,
+            text=True,
         )
         assert result.returncode == 0, f"Syntax error: {result.stderr}"
 
@@ -208,7 +213,10 @@ class TestLLMCLogManager:
         script_path = scripts_dir / "llmc_log_manager.py"
         with tempfile.TemporaryDirectory() as tmpdir:
             subprocess.run(
-                [str(script_path), "--check", tmpdir], check=False, capture_output=True, text=True
+                [str(script_path), "--check", tmpdir],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should check logs (may have no logs to check)
 
@@ -285,7 +293,10 @@ class TestLLMCLogManager:
             (Path(tmpdir) / "test.jsonl").write_text('{"key": "value"}\n')
 
             subprocess.run(
-                [str(script_path), "--check", tmpdir], check=False, capture_output=True, text=True
+                [str(script_path), "--check", tmpdir],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             # Should find and check these files
 

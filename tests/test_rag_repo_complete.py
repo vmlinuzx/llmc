@@ -100,7 +100,9 @@ def test_registry_idempotent_add(tmp_path: Path) -> None:
     config_dir = workspace_path / "config"
     config_dir.mkdir(parents=True)
     rag_config = config_dir / "rag.yml"
-    rag_config.write_text(yaml.dump({"repo_id": "repo-existing", "display_name": "Existing"}))
+    rag_config.write_text(
+        yaml.dump({"repo_id": "repo-existing", "display_name": "Existing"})
+    )
     version_config = config_dir / "version.yml"
     version_config.write_text(yaml.dump({"config_version": "v1"}))
 

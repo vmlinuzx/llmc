@@ -139,7 +139,9 @@ def _normalize_ollama_url(value: str) -> str:
     return trimmed.rstrip("/")
 
 
-def resolve_ollama_host_chain(env: Mapping[str, str] | None = None) -> list[dict[str, str]]:
+def resolve_ollama_host_chain(
+    env: Mapping[str, str] | None = None,
+) -> list[dict[str, str]]:
     env = env or os.environ
     hosts: list[dict[str, str]] = []
 
@@ -197,9 +199,9 @@ def health_check_ollama_hosts(
         url = _normalize_ollama_url(host.get("url", ""))
         if not url:
             continue
-        payload = json.dumps({"model": model_name, "prompt": "ping", "stream": False}).encode(
-            "utf-8"
-        )
+        payload = json.dumps(
+            {"model": model_name, "prompt": "ping", "stream": False}
+        ).encode("utf-8")
         req = urllib.request.Request(
             f"{url}/api/generate",
             data=payload,
@@ -350,7 +352,12 @@ class _GpuSampler:
 
     def stop(self) -> dict[str, float | None]:
         if self._thread is None:
-            return {"avg_util": None, "max_util": None, "avg_mem": None, "max_mem": None}
+            return {
+                "avg_util": None,
+                "max_util": None,
+                "avg_mem": None,
+                "max_mem": None,
+            }
         self._stop.set()
         self._thread.join(timeout=2.0)
         self._thread = None
@@ -431,7 +438,9 @@ def _load_router_policy() -> dict[str, Any]:
                 return data
             return {}
     except (OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"Failed to load router policy {ROUTER_POLICY_PATH}: {exc}") from exc
+        raise RuntimeError(
+            f"Failed to load router policy {ROUTER_POLICY_PATH}: {exc}"
+        ) from exc
 
 
 PRESET_CACHE = _load_enrich_presets()
@@ -711,13 +720,21 @@ def call_via_ollama(
 ) -> tuple[str, dict[str, object]]:
     base_url = (base_url or os.environ.get("OLLAMA_URL", "")).rstrip("/")
     if not base_url:
-        raise ValueError("Ollama base URL not configured. Set OLLAMA_URL or check chain config.")
+        raise ValueError(
+            "Ollama base URL not configured. Set OLLAMA_URL or check chain config."
+        )
 
     model_name = model_override or os.environ.get("OLLAMA_MODEL", "")
     if not model_name:
-        raise ValueError("Ollama model not configured. Set OLLAMA_MODEL or check chain config.")
+        raise ValueError(
+            "Ollama model not configured. Set OLLAMA_MODEL or check chain config."
+        )
 
-    payload_dict: dict[str, Any] = {"model": model_name, "prompt": prompt, "stream": False}
+    payload_dict: dict[str, Any] = {
+        "model": model_name,
+        "prompt": prompt,
+        "stream": False,
+    }
     if options:
         payload_dict["options"] = options
     if keep_alive is not None:
@@ -1230,7 +1247,10 @@ ALLOWED_FIELDS = {
 
 
 def normalize_evidence(
-    result: dict, line_start: int, line_end: int, allowed_fields: set[str] = ALLOWED_FIELDS
+    result: dict,
+    line_start: int,
+    line_end: int,
+    allowed_fields: set[str] = ALLOWED_FIELDS,
 ) -> None:
     evidence = result.get("evidence")
     if not isinstance(evidence, list):
@@ -1256,7 +1276,14 @@ def normalize_evidence(
     def has_field(field: str) -> bool:
         return any(entry["field"] == field for entry in evidence)
 
-    for field in ["summary_120w", "inputs", "outputs", "side_effects", "pitfalls", "usage_snippet"]:
+    for field in [
+        "summary_120w",
+        "inputs",
+        "outputs",
+        "side_effects",
+        "pitfalls",
+        "usage_snippet",
+    ]:
         value = result.get(field)
         if field == "usage_snippet":
             if not isinstance(value, str) or not value.strip():
@@ -1400,7 +1427,9 @@ def _build_cascade_for_attempt(
     enrichment_config: EnrichmentConfigT | None = None,
     selected_chain: Sequence[EnrichmentBackendSpecT] | None = None,
     backend_specs: Sequence[EnrichmentBackendSpecT] | None = None,
-) -> tuple[BackendCascadeT, str, dict[str, Any], str | None, str | None, str, str | None]:
+) -> tuple[
+    BackendCascadeT, str, dict[str, Any], str | None, str | None, str, str | None
+]:
     """Build a BackendCascade and preset metadata for a single attempt.
 
     This mirrors the existing tier/back-end selection logic in ``main`` but
@@ -1521,7 +1550,15 @@ def _build_cascade_for_attempt(
         selected_backend = "ollama"
 
     cascade = BackendCascade(backends=adapters)
-    return cascade, preset_key, tier_preset, host_label, host_url, selected_backend, chain_name_used
+    return (
+        cascade,
+        preset_key,
+        tier_preset,
+        host_label,
+        host_url,
+        selected_backend,
+        chain_name_used,
+    )
 
 
 def main() -> int:
@@ -1532,7 +1569,9 @@ def main() -> int:
     # Code-first scheduling configuration (optional)
     # ------------------------------------------------------------------
     if getattr(args, "code_first", False) and getattr(args, "no_code_first", False):
-        print("Error: cannot pass both --code-first and --no-code-first.", file=sys.stderr)
+        print(
+            "Error: cannot pass both --code-first and --no-code-first.", file=sys.stderr
+        )
         return 2
 
     effective_code_first = False
@@ -1595,7 +1634,9 @@ def main() -> int:
         except Exception:
             classifier = None
 
-    runner_mode = "code_first" if effective_code_first and classifier is not None else "legacy"
+    runner_mode = (
+        "code_first" if effective_code_first and classifier is not None else "legacy"
+    )
 
     # Telemetry accumulators (per run)
     files_by_weight: dict[int, int] = {i: 0 for i in range(1, 11)}
@@ -1660,7 +1701,9 @@ def main() -> int:
                 file=sys.stderr,
             )
     if enrichment_config is not None and not selected_chain:
-        chain_name = args.chain_name or getattr(enrichment_config, "default_chain", "<default>")
+        chain_name = args.chain_name or getattr(
+            enrichment_config, "default_chain", "<default>"
+        )
         print(
             f"[enrichment] config has no enabled backends for chain {chain_name!r}.",
             file=sys.stderr,
@@ -1715,7 +1758,9 @@ def main() -> int:
 
             # enforce_latin1 defaults to False; override if config says True
             if not getattr(args, "enforce_latin1", False):
-                cfg_latin1 = getattr(enrichment_config, "enforce_latin1_enrichment", False)
+                cfg_latin1 = getattr(
+                    enrichment_config, "enforce_latin1_enrichment", False
+                )
                 if cfg_latin1:
                     if args.verbose:
                         print(
@@ -1731,11 +1776,15 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-    pipeline_mode = "config" if enrichment_config is not None and selected_chain else "legacy"
+    pipeline_mode = (
+        "config" if enrichment_config is not None and selected_chain else "legacy"
+    )
     effective_chain: str | None = None
     if enrichment_config is not None:
         try:
-            effective_chain = args.chain_name or getattr(enrichment_config, "default_chain", None)
+            effective_chain = args.chain_name or getattr(
+                enrichment_config, "default_chain", None
+            )
         except Exception:
             effective_chain = args.chain_name
 
@@ -1748,7 +1797,11 @@ def main() -> int:
     if args.verbose:
         print(f"Backend selection: {backend}", file=sys.stderr)
 
-    if enrichment_config is not None and selected_chain and getattr(args, "verbose", False):
+    if (
+        enrichment_config is not None
+        and selected_chain
+        and getattr(args, "verbose", False)
+    ):
         effective_chain = args.chain_name or getattr(
             enrichment_config, "default_chain", "<default>"
         )
@@ -1757,7 +1810,10 @@ def main() -> int:
             file=sys.stderr,
         )
     if args.cooldown:
-        print(f"Cooldown: skipping spans modified within last {args.cooldown}s", file=sys.stderr)
+        print(
+            f"Cooldown: skipping spans modified within last {args.cooldown}s",
+            file=sys.stderr,
+        )
     log_path = args.log or (repo_root / "logs" / "enrichment_metrics.jsonl")
 
     router_enabled = (args.router or "on").lower() != "off"
@@ -1782,13 +1838,20 @@ def main() -> int:
         existing_urls = {h["url"] for h in ollama_host_chain}
         for chain_backends in enrichment_config.chains.values():
             for backend_spec in chain_backends:
-                if backend_spec.enabled and backend_spec.provider == "ollama" and backend_spec.url:
+                if (
+                    backend_spec.enabled
+                    and backend_spec.provider == "ollama"
+                    and backend_spec.url
+                ):
                     if backend_spec.model and not health_check_model:
                         health_check_model = backend_spec.model
                     normalized = _normalize_ollama_url(backend_spec.url)
                     if normalized and normalized not in existing_urls:
                         ollama_host_chain.append(
-                            {"label": backend_spec.name or "config-host", "url": normalized}
+                            {
+                                "label": backend_spec.name or "config-host",
+                                "url": normalized,
+                            }
                         )
                         existing_urls.add(normalized)
     host_chain_count = max(1, len(ollama_host_chain))
@@ -1808,7 +1871,9 @@ def main() -> int:
                 ollama_host_chain, env, model_name=health_check_model
             )
             if not health.reachable_hosts:
-                checked_labels = [h.get("label") or h.get("url") for h in health.checked_hosts]
+                checked_labels = [
+                    h.get("label") or h.get("url") for h in health.checked_hosts
+                ]
                 print(
                     f"[rag-enrich] ERROR: No reachable Ollama hosts for repo {repo_root}. "
                     f"Checked: {checked_labels}",
@@ -1817,7 +1882,9 @@ def main() -> int:
                 )
                 return 2
             else:
-                reachable_labels = [h.get("label") or h.get("url") for h in health.reachable_hosts]
+                reachable_labels = [
+                    h.get("label") or h.get("url") for h in health.reachable_hosts
+                ]
                 print(
                     f"[rag-enrich] Healthcheck OK: reachable Ollama hosts = {reachable_labels}",
                     flush=True,
@@ -1840,8 +1907,14 @@ def main() -> int:
             remaining = args.max_spans - processed if args.max_spans else None
             if remaining is not None and remaining <= 0:
                 break
-            this_batch = args.batch_size if remaining is None else min(args.batch_size, remaining)
-            plan = enrichment_plan(db, repo_root, limit=this_batch, cooldown_seconds=args.cooldown)
+            this_batch = (
+                args.batch_size
+                if remaining is None
+                else min(args.batch_size, remaining)
+            )
+            plan = enrichment_plan(
+                db, repo_root, limit=this_batch, cooldown_seconds=args.cooldown
+            )
             if failure_tracker is not None and plan:
                 original_len = len(plan)
                 plan = [
@@ -1897,9 +1970,15 @@ def main() -> int:
 
                 if effective_code_first:
                     # Reorder plan so that low-weight (high-priority) items are processed first.
-                    high_items = [e for e in classified_plan if e.get("weight_tier") == "high"]
-                    medium_items = [e for e in classified_plan if e.get("weight_tier") == "medium"]
-                    low_items = [e for e in classified_plan if e.get("weight_tier") == "low"]
+                    high_items = [
+                        e for e in classified_plan if e.get("weight_tier") == "high"
+                    ]
+                    medium_items = [
+                        e for e in classified_plan if e.get("weight_tier") == "medium"
+                    ]
+                    low_items = [
+                        e for e in classified_plan if e.get("weight_tier") == "low"
+                    ]
 
                     def _priority(entry: dict[str, Any]) -> float:
                         val = entry.get("final_priority")
@@ -1963,7 +2042,9 @@ def main() -> int:
                 wall_start = time.monotonic()
                 prompt = build_prompt(item, repo_root)
                 if args.dry_run:
-                    print(f"DRY RUN span {item['span_hash']} -> prompt preview:\n{prompt}\n")
+                    print(
+                        f"DRY RUN span {item['span_hash']} -> prompt preview:\n{prompt}\n"
+                    )
                     continue
 
                 line_start, line_end = item["lines"]
@@ -1996,11 +2077,16 @@ def main() -> int:
                     ).lower()
                     if manual_override != "auto":
                         start_tier = manual_override
-                    if line_count >= policy_line_threshold and start_tier != policy_fallback_tier:
+                    if (
+                        line_count >= policy_line_threshold
+                        and start_tier != policy_fallback_tier
+                    ):
                         start_tier = policy_fallback_tier
                 else:
                     start_tier = (
-                        manual_override if manual_override != "auto" else policy_default_tier
+                        manual_override
+                        if manual_override != "auto"
+                        else policy_default_tier
                     )
                 if start_tier not in {"7b", "14b", "nano"}:
                     start_tier = policy_default_tier
@@ -2033,7 +2119,9 @@ def main() -> int:
                             start_line=line_start,
                             end_line=line_end,
                             content_type=item.get("slice_type", "unknown"),
-                            classifier_confidence=item.get("classifier_confidence", 0.0),
+                            classifier_confidence=item.get(
+                                "classifier_confidence", 0.0
+                            ),
                             approx_token_count=tokens_in,
                         )
                         decision = enrichment_router.choose_chain(
@@ -2081,9 +2169,15 @@ def main() -> int:
                         backend_specs=route_specs,
                     )
 
-                    options = tier_preset.get("options") if selected_backend == "ollama" else None
+                    options = (
+                        tier_preset.get("options")
+                        if selected_backend == "ollama"
+                        else None
+                    )
                     tier_model_override = (
-                        tier_preset.get("model") if selected_backend == "ollama" else None
+                        tier_preset.get("model")
+                        if selected_backend == "ollama"
+                        else None
                     )
 
                     sampler: _GpuSampler | None = None
@@ -2115,12 +2209,18 @@ def main() -> int:
                                     "chain_name": chain_name_used,
                                 }
                             )
-                            if router_enabled and tier_for_attempt != policy_fallback_tier:
+                            if (
+                                router_enabled
+                                and tier_for_attempt != policy_fallback_tier
+                            ):
                                 current_tier = policy_fallback_tier
                                 continue
                             if (
                                 selected_backend == "ollama"
-                                and (not router_enabled or tier_for_attempt == policy_fallback_tier)
+                                and (
+                                    not router_enabled
+                                    or tier_for_attempt == policy_fallback_tier
+                                )
                                 and current_host_idx + 1 < host_chain_count
                             ):
                                 current_host_idx += 1
@@ -2136,8 +2236,16 @@ def main() -> int:
                         failure_info = exc.failure
                         failure_type = classify_failure(failure_info)
                         last_attempt = exc.attempts[-1] if exc.attempts else None
-                        last_model = getattr(last_attempt, "model", None) if last_attempt else None
-                        last_host = getattr(last_attempt, "host", None) if last_attempt else None
+                        last_model = (
+                            getattr(last_attempt, "model", None)
+                            if last_attempt
+                            else None
+                        )
+                        last_host = (
+                            getattr(last_attempt, "host", None)
+                            if last_attempt
+                            else None
+                        )
                         attempt_records.append(
                             {
                                 "tier": tier_for_attempt,
@@ -2149,7 +2257,11 @@ def main() -> int:
                                 "model": last_model or tier_model_override,
                                 "host": last_host or host_label or host_url,
                                 "chain_name": chain_name_used
-                                or (meta.get("chain_name") if isinstance(meta, dict) else None),
+                                or (
+                                    meta.get("chain_name")
+                                    if isinstance(meta, dict)
+                                    else None
+                                ),
                             }
                         )
                         if failure_type == "validation":
@@ -2171,12 +2283,19 @@ def main() -> int:
                             and failure_type in {"runtime", "parse", "truncation"}
                             and tier_for_attempt != policy_fallback_tier
                         )
-                        if promote_due_to_schema or promote_due_to_size or promote_due_to_failure:
+                        if (
+                            promote_due_to_schema
+                            or promote_due_to_size
+                            or promote_due_to_failure
+                        ):
                             current_tier = policy_fallback_tier
                             continue
                         if (
                             selected_backend == "ollama"
-                            and (not router_enabled or tier_for_attempt == policy_fallback_tier)
+                            and (
+                                not router_enabled
+                                or tier_for_attempt == policy_fallback_tier
+                            )
                             and current_host_idx + 1 < host_chain_count
                         ):
                             current_host_idx += 1
@@ -2206,19 +2325,27 @@ def main() -> int:
                             "success": True,
                             "failure": None,
                             "options": options,
-                            "model": meta.get("model") if isinstance(meta, dict) else None,
-                            "host": meta.get("host", host_label or host_url)
-                            if isinstance(meta, dict)
-                            else (host_label or host_url),
-                            "chain_name": meta.get("chain_name", chain_name_used)
-                            if isinstance(meta, dict)
-                            else chain_name_used,
+                            "model": (
+                                meta.get("model") if isinstance(meta, dict) else None
+                            ),
+                            "host": (
+                                meta.get("host", host_label or host_url)
+                                if isinstance(meta, dict)
+                                else (host_label or host_url)
+                            ),
+                            "chain_name": (
+                                meta.get("chain_name", chain_name_used)
+                                if isinstance(meta, dict)
+                                else chain_name_used
+                            ),
                         }
                     )
                     break
                 router_tier = tiers_history[-1] if tiers_history else start_tier
                 final_tier = (
-                    infer_effective_tier(final_meta, router_tier) if success else router_tier
+                    infer_effective_tier(final_meta, router_tier)
+                    if success
+                    else router_tier
                 )
                 promo_label = "none"
                 if len(tiers_history) > 1:
@@ -2240,14 +2367,18 @@ def main() -> int:
                         # Failure tracking is best-effort; never crash enrichment on it.
                         pass
 
-                last_attempt_dict: dict[str, Any] = attempt_records[-1] if attempt_records else {}
+                last_attempt_dict: dict[str, Any] = (
+                    attempt_records[-1] if attempt_records else {}
+                )
                 gpu_stats_last: dict[str, float | None] = {}
                 if isinstance(final_meta.get("gpu_stats"), dict):
                     gpu_stats_last = final_meta["gpu_stats"]  # type: ignore[assignment]
                 elif isinstance(last_attempt_dict.get("gpu"), dict):
                     gpu_stats_last = last_attempt_dict["gpu"]  # type: ignore[assignment]
 
-                tier_options = final_meta.get("options") if isinstance(final_meta, dict) else None
+                tier_options = (
+                    final_meta.get("options") if isinstance(final_meta, dict) else None
+                )
                 if not isinstance(tier_options, dict):
                     tier_options = last_attempt_dict.get("options")
                 if not isinstance(tier_options, dict):
@@ -2272,30 +2403,52 @@ def main() -> int:
                         )
 
                 gpu_avg = (
-                    gpu_stats_last.get("avg_util") if isinstance(gpu_stats_last, dict) else None
+                    gpu_stats_last.get("avg_util")
+                    if isinstance(gpu_stats_last, dict)
+                    else None
                 )
                 gpu_max = (
-                    gpu_stats_last.get("max_util") if isinstance(gpu_stats_last, dict) else None
+                    gpu_stats_last.get("max_util")
+                    if isinstance(gpu_stats_last, dict)
+                    else None
                 )
                 vram_peak = (
-                    gpu_stats_last.get("max_mem") if isinstance(gpu_stats_last, dict) else None
+                    gpu_stats_last.get("max_mem")
+                    if isinstance(gpu_stats_last, dict)
+                    else None
                 )
                 vram_avg = (
-                    gpu_stats_last.get("avg_mem") if isinstance(gpu_stats_last, dict) else None
+                    gpu_stats_last.get("avg_mem")
+                    if isinstance(gpu_stats_last, dict)
+                    else None
                 )
-                ctx_value = tier_options.get("num_ctx") if isinstance(tier_options, dict) else None
+                ctx_value = (
+                    tier_options.get("num_ctx")
+                    if isinstance(tier_options, dict)
+                    else None
+                )
                 batch_value = (
-                    tier_options.get("num_batch") if isinstance(tier_options, dict) else None
+                    tier_options.get("num_batch")
+                    if isinstance(tier_options, dict)
+                    else None
                 )
                 num_thread_value = (
-                    tier_options.get("num_thread") if isinstance(tier_options, dict) else None
+                    tier_options.get("num_thread")
+                    if isinstance(tier_options, dict)
+                    else None
                 )
                 num_gpu_value = (
-                    tier_options.get("num_gpu") if isinstance(tier_options, dict) else None
+                    tier_options.get("num_gpu")
+                    if isinstance(tier_options, dict)
+                    else None
                 )
                 rss_mib = _read_rss_mib()
                 tok_s = None
-                eval_count = final_meta.get("eval_count") if isinstance(final_meta, dict) else None
+                eval_count = (
+                    final_meta.get("eval_count")
+                    if isinstance(final_meta, dict)
+                    else None
+                )
                 if isinstance(eval_count, int) and total_latency > 0:
                     tok_s = round(eval_count / total_latency, 2)
                 elif success and total_latency > 0:
@@ -2373,7 +2526,9 @@ def main() -> int:
                     # Telemetry: per-weight counters and high-priority timing.
                     weight_value = item.get("path_weight")
                     if isinstance(weight_value, int) and 1 <= weight_value <= 10:
-                        files_by_weight[weight_value] = files_by_weight.get(weight_value, 0) + 1
+                        files_by_weight[weight_value] = (
+                            files_by_weight.get(weight_value, 0) + 1
+                        )
                         if weight_value <= 3:
                             high_enriched_count += 1
                             if time_to_first_high is None:
@@ -2412,15 +2567,21 @@ def main() -> int:
 
                     # Extract config metadata for logging
                     chain_name = (
-                        final_meta.get("chain_name") if isinstance(final_meta, dict) else None
+                        final_meta.get("chain_name")
+                        if isinstance(final_meta, dict)
+                        else None
                     )
                     backend_name = (
-                        final_meta.get("backend_name") if isinstance(final_meta, dict) else None
+                        final_meta.get("backend_name")
+                        if isinstance(final_meta, dict)
+                        else None
                     )
                     host_url_for_log: str | None
                     if isinstance(final_meta, dict):
                         raw_host = final_meta.get("host_url")
-                        host_url_for_log = str(raw_host) if isinstance(raw_host, str) else None
+                        host_url_for_log = (
+                            str(raw_host) if isinstance(raw_host, str) else None
+                        )
                     else:
                         host_url_for_log = None
 

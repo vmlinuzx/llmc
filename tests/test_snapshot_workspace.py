@@ -13,7 +13,9 @@ def test_snapshot_creates_tar(tmp_path: Path) -> None:
     (base / "dir").mkdir()
     (base / "dir" / "f.txt").write_text("hi")
     fs = SafeFS(base)
-    out = create_snapshot_tar(fs, ".", "exports/test-snap.tar.gz", include_hidden=False, force=True)
+    out = create_snapshot_tar(
+        fs, ".", "exports/test-snap.tar.gz", include_hidden=False, force=True
+    )
     assert out.exists()
     with tarfile.open(out, "r:gz") as tar:
         names = tar.getnames()

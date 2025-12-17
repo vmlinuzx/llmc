@@ -161,7 +161,9 @@ class TestQueryTrackerLogQuery:
             tracker = QueryTracker(db_path)
 
             for i in range(5):
-                tracker.log_query(f"query {i}", results_count=i, files_retrieved=[f"file{i}.py"])
+                tracker.log_query(
+                    f"query {i}", results_count=i, files_retrieved=[f"file{i}.py"]
+                )
 
             # Verify all queries were logged
             conn = sqlite3.connect(str(db_path))
@@ -402,7 +404,12 @@ class TestQueryTrackerGetAnalytics:
                 INSERT INTO query_history (query_text, timestamp, results_count, files_retrieved)
                 VALUES (?, ?, ?, ?)
                 """,
-                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json"),
+                (
+                    "bad json",
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    1,
+                    "not valid json",
+                ),
             )
             conn.commit()
             conn.close()
@@ -535,7 +542,12 @@ class TestQueryTrackerGetRecentQueries:
                 INSERT INTO query_history (query_text, timestamp, results_count, files_retrieved)
                 VALUES (?, ?, ?, ?)
                 """,
-                ("bad json", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 1, "not valid json"),
+                (
+                    "bad json",
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    1,
+                    "not valid json",
+                ),
             )
             conn.commit()
             conn.close()
@@ -742,7 +754,9 @@ class TestAnalyticsEdgeCases:
             tracker.log_query(unicode_query, 1, unicode_files)
 
             conn = sqlite3.connect(str(db_path))
-            cursor = conn.execute("SELECT query_text, files_retrieved FROM query_history")
+            cursor = conn.execute(
+                "SELECT query_text, files_retrieved FROM query_history"
+            )
             row = cursor.fetchone()
             assert row[0] == unicode_query
             assert json.loads(row[1]) == unicode_files

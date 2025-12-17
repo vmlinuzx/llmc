@@ -90,7 +90,13 @@ def _is_safe_path(path: Path) -> bool:
     except Exception:
         return False
 
-    sensitive_roots = [Path("/etc"), Path("/proc"), Path("/sys"), Path("/dev"), Path("/root")]
+    sensitive_roots = [
+        Path("/etc"),
+        Path("/proc"),
+        Path("/sys"),
+        Path("/dev"),
+        Path("/root"),
+    ]
     for root in sensitive_roots:
         try:
             path_resolved.relative_to(root)

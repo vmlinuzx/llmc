@@ -221,8 +221,10 @@ def load_provider_config(
     )
     if rpm or tpm:
         rate_limit_override = RateLimitConfig(
-            requests_per_minute=rpm or (metadata.rate_limit.requests_per_minute if metadata else 60),
-            tokens_per_minute=tpm or (metadata.rate_limit.tokens_per_minute if metadata else 1_000_000),
+            requests_per_minute=rpm
+            or (metadata.rate_limit.requests_per_minute if metadata else 60),
+            tokens_per_minute=tpm
+            or (metadata.rate_limit.tokens_per_minute if metadata else 1_000_000),
         )
 
     # Pricing overrides
@@ -250,9 +252,7 @@ def load_provider_config(
     )
 
 
-def build_pricing_map(
-    enrichment_config: dict[str, Any]
-) -> dict[str, PricingInfo]:
+def build_pricing_map(enrichment_config: dict[str, Any]) -> dict[str, PricingInfo]:
     """Build pricing map from llmc.toml enrichment config.
 
     Args:

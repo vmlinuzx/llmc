@@ -22,16 +22,19 @@ def create_test_db(tmp_path: Path, db_name: str = "rag.db") -> Path:
 
     # Create main DB with traditional tables
     conn = sqlite3.connect(str(db_path))
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS files (
             id INTEGER PRIMARY KEY,
             path TEXT UNIQUE NOT NULL,
             content TEXT,
             indexed_at TIMESTAMP
         )
-    """)
+    """
+    )
 
-    conn.execute("""
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS symbols (
             id INTEGER PRIMARY KEY,
             file_id INTEGER,
@@ -39,7 +42,8 @@ def create_test_db(tmp_path: Path, db_name: str = "rag.db") -> Path:
             type TEXT,
             FOREIGN KEY (file_id) REFERENCES files(id)
         )
-    """)
+    """
+    )
 
     # Add sample data
     conn.execute(
@@ -72,14 +76,16 @@ def create_fts_db(tmp_path: Path, db_name: str = "rag_fts.db") -> Path:
         "CREATE TABLE IF NOT EXISTS files (id INTEGER PRIMARY KEY, path TEXT, content TEXT)"
     )
 
-    conn.execute("""
+    conn.execute(
+        """
         CREATE VIRTUAL TABLE IF NOT EXISTS fts_files USING fts5(
             path,
             content,
             content='files',
             content_rowid='id'
         )
-    """)
+    """
+    )
 
     # Initialize FTS index
     conn.execute("INSERT INTO fts_files(fts_files) VALUES('rebuild')")

@@ -7,8 +7,8 @@ from typing import Any
 
 import pytest
 
-import scripts.qwen_enrich_batch as qeb
 from llmc.rag.enrichment_backends import BackendError
+import scripts.qwen_enrich_batch as qeb
 
 
 def _make_args() -> SimpleNamespace:
@@ -25,7 +25,9 @@ def _make_args() -> SimpleNamespace:
 def test_ollama_adapter_success(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: dict[str, Any] = {}
 
-    def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> tuple[str, dict[str, Any]]:
+    def fake_call_qwen(
+        prompt: str, repo_root: Path, **kwargs: Any
+    ) -> tuple[str, dict[str, Any]]:
         calls["backend"] = kwargs.get("backend")
         calls["model_override"] = kwargs.get("model_override")
         calls["ollama_base_url"] = kwargs.get("ollama_base_url")
@@ -56,7 +58,11 @@ def test_ollama_adapter_success(monkeypatch: pytest.MonkeyPatch) -> None:
         args=_make_args(),
         host_url="http://athena:11434",
         host_label="athena",
-        tier_preset={"model": "preset-model", "options": {"num_ctx": 4096}, "keep_alive": None},
+        tier_preset={
+            "model": "preset-model",
+            "options": {"num_ctx": 4096},
+            "keep_alive": None,
+        },
         tier_for_attempt="7b",
     )
 
@@ -73,7 +79,9 @@ def test_ollama_adapter_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_ollama_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> tuple[str, dict[str, Any]]:
+    def fake_call_qwen(
+        prompt: str, repo_root: Path, **kwargs: Any
+    ) -> tuple[str, dict[str, Any]]:
         return "RAW", {}
 
     failure_tuple = ("validation", ValueError("oops"), {"foo": "bar"})
@@ -92,7 +100,11 @@ def test_ollama_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> N
         args=_make_args(),
         host_url="http://localhost:11434",
         host_label=None,
-        tier_preset={"model": "preset-model", "options": {"num_ctx": 4096}, "keep_alive": None},
+        tier_preset={
+            "model": "preset-model",
+            "options": {"num_ctx": 4096},
+            "keep_alive": None,
+        },
         tier_for_attempt="7b",
     )
 
@@ -109,7 +121,9 @@ def test_gateway_adapter_success_respects_model_and_restores_env(
     original_model = "orig-model"
     monkeypatch.setenv("GEMINI_MODEL", original_model)
 
-    def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> tuple[str, dict[str, Any]]:
+    def fake_call_qwen(
+        prompt: str, repo_root: Path, **kwargs: Any
+    ) -> tuple[str, dict[str, Any]]:
         # During the call, the env should be overridden.
         assert os.environ.get("GEMINI_MODEL") == "gemini-2.5-flash"
         return "RAW", {}
@@ -146,7 +160,9 @@ def test_gateway_adapter_success_respects_model_and_restores_env(
 def test_gateway_adapter_validation_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     failure_tuple = ("validation", ValueError("bad"), {"bar": "baz"})
 
-    def fake_call_qwen(prompt: str, repo_root: Path, **kwargs: Any) -> tuple[str, dict[str, Any]]:
+    def fake_call_qwen(
+        prompt: str, repo_root: Path, **kwargs: Any
+    ) -> tuple[str, dict[str, Any]]:
         return "RAW", {}
 
     def fake_parse_and_validate(

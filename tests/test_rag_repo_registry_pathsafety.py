@@ -20,7 +20,9 @@ def _load_entries(mod, yaml_path: Path):
             if entry:
                 entries.append(entry)
         return entries
-    raise AttributeError("No known registry loader found in module. Implement loader per SDD.")
+    raise AttributeError(
+        "No known registry loader found in module. Implement loader per SDD."
+    )
 
 
 def _names(entries) -> list[str]:

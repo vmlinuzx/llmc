@@ -397,7 +397,9 @@ class TestErrorResult:
 
     def test_error_result_serialization(self):
         """error_result should serialize error_code and message correctly."""
-        result = error_result(error_code="DB_CONNECTION_FAILED", message="Cannot connect")
+        result = error_result(
+            error_code="DB_CONNECTION_FAILED", message="Cannot connect"
+        )
 
         result_dict = result.to_dict()
 

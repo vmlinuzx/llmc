@@ -85,7 +85,9 @@ def _cleanup_stale_processes(ttl_sec: float = STALE_TTL_SEC) -> int:
             continue
         # Check if stale (no activity for TTL)
         if now - mp.last_activity > ttl_sec:
-            logger.info(f"Cleaning up stale process {proc_id} (idle {now - mp.last_activity:.0f}s)")
+            logger.info(
+                f"Cleaning up stale process {proc_id} (idle {now - mp.last_activity:.0f}s)"
+            )
             try:
                 mp.p.terminate()
                 mp.p.wait(timeout=2)

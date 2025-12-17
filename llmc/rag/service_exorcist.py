@@ -79,7 +79,10 @@ class ExorcistStats:
         if self.enrichments.exists():
             size = self.enrichments.stat().st_size
             stats["files"].append(
-                {"path": str(self.enrichments.relative_to(self.repo)), "size_bytes": size}
+                {
+                    "path": str(self.enrichments.relative_to(self.repo)),
+                    "size_bytes": size,
+                }
             )
             stats["total_size_bytes"] += size
 
@@ -94,7 +97,10 @@ class ExorcistStats:
         if self.embeddings_db.exists():
             size = self.embeddings_db.stat().st_size
             stats["files"].append(
-                {"path": str(self.embeddings_db.relative_to(self.repo)), "size_bytes": size}
+                {
+                    "path": str(self.embeddings_db.relative_to(self.repo)),
+                    "size_bytes": size,
+                }
             )
             stats["total_size_bytes"] += size
 
@@ -121,7 +127,10 @@ class ExorcistStats:
         if self.failures_db.exists():
             size = self.failures_db.stat().st_size
             stats["files"].append(
-                {"path": str(self.failures_db.relative_to(self.repo)), "size_bytes": size}
+                {
+                    "path": str(self.failures_db.relative_to(self.repo)),
+                    "size_bytes": size,
+                }
             )
             stats["total_size_bytes"] += size
 

@@ -36,7 +36,7 @@ class ConfigManager:
         """Backup current config and write new one."""
         # Backup before writing
         backup_path = self.backup()
-        
+
         try:
             # Write new config
             with open(self.config_path, "wb") as f:
@@ -58,7 +58,7 @@ class ConfigManager:
     def validate(self, config: dict[str, Any]) -> list[str]:
         """
         Return list of validation errors.
-        
+
         Performs basic structural validation:
         - Required sections exist
         - Chain names are unique
@@ -66,47 +66,47 @@ class ConfigManager:
         - Provider/tier values are valid
         """
         errors: list[str] = []
-        
+
         # Check enrichment section exists
         if "enrichment" not in config:
             return ["Missing [enrichment] section"]
-        
+
         enrichment = config["enrichment"]
-        
+
         # Validate chains
         chains = enrichment.get("chain", [])
         if not isinstance(chains, list):
             errors.append("enrichment.chain must be an array of tables")
             return errors
-        
+
         # Check for duplicate chain names
         chain_names = [c.get("name") for c in chains]
         duplicates = [name for name in chain_names if chain_names.count(name) > 1]
         if duplicates:
             errors.append(f"Duplicate chain names: {', '.join(set(duplicates))}")
-        
+
         # Validate each chain
         for idx, chain in enumerate(chains):
             prefix = f"Chain #{idx + 1}"
-            
+
             if "name" not in chain:
                 errors.append(f"{prefix}: Missing 'name' field")
                 continue
-            
+
             name = chain["name"]
             prefix = f"Chain '{name}'"
-            
+
             # Required fields
             required = ["chain", "provider", "model", "routing_tier"]
             for field in required:
                 if field not in chain:
                     errors.append(f"{prefix}: Missing required field '{field}'")
-            
+
             # Validate provider (basic check, can enhance with allowed list)
             provider = chain.get("provider", "")
             if provider and not isinstance(provider, str):
                 errors.append(f"{prefix}: Invalid provider type")
-            
+
             # Validate tier
             tier = chain.get("routing_tier", "")
             allowed_tiers = ["nano", "3b", "7b", "14b", "70b"]
@@ -115,18 +115,18 @@ class ConfigManager:
                     f"{prefix}: Invalid routing_tier '{tier}' "
                     f"(allowed: {', '.join(allowed_tiers)})"
                 )
-        
+
         # Validate routes
         routes = enrichment.get("routes", {})
         chain_groups = {c.get("chain") for c in chains}
-        
+
         for slice_type, target_chain in routes.items():
             if target_chain not in chain_groups:
                 errors.append(
                     f"Route '{slice_type}' → '{target_chain}': "
                     f"Target chain group does not exist"
                 )
-        
+
         return errors
 
     def get_chains(self) -> list[dict[str, Any]]:
@@ -147,6 +147,5 @@ class ConfigManager:
     def get_chains_by_group(self, chain_group: str) -> list[dict[str, Any]]:
         """Get all chains belonging to a chain group."""
         return [
-            chain for chain in self.get_chains()
-            if chain.get("chain") == chain_group
+            chain for chain in self.get_chains() if chain.get("chain") == chain_group
         ]

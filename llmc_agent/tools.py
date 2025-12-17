@@ -2,7 +2,7 @@
 
 Progressive disclosure of capabilities:
 - Tier 0 (Crawl): RAG search only - find things
-- Tier 1 (Walk): Read operations - see things  
+- Tier 1 (Walk): Read operations - see things
 - Tier 2 (Run): Write operations - change things
 
 The agent starts at Tier 0 and unlocks higher tiers based on detected intent.
@@ -10,30 +10,31 @@ The agent starts at Tier 0 and unlocks higher tiers based on detected intent.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any, Callable
+from typing import Any
 
 
 class ToolTier(IntEnum):
     """Tool capability tiers."""
-    
+
     CRAWL = 0  # Search/discovery only
-    WALK = 1   # Read operations
-    RUN = 2    # Write operations
+    WALK = 1  # Read operations
+    RUN = 2  # Write operations
 
 
 @dataclass
 class Tool:
     """A tool available to the agent."""
-    
+
     name: str
     description: str
     tier: ToolTier
     function: Callable[..., Any]
     parameters: dict[str, Any]  # JSON Schema
     requires_confirmation: bool = False
-    
+
     def to_ollama_format(self) -> dict[str, Any]:
         """Convert to Ollama tool format."""
         return {
@@ -42,7 +43,7 @@ class Tool:
                 "name": self.name,
                 "description": self.description,
                 "parameters": self.parameters,
-            }
+            },
         }
 
 
@@ -50,12 +51,13 @@ class Tool:
 # Tool Definitions
 # ============================================================================
 
+
 def _make_rag_search_tool() -> Tool:
     """RAG search tool (Tier 0)."""
     from llmc_agent.backends.llmc import LLMCBackend
-    
+
     backend = LLMCBackend()
-    
+
     async def rag_search(query: str, limit: int = 5) -> dict[str, Any]:
         """Search the codebase for relevant code."""
         results = await backend.search(query, limit=limit)
@@ -70,7 +72,7 @@ def _make_rag_search_tool() -> Tool:
                 for r in results
             ]
         }
-    
+
     return Tool(
         name="search_code",
         description="Search the codebase for relevant code snippets. Use this to find functions, classes, or concepts.",
@@ -81,23 +83,23 @@ def _make_rag_search_tool() -> Tool:
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "Natural language search query"
+                    "description": "Natural language search query",
                 },
                 "limit": {
                     "type": "integer",
                     "description": "Maximum results (default 5)",
                     "default": 5,
-                }
+                },
             },
-            "required": ["query"]
-        }
+            "required": ["query"],
+        },
     )
 
 
 def _make_read_file_tool(allowed_roots: list[str]) -> Tool:
     """Read file tool (Tier 1)."""
     from llmc_mcp.tools.fs import read_file as fs_read_file
-    
+
     def read_file(path: str, max_lines: int = 200) -> dict[str, Any]:
         """Read contents of a file."""
         result = fs_read_file(path, allowed_roots, max_bytes=max_lines * 100)
@@ -105,11 +107,18 @@ def _make_read_file_tool(allowed_roots: list[str]) -> Tool:
             content = result.data
             lines = content.split("\n")
             if len(lines) > max_lines:
-                content = "\n".join(lines[:max_lines]) + f"\n\n[...truncated, {len(lines) - max_lines} more lines...]"
-            return {"content": content, "path": path, "truncated": len(lines) > max_lines}
+                content = (
+                    "\n".join(lines[:max_lines])
+                    + f"\n\n[...truncated, {len(lines) - max_lines} more lines...]"
+                )
+            return {
+                "content": content,
+                "path": path,
+                "truncated": len(lines) > max_lines,
+            }
         else:
             return {"error": result.error, "path": path}
-    
+
     return Tool(
         name="read_file",
         description="Read the contents of a file. Use after search_code to see full context.",
@@ -118,25 +127,22 @@ def _make_read_file_tool(allowed_roots: list[str]) -> Tool:
         parameters={
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to the file to read"
-                },
+                "path": {"type": "string", "description": "Path to the file to read"},
                 "max_lines": {
                     "type": "integer",
                     "description": "Maximum lines to return (default 200)",
                     "default": 200,
-                }
+                },
             },
-            "required": ["path"]
-        }
+            "required": ["path"],
+        },
     )
 
 
 def _make_list_dir_tool(allowed_roots: list[str]) -> Tool:
     """List directory tool (Tier 1)."""
     from llmc_mcp.tools.fs import list_dir as fs_list_dir
-    
+
     def list_directory(path: str, include_hidden: bool = False) -> dict[str, Any]:
         """List contents of a directory."""
         result = fs_list_dir(path, allowed_roots, include_hidden=include_hidden)
@@ -144,7 +150,7 @@ def _make_list_dir_tool(allowed_roots: list[str]) -> Tool:
             return {"entries": result.data, "path": path}
         else:
             return {"error": result.error, "path": path}
-    
+
     return Tool(
         name="list_dir",
         description="List files and subdirectories in a directory.",
@@ -153,25 +159,22 @@ def _make_list_dir_tool(allowed_roots: list[str]) -> Tool:
         parameters={
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Directory path to list"
-                },
+                "path": {"type": "string", "description": "Directory path to list"},
                 "include_hidden": {
                     "type": "boolean",
                     "description": "Include hidden files (default false)",
                     "default": False,
-                }
+                },
             },
-            "required": ["path"]
-        }
+            "required": ["path"],
+        },
     )
 
 
 def _make_edit_block_tool(allowed_roots: list[str]) -> Tool:
     """Edit block tool (Tier 2)."""
     from llmc_mcp.tools.fs import edit_block as fs_edit_block
-    
+
     def edit_block(path: str, old_text: str, new_text: str) -> dict[str, Any]:
         """Replace text in a file."""
         result = fs_edit_block(path, allowed_roots, old_text, new_text)
@@ -183,7 +186,7 @@ def _make_edit_block_tool(allowed_roots: list[str]) -> Tool:
             }
         else:
             return {"success": False, "error": result.error, "path": path}
-    
+
     return Tool(
         name="edit_block",
         description="Replace a block of text in a file. The old_text must match exactly.",
@@ -193,28 +196,22 @@ def _make_edit_block_tool(allowed_roots: list[str]) -> Tool:
         parameters={
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to file to edit"
-                },
+                "path": {"type": "string", "description": "Path to file to edit"},
                 "old_text": {
                     "type": "string",
-                    "description": "Exact text to find and replace"
+                    "description": "Exact text to find and replace",
                 },
-                "new_text": {
-                    "type": "string",
-                    "description": "Replacement text"
-                }
+                "new_text": {"type": "string", "description": "Replacement text"},
             },
-            "required": ["path", "old_text", "new_text"]
-        }
+            "required": ["path", "old_text", "new_text"],
+        },
     )
 
 
 def _make_write_file_tool(allowed_roots: list[str]) -> Tool:
     """Write file tool (Tier 2)."""
     from llmc_mcp.tools.fs import write_file as fs_write_file
-    
+
     def write_file(path: str, content: str, mode: str = "rewrite") -> dict[str, Any]:
         """Write content to a file."""
         result = fs_write_file(path, allowed_roots, content, mode=mode)
@@ -222,7 +219,7 @@ def _make_write_file_tool(allowed_roots: list[str]) -> Tool:
             return {"success": True, "path": path, "bytes_written": len(content)}
         else:
             return {"success": False, "error": result.error, "path": path}
-    
+
     return Tool(
         name="write_file",
         description="Write or create a file. Use mode='append' to add to existing file.",
@@ -232,40 +229,36 @@ def _make_write_file_tool(allowed_roots: list[str]) -> Tool:
         parameters={
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "Path to file to write"
-                },
-                "content": {
-                    "type": "string", 
-                    "description": "Content to write"
-                },
+                "path": {"type": "string", "description": "Path to file to write"},
+                "content": {"type": "string", "description": "Content to write"},
                 "mode": {
                     "type": "string",
                     "enum": ["rewrite", "append"],
                     "description": "Write mode (default: rewrite)",
-                    "default": "rewrite"
-                }
+                    "default": "rewrite",
+                },
             },
-            "required": ["path", "content"]
-        }
+            "required": ["path", "content"],
+        },
     )
 
 
 def _make_inspect_tool() -> Tool:
     """Inspect code tool (Tier 1) - span-aware with enrichment."""
     from pathlib import Path
-    
-    def inspect_code(path: str, symbol: str | None = None, line: int | None = None) -> dict[str, Any]:
+
+    def inspect_code(
+        path: str, symbol: str | None = None, line: int | None = None
+    ) -> dict[str, Any]:
         """Inspect a file or symbol with RAG enrichment.
-        
+
         Returns focused snippets instead of whole files - much more context efficient!
         """
         try:
-            from llmc.rag.inspector import inspect_entity, PathSecurityError
-            
+            from llmc.rag.inspector import PathSecurityError, inspect_entity
+
             repo_root = Path.cwd()
-            
+
             result = inspect_entity(
                 repo_root,
                 path=path if not symbol else None,
@@ -274,14 +267,19 @@ def _make_inspect_tool() -> Tool:
                 include_full_source=False,  # Just snippets
                 max_neighbors=3,
             )
-            
+
             return {
                 "path": result.path,
                 "snippet": result.snippet,
                 "span": result.primary_span,
                 "summary": result.file_summary,
                 "symbols": [
-                    {"name": s.name, "line": s.line, "type": s.type, "summary": s.summary}
+                    {
+                        "name": s.name,
+                        "line": s.line,
+                        "type": s.type,
+                        "summary": s.summary,
+                    }
                     for s in (result.defined_symbols or [])[:5]
                 ],
                 "enrichment": result.enrichment if result.enrichment else None,
@@ -290,7 +288,7 @@ def _make_inspect_tool() -> Tool:
             return {"error": f"Security: {e}", "path": path}
         except Exception as e:
             return {"error": str(e), "path": path}
-    
+
     return Tool(
         name="inspect_code",
         description="Inspect a file or symbol with RAG context. Returns focused snippets with enrichment - use this instead of read_file for code understanding.",
@@ -299,21 +297,18 @@ def _make_inspect_tool() -> Tool:
         parameters={
             "type": "object",
             "properties": {
-                "path": {
-                    "type": "string",
-                    "description": "File path to inspect"
-                },
+                "path": {"type": "string", "description": "File path to inspect"},
                 "symbol": {
                     "type": "string",
-                    "description": "Optional symbol name to focus on (e.g., 'MyClass.my_method')"
+                    "description": "Optional symbol name to focus on (e.g., 'MyClass.my_method')",
                 },
                 "line": {
                     "type": "integer",
-                    "description": "Optional line number to focus on"
-                }
+                    "description": "Optional line number to focus on",
+                },
             },
-            "required": ["path"]
-        }
+            "required": ["path"],
+        },
     )
 
 
@@ -321,60 +316,65 @@ def _make_inspect_tool() -> Tool:
 # Tool Registry
 # ============================================================================
 
+
 class ToolRegistry:
     """Manages available tools and tier transitions."""
-    
-    def __init__(self, allowed_roots: list[str] | None = None, default_tier: ToolTier = ToolTier.WALK):
+
+    def __init__(
+        self,
+        allowed_roots: list[str] | None = None,
+        default_tier: ToolTier = ToolTier.WALK,
+    ):
         self.allowed_roots = allowed_roots or ["."]
         # Default to WALK - give the model read access by default
         # The tier system was meant for implementation phases, not runtime gating
         self.current_tier = default_tier
         self._tools: dict[str, Tool] = {}
         self._build_tools()
-    
+
     def _build_tools(self) -> None:
         """Initialize all tools."""
         # Tier 0: Crawl
         self._register(_make_rag_search_tool())
-        
+
         # Tier 1: Walk
         self._register(_make_read_file_tool(self.allowed_roots))
         self._register(_make_list_dir_tool(self.allowed_roots))
         self._register(_make_inspect_tool())
-        
+
         # Tier 2: Run
         self._register(_make_edit_block_tool(self.allowed_roots))
         self._register(_make_write_file_tool(self.allowed_roots))
-    
+
     def _register(self, tool: Tool) -> None:
         """Register a tool."""
         self._tools[tool.name] = tool
-    
+
     def get_tools_for_tier(self, tier: ToolTier | None = None) -> list[Tool]:
         """Get tools available at a tier (includes lower tiers)."""
         tier = tier if tier is not None else self.current_tier
         return [t for t in self._tools.values() if t.tier <= tier]
-    
+
     def get_tool(self, name: str) -> Tool | None:
         """Get a specific tool by name."""
         return self._tools.get(name)
-    
+
     def is_tool_available(self, name: str) -> bool:
         """Check if tool is available at current tier."""
         tool = self._tools.get(name)
         if not tool:
             return False
         return tool.tier <= self.current_tier
-    
+
     def unlock_tier(self, tier: ToolTier) -> None:
         """Unlock a capability tier."""
         if tier > self.current_tier:
             self.current_tier = tier
-    
+
     def to_ollama_tools(self) -> list[dict[str, Any]]:
         """Get Ollama-formatted tool definitions for current tier."""
         return [t.to_ollama_format() for t in self.get_tools_for_tier()]
-    
+
     def tier_token_cost(self, tier: ToolTier | None = None) -> int:
         """Estimate token cost of tool definitions for a tier."""
         tools = self.get_tools_for_tier(tier)
@@ -388,30 +388,48 @@ class ToolRegistry:
 
 # Keywords that suggest the user wants to read files
 WALK_SIGNALS = [
-    "show me", "read", "view", "see", "look at", "contents of",
-    "what's in", "open", "display", "print",
+    "show me",
+    "read",
+    "view",
+    "see",
+    "look at",
+    "contents of",
+    "what's in",
+    "open",
+    "display",
+    "print",
 ]
 
 # Keywords that suggest the user wants to modify files
 RUN_SIGNALS = [
-    "edit", "change", "modify", "update", "fix", "add", "remove",
-    "create", "write", "delete", "replace", "refactor",
+    "edit",
+    "change",
+    "modify",
+    "update",
+    "fix",
+    "add",
+    "remove",
+    "create",
+    "write",
+    "delete",
+    "replace",
+    "refactor",
 ]
 
 
 def detect_intent_tier(prompt: str) -> ToolTier:
     """Detect intent tier from user prompt."""
     prompt_lower = prompt.lower()
-    
+
     # Check for Run signals first (higher priority)
     for signal in RUN_SIGNALS:
         if signal in prompt_lower:
             return ToolTier.RUN
-    
+
     # Check for Walk signals
     for signal in WALK_SIGNALS:
         if signal in prompt_lower:
             return ToolTier.WALK
-    
+
     # Default to Crawl
     return ToolTier.CRAWL

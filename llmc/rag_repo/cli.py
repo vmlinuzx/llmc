@@ -39,7 +39,9 @@ def clean_workspace(
 ) -> dict:
     """Remove contents of a workspace safely. Requires force=True."""
     if not force:
-        raise RuntimeError("Refusing to clean without --force. This operation is destructive.")
+        raise RuntimeError(
+            "Refusing to clean without --force. This operation is destructive."
+        )
     ws_root = resolve_workspace_from_cli(repo_root, workspace_arg)
     fs = SafeFS(ws_root)
     fs.rm_tree(".")
@@ -74,7 +76,9 @@ def export_bundle(
     export_dir = resolve_export_dir(repo_root, workspace_arg, export_arg)
     export_dir.mkdir(parents=True, exist_ok=True)
     if any(export_dir.iterdir()) and not force:
-        raise RuntimeError("Export directory is not empty. Re-run with --force to overwrite.")
+        raise RuntimeError(
+            "Export directory is not empty. Re-run with --force to overwrite."
+        )
     return {"export_dir": export_dir}
 
 
@@ -114,7 +118,9 @@ def main(argv: list[str] | None = None) -> int:
     p_add = sub.add_parser("add", help="Register or re-register a repo for RAG")
     p_add.add_argument("path", help="Path to repo (default: .)", nargs="?", default=".")
     p_add.add_argument("--config", help="Path to tool config", default=None)
-    p_add.add_argument("--template", help="Path to custom llmc.toml template", default=None)
+    p_add.add_argument(
+        "--template", help="Path to custom llmc.toml template", default=None
+    )
     p_add.add_argument("-y", "--yes", action="store_true", help="Assume yes to prompts")
     p_add.add_argument("--json", action="store_true", help="JSON output")
 

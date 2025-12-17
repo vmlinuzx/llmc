@@ -94,7 +94,9 @@ class TestExponentialBackoff:
             (5, 16),  # Fifth: 60 * 2^4 = 960
         ],
     )
-    def test_exponential_backoff_multiplier_progression(self, failure_count, expected_multiplier):
+    def test_exponential_backoff_multiplier_progression(
+        self, failure_count, expected_multiplier
+    ):
         """Test backoff multiplier increases as 2^(n-1)."""
         multiplier = 2 ** (failure_count - 1)
         assert multiplier == expected_multiplier
@@ -526,4 +528,6 @@ class TestMinRefreshInterval:
         )
 
         # Repo-specific interval should be respected
-        assert repo_desc.min_refresh_interval > timedelta(seconds=config.tick_interval_seconds)
+        assert repo_desc.min_refresh_interval > timedelta(
+            seconds=config.tick_interval_seconds
+        )

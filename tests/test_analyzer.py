@@ -19,7 +19,13 @@ def run_test_batch(test_pattern, output_file):
     test_files = glob.glob(test_pattern)
     if not test_files:
         print(f"No files found for pattern: {test_pattern}")
-        return {"pattern": test_pattern, "failed": 0, "passed": 0, "failures": [], "error_count": 0}
+        return {
+            "pattern": test_pattern,
+            "failed": 0,
+            "passed": 0,
+            "failures": [],
+            "error_count": 0,
+        }
 
     cmd = [
         "python3",
@@ -31,7 +37,9 @@ def run_test_batch(test_pattern, output_file):
         "-q",
     ]
 
-    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        cmd, check=False, capture_output=True, text=True, timeout=120
+    )
 
     # Parse output
     lines = result.stdout.split("\n") + result.stderr.split("\n")
@@ -71,7 +79,9 @@ def analyze_failures(all_results):
     total_passed = sum(r["passed"] for r in all_results)
 
     print(f"\nTOTAL: {total_failed} failed, {total_passed} passed")
-    print(f"Success Rate: {(total_passed / (total_failed + total_passed) * 100):.1f}%\n")
+    print(
+        f"Success Rate: {(total_passed / (total_failed + total_passed) * 100):.1f}%\n"
+    )
 
     # Categorize failures
     categories = {
@@ -148,7 +158,9 @@ def main():
     with open(Path(__file__).parent / "ruthless_test_analysis.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"\n\nDetailed report saved to: {Path(__file__).parent / 'ruthless_test_analysis.json'}")
+    print(
+        f"\n\nDetailed report saved to: {Path(__file__).parent / 'ruthless_test_analysis.json'}"
+    )
 
 
 if __name__ == "__main__":

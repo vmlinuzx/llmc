@@ -315,7 +315,9 @@ class RemoteBackend(ABC):
         pass
 
     @abstractmethod
-    def _parse_response(self, data: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
+    def _parse_response(
+        self, data: dict[str, Any], item: dict[str, Any]
+    ) -> dict[str, Any]:
         """Parse provider-specific response into enrichment format.
 
         Args:
@@ -375,11 +377,7 @@ class RemoteBackend(ABC):
         # Look for {...} or ```json\n{...}\n```
 
         # First try: look for code fence with json
-        fence_match = re.search(
-            r'```(?:json)?\s*\n(\{.*?\})\s*\n```',
-            text,
-            re.DOTALL
-        )
+        fence_match = re.search(r"```(?:json)?\s*\n(\{.*?\})\s*\n```", text, re.DOTALL)
         if fence_match:
             try:
                 return dict(json.loads(fence_match.group(1)))
@@ -387,7 +385,7 @@ class RemoteBackend(ABC):
                 pass
 
         # Second try: find bare JSON object
-        json_match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
+        json_match = re.search(r"\{[^{}]*\}", text, re.DOTALL)
         if json_match:
             try:
                 return dict(json.loads(json_match.group()))

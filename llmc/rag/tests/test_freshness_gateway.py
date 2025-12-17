@@ -24,13 +24,22 @@ def _init_git_repo(repo_path: Path, commit_sha: str = "abc123def456") -> str:
         capture_output=True,
     )
     subprocess.run(
-        ["git", "config", "user.name", "Test"], check=False, cwd=repo_path, capture_output=True
+        ["git", "config", "user.name", "Test"],
+        check=False,
+        cwd=repo_path,
+        capture_output=True,
     )
     (repo_path / "README.md").write_text("# Test")
     subprocess.run(["git", "add", "."], cwd=repo_path, capture_output=True, check=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=repo_path, capture_output=True, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=repo_path, capture_output=True, check=True
+    )
     result = subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=False, cwd=repo_path, capture_output=True, text=True
+        ["git", "rev-parse", "HEAD"],
+        check=False,
+        cwd=repo_path,
+        capture_output=True,
+        text=True,
     )
     return result.stdout.strip()
 
