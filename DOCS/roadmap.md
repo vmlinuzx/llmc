@@ -14,9 +14,9 @@ Think of this as:
 
 These are the things that make the current LLMC stack feel solid and intentional for you and for any future users.
 
-### 1.0 Domain RAG – Technical Documentation Support (P0)
+### ~~1.0 Domain RAG – Technical Documentation Support (P0)~~ ✅ DONE
 
-**Status:** 🟡 In Progress (Core parsing done, enrichment/graph pending)
+**Status:** ✅ Complete (All 5 phases done - 2025-12-17)
 
 **Goal:** Extend LLMC beyond code to handle technical documentation repositories with domain-aware chunking, embeddings, and enrichment.
 
@@ -35,14 +35,16 @@ These are the things that make the current LLMC stack feel solid and intentional
 - [x] Phase 2: TechDocsExtractor implementation ✅ (2025-12-13, tests fixed 2025-12-16)
 - [x] Phase 3: Enrichment schema + prompts ✅ (2025-12-15)
 - [x] Phase 4: Graph edges (REFERENCES, REQUIRES, WARNS_ABOUT) ✅ (2025-12-16)
-- [ ] Phase 5: CI smoke tests + validation on LLMC's own DOCS/
+- [x] Phase 5: CI smoke tests + validation on LLMC's own DOCS/ ✅ (2025-12-17)
+  - `tests/rag/ci/test_llmc_docs_validation.py` - 373 files, 6545 chunks, zero errors
+  - Validates extraction quantity, quality (section paths, anchors), and determinism
 
 **Why This Matters:**
 - Same 70-95% token savings for documentation repos
 - Foundation for legal/medical domains later
 - Already works with code repo docs (README, DOCS/)
 
-**Effort:** ~20-30 hours | **Difficulty:** 🟡 Medium (6/10)
+**Effort:** ~~20-30 hours~~ ✅ Complete | **Difficulty:** 🟡 Medium (6/10)
 
 **See also:** `~/src/thunderdome/` - Dialectical autocoding orchestrator (separate project)
 
