@@ -8,9 +8,12 @@ This module detects if we're running in a container/sandbox.
 from __future__ import annotations
 
 from functools import lru_cache
+import logging
 import os
 from pathlib import Path
 import re
+
+logger = logging.getLogger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -30,7 +33,13 @@ def is_isolated_environment() -> bool:
         True if isolated, False if running on bare host.
     """
     # Explicit opt-in (for testing or known-safe environments)
+    # WARNING: This bypasses security isolation checks!
     if os.environ.get("LLMC_ISOLATED", "").lower() in ("1", "true", "yes"):
+        logger.warning(
+            "SECURITY BYPASS: LLMC_ISOLATED=1 detected. "
+            "Isolation requirements are being bypassed via environment variable. "
+            "This should only be used in known-safe environments."
+        )
         return True
 
     # Docker container
