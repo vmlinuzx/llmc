@@ -68,6 +68,14 @@ All notable changes to LLMC will be documented in this file.
   - Creates audit trail for forensic analysis when security checks are bypassed
   - Addresses SDD-Security-IsolationLog gap analysis finding
 
+- **Interactive Configuration Wizard (2.4) - Verified Complete:**
+  - `llmc config wizard` and `llmc repo register --interactive` fully implemented
+  - Ollama connectivity check with `/api/tags` model discovery
+  - Tiered model selection (Small/Fast → Medium → Large fallbacks)
+  - Embedding model selection with recommendations
+  - Full `llmc.toml` generation with proper enrichment chains
+  - **Updated model recommendations to qwen3** (qwen3:4b beats qwen2.5:14b on coding tasks)
+
 ### Changed
 
 - **Legacy Test Alias Cleanup (PR #27):**

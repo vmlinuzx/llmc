@@ -30,19 +30,28 @@ except ImportError:
 console = Console()
 
 # Recommended models for different tiers
+# Note: qwen3 significantly outperforms qwen2.5 at comparable sizes
+# (qwen3:4b generally beats qwen2.5:14b on coding tasks)
 RECOMMENDED_SMALL = [
-    "qwen2.5:3b",
-    "qwen2.5:1.5b",
+    "qwen3:4b",
+    "qwen3:4b-instruct",
+    "qwen3:1.7b",
     "llama3.2:3b",
-    "llama3.2:1b",
-    "qwen2.5:0.5b",
+    "qwen2.5:3b",
 ]
-RECOMMENDED_MEDIUM = ["qwen2.5:7b", "llama3.1:8b", "gemma2:9b", "mistral:7b"]
+RECOMMENDED_MEDIUM = [
+    "qwen3:8b",
+    "qwen3:8b-instruct",
+    "qwen2.5:7b",
+    "llama3.1:8b",
+    "gemma2:9b",
+]
 RECOMMENDED_LARGE = [
+    "qwen3:14b",
+    "qwen3:32b",
     "qwen2.5:14b",
     "qwen2.5:32b",
     "llama3.3:70b",
-    "deepseek-coder-v2:16b",
 ]
 RECOMMENDED_EMBED = [
     "nomic-embed-text",
@@ -223,7 +232,7 @@ def run_wizard(
         console.print(
             "[yellow]⚠️  No models found in Ollama. You'll need to pull some models first.[/yellow]"
         )
-        console.print("Example: [dim]ollama pull qwen2.5:7b[/dim]")
+        console.print("Example: [dim]ollama pull qwen3:4b[/dim]")
 
     # 2. Model Selection
     console.print("\n[bold]2. Enrichment Model Selection[/bold]")
@@ -236,7 +245,7 @@ def run_wizard(
         "Select PRIMARY model (Small/Fast - e.g. 1b-4b params)",
         models,
         RECOMMENDED_SMALL,
-        default="qwen2.5:3b",
+        default="qwen3:4b",
     )
 
     # Tier 2: Medium (Optional)
@@ -247,7 +256,7 @@ def run_wizard(
             models,
             RECOMMENDED_MEDIUM,
             allow_skip=True,
-            default="qwen2.5:7b",
+            default="qwen3:8b",
         )
 
     # Tier 3: Large (Optional)
@@ -258,7 +267,7 @@ def run_wizard(
             models,
             RECOMMENDED_LARGE,
             allow_skip=True,
-            default="qwen2.5:14b",
+            default="qwen3:14b",
         )
 
     # 3. Embeddings
