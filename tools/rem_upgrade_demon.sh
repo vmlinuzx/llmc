@@ -1,0 +1,1 @@
+../scripts/rem_upgrade_demon.sh
