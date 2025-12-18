@@ -4,6 +4,15 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed (2025-12-18)
+
+- **CLI Commands With Broken Output (4 bugs fixed):**
+  - `llmc debug doctor` - Was silently discarding output, now prints formatted health report with emoji status indicators
+  - `llmc debug plan "query"` - Was dumping raw Python dataclass repr, now shows human-readable summary with JSON option
+  - `llmc analytics where-used "symbol"` - AttributeError from using `.get()` on dataclass, now correctly accesses `.items` and `.snippet.location`
+  - `llmc analytics lineage "symbol"` - Same dataclass access fix as where-used
+  - All 4 commands now support `--json` flag for machine-readable output
+
 ### Security (Jules PRs - 2025-12-17)
 
 - **CRITICAL: RCE in linux_ops/proc.py Fixed (PR #24):**

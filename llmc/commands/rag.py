@@ -118,16 +118,31 @@ def plan(
     min_confidence: Annotated[
         float, typer.Option(help="Minimum confidence threshold")
     ] = 0.6,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit plan as JSON")
+    ] = False,
 ):
     """Generate retrieval plan."""
-    from llmc.rag.planner import generate_plan as run_generate_plan
+    from llmc.rag.planner import generate_plan as run_generate_plan, plan_as_dict
 
     repo_root = find_repo_root()
     try:
         result = run_generate_plan(
             query=query, limit=limit, min_confidence=min_confidence, repo_root=repo_root
         )
-        typer.echo(result)
+        if json_output:
+            typer.echo(json.dumps(plan_as_dict(result), indent=2, ensure_ascii=False))
+        else:
+            # Human-readable summary
+            typer.echo(f"Query: {result.query}")
+            typer.echo(f"Intent: {result.intent}")
+            typer.echo(f"Confidence: {result.confidence:.2%}")
+            typer.echo(f"Fallback recommended: {result.fallback_recommended}")
+            typer.echo(f"\nTop {len(result.spans)} spans:")
+            for i, span in enumerate(result.spans, 1):
+                typer.echo(f"  {i}. [{span.score:.1f}] {span.path}:{span.lines[0]}-{span.lines[1]} {span.symbol}")
+            if result.rationale:
+                typer.echo(f"\nRationale: {'; '.join(result.rationale[:3])}")
     except Exception as e:
         typer.echo(f"Error planning: {e}", err=True)
         raise typer.Exit(code=1) from e
@@ -226,12 +241,48 @@ def doctor(
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Verbose output")
     ] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit report as JSON")
+    ] = False,
 ):
     """Diagnose RAG health."""
     from llmc.rag.doctor import run_rag_doctor as run_doctor
 
     repo_root = find_repo_root()
-    run_doctor(repo_path=repo_root, verbose=verbose)
+    result = run_doctor(repo_path=repo_root, verbose=verbose)
+
+    if json_output:
+        typer.echo(json.dumps(result, indent=2, ensure_ascii=False))
+        return
+
+    # Human-readable output
+    status = result.get("status", "UNKNOWN")
+    status_icon = {"OK": "✅", "WARN": "⚠️", "EMPTY": "📭", "NO_DB": "❌"}.get(status, "❓")
+    typer.echo(f"{status_icon} RAG Health: {status}")
+    typer.echo(f"   Repo: {result.get('repo')}")
+    typer.echo(f"   DB: {result.get('db_path')}")
+
+    stats = result.get("stats")
+    if stats:
+        typer.echo(f"\n📊 Stats:")
+        typer.echo(f"   Files: {stats.get('files', 0)}")
+        typer.echo(f"   Spans: {stats.get('spans', 0)}")
+        typer.echo(f"   Enrichments: {stats.get('enrichments', 0)} (pending: {stats.get('pending_enrichments', 0)})")
+        typer.echo(f"   Embeddings: {stats.get('embeddings', 0)} (pending: {stats.get('pending_embeddings', 0)})")
+        if stats.get('orphan_enrichments', 0) > 0:
+            typer.echo(f"   ⚠️ Orphan enrichments: {stats.get('orphan_enrichments')}")
+
+    issues = result.get("issues", [])
+    if issues:
+        typer.echo(f"\n⚠️ Issues:")
+        for issue in issues:
+            typer.echo(f"   • {issue}")
+
+    top_pending = result.get("top_pending_files", [])
+    if top_pending:
+        typer.echo(f"\n📋 Top pending files:")
+        for f in top_pending:
+            typer.echo(f"   • {f['path']} ({f['pending_spans']} spans)")
 
 
 # Phase 5: Advanced RAG Commands
@@ -796,11 +847,18 @@ def nav_where_used(
         result = tool_rag_where_used(symbol, repo_root=repo_root, limit=limit)
 
         if json_output:
-            typer.echo(json.dumps(result, indent=2, default=str))
+            typer.echo(json.dumps(result.to_dict(), indent=2, default=str))
         else:
             typer.echo(f"Where-used results for '{symbol}':")
-            for i, item in enumerate(result.get("items", []), 1):
-                typer.echo(f"{i}. {item}")
+            if not result.items:
+                typer.echo("  No usages found.")
+            else:
+                for i, item in enumerate(result.items, 1):
+                    loc = item.snippet.location
+                    typer.echo(f"{i}. {loc.path}:{loc.start_line}-{loc.end_line}")
+                    text = item.snippet.text
+                    if text:
+                        typer.echo(f"   {text[:80]}..." if len(text) > 80 else f"   {text}")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
@@ -825,11 +883,18 @@ def nav_lineage(
         )
 
         if json_output:
-            typer.echo(json.dumps(result, indent=2, default=str))
+            typer.echo(json.dumps(result.to_dict(), indent=2, default=str))
         else:
-            typer.echo(f"Lineage for '{symbol}':")
-            for i, item in enumerate(result.get("items", []), 1):
-                typer.echo(f"{i}. {item}")
+            typer.echo(f"Lineage for '{symbol}' ({result.direction}):")
+            if not result.items:
+                typer.echo("  No lineage found.")
+            else:
+                for i, item in enumerate(result.items, 1):
+                    loc = item.snippet.location
+                    typer.echo(f"{i}. {loc.path}:{loc.start_line}-{loc.end_line}")
+                    text = item.snippet.text
+                    if text:
+                        typer.echo(f"   {text[:80]}..." if len(text) > 80 else f"   {text}")
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
