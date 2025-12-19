@@ -12,7 +12,36 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from llmc.config import get_llmc_config
+
+
 logger = logging.getLogger(__name__)
+
+
+def validate_repo_root(repo_root: str | Path) -> Path:
+    """Validate repo_root is in allowed_roots.
+
+    Raises:
+        PermissionError: If repo_root is not allowed
+    """
+    config = get_llmc_config()
+    allowed_roots = config.get("allowed_roots", [])
+
+    # If no allowed_roots configured, allow any (backwards compat)
+    if not allowed_roots:
+        return Path(repo_root).resolve()
+
+    repo_path = Path(repo_root).resolve()
+
+    for allowed in allowed_roots:
+        allowed_path = Path(allowed).resolve()
+        try:
+            repo_path.relative_to(allowed_path)
+            return repo_path  # Valid - is under an allowed root
+        except ValueError:
+            continue
+
+    raise PermissionError(f"repo_root '{repo_root}' is not under allowed_roots")
 
 
 @dataclass
@@ -72,20 +101,18 @@ def rag_search(
     if not query or not query.strip():
         return RagSearchResult(data=[], meta={}, error="query is required")
 
-    repo_path = Path(repo_root).resolve() if isinstance(repo_root, str) else repo_root.resolve()
-
-    # Save current dir and change to repo root
-    # This ensures RAG config loading finds llmc.toml
-    original_cwd = os.getcwd()
+    try:
+        repo_path = validate_repo_root(repo_root)
+    except PermissionError as e:
+        return RagSearchResult(data=[], meta={}, error=str(e))
 
     try:
-        os.chdir(repo_path)
-
-        # Config reloads automatically every time (no caching)
-
         # Direct import - module stays loaded between calls
         from llmc.rag.search import search_spans
 
+        # The repo_path is passed to search_spans, which uses it to find
+        # the llmc.toml file and load the correct configuration. This
+        # replaces the need for os.chdir.
         results = search_spans(
             query.strip(),
             limit=limit,
@@ -122,9 +149,6 @@ def rag_search(
     except Exception as e:
         logger.exception("RAG search error")
         return RagSearchResult(data=[], meta={}, error=str(e))
-    finally:
-        # Restore original working directory
-        os.chdir(original_cwd)
 
 
 def rag_search_enriched(
@@ -158,20 +182,19 @@ def rag_search_enriched(
     if not query or not query.strip():
         return RagSearchResult(data=[], meta={}, error="query is required")
 
-    repo_path = Path(repo_root).resolve() if isinstance(repo_root, str) else repo_root.resolve()
-
-    # Save current dir and change to repo root
-    original_cwd = os.getcwd()
+    try:
+        repo_path = validate_repo_root(repo_root)
+    except PermissionError as e:
+        return RagSearchResult(data=[], meta={}, error=str(e))
 
     try:
-        os.chdir(repo_path)
-
-        # Config reloads automatically every time (no caching)
-
         # For now, we'll use the existing search_spans with debug=True to get graph data
         # In future phases, we'll add proper mode selection and enrichment orchestration
         from llmc.rag.search import search_spans
 
+        # The repo_path is passed to search_spans, which uses it to find
+        # the llmc.toml file and load the correct configuration. This
+        # replaces the need for os.chdir.
         # Enable debug mode to get graph enrichment
         use_debug = (enrich_mode in ["graph", "hybrid", "auto"]) or include_features
 
@@ -233,8 +256,6 @@ def rag_search_enriched(
     except Exception as e:
         logger.exception("RAG search enriched error")
         return RagSearchResult(data=[], meta={}, error=str(e))
-    finally:
-        os.chdir(original_cwd)
 
 
 def rag_bootload(
@@ -255,7 +276,10 @@ def rag_bootload(
     Returns:
         Dict with plan, scope, notes
     """
-    repo_path = Path(repo_root) if isinstance(repo_root, str) else repo_root
+    try:
+        repo_path = validate_repo_root(repo_root)
+    except PermissionError as e:
+        return {"error": str(e)}
 
     # For MVP, return minimal bootstrap info
     # Future: Parse task_id to determine scope, load relevant context
