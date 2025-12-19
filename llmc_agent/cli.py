@@ -242,14 +242,29 @@ async def _run_agent(
     if verbose:
         effective_prompt = f"{prompt}\n\n(Please explain your reasoning step by step before giving your final answer.)"
 
+    # Verbose callback for real-time tool updates
+    def verbose_handler(event_type: str, *args):
+        if event_type == "thinking" and args[0]:
+            console.print(f"[dim italic]💭 {args[0][:150]}...[/dim italic]" if len(args[0]) > 150 else f"[dim italic]💭 {args[0]}[/dim italic]")
+        elif event_type == "tool_call":
+            tool_name, tool_args = args[0], args[1]
+            args_str = ", ".join(f"{k}={repr(v)[:30]}" for k, v in tool_args.items())
+            console.print(f"[cyan]🔧 {tool_name}[/cyan]({args_str})")
+        elif event_type == "tool_result":
+            tool_name, result = args[0], args[1]
+            console.print(f"[green]   ✓ {tool_name}[/green] → [dim]{result[:80]}...[/dim]" if len(result) > 80 else f"[green]   ✓ {tool_name}[/green] → [dim]{result}[/dim]")
+
     # Get response (with session for context)
     if use_tools:
         if not quiet and not json_output:
             msg = "Tools enabled"
             if verbose:
-                msg += " (reasoning mode)"
+                msg += " (verbose)"
             console.print(f"[dim]{msg}[/dim]")
-        response = await agent.ask_with_tools(effective_prompt, session=session)
+        
+        callback = verbose_handler if verbose else None
+        response = await agent.ask_with_tools(effective_prompt, session=session, verbose_callback=callback)
+        
         if not quiet and not json_output and response.tool_calls:
             console.print(
                 f"[dim]Tools used: {len(response.tool_calls)}[/dim]"

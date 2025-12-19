@@ -199,6 +199,7 @@ class Agent:
         question: str,
         session: Session | None = None,
         max_tool_rounds: int = 5,
+        verbose_callback: callable | None = None,
     ) -> AgentResponse:
         """Ask with tool support (Walk/Run phases).
 
@@ -207,6 +208,11 @@ class Agent:
         2. Includes appropriate tools in the request
         3. Executes tool calls and loops until model is done
         4. Returns final response
+        
+        If verbose_callback is provided, it will be called with status updates:
+        - ("thinking", "..reasoning text..")
+        - ("tool_call", "tool_name", {args})
+        - ("tool_result", "tool_name", "..result..")
         """
         from llmc_agent.tools import detect_intent_tier
 
@@ -283,6 +289,10 @@ class Agent:
             parser = self.format_negotiator.get_call_parser()
             parsed = parser.parse(response.raw_response or {})
 
+            # Show any reasoning/thinking if verbose mode
+            if verbose_callback and parsed.content:
+                verbose_callback("thinking", parsed.content)
+
             # Check for tool calls (now works with XML, native, etc.)
             if not parsed.tool_calls:
                 # No tool calls, we're done
@@ -316,6 +326,10 @@ class Agent:
                     )
                     continue
 
+                # Verbose: show tool being called
+                if verbose_callback:
+                    verbose_callback("tool_call", tc.name, tc.arguments)
+
                 # Execute tool
                 try:
                     args = tc.arguments
@@ -325,6 +339,11 @@ class Agent:
                         result = await tool.function(**args)
                     else:
                         result = tool.function(**args)
+
+                    # Verbose: show tool result summary
+                    if verbose_callback:
+                        result_summary = str(result)[:200] + "..." if len(str(result)) > 200 else str(result)
+                        verbose_callback("tool_result", tc.name, result_summary)
 
                     tool_call = ToolCall(
                         name=tool.name,
