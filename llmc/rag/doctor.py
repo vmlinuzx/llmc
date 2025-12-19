@@ -15,6 +15,7 @@ from typing import Any
 
 from llmc.rag.config import index_path_for_read
 from llmc.rag.database import Database
+from llmc.rag.embeddings.check import check_embedding_models
 
 
 def _open_db(repo_path: Path) -> tuple[Database | None, Path]:
@@ -153,6 +154,13 @@ def run_rag_doctor(repo_path: Path, verbose: bool = False) -> dict[str, Any]:
             if status == "OK":
                 status = "WARN"
             issues.append(f"{pending_embeddings} spans are pending embeddings.")
+
+        # Add embedding provider checks
+        embedding_checks = check_embedding_models(repo_path)
+        for check in embedding_checks:
+            if not check.passed:
+                status = "WARN"
+                issues.append(f"Embedding check failed: {check.message}")
 
         stats = {
             **base_stats,
