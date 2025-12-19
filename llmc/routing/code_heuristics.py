@@ -41,6 +41,13 @@ CODE_STRUCT_REGEXES = [
     re.compile(r"\b\w+\s*\([^()\n]*\)", re.MULTILINE),
 ]
 
+# File extensions that indicate code queries
+CODE_EXTENSIONS = {
+    ".py", ".ts", ".js", ".rs", ".go", ".c", ".cpp", ".h",
+    ".tsx", ".jsx", ".vue", ".rb", ".java", ".kt", ".swift",
+    ".cs", ".php", ".scala", ".lua", ".sh", ".bash", ".zsh",
+}
+
 CODE_KEYWORDS = {
     "if",
     "elif",
@@ -81,6 +88,12 @@ CODE_KEYWORDS = {
 
 
 def score_all(text: str, cfg: dict[str, Any] | None = None) -> RouteSignal | None:
+    # 0. File extensions - highest priority for code queries like "cli.py"
+    text_lower = text.lower()
+    for ext in CODE_EXTENSIONS:
+        if ext in text_lower:
+            return RouteSignal(route="code", score=0.95, reason=f"file-extension={ext}")
+
     # 1. Fences
     if has_fenced_code(text):
         return RouteSignal(route="code", score=0.95, reason="heuristic=fenced-code")

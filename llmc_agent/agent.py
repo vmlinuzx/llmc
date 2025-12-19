@@ -20,6 +20,7 @@ from llmc_agent.backends.base import GenerateRequest
 from llmc_agent.backends.llmc import LLMCBackend, RAGResult
 from llmc_agent.backends.ollama import OllamaBackend
 from llmc_agent.config import Config
+from llmc_agent.format import FormatNegotiator
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
 
 
@@ -67,6 +68,9 @@ class Agent:
         from llmc_agent.tools import ToolRegistry
 
         self.tools = ToolRegistry(allowed_roots=["."])
+
+        # Initialize UTP format negotiator for tool call parsing
+        self.format_negotiator = FormatNegotiator()
 
     async def ask(
         self,
@@ -195,6 +199,7 @@ class Agent:
         question: str,
         session: Session | None = None,
         max_tool_rounds: int = 5,
+        verbose_callback: callable | None = None,
     ) -> AgentResponse:
         """Ask with tool support (Walk/Run phases).
 
@@ -203,6 +208,11 @@ class Agent:
         2. Includes appropriate tools in the request
         3. Executes tool calls and loops until model is done
         4. Returns final response
+        
+        If verbose_callback is provided, it will be called with status updates:
+        - ("thinking", "..reasoning text..")
+        - ("tool_call", "tool_name", {args})
+        - ("tool_result", "tool_name", "..result..")
         """
         from llmc_agent.tools import detect_intent_tier
 
@@ -220,6 +230,8 @@ class Agent:
         )
 
         # Always tell the model about available tools
+        # Note: For models with native tool support (like qwen3-next-80b-tools),
+        # the modelfile template handles tool format instructions.
         available_tools = self.tools.get_tools_for_tier()
         if available_tools:
             tool_descriptions = []
@@ -273,34 +285,65 @@ class Agent:
             total_prompt_tokens += response.tokens_prompt
             total_completion_tokens += response.tokens_completion
 
-            # Check for tool calls
-            if not response.tool_calls:
+            # === UTP: Parse tool calls from any format ===
+            parser = self.format_negotiator.get_call_parser()
+            parsed = parser.parse(response.raw_response or {})
+
+            # Show any reasoning/thinking if verbose mode
+            if verbose_callback and parsed.content:
+                verbose_callback("thinking", parsed.content)
+
+            # Check for tool calls (now works with XML, native, etc.)
+            if not parsed.tool_calls:
                 # No tool calls, we're done
-                final_content = response.content
+                final_content = parsed.content or response.content
                 break
 
-            # Execute tool calls
-            for tc in response.tool_calls:
-                tool = self.tools.get_tool(tc["function"]["name"])
+            # Execute tool calls from parsed response
+            for tc in parsed.tool_calls:
+                tool = self.tools.get_tool(tc.name)
                 if not tool:
+                    # Unknown tool - add error message
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id or "",
+                            "content": json.dumps({"error": f"Tool '{tc.name}' not found"}),
+                        }
+                    )
                     continue
 
                 # Check if available at current tier
-                if not self.tools.is_tool_available(tc["function"]["name"]):
-                    # Tool not available, skip
+                if not self.tools.is_tool_available(tc.name):
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id or "",
+                            "content": json.dumps(
+                                {"error": f"Tool '{tc.name}' not available at tier {self.tools.current_tier}"}
+                            ),
+                        }
+                    )
                     continue
+
+                # Verbose: show tool being called
+                if verbose_callback:
+                    verbose_callback("tool_call", tc.name, tc.arguments)
 
                 # Execute tool
                 try:
-                    args = tc["function"]["arguments"]
-                    if isinstance(args, str):
-                        args = json.loads(args)
+                    args = tc.arguments
 
                     # Async or sync execution
                     if asyncio.iscoroutinefunction(tool.function):
                         result = await tool.function(**args)
                     else:
                         result = tool.function(**args)
+
+                    # Verbose: show tool result summary
+                    if verbose_callback:
+                        result_summary = str(result)[:200] + "..." if len(str(result)) > 200 else str(result)
+                        verbose_callback("tool_result", tc.name, result_summary)
 
                     tool_call = ToolCall(
                         name=tool.name,
@@ -309,18 +352,28 @@ class Agent:
                     )
                     all_tool_calls.append(tool_call)
 
-                    # Add tool result to messages
+                    # Add assistant message with tool call
+                    tc_id = tc.id or f"call_{round_num}_{tc.name}"
                     messages.append(
                         {
                             "role": "assistant",
-                            "content": None,
-                            "tool_calls": [tc],
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": tc_id,
+                                    "function": {
+                                        "name": tc.name,
+                                        # Ollama expects arguments as a dict, not JSON string
+                                        "arguments": tc.arguments,
+                                    },
+                                }
+                            ],
                         }
                     )
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tc.get("id", ""),
+                            "tool_call_id": tc_id,
                             "content": json.dumps(result),
                         }
                     )
@@ -330,15 +383,39 @@ class Agent:
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tc.get("id", ""),
+                            "tool_call_id": tc.id or "",
                             "content": json.dumps({"error": str(e)}),
                         }
                     )
         else:
-            # Max rounds reached
-            final_content = (
-                response.content if "response" in dir() else "Max tool rounds reached."
-            )
+            # Max rounds reached - the last response likely had tool calls
+            # Make one final request WITHOUT tools to get the synthesized answer
+            final_content = parsed.content if "parsed" in dir() else ""
+            
+            if not final_content and messages:
+                # Ask the model to synthesize an answer from what it learned
+                messages.append({
+                    "role": "user",
+                    "content": "Now synthesize your findings into a helpful answer. Do NOT use any more tools. Just answer the original question directly based on what you learned."
+                })
+                
+                # Use a simpler system prompt that doesn't mention tools
+                simple_system = "You are a helpful assistant. Answer questions directly and concisely based on the information gathered."
+                
+                # Request WITHOUT tools to force a text response
+                request = GenerateRequest(
+                    messages=messages,
+                    system=simple_system,
+                    model=self.config.agent.model,
+                    temperature=self.config.ollama.temperature,
+                    max_tokens=self.config.agent.response_reserve,
+                )
+                
+                # Don't pass tools - force text response
+                response = await self.ollama.generate(request)
+                final_content = response.content
+                total_prompt_tokens += response.tokens_prompt
+                total_completion_tokens += response.tokens_completion
 
         # Update session if provided
         if session:

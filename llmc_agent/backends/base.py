@@ -27,6 +27,7 @@ class GenerateResponse:
     model: str
     finish_reason: str  # "stop", "length", "error", "tool_calls"
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    raw_response: Any = None  # Full API response for UTP parser access
 
 
 class Backend(ABC):

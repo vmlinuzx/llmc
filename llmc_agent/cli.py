@@ -41,6 +41,7 @@ stdout_console = Console()  # Main output to stdout
 @click.option(
     "--no-tools", "no_tools", is_flag=True, help="Disable tools (Crawl-only mode)"
 )
+@click.option("-v", "--verbose", is_flag=True, help="Show model thinking")
 @click.option("--version", is_flag=True, help="Show version")
 def main(
     prompt_words: tuple[str, ...],
@@ -56,6 +57,7 @@ def main(
     no_session: bool,
     model: str | None,
     no_tools: bool,
+    verbose: bool,
     version: bool,
 ) -> None:
     """bx - AI coding assistant with RAG and tools.
@@ -72,12 +74,6 @@ def main(
         bx -r                               Recall last exchange
         bx -l                               List recent sessions
         bx -s abc123 continue here          Resume specific session
-
-    \b
-    Tools are enabled by default. Tier auto-detected from intent:
-      • Crawl: search/find code
-      • Walk: read files, list dirs
-      • Run: edit/write files (coming soon)
     """
 
     if version:
@@ -143,7 +139,7 @@ def main(
     try:
         response = asyncio.run(
             _run_agent(
-                prompt, config, session, session_mgr, json_output, quiet, not no_tools
+                prompt, config, session, session_mgr, json_output, quiet, not no_tools, verbose
             )
         )
     except KeyboardInterrupt:
@@ -223,6 +219,7 @@ async def _run_agent(
     json_output: bool,
     quiet: bool,
     use_tools: bool = False,
+    verbose: bool = False,
 ):
     """Run the agent and display results."""
 
@@ -240,18 +237,40 @@ async def _run_agent(
         rag_status = "[green]✓[/green]" if health.get("rag") else "[yellow]○[/yellow]"
         console.print(f"[dim]Model: {config.agent.model} | RAG: {rag_status}[/dim]")
 
+    # Add reasoning instruction if verbose
+    effective_prompt = prompt
+    if verbose:
+        effective_prompt = f"{prompt}\n\n(Please explain your reasoning step by step before giving your final answer.)"
+
+    # Verbose callback for real-time tool updates
+    def verbose_handler(event_type: str, *args):
+        if event_type == "thinking" and args[0]:
+            console.print(f"[dim italic]💭 {args[0][:150]}...[/dim italic]" if len(args[0]) > 150 else f"[dim italic]💭 {args[0]}[/dim italic]")
+        elif event_type == "tool_call":
+            tool_name, tool_args = args[0], args[1]
+            args_str = ", ".join(f"{k}={repr(v)[:30]}" for k, v in tool_args.items())
+            console.print(f"[cyan]🔧 {tool_name}[/cyan]({args_str})")
+        elif event_type == "tool_result":
+            tool_name, result = args[0], args[1]
+            console.print(f"[green]   ✓ {tool_name}[/green] → [dim]{result[:80]}...[/dim]" if len(result) > 80 else f"[green]   ✓ {tool_name}[/green] → [dim]{result}[/dim]")
+
     # Get response (with session for context)
     if use_tools:
-        tier_names = {0: "Crawl", 1: "Walk", 2: "Run"}
         if not quiet and not json_output:
-            console.print("[dim]Tools enabled (tier auto-detected)[/dim]")
-        response = await agent.ask_with_tools(prompt, session=session)
-        if not quiet and not json_output and response.tier_used > 0:
+            msg = "Tools enabled"
+            if verbose:
+                msg += " (verbose)"
+            console.print(f"[dim]{msg}[/dim]")
+        
+        callback = verbose_handler if verbose else None
+        response = await agent.ask_with_tools(effective_prompt, session=session, verbose_callback=callback)
+        
+        if not quiet and not json_output and response.tool_calls:
             console.print(
-                f"[dim]Tier: {tier_names.get(response.tier_used, response.tier_used)} | Tools used: {len(response.tool_calls)}[/dim]"
+                f"[dim]Tools used: {len(response.tool_calls)}[/dim]"
             )
     else:
-        response = await agent.ask(prompt, session=session)
+        response = await agent.ask(effective_prompt, session=session)
 
     # Save session
     if session and session_mgr:
@@ -273,6 +292,18 @@ async def _run_agent(
             output["session_messages"] = len(session.messages)
         click.echo(json.dumps(output, indent=2))
     else:
+        # Parse thinking blocks from response
+        import re
+        content = response.content or ""
+        thinking = ""
+        
+        # Extract <think>...</think> blocks
+        think_match = re.search(r"<think>(.*?)</think>", content, re.DOTALL)
+        if think_match:
+            thinking = think_match.group(1).strip()
+            # Remove thinking from displayed content
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        
         # Metadata to stderr
         if not quiet:
             total_tokens = response.tokens_prompt + response.tokens_completion
@@ -283,9 +314,15 @@ async def _run_agent(
             if response.rag_sources:
                 sources = response.rag_sources[:3]
                 console.print(f"[dim]Sources: {', '.join(sources)}[/dim]")
-
+        
+        # Show thinking if verbose
+        if verbose and thinking:
+            console.print("[yellow bold]💭 Thinking:[/yellow bold]")
+            console.print(f"[italic dim]{thinking}[/italic dim]")
+            console.print()
+        
         # Main response to stdout
-        stdout_console.print(response.content)
+        stdout_console.print(content)
 
     return response
 

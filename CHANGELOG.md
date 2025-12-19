@@ -4,6 +4,26 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Added (2025-12-18)
+
+- **Unified Tool Protocol (UTP) - Format translation layer for tool calling:**
+  - New `llmc_agent/format/` package with parsers and adapters
+  - `OpenAINativeParser`: Extracts tool calls from `response.message.tool_calls` (OpenAI/Ollama native)
+  - `XMLToolParser`: Extracts tool calls from XML in content (`<tools>`, `<tool_use>`, `<function_call>`)
+  - `CompositeParser`: Tries native first, then XML - supports both formats seamlessly
+  - `FormatNegotiator`: Central factory for parsers and adapters with provider defaults
+  - `ToolsConfig`: New config dataclass for `[tools]` section in llmc.toml
+  - **Impact:** Boxxie (Qwen3-80B) now executes tool calls correctly - XML in content is parsed and executed
+  - **Tests:** 22 unit tests for parsers, integration tests for Boxxie flow
+  - See: `DOCS/planning/SDD_Unified_Tool_Protocol.md`, `DOCS/planning/HLD_Unified_Tool_Protocol.md`
+
+- **Native Tool Calling for Boxxie (bx) - End-to-end integration fixed:**
+  - Default model changed to `qwen3-next-80b-tools` (has proper tool template in modelfile)
+  - Fixed Ollama native tool detection to recognize `-tools` suffix models
+  - Fixed 400 Bad Request: arguments were being double-encoded as JSON strings
+  - Tool execution loop now works: model → tool_call → execute → result → final response
+  - Tested with `list_dir`, `search_code`, `read_file`, `inspect_code`
+
 ### Fixed (2025-12-18)
 
 - **CLI Commands With Broken Output (4 bugs fixed):**

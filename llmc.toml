@@ -1,4 +1,15 @@
 # ==============================================================================
+# Agent (bx) Configuration
+# ==============================================================================
+
+[agent]
+model = "qwen3-next-80b-tools"  # Boxxie: 80B MoE @ 32 t/s - uses native tool calling template
+
+[ollama]
+url = "http://athena:11434"
+timeout = 300
+
+# ==============================================================================
 # Embeddings
 # ==============================================================================
 # 
@@ -574,9 +585,11 @@ retention_days = 0  # 0 = keep forever
 enabled = true
 
 [scoring]
-code_boost = 0.08
-doc_penalty = -0.06
-test_penalty = -0.08
+# P0 FIX: These values must be large enough to overcome semantic similarity
+# bias toward keyword-rich docs. Previous values (0.08, -0.06) were too weak.
+code_boost = 0.15        # Was 0.08 - boost code files in search
+doc_penalty = -0.12      # Was -0.06 - penalize docs when looking for code
+test_penalty = -0.10     # Was -0.08 - penalize test files
 exact_match_boost = 0.20
 stem_match_boost = 0.15
 partial_match_boost = 0.05
@@ -627,6 +640,14 @@ model = "qwen3-next-80b-tools"
 url = "http://athena:11434"
 temperature = 0.6
 timeout_seconds = 300
+
+# UTP (Unified Tool Protocol) Configuration
+# Controls how tool calls are parsed from model responses.
+# Boxxie uses XML tool calls in content, not OpenAI's tool_calls field.
+[profiles.boxxie-tools.tools]
+definition_format = "openai"  # How to send tool definitions to the model
+call_parser = "auto"          # "auto" | "openai" | "anthropic" - auto detects XML or native
+result_format = "openai"      # How to format tool results back to model
 
 
 

@@ -133,9 +133,27 @@ class OllamaBackend(Backend):
             },
         }
 
-        # Add tools if provided
+        # Add tools if provided AND model supports native tool calling
+        # Models using XML tool format (like custom modelfiles) don't want this
+        # The UTP parser will handle tool calls from content instead
         if tools:
-            payload["tools"] = tools
+            # Check if model likely supports native tools
+            model_name = request.model.lower()
+            
+            # Models with '-tools' suffix always have tool templates
+            has_tool_template = '-tools' in model_name
+            
+            # Known model families that support native tools when properly templated
+            native_tool_models = ['llama3', 'mistral', 'qwen2', 'qwen3']
+            is_native_family = any(m in model_name for m in native_tool_models)
+            
+            # 'nothink' modelfiles typically strip tool templates for faster inference
+            has_no_tool_template = 'nothink' in model_name
+            
+            supports_native_tools = has_tool_template or (is_native_family and not has_no_tool_template)
+            
+            if supports_native_tools:
+                payload["tools"] = tools
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
@@ -165,6 +183,7 @@ class OllamaBackend(Backend):
             model=data.get("model", request.model),
             finish_reason=finish_reason,
             tool_calls=tool_calls,
+            raw_response=data,  # Full response for UTP parser
         )
 
     async def health_check(self) -> bool:
