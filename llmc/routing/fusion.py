@@ -63,52 +63,42 @@ def fuse_scores(
         Each result will have 'score' updated to the fused score.
         Original metadata from the 'best' route result is preserved.
     """
+    # NOTE: We use RAW scores instead of normalizing per-route.
+    # The old approach normalized each route's scores to [0,1], which caused
+    # the best doc and best code file to both become 1.0 - defeating the purpose
+    # of our extension boosts. Raw scores are already on the same 0-100 scale
+    # thanks to normalized_score, so we use those directly.
 
-    # 1. Normalize scores per route
-    normalized_results: dict[str, list[dict[str, Any]]] = {}
-    for route_name, results in route_results.items():
-        normalized_results[route_name] = normalize_scores(results)
-
-    # 2. Apply weights and merge
     # Map slice_id -> (best_score, best_result_object)
     merged_map: dict[str, tuple[float, dict[str, Any]]] = {}
 
-    for route_name, results in normalized_results.items():
-        weight = route_weights.get(route_name, 0.0)
+    for route_name, results in route_results.items():
+        weight = route_weights.get(route_name, 1.0)
         if weight == 0.0:
             continue
 
         for res in results:
             slice_id = res["slice_id"]
-            # Calculate weighted score
-            weighted_score = res["_fusion_norm_score"] * weight
+            # Use raw score, apply weight
+            raw_score = res.get("normalized_score", res.get("score", 0)) or 0
+            weighted_score = float(raw_score) * weight
 
             if slice_id in merged_map:
                 current_best_score, current_best_obj = merged_map[slice_id]
-                # Strategy: MAX score (as per requirements)
+                # Strategy: MAX score
                 if weighted_score > current_best_score:
-                    # Update with new best score and object (in case different routes provide different metadata)
-                    # We overwrite the object to prefer metadata from the higher scoring route?
-                    # Or we just update the score. Usually preferred to keep the metadata from the 'winning' route.
                     merged_map[slice_id] = (weighted_score, res)
-                # else: keep existing
             else:
                 merged_map[slice_id] = (weighted_score, res)
 
-    # 3. Convert back to list and sort
+    # Convert back to list and sort
     final_results = []
     for slice_id, (fused_score, res_obj) in merged_map.items():
-        # Create a copy to avoid mutating input
         final_res = res_obj.copy()
-        # Remove the temporary _fusion_norm_score
-        final_res.pop("_fusion_norm_score", None)
-        # Update the main score to be the fused score
         final_res["score"] = fused_score
-        # Add a debugging field to see where it came from/how it was calculated?
-        # Maybe later, for now keep it clean.
         final_results.append(final_res)
 
-    # Sort descending
+    # Sort descending by fused score
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
     return final_results
