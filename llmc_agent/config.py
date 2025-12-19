@@ -80,6 +80,19 @@ class UIConfig:
 
 
 @dataclass
+class ToolsConfig:
+    """Tool calling format configuration for UTP.
+    
+    Controls how tool calls are parsed from LLM responses and
+    how tool definitions/results are formatted for the provider.
+    """
+
+    definition_format: str = "openai"  # How to send tool definitions
+    call_parser: str = "auto"  # "auto" | "openai" | "anthropic" | "qwen"
+    result_format: str = "openai"  # How to format tool results
+
+
+@dataclass
 class Config:
     """Root configuration."""
 
@@ -88,6 +101,7 @@ class Config:
     rag: RAGConfig = field(default_factory=RAGConfig)
     session: SessionConfig = field(default_factory=SessionConfig)
     ui: UIConfig = field(default_factory=UIConfig)
+    tools: ToolsConfig = field(default_factory=ToolsConfig)
 
     @classmethod
     def load(cls, config_path: str | None = None) -> Config:
@@ -178,6 +192,15 @@ def _merge_config(config: Config, data: dict[str, Any]) -> Config:
             config.ui.show_tokens = ui_data["show_tokens"]
         if "show_sources" in ui_data:
             config.ui.show_sources = ui_data["show_sources"]
+
+    if "tools" in data:
+        tools_data = data["tools"]
+        if "definition_format" in tools_data:
+            config.tools.definition_format = tools_data["definition_format"]
+        if "call_parser" in tools_data:
+            config.tools.call_parser = tools_data["call_parser"]
+        if "result_format" in tools_data:
+            config.tools.result_format = tools_data["result_format"]
 
     return config
 

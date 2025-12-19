@@ -628,6 +628,14 @@ url = "http://athena:11434"
 temperature = 0.6
 timeout_seconds = 300
 
+# UTP (Unified Tool Protocol) Configuration
+# Controls how tool calls are parsed from model responses.
+# Boxxie uses XML tool calls in content, not OpenAI's tool_calls field.
+[profiles.boxxie-tools.tools]
+definition_format = "openai"  # How to send tool definitions to the model
+call_parser = "auto"          # "auto" | "openai" | "anthropic" - auto detects XML or native
+result_format = "openai"      # How to format tool results back to model
+
 
 
 
