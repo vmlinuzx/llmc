@@ -20,9 +20,11 @@ from llmc.core import load_config
 logger = logging.getLogger(__name__)
 
 # Default weights if not configured
-DEFAULT_EXTENSION_BOOST = 0.08
-DEFAULT_DOC_PENALTY = -0.06
-DEFAULT_TEST_PENALTY = -0.08
+# NOTE: These values need to be large enough to overcome the semantic similarity
+# advantage that docs have (they're keyword-rich and dominate BM25/embedding results)
+DEFAULT_EXTENSION_BOOST = 0.15  # Was 0.08, too weak
+DEFAULT_DOC_PENALTY = -0.12     # Was -0.06, too weak  
+DEFAULT_TEST_PENALTY = -0.10    # Was -0.08
 
 DEFAULT_FILENAME_MATCH_EXACT = 0.20
 DEFAULT_FILENAME_MATCH_STEM = 0.15
@@ -65,6 +67,7 @@ class Scorer:
         Heuristic:
         - 'how to', 'guide', 'tutorial', 'explain' -> docs
         - 'function', 'class', 'def', 'import', camelCase, snake_case -> code
+        - File extensions (.py, .ts, .js, etc.) -> code
         """
         if not self.config["enable_intent_detection"]:
             return "neutral"
@@ -75,7 +78,13 @@ class Scorer:
         if any(w in q for w in ["how to", "guide", "tutorial", "explain", "overview", "what is"]):
             return "docs"
 
-        # Code indicators
+        # Code indicators - file extensions
+        code_extensions = {".py", ".ts", ".js", ".rs", ".go", ".c", ".cpp", ".h", 
+                          ".tsx", ".jsx", ".vue", ".rb", ".java", ".kt", ".swift"}
+        if any(ext in q for ext in code_extensions):
+            return "code"
+
+        # Code indicators - keywords
         if any(w in q for w in ["function", "class", "def ", "import ", "return ", "async "]):
             return "code"
 
@@ -88,6 +97,7 @@ class Scorer:
                 return "code"
 
         return "neutral"
+
 
     def score_extension(self, path_str: str, intent: str = "neutral") -> float:
         """

@@ -585,9 +585,11 @@ retention_days = 0  # 0 = keep forever
 enabled = true
 
 [scoring]
-code_boost = 0.08
-doc_penalty = -0.06
-test_penalty = -0.08
+# P0 FIX: These values must be large enough to overcome semantic similarity
+# bias toward keyword-rich docs. Previous values (0.08, -0.06) were too weak.
+code_boost = 0.15        # Was 0.08 - boost code files in search
+doc_penalty = -0.12      # Was -0.06 - penalize docs when looking for code
+test_penalty = -0.10     # Was -0.08 - penalize test files
 exact_match_boost = 0.20
 stem_match_boost = 0.15
 partial_match_boost = 0.05
