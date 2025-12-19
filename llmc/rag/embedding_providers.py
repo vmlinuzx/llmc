@@ -122,10 +122,8 @@ class HashEmbeddingProvider(EmbeddingProvider):
 # ---------------------------------------------------------------------------
 
 
-try:
-    from sentence_transformers import SentenceTransformer
-except Exception:  # pragma: no cover - optional dependency
-    SentenceTransformer = None  # type: ignore[assignment]
+# SentenceTransformer import is deferred to __init__ to avoid 5+ second startup penalty
+SentenceTransformer = None  # Lazy loaded
 
 
 class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
@@ -140,11 +138,16 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
         normalize_embeddings: bool = True,
         trust_remote_code: bool = False,
     ) -> None:
+        global SentenceTransformer
         if SentenceTransformer is None:
-            raise EmbeddingConfigError(
-                "sentence-transformers is not installed but "
-                "SentenceTransformerEmbeddingProvider is configured"
-            )
+            try:
+                from sentence_transformers import SentenceTransformer as ST
+                SentenceTransformer = ST
+            except ImportError:
+                raise EmbeddingConfigError(
+                    "sentence-transformers is not installed but "
+                    "SentenceTransformerEmbeddingProvider is configured"
+                )
 
         if metadata.dimension <= 0:
             logger.warning(
@@ -205,13 +208,10 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
 # Clinical-Longformer provider (medical document embeddings)
 # ---------------------------------------------------------------------------
 
-try:
-    from llmc.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
-
-    CLINICAL_LONGFORMER_AVAILABLE = True
-except ImportError:
-    CLINICAL_LONGFORMER_AVAILABLE = False
-    LongContextAdapter = None  # type: ignore[assignment]
+# LongContextAdapter import is deferred to avoid 5+ second startup penalty
+# The actual import happens inside ClinicalLongformerEmbeddingProvider._ensure_adapter()
+CLINICAL_LONGFORMER_AVAILABLE = True  # Assume available, will fail gracefully if not
+LongContextAdapter = None  # Lazy loaded
 
 
 class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
@@ -244,6 +244,8 @@ class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
     def _ensure_adapter(self) -> None:
         if self._adapter is None:
             from pathlib import Path
+            # Lazy import to avoid 5+ second startup penalty
+            from llmc.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
 
             config_path = self._config_path
             if config_path is None:
