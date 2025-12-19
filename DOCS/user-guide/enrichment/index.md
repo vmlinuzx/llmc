@@ -8,9 +8,7 @@ Enrichment uses LLMs to add AI-generated summaries, tags, and metadata to your i
 
 ## In This Section
 
-- [Setup](setup.md) — Getting enrichment running
 - [Providers](providers.md) — Ollama, Gemini, Anthropic, OpenAI, Groq
-- [Optimization](optimization.md) — Path weights, priorities, cost control
 
 ---
 

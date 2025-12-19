@@ -9,10 +9,8 @@ Guides for running and monitoring LLMC in production.
 | Guide | Description |
 |-------|-------------|
 | [RAG Daemon](daemon.md) | Service lifecycle, systemd integration |
-| [Monitoring](monitoring.md) | Logs, health checks, metrics |
 | [MCP Integration](mcp-integration.md) | Claude Desktop setup |
 | [Troubleshooting](troubleshooting.md) | Common issues and fixes |
-| [Backup & Recovery](backup-recovery.md) | Data safety |
 
 ---
 

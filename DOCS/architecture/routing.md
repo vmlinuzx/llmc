@@ -28,11 +28,11 @@ The determined `slice_type`, along with `slice_language` (e.g., `python`, `javas
 
 ### 2.2. Slice to Route Mapping
 
-Once a `slice_type` is determined, it is mapped to a `route_name` (e.g., `"code"`, `"docs"`) via the `routing.slice_type_to_route` section in `llmc.toml`. This mapping is handled by the `tools.rag.config.get_route_for_slice_type` helper function.
+Once a `slice_type` is determined, it is mapped to a `route_name` (e.g., `"code"`, `"docs"`) via the `routing.slice_type_to_route` section in `llmc.toml`. This mapping is handled by the `llmc.rag.config.get_route_for_slice_type` helper function.
 
 ### 2.3. Route to Embedding Profile & Index Mapping
 
-Each `route_name` then maps to a specific `embedding_profile` and `embedding_index`. This mapping is defined in the `embeddings.routes.*` section of `llmc.toml` and resolved by the `tools.rag.config.resolve_route` helper function.
+Each `route_name` then maps to a specific `embedding_profile` and `embedding_index`. This mapping is defined in the `embeddings.routes.*` section of `llmc.toml` and resolved by the `llmc.rag.config.resolve_route` helper function.
 
 - An `embedding_profile` (defined under `embeddings.profiles.*`) specifies the embedding model, its dimension (`dim`), provider, and other characteristics.
 - An `embedding_index` refers to the specific database table (e.g., `emb_docs`, `emb_code`) where the generated embeddings for that content type will be stored.

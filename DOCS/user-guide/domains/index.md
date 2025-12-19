@@ -8,12 +8,12 @@ LLMC supports different repository types with specialized extraction and search 
 
 ## Supported Domains
 
-| Domain | Description | Guide |
-|--------|-------------|-------|
-| **Code** | Python, TypeScript, JavaScript, Go, Java | [Code Repos](code-repos.md) |
-| **Tech Docs** | API docs, man pages, config references | [Tech Docs](tech-docs.md) |
-| **Medical** | Clinical notes, PHI-safe processing | [Medical RAG](medical-rag.md) |
-| **Mixed** | Repositories with both code and documentation | [Mixed Repos](mixed-repos.md) |
+| Domain | Description |
+|--------|-------------|
+| **Code** | Python, TypeScript, JavaScript, Go, Java |
+| **Tech Docs** | API docs, man pages, config references |
+| **Medical** | Clinical notes, PHI-safe processing |
+| **Mixed** | Repositories with both code and documentation |
 
 ---
 

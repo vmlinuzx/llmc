@@ -186,82 +186,51 @@ Once the index is built, you can:
 
 There are three primary "front door" commands:
 
-- `llmc-rag-service` - high-level, human-facing service wrapper.
-- `llmc-rag-repo` - manage which repos are registered for RAG.
-- `llmc-rag-daemon` - low-level scheduler/worker loop.
+- `llmc repo` - manage which repos are registered for RAG.
+- `llmc service` - high-level service wrapper and daemon.
 
-These are thin shims around the actual Python modules in `tools.*` and live under `scripts/`.
+The new unified `llmc` CLI provides subcommands that replace the older, separate scripts.
 
-### 5.1. llmc-rag-repo - Repo Registry UX
+### 5.1. `llmc repo` - Repo Registry
 
-Backed by `python -m tools.rag_repo.cli`.
-
-Manages the global repo registry (`~/.llmc/repos.yml`) and per-repo `.llmc/rag` workspaces.
+The `llmc repo` command group manages the global repo registry (`~/.llmc/repos.yml`) and per-repo `.llmc` workspaces.
 
 Common commands:
 
 ```bash
-llmc-rag-repo                  # tree-style help
-llmc-rag-repo add /home/you/src/llmc
-llmc-rag-repo list --json
-llmc-rag-repo inspect /home/you/src/llmc
+llmc repo --help               # See all repo commands
+llmc repo add /home/you/src/llmc
+llmc repo list --json
+llmc repo validate /home/you/src/llmc
 ```
 
 Key behaviors:
 
-- Normalizes paths and creates `.llmc/rag` as needed.
-- Writes and reads `~/.llmc/repos.yml` through a YAML registry adapter.
+- Normalizes paths and creates `.llmc` workspaces as needed.
+- Writes and reads `~/.llmc/repos.yml`.
 - Prints short, friendly errors on bad input instead of dumping tracebacks.
 
-### 5.2. llmc-rag-daemon - Scheduler / Worker UX
+### 5.2. `llmc service` - Daemon and Service Management
 
-Backed by `python -m tools.rag_daemon.main`.
-
-Runs the scheduler loop that keeps registered repos fresh.
+The `llmc service` command group runs the scheduler loop that keeps registered repos fresh, replacing the legacy `llmc-rag-daemon` and `llmc-rag-service` scripts.
 
 Common commands:
 
 ```bash
-llmc-rag-daemon                  # tree-style help
-llmc-rag-daemon run              # run until interrupted
-llmc-rag-daemon tick             # single scheduler tick then exit
-llmc-rag-daemon config --json    # show effective config
-llmc-rag-daemon doctor           # basic health checks
+llmc service --help              # See all service commands
+llmc service start               # Run in foreground
+llmc service start --daemon      # Run in background
+llmc service status              # Check health and status
+llmc service logs -f             # Tail logs
+llmc service stop                # Stop the background service
 ```
 
-Defaults:
+This unified command handles:
+- Tracking managed repos and service state in `~/.llmc/rag-service.json`.
+- Orchestrating per-repo refresh cycles using the `llmc.rag` modules.
+- Recording failures in `~/.llmc/rag-failures.db`.
 
-- Config file: `~/.llmc/rag-daemon.yml` (overridable via `LLMC_RAG_DAEMON_CONFIG` or `--config`).
-- Reasonable defaults for tick interval, concurrency, state store, log directory, and control directory.
-
-Error handling:
-
-- Missing config: clear error with a hint about where to create it.
-- Missing or unwritable state/log/control paths: surfaced via `doctor` with `[ERROR]` lines and a non-zero exit code.
-
-### 5.3. llmc-rag-service - "Real Human" UX
-
-Backed by `tools.rag.service` through `scripts/llmc-rag-service`.
-
-This is the CLI you probably want to use day-to-day.
-
-Common commands:
-
-```bash
-llmc-rag-service                            # tree-style help
-llmc-rag-service register /home/you/src/llmc
-llmc-rag-service start --interval 300       # foreground loop
-llmc-rag-service start --interval 300 --daemon
-llmc-rag-service status
-llmc-rag-service stop
-llmc-rag-service clear-failures --repo /home/you/src/llmc
-```
-
-Responsibilities:
-
-- Tracks managed repos and service state in `~/.llmc/rag-service.json`.
-- Orchestrates per-repo refresh cycles using the RAG modules.
-- Records and clears failures in `~/.llmc/rag-failures.db`.
+Configuration is managed in `llmc.toml`, and `llmc debug doctor` provides comprehensive health checks.
 
 Error handling and UX:
 
@@ -273,68 +242,53 @@ Error handling and UX:
 
 ## 6. Path Safety and Workspace Helpers
 
-LLMC includes a dedicated CLI for path-safety helpers: `tools.rag_repo.cli_entry`.
+LLMC includes diagnostic and recovery tools under the `llmc debug` and `llmc repo` command groups.
 
-### 6.1. doctor-paths, snapshot, and clean
+### 6.1. `doctor`, `export`, and `repo clean`
 
 Quick examples:
 
 ```bash
-python -m tools.rag_repo.cli_entry doctor-paths --repo /path/to/repo --json
-python -m tools.rag_repo.cli_entry snapshot --repo /path/to/repo --name snap.tar.gz --force --json
-python -m tools.rag_repo.cli_entry clean --repo /path/to/repo --force --json
+llmc debug doctor --json
+llmc debug export --output /tmp/backup.tar.gz
+llmc repo clean --force --json
 ```
 
-Flags:
-
-- `--json` prints machine-friendly output.
-- `--force` is required for destructive operations like `clean` and snapshot overwrites.
-
-Exit codes:
-
-- `0` - success
-- `2` - user / path / policy error (bad workspace, traversal attempt, missing `--force`, etc.)
-- `1` - unexpected failure (traceback goes to logs; CLI prints a concise error)
-
-Use cases:
-
-- `doctor-paths`: "Is this workspace safe? What paths are allowed or blocked?"
-- `snapshot`: Tar up a workspace for backup, debugging, or sending to another environment.
-- `clean`: Wipe workspace contents when you want to rebuild indexes from scratch.
+- `llmc debug doctor`: Checks workspace safety, configuration, and index health.
+- `llmc debug export`: Creates a snapshot of a workspace for backup or debugging.
+- `llmc repo clean`: Wipes workspace contents to rebuild indexes from scratch. Destructive operations require `--force`.
 
 ---
 
 ## 7. Core RAG Operations
 
-Most of the heavy lifting lives under the `tools.rag` package. You will usually access it via CLIs, but the important concepts are:
+Most of the heavy lifting lives under the `llmc.rag` package. You will usually access it via the `llmc` CLI. The important concepts are:
 
-- **Index**: scans a repo, slices files into spans, and stores them in `.rag/index_v2.db`.
-- **Sync**: applies incremental changes from git or from explicit file lists.
-- **Embeddings**: computes vector embeddings and caches them, skipping unchanged spans.
-- **Enrichment**: calls the configured LLM chains to add summaries and metadata to spans.
-- **Search**: queries the local index using a mix of keyword search and vector similarity.
-- **Planner and trimmer**: chooses the best spans for a query and packs them into a context window.
+- **Index**: Scans a repo, slices files into spans, and stores them.
+- **Sync**: Applies incremental changes from git or explicit file lists.
+- **Embeddings**: Computes and caches vector embeddings.
+- **Enrichment**: Calls configured LLM chains to add summaries and metadata.
+- **Search**: Queries the local index using a mix of keyword and vector search.
 
-A typical manual workflow looks like:
+A typical manual workflow uses the `debug` and `analytics` commands:
 
 ```bash
-# initial index
-python -m tools.rag.cli index --repo /home/you/src/your-repo
+# Initial index
+llmc debug index
 
-# sync after local changes
-python -m tools.rag.cli sync --repo /home/you/src/your-repo --since HEAD~1
+# Sync after local changes
+llmc debug sync --since HEAD~1
 
-# embed spans
-python -m tools.rag.cli embed --repo /home/you/src/your-repo
+# Embed spans
+llmc debug embed
 
-# enrich spans
-python -m tools.rag.cli enrich --repo /home/you/src/your-repo
+# Enrich spans
+llmc debug enrich
 
-# run a query
-python -m tools.rag.cli search --repo /home/you/src/your-repo "how does X call Y"
+# Run a query
+llmc analytics search "how does X call Y"
 ```
-
-The exact flags may vary depending on your version, but the pattern is always: index, sync, embed, enrich, then search.
+The pattern is always: index, sync, embed, enrich, then search. The `llmc service` command automates this loop.
 
 ### 7.1. Normalized Scoring
 
@@ -460,48 +414,45 @@ Expected behavior:
 
 ### 12.1. Checking paths and workspaces
 
-If something feels off with a workspace:
+If something feels off with a workspace, run the comprehensive health check:
 
 ```bash
-python -m tools.rag_repo.cli_entry doctor-paths --repo /home/you/src/your-repo --json
+llmc debug doctor --json
 ```
 
 This will tell you:
 
-- Whether the workspace path is valid.
-- Which paths are allowed or blocked.
-- Any policy errors that would prevent safe operation.
+- Whether the workspace path is valid and configuration is sane.
+- Which paths are allowed or blocked by security policy.
+- The status of the RAG index and any potential corruption.
 
 ### 12.2. Wiping and rebuilding a workspace
 
 If the index is badly out of date or corrupted, you can clean it and rebuild.
 
 ```bash
-python -m tools.rag_repo.cli_entry clean --repo /home/you/src/your-repo --force --json
+llmc repo clean --force --json
 ```
 
 Then re-run the normal workflows:
 
-- `llmc-rag-service start` for automated refresh.
-- Or manual `index`, `embed`, `enrich` via the RAG CLI.
+- `llmc service start` for automated refresh.
+- Or manual `llmc debug index`, `embed`, `enrich` commands.
 
 ### 12.3. Checking daemon and service health
 
-Use:
+Use the `llmc service` and `llmc debug` commands:
 
 ```bash
-llmc-rag-daemon doctor
-llmc-rag-daemon config --json
-
-llmc-rag-service status
-llmc-rag-service clear-failures --repo /home/you/src/your-repo
+llmc service status
+llmc debug doctor
+llmc service logs -f
 ```
 
 Look for:
-
-- Misconfigured paths (state, logs, control dirs).
-- Stale or stuck jobs in the failure store.
 - Service not running when you think it is.
+- Errors in the logs.
+- Stale or stuck jobs reported by `doctor`.
 
 ### 12.4. Logs
 
