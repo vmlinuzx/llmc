@@ -62,5 +62,9 @@ class CompositeParser:
             return response
         if isinstance(response, dict):
             msg = response.get("message", response)
-            return msg.get("content", "") or ""
+            if msg is None:
+                return ""
+            if isinstance(msg, dict):
+                return msg.get("content", "") or ""
+            return ""
         return getattr(response, "content", "") or ""

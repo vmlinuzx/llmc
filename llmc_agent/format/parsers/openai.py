@@ -25,6 +25,8 @@ class OpenAINativeParser:
         """
         if isinstance(response, dict):
             msg = response.get("message", response)
+            if msg is None or not isinstance(msg, dict):
+                return False
             tool_calls = msg.get("tool_calls")
             return bool(tool_calls)
         return False
@@ -36,8 +38,12 @@ class OpenAINativeParser:
         """
         if isinstance(response, dict):
             msg = response.get("message", response)
-            tool_calls_raw = msg.get("tool_calls", []) or []
-            content = msg.get("content", "") or ""
+            if msg is None or not isinstance(msg, dict):
+                tool_calls_raw = []
+                content = ""
+            else:
+                tool_calls_raw = msg.get("tool_calls", []) or []
+                content = msg.get("content", "") or ""
         else:
             tool_calls_raw = []
             content = ""
