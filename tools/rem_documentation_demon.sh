@@ -1,1 +1,0 @@
-../scripts/rem_documentation_demon.sh
