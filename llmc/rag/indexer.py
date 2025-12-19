@@ -210,8 +210,27 @@ def index_repo(
             new_hash = compute_hash(source)
             existing_hash = db.get_file_hash(relative_path)
             if existing_hash == new_hash:
-                counts["unchanged"] += 1
-                continue
+                # MIGRATION FIX: Force re-extraction for markdown files with 0 spans
+                # This handles upgrade from pre-TechDocsExtractor versions where markdown
+                # files were indexed but no spans were extracted.
+                if lang == "markdown":
+                    span_count = db.conn.execute(
+                        """
+                        SELECT COUNT(*) FROM spans s
+                        JOIN files f ON s.file_id = f.id
+                        WHERE f.path = ?
+                        """,
+                        (str(relative_path),),
+                    ).fetchone()[0]
+                    if span_count == 0:
+                        log.info(f"Migration: re-extracting {relative_path} (0 spans from old indexer)")
+                        # Fall through to extraction instead of skipping
+                    else:
+                        counts["unchanged"] += 1
+                        continue
+                else:
+                    counts["unchanged"] += 1
+                    continue
 
             # ATOMIC OPERATION: Extract spans and generate sidecar from same source/AST
             file_process_start = time.time()
@@ -330,8 +349,25 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
             new_hash = compute_hash(source)
             existing_hash = db.get_file_hash(rel)
             if existing_hash == new_hash:
-                counts["unchanged"] += 1
-                continue
+                # MIGRATION FIX: Force re-extraction for markdown files with 0 spans
+                if lang == "markdown":
+                    span_count = db.conn.execute(
+                        """
+                        SELECT COUNT(*) FROM spans s
+                        JOIN files f ON s.file_id = f.id
+                        WHERE f.path = ?
+                        """,
+                        (str(rel),),
+                    ).fetchone()[0]
+                    if span_count == 0:
+                        log.info(f"Migration: re-extracting {rel} (0 spans from old indexer)")
+                        # Fall through to extraction
+                    else:
+                        counts["unchanged"] += 1
+                        continue
+                else:
+                    counts["unchanged"] += 1
+                    continue
 
             # ATOMIC OPERATION: Extract spans and generate sidecar
             text_preview = source[:1024].decode("utf-8", errors="ignore")

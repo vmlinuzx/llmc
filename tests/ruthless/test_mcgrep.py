@@ -53,6 +53,8 @@ class TestMcgrepCLI:
         )
         assert result.returncode == 0
         assert "query" in result.stdout.lower()
+        assert "--extract" in result.stdout
+        assert "--context" in result.stdout
 
     def test_mcgrep_bare_query_inserts_search(self):
         """mcgrep 'query' should be equivalent to mcgrep search 'query'."""
@@ -102,7 +104,7 @@ class TestMcgrepSearch:
             or "query" in result.stderr.lower()
         )
 
-    @patch("llmc.rag_nav.tool_handlers.tool_rag_search")
+    @patch("llmc.rag.search.search_spans")
     @patch("llmc.mcgrep.find_repo_root")
     def test_search_formats_results_correctly(
         self, mock_find_root, mock_search, tmp_path
@@ -113,25 +115,59 @@ class TestMcgrepSearch:
         # Setup mocks
         mock_find_root.return_value = tmp_path
 
-        # Create mock result
         mock_item = MagicMock()
-        mock_item.file = "test.py"
-        mock_item.snippet.location.path = "test.py"
-        mock_item.snippet.location.start_line = 10
-        mock_item.snippet.location.end_line = 15
-        mock_item.snippet.text = "def test_function():\n    pass"
-        mock_item.enrichment = None
+        mock_item.path = Path("test.py")
+        mock_item.start_line = 10
+        mock_item.end_line = 15
+        mock_item.symbol = "test_function"
+        mock_item.normalized_score = 95.0
+        mock_item.summary = "Test function. More detail."
 
-        mock_result = MagicMock()
-        mock_result.source = "LOCAL_FALLBACK"
-        mock_result.freshness_state = "UNKNOWN"
-        mock_result.items = [mock_item]
-
-        mock_search.return_value = mock_result
+        mock_search.return_value = [mock_item]
 
         # This should not raise
         _run_search("test query", None, 10, True)
 
+    @patch("llmc.rag.search.search_spans")
+    @patch("llmc.mcgrep.find_repo_root")
+    def test_search_extract_mode_outputs_context(
+        self, mock_find_root, mock_search, tmp_path
+    ):
+        """Extract mode should render code context for the top spans."""
+        from llmc.mcgrep import _run_search_extracted
+
+        mock_find_root.return_value = tmp_path
+
+        source = "\n".join(
+            [
+                "line1",
+                "line2",
+                "def target():",
+                "    return 123",
+                "line5",
+            ]
+        )
+        (tmp_path / "test.py").write_text(source)
+
+        mock_span = MagicMock()
+        mock_span.path = Path("test.py")
+        mock_span.start_line = 3
+        mock_span.end_line = 4
+        mock_span.symbol = "target"
+        mock_span.normalized_score = 99.0
+        mock_span.summary = "Defines the target function."
+
+        mock_search.return_value = [mock_span]
+
+        # This should not raise
+        _run_search_extracted(
+            "test query",
+            None,
+            limit=10,
+            extract_count=1,
+            context_lines=1,
+            show_summary=True,
+        )
     def test_search_handles_no_repo(self, tmp_path):
         """Search should gracefully handle not being in a repo."""
         # Create an empty directory with no .llmc or .git

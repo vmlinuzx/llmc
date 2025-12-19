@@ -4,7 +4,42 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
-### Added (2025-12-18)
+### Fixed (2025-12-19)
+
+- **RAG Doctor: Pending Embeddings Lie Fixed:**
+  - Doctor was reporting 5171 pending embeddings when worker said 0
+  - Root cause: Doctor only checked `embeddings` table, but worker checks BOTH `embeddings` AND `emb_code`
+  - Also: Doctor filtered by `profile = 'default'` but column is `profile_name` and actual value is `'docs'`
+  - **Fix:** Updated `doctor.py` query to match worker logic - proper 2-table join
+
+- **Markdown Files Not Indexed (0 Spans Migration Bug):**
+  - Files indexed before TechDocsExtractor integration had 0 spans but correct file hashes
+  - Incremental indexer would skip re-extraction because hash matched
+  - **Affected:** `DOCS/roadmap.md` (957 lines, 0 spans), 20+ other markdown files
+  - **Fix:** Auto-migration in `indexer.py` detects markdown files with 0 spans and forces re-extraction
+  - Migration runs automatically on next sync - no manual intervention needed
+
+### Changed (2025-12-19)
+
+- **mcgrep: Separate CODE and DOCS sections in output:**
+  - Results now grouped into `── CODE ──` (top 20) and `── DOCS ──` (top 5) sections
+  - Header shows breakdown: `100 spans in 34 files (33 code, 1 docs)`
+  - Documentation files detected by extension: `.md`, `.markdown`, `.rst`, `.txt`
+  - **Why:** LLMs and humans can now see both implementation code AND documentation for a query
+
+### Added (2025-12-19)
+
+- **mcwho - Who Uses This Symbol? CLI:**
+  - New `mcwho` command for simple schema graph queries
+  - `mcwho EnrichmentPipeline.run` - Shows callers, callees, imports in one view
+  - `mcwho --callers foo` - Just show callers
+  - `mcwho stats` - Graph statistics (4902 entities, 19570 edges in LLMC)
+  - `mcwho graph` - Build/rebuild schema graph
+  - Fuzzy symbol matching (exact → suffix → contains)
+  - Dead simple UX: one symbol, one answer
+  - **Why:** LLMs needed an easy way to ask "who uses this?" without learning `llmc-rag-nav`
+
+
 
 - **Unified Tool Protocol (UTP) - Format translation layer for tool calling:**
   - New `llmc_agent/format/` package with parsers and adapters

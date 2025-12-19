@@ -63,6 +63,7 @@ packages = ["llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers", "llmc_agent", "ll
 [project.scripts]
 llmc-cli = "llmc.main:app"
 mcgrep = "llmc.mcgrep:main"
+mcwho = "llmc.mcwho:main"
 llmc-mcp = "llmc_mcp.cli:main"
 te = "llmc.te.cli:main"
 llmc-chat = "llmc_agent.cli:main"

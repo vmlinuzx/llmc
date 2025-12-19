@@ -8,6 +8,7 @@ Usage:
     mcgrep "where is auth handled?"
     mcgrep "database connection" src/
     mcgrep -n 20 "error handling"
+    mcgrep "router" --extract 10 --context 3
     mcgrep watch                    # Start background indexer
     mcgrep status                   # Check index health
 
@@ -47,6 +48,45 @@ def _format_source_indicator(source: str, freshness: str) -> str:
             return "[yellow]●[/yellow] semantic (stale)"
     else:
         return "[blue]●[/blue] fallback"
+
+
+def _normalize_result_path(repo_root: Path, raw_path: Path | str) -> Path | None:
+    """Normalize a search result path to a repo-relative path when possible.
+
+    Returns None if the path cannot be safely resolved under repo_root.
+    """
+    try:
+        candidate = raw_path if isinstance(raw_path, Path) else Path(str(raw_path))
+    except Exception:
+        return None
+
+    if candidate.is_absolute():
+        try:
+            return candidate.relative_to(repo_root)
+        except ValueError:
+            return None
+
+    return candidate
+
+
+def _merge_line_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """Merge overlapping/adjacent (start, end) line ranges."""
+    if not ranges:
+        return []
+
+    sorted_ranges = sorted(ranges, key=lambda r: (r[0], r[1]))
+    merged: list[tuple[int, int]] = []
+    cur_start, cur_end = sorted_ranges[0]
+
+    for start, end in sorted_ranges[1:]:
+        if start <= cur_end + 1:
+            cur_end = max(cur_end, end)
+            continue
+        merged.append((cur_start, cur_end))
+        cur_start, cur_end = start, end
+
+    merged.append((cur_start, cur_end))
+    return merged
 
 
 def _run_search_expanded(query: str, path: str | None, limit: int, expand_count: int) -> None:
@@ -138,11 +178,176 @@ def _run_search_expanded(query: str, path: str | None, limit: int, expand_count:
         console.print()  # spacing between files
 
 
+def _run_search_extracted(
+    query: str,
+    path: str | None,
+    limit: int,
+    extract_count: int,
+    context_lines: int,
+    show_summary: bool,
+) -> None:
+    """Semantic search and print extracted span context (thin mode)."""
+    from llmc.rag.search import search_spans
+
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]")
+        console.print("Run: mcgrep init")
+        raise typer.Exit(1)
+
+    effective_limit = max(limit, extract_count)
+
+    # Run embedding-based semantic search (same backend as default output).
+    try:
+        results = search_spans(query, limit=effective_limit, repo_root=repo_root)
+    except FileNotFoundError:
+        console.print("[red]No index found.[/red] Run: mcgrep watch")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Search error:[/red] {e}")
+        raise typer.Exit(1)
+
+    items = results
+
+    # Filter by path if provided
+    if path:
+        path_filter = Path(path).resolve()
+        try:
+            if path_filter.is_relative_to(repo_root):
+                path_filter = path_filter.relative_to(repo_root)
+        except (ValueError, TypeError):
+            pass
+        items = [it for it in items if str(path_filter) in str(it.path)]
+
+    if not items:
+        console.print(f"[dim]No results for:[/dim] {query}")
+        return
+
+    top_spans = items[:extract_count]
+    groups: dict[str, list] = {}
+    file_order: list[str] = []
+
+    for item in top_spans:
+        rel_path = _normalize_result_path(repo_root, item.path)
+        if rel_path is None:
+            continue
+        file_path = str(rel_path)
+        if file_path not in groups:
+            groups[file_path] = []
+            file_order.append(file_path)
+        groups[file_path].append(item)
+
+    if not groups:
+        console.print(f"[dim]No readable results for:[/dim] {query}")
+        return
+
+    console.print(
+        f"[bold]{len(top_spans)} spans in {len(groups)} files[/bold] [green]●[/green] semantic"
+    )
+    console.print(
+        f"[dim]Mode: extract (±{context_lines} lines). Lx-y are 1-based lines; [score] is 0-100 relevance.[/dim]"
+    )
+    console.print("[dim]Tip: use --expand N to return full file content.[/dim]\n")
+
+    source_cache: dict[str, list[str] | None] = {}
+
+    for file_path in file_order:
+        spans = groups.get(file_path, [])
+        if not spans:
+            continue
+
+        console.print(f"[bold cyan]━━━ {file_path} ━━━[/bold cyan]")
+
+        full_path = repo_root / file_path
+        if file_path not in source_cache:
+            try:
+                content = full_path.read_text(errors="ignore")
+                source_cache[file_path] = content.splitlines()
+            except Exception as e:
+                console.print(f"[red]Error reading file:[/red] {e}")
+                source_cache[file_path] = None
+
+        lines = source_cache[file_path]
+        if lines is None:
+            console.print()
+            continue
+
+        total_lines = len(lines)
+        if total_lines == 0:
+            console.print("[dim](empty file)[/dim]\n")
+            continue
+
+        expanded_ranges: list[tuple[int, int]] = []
+        match_lines: set[int] = set()
+        match_hints: list[str] = []
+
+        for span in spans:
+            start = int(span.start_line or 1)
+            end = int(span.end_line or start)
+            if start <= 0:
+                start = 1
+            if end < start:
+                end = start
+
+            start = min(start, total_lines)
+            end = min(end, total_lines)
+
+            for line_no in range(start, end + 1):
+                match_lines.add(line_no)
+
+            score = float(getattr(span, "normalized_score", 0.0) or 0.0)
+            symbol = str(getattr(span, "symbol", "") or "").strip()
+            symbol_str = f" • {symbol}" if symbol else ""
+            match_hints.append(f"L{start}-{end}[{score:.0f}]{symbol_str}")
+
+            expanded_start = max(1, start - context_lines)
+            expanded_end = min(total_lines, end + context_lines)
+            expanded_ranges.append((expanded_start, expanded_end))
+
+        merged_ranges = _merge_line_ranges(expanded_ranges)
+        matches_str = ", ".join(match_hints[:8])
+        if len(match_hints) > 8:
+            matches_str += f" (+{len(match_hints) - 8} more)"
+        console.print(f"[dim]Matches: {matches_str}[/dim]\n")
+
+        last_end: int | None = None
+        for range_start, range_end in merged_ranges:
+            if last_end is not None and range_start > last_end + 1:
+                console.print("[dim]  ⋮[/dim]")
+
+            for line_no in range(range_start, range_end + 1):
+                try:
+                    line = lines[line_no - 1]
+                except Exception:
+                    line = ""
+                if line_no in match_lines:
+                    console.print(f"[yellow]{line_no:>5}[/yellow] │ {line}")
+                else:
+                    console.print(f"[dim]{line_no:>5}[/dim] │ {line}")
+
+            last_end = range_end
+            console.print()
+
+        if show_summary:
+            # Summaries are a helpful hint but should stay thin.
+            for span in spans[:5]:
+                summary = getattr(span, "summary", None)
+                if not summary:
+                    continue
+                summary_str = str(summary)
+                if len(summary_str) > 120:
+                    summary_str = summary_str[:117] + "..."
+                score = float(getattr(span, "normalized_score", 0.0) or 0.0)
+                console.print(f"[green]→[{score:.1f}] {summary_str}[/green]")
+            console.print()
+
+
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
     """Core search logic using embedding-based semantic search.
     
     Output format (hybrid):
-    1. Top 10 files: compact (FilePath "Desc" : spans[rank])
+    1. Top files: compact (FilePath "span-summary (proxy)" : Lstart-end[score])
     2. Remaining results: detailed (one span per line with summary)
     """
     from llmc.rag.search import search_spans
@@ -181,33 +386,45 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         console.print(f"[dim]No results for:[/dim] {query}")
         return
 
-    # === PART 1: Top 10 compact file-grouped results ===
+    # === PART 1: Separate CODE and DOCS files ===
     
     # Group by file - preserving order of first appearance
-    file_groups: dict[str, list] = {}
+    code_groups: dict[str, list] = {}
+    docs_groups: dict[str, list] = {}
     file_descriptions: dict[str, str] = {}
+    
+    DOC_EXTENSIONS = {".md", ".markdown", ".rst", ".txt"}
     
     for item in items:
         file_path = str(item.path)
-        if file_path not in file_groups:
-            file_groups[file_path] = []
-            # Use first span's summary as file description (first sentence, no truncation)
+        path_obj = Path(file_path)
+        is_doc = path_obj.suffix.lower() in DOC_EXTENSIONS
+        
+        target_groups = docs_groups if is_doc else code_groups
+        
+        if file_path not in target_groups:
+            target_groups[file_path] = []
+            # Use first span's summary as file description (first sentence)
             if item.summary:
                 desc = item.summary.split('.')[0]  # First sentence
                 file_descriptions[file_path] = desc
-        file_groups[file_path].append(item)
+        target_groups[file_path].append(item)
 
-    # Top 20 files for compact section
-    top_files = list(file_groups.items())[:20]
-    total_files = len(file_groups)
+    total_files = len(code_groups) + len(docs_groups)
 
     # Header with format explanation
-    console.print(f"[bold]{len(items)} spans in {total_files} files[/bold] [green]●[/green] semantic")
-    console.print("[dim]FilePath \"Description\" : spans[rank][/dim]\n")
+    console.print(
+        f"[bold]{len(items)} spans in {total_files} files[/bold] "
+        f"([cyan]{len(code_groups)} code[/cyan], [green]{len(docs_groups)} docs[/green]) "
+        "[green]●[/green] semantic"
+    )
+    console.print('[dim]Format: FilePath "summary" : Lstart-end[score][/dim]')
+    console.print(
+        "[dim]Legend: score is 0-100 relevance. "
+        "Tip: use --extract for code context.[/dim]\n"
+    )
 
-    # Compact output - one line per file (top 20)
-    for file_path, spans in top_files:
-        # Build spans string: L38-52[100], L26-35[99], ...
+    def _print_file_group(file_path: str, spans: list) -> None:
         span_strs = []
         for s in spans[:5]:  # Max 5 spans per file
             span_strs.append(f"L{s.start_line}-{s.end_line}[{s.normalized_score:.0f}]")
@@ -215,12 +432,28 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
             span_strs.append(f"+{len(spans)-5}more")
         
         spans_compact = ", ".join(span_strs)
-        
-        # File description (no truncation)
         desc = file_descriptions.get(file_path, "")
         desc_str = f' "{desc}"' if desc else ""
         
         console.print(f"[bold]{file_path}[/bold]{desc_str} : [yellow]{spans_compact}[/yellow]")
+
+    # === CODE section (top 20) ===
+    console.print("[bold cyan]── CODE ──[/bold cyan]")
+    top_code = list(code_groups.items())[:20]
+    if top_code:
+        for file_path, spans in top_code:
+            _print_file_group(file_path, spans)
+    else:
+        console.print("[dim]  (no code matches)[/dim]")
+    
+    # === DOCS section (top 5) ===
+    console.print("\n[bold green]── DOCS ──[/bold green]")
+    top_docs = list(docs_groups.items())[:5]
+    if top_docs:
+        for file_path, spans in top_docs:
+            _print_file_group(file_path, spans)
+    else:
+        console.print("[dim]  (no documentation matches)[/dim]")
 
     # === PART 2: Top 10 detailed span results (like mgrep) ===
     
@@ -258,6 +491,18 @@ def search(
     summary: bool = typer.Option(
         True, "--summary/--no-summary", "-s", help="Show enrichment summaries"
     ),
+    extract: int = typer.Option(
+        0,
+        "-x",
+        "--extract",
+        help="Extract top N spans as code with surrounding context (thin mode).",
+    ),
+    context: int = typer.Option(
+        3,
+        "-C",
+        "--context",
+        help="Context lines around spans (extract mode only).",
+    ),
     expand: int = typer.Option(
         0, "-e", "--expand", help="Return full file content for top N results (LLM mode)"
     ),
@@ -268,10 +513,20 @@ def search(
     Examples:
         mcgrep search "where is authentication handled?"
         mcgrep search "database connection" -n 20
+        mcgrep search "router" --extract 10 --context 3
         mcgrep search "auth" --expand 3  # Full file content for top 3 hits
     """
+    if extract < 0:
+        raise typer.BadParameter("--extract must be >= 0")
+    if context < 0:
+        raise typer.BadParameter("--context must be >= 0")
+    if extract > 0 and expand > 0:
+        raise typer.BadParameter("Use either --extract or --expand, not both.")
+
     query_str = " ".join(query)
-    if expand > 0:
+    if extract > 0:
+        _run_search_extracted(query_str, path, limit, extract, context, summary)
+    elif expand > 0:
         _run_search_expanded(query_str, path, limit, expand)
     else:
         _run_search(query_str, path, limit, summary)

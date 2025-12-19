@@ -33,3 +33,11 @@ Semantic grep with RAG context
 ╰─────────────────────────────────────╯
 
 ```
+
+## Search examples
+
+```bash
+mcgrep "router"                          # Compact file list + span line ranges
+mcgrep "router" --extract 10 --context 3 # Print code for top spans (thin context)
+mcgrep "router" --expand 2               # Print full content for top files (thick context)
+```
