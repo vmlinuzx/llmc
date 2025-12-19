@@ -19,8 +19,6 @@ Task-oriented guides for getting things done with LLMC.
 | Guide | Description |
 |-------|-------------|
 | [Search](search/index.md) | Semantic and keyword search |
-| [Graph Navigation](search/graph-navigation.md) | where-used, lineage |
-| [Advanced Queries](search/advanced-queries.md) | Filters, weights, tips |
 
 ---
 
@@ -30,7 +28,6 @@ Task-oriented guides for getting things done with LLMC.
 |-------|-------------|
 | [Enrichment Setup](enrichment/index.md) | Configuring LLM enrichment |
 | [Providers](enrichment/providers.md) | Ollama, Gemini, Anthropic, etc. |
-| [Optimization](enrichment/optimization.md) | Path weights, priorities |
 
 ---
 

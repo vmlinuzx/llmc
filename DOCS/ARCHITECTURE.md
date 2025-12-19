@@ -34,7 +34,7 @@ llmc_agent/                # Agentic chat interface
 │   └── ollama.py          # Ollama API client
 └── prompt.py              # System prompts
 
-tools/rag/                 # RAG indexing and search
+llmc/rag/                  # RAG indexing and search
 ├── service.py             # Background enrichment daemon
 ├── database.py            # SQLite schema and operations
 ├── indexer.py             # Code span extraction
@@ -52,11 +52,6 @@ tools/rag/                 # RAG indexing and search
 ├── extractors/            # Language-specific extractors
 │   └── techdocs.py        # Markdown/RST heading-aware chunking
 └── config.py              # RAG configuration loading
-
-tools/rag_nav/             # Navigation and tool handlers
-├── tool_handlers.py       # MCP tool implementations
-├── gateway.py             # Route resolution
-└── models.py              # IndexStatus, etc.
 ```
 
 ## Data Flow
@@ -207,26 +202,21 @@ For untrusted code, the original design called for Docker isolation, but this pr
 llmc (CLI)
 ├── llmc.docgen
 ├── llmc.security
-└── tools.rag
+└── llmc.rag
 
 llmc_mcp (MCP Server)
-├── tools.rag
-├── tools.rag_nav
+├── llmc.rag
 └── llmc_mcp.tools.code_exec
 
 llmc_agent (Chat)
 ├── llmc_agent.backends.ollama
-└── tools.rag (optional, for context)
+└── llmc.rag (optional, for context)
 
-tools.rag
-├── tools.rag.graph_store  # Schema graph
-├── tools.rag.graph/       # Edge types
-├── tools.rag.enrichment   # Query enrichment
-└── tools.rag.search       # Hybrid search
-
-tools.rag_nav
-├── tools.rag (via absolute imports)
-└── (avoids circular imports)
+llmc.rag
+├── llmc.rag.graph_store  # Schema graph
+├── llmc.rag.graph/       # Edge types
+├── llmc.rag.enrichment   # Query enrichment
+└── llmc.rag.search       # Hybrid search
 ```
 
 ## Testing

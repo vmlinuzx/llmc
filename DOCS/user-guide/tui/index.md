@@ -9,7 +9,6 @@ LLMC includes a full-screen terminal user interface for monitoring and interacti
 ## In This Section
 
 - [Dashboard Usage](dashboard.md) — Screens and navigation
-- [Configuration](configuration.md) — TUI settings
 
 ---
 

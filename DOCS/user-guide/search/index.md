@@ -8,10 +8,6 @@ LLMC provides powerful search capabilities that combine semantic understanding w
 
 ## In This Section
 
-- [Semantic Search](semantic-search.md) — Natural language queries
-- [Graph Navigation](graph-navigation.md) — where-used, lineage
-- [Advanced Queries](advanced-queries.md) — Tips and tricks
-
 ---
 
 ## Quick Examples

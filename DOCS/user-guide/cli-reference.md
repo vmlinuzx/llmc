@@ -297,7 +297,7 @@ Incrementally update spans for selected files.
 
 ```bash
 # Sync specific files
-llmc debug sync --path tools/rag/search.py --path tools/rag/indexer.py
+llmc debug sync --path llmc/rag/search.py --path llmc/rag/indexer.py
 
 # Sync files changed since commit
 llmc debug sync --since HEAD~5
@@ -413,16 +413,16 @@ Deep dive into a file or symbol with graph context.
 
 ```bash
 # Inspect by symbol
-llmc debug inspect --symbol tools.rag.search.search_spans
+llmc debug inspect --symbol llmc.rag.search.search_spans
 
 # Inspect by file path
-llmc debug inspect --path tools/rag/search.py
+llmc debug inspect --path llmc/rag/search.py
 
 # Include full source
-llmc debug inspect --path tools/rag/search.py --full
+llmc debug inspect --path llmc/rag/search.py --full
 
 # Focus on specific line
-llmc debug inspect --path tools/rag/search.py --line 42
+llmc debug inspect --path llmc/rag/search.py --line 42
 ```
 
 **Options:**
@@ -798,6 +798,6 @@ llmc service logs --lines 100
 
 ## See Also
 
-- [SDD: Unified CLI v2](../legacy/planning_dec2025/SDD_Unified_CLI_v2.md) - Design document
+- [SDD: Unified CLI v2](../planning/sdd/SDD_Unified_CLI_v2.md) - Design document
 - [AGENTS.md](../../AGENTS.md) - Agent protocols and workflows
-- [ROADMAP.md](../planning/roadmap.md) - Project roadmap
+- [ROADMAP.md](../roadmap.md) - Project roadmap
