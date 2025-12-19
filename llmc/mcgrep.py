@@ -139,8 +139,8 @@ def _run_search_expanded(query: str, path: str | None, limit: int, expand_count:
 
 
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
-    """Core search logic."""
-    from llmc.rag_nav.tool_handlers import tool_rag_search
+    """Core search logic using embedding-based semantic search."""
+    from llmc.rag.search import search_spans
 
     try:
         repo_root = find_repo_root()
@@ -149,9 +149,9 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         console.print("Run: mcgrep init")
         raise typer.Exit(1)
 
-    # Run search with freshness-aware fallback
+    # Run embedding-based semantic search (has scoring fixes for filename matching)
     try:
-        result = tool_rag_search(repo_root, query, limit=limit)
+        results = search_spans(query, limit=limit, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
         raise typer.Exit(1)
@@ -159,9 +159,9 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         console.print(f"[red]Search error:[/red] {e}")
         raise typer.Exit(1)
 
-    source = getattr(result, "source", "UNKNOWN")
-    freshness = getattr(result, "freshness_state", "UNKNOWN")
-    items = getattr(result, "items", []) or []
+    # Convert SpanMatch results to display format
+    source = "RAG_SEMANTIC"
+    items = results
 
     # Filter by path if provided
     if path:
@@ -171,52 +171,36 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
                 path_filter = path_filter.relative_to(repo_root)
         except (ValueError, TypeError):
             pass
-        items = [it for it in items if str(path_filter) in str(it.file)]
+        items = [it for it in items if str(path_filter) in str(it.path)]
 
     if not items:
         console.print(f"[dim]No results for:[/dim] {query}")
-        console.print(
-            f"[dim]Source: {_format_source_indicator(source, freshness)}[/dim]"
-        )
+        console.print(f"[dim]Source: {source}[/dim]")
         return
 
     # Header
-    indicator = _format_source_indicator(source, freshness)
-    console.print(f"[bold]{len(items)} results[/bold] {indicator}\n")
+    console.print(f"[bold]{len(items)} results[/bold] [green]●[/green] semantic\n")
 
     # Results
     for i, item in enumerate(items, 1):
-        loc = item.snippet.location
-        file_path = loc.path
-        start = loc.start_line
-        end = loc.end_line
+        file_path = str(item.path)
+        start = item.start_line
+        end = item.end_line
+        score = item.normalized_score
+        symbol = item.symbol or ""
 
-        # File location
+        # File location with score
+        symbol_str = f" • {symbol}" if symbol else ""
         console.print(
-            f"[bold cyan]{i}.[/bold cyan] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]"
+            f"[bold cyan]{i}.[/bold cyan] [{score:.1f}] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]{symbol_str}"
         )
 
-        # Snippet preview (first 2 lines)
-        text = (item.snippet.text or "").strip()
-        if text:
-            lines = text.split("\n")[:2]
-            for line in lines:
-                # Truncate long lines
-                if len(line) > 100:
-                    line = line[:97] + "..."
-                console.print(f"   [dim]{line}[/dim]")
-
         # Enrichment summary if available
-        if show_summary:
-            enrichment = getattr(item, "enrichment", None)
-            if enrichment:
-                # EnrichmentData is a dataclass, access as attribute
-                summary = getattr(enrichment, "summary", None)
-                if summary:
-                    # Truncate summary
-                    if len(summary) > 120:
-                        summary = summary[:117] + "..."
-                    console.print(f"   [green]→ {summary}[/green]")
+        if show_summary and item.summary:
+            summary = item.summary
+            if len(summary) > 120:
+                summary = summary[:117] + "..."
+            console.print(f"   [green]→ {summary}[/green]")
 
         console.print()  # spacing
 
