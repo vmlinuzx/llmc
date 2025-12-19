@@ -96,68 +96,37 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ---
 
-### 1.0.4 Native Ollama/OpenAI Tool Calling Format (P0) 🔥 NEW
+### ~~1.0.4 Native Ollama/OpenAI Tool Calling Format (P0)~~ ✅ DONE
 
-**Status:** 🔴 Not started  
-**Added:** 2025-12-18 (discovered during Boxxie integration)
+**Status:** ✅ Complete  
+**Added:** 2025-12-18 | **Completed:** 2025-12-19
 
-**Problem:** `llmc_agent` (bx) uses Ollama's native tool calling API which returns tool calls in the `tool_calls` field of the response. However, some models (especially custom modelfiles) output tool calls as XML text in the content field:
+**Problem:** `llmc_agent` (bx) uses Ollama's native tool calling API, but custom modelfiles output tool calls as XML in content instead of using the `tool_calls` field.
 
-```xml
-<tools>
-{"name": "search_code", "arguments": {"query": "..."}}
-</tools>
-```
+**Solution Implemented:** Unified Tool Protocol (UTP)
 
-This causes `ask_with_tools()` to:
-1. Receive the XML as text content
-2. Print it to the user instead of executing it
-3. Fail to complete the agentic loop
+- ✅ New `llmc_agent/format/` package with multi-format parsers
+- ✅ `OpenAINativeParser`: Handles native `response.tool_calls`
+- ✅ `XMLToolParser`: Extracts `<tools>`, `<tool_use>`, `<tool_call>` from content
+- ✅ `CompositeParser`: Tries native first, then XML - auto-detects format
+- ✅ `FormatNegotiator`: Factory for parser selection
+- ✅ 22 unit tests for parsers
 
-**Tool Calling Format Landscape:**
+**Integration Fixes (2025-12-19):**
+- ✅ Default model → `qwen3-next-80b-tools` (has proper tool template)
+- ✅ Fixed native tool detection for `-tools` suffix models
+- ✅ Fixed 400 error: arguments must be dict, not JSON string
+- ✅ Fixed blank output: Force synthesis after max tool rounds
 
-| Format | Used By | API Field |
-|--------|---------|-----------|
-| **OpenAI/Ollama Native** | GPT-4, Llama 3.1+, native Ollama models | `response.tool_calls` |
-| **Anthropic XML** | Claude | `<tool_use>` in content |
-| **Custom XML** | Qwen templates, custom modelfiles | `<tools>` or `<tool_call>` in content |
+**Success Criteria Met:**
+- ✅ `bx` executes tool calls from both native and XML formats
+- ✅ Tool results fed back to model for continuation
+- ✅ Works with `qwen3-next-80b-tools` modelfile
+- ✅ Existing native Ollama tool calling still works
 
-**Solution Options:**
+**Branch:** `feature/unified-tool-protocol` (ready to merge)
 
-1. **Option A: Content Parser (Quick Fix)**
-   - Add XML parsing to `ask_with_tools()` to detect `<tools>` blocks in content
-   - Extract and execute, then continue loop
-   - Works with any model that outputs XML tool calls
-   - ~4-8 hours
-
-2. **Option B: Native Ollama Tools Only (Clean Fix)**
-   - Ensure all models use Ollama's native `tools` parameter
-   - Model must support native tool calling (check with `ollama show --modelfile`)
-   - Some models may not support this format
-   - ~2-4 hours + model testing
-
-3. **Option C: Multi-Format Adapter (Robust)**
-   - Abstract tool call detection behind `ToolCallParser` interface
-   - `OllamaToolParser`, `AnthropicToolParser`, `XMLToolParser`
-   - Route based on response structure or model config
-   - ~12-20 hours
-
-**Recommended:** Option A first (quick unblock), then Option C for production robustness.
-
-**Files to Modify:**
-- `llmc_agent/agent.py` - `ask_with_tools()` loop
-- `llmc_agent/backends/ollama.py` - `generate_with_tools()` response parsing
-- `llmc_agent/tools.py` - Tool execution
-
-**Success Criteria:**
-- [ ] `bx` can execute tool calls from models that output XML format
-- [ ] Tool results are fed back to model for continuation
-- [ ] Works with `qwen3-next-80b-tools` modelfile
-- [ ] Existing native Ollama tool calling still works
-
-**Why P0:** Blocks local LLM agentic workflows with Boxxie (80B model running at 32 t/s on Strix Halo). This is THE critical path for local frontier-class agents.
-
-**Effort:** 8-20 hours | **Difficulty:** 🟡 Medium (6/10)
+**Effort:** ~12 hours | **Difficulty:** 🟡 Medium (6/10)
 
 ---
 
