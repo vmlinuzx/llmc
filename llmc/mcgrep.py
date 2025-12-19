@@ -392,6 +392,15 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
     code_groups: dict[str, list] = {}
     docs_groups: dict[str, list] = {}
     file_descriptions: dict[str, str] = {}
+
+    # Get file descriptions from the database
+    db_path = repo_root / ".rag" / "index_v2.db"
+    if db_path.exists():
+        db = Database(db_path)
+        rows = db.conn.execute("SELECT file_path, description FROM file_descriptions").fetchall()
+        for row in rows:
+            file_descriptions[row["file_path"]] = row["description"]
+        db.close()
     
     DOC_EXTENSIONS = {".md", ".markdown", ".rst", ".txt"}
     
@@ -404,8 +413,8 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         
         if file_path not in target_groups:
             target_groups[file_path] = []
-            # Use first span's summary as file description (first sentence)
-            if item.summary:
+            # Use first span's summary as file description (first sentence) if not in the db
+            if file_path not in file_descriptions and item.summary:
                 desc = item.summary.split('.')[0]  # First sentence
                 file_descriptions[file_path] = desc
         target_groups[file_path].append(item)
