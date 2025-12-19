@@ -26,9 +26,9 @@ DEFAULT_EXTENSION_BOOST = 0.15  # Was 0.08, too weak
 DEFAULT_DOC_PENALTY = -0.12     # Was -0.06, too weak  
 DEFAULT_TEST_PENALTY = -0.10    # Was -0.08
 
-DEFAULT_FILENAME_MATCH_EXACT = 0.20
-DEFAULT_FILENAME_MATCH_STEM = 0.15
-DEFAULT_FILENAME_MATCH_PARTIAL = 0.05
+DEFAULT_FILENAME_MATCH_EXACT = 0.35  # Huge boost for exact filename match
+DEFAULT_FILENAME_MATCH_STEM = 0.30   # Big boost for stem match (router -> router.py)
+DEFAULT_FILENAME_MATCH_PARTIAL = 0.08
 
 DEFAULT_CODE_EXTENSIONS = {
     ".py", ".ts", ".js", ".rs", ".go", ".c", ".cpp", ".h",
