@@ -49,6 +49,95 @@ def _format_source_indicator(source: str, freshness: str) -> str:
         return "[blue]●[/blue] fallback"
 
 
+def _run_search_expanded(query: str, path: str | None, limit: int, expand_count: int) -> None:
+    """LLM-optimized search: find semantically, return full file content.
+    
+    Uses semantic search to find the right files, then returns full content
+    for top N hits. This gives LLMs the broad context they need.
+    """
+    from llmc.rag_nav.tool_handlers import tool_rag_search
+
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]")
+        console.print("Run: mcgrep init")
+        raise typer.Exit(1)
+
+    # Run semantic search
+    try:
+        result = tool_rag_search(repo_root, query, limit=limit)
+    except FileNotFoundError:
+        console.print("[red]No index found.[/red] Run: mcgrep watch")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Search error:[/red] {e}")
+        raise typer.Exit(1)
+
+    items = getattr(result, "items", []) or []
+
+    # Filter by path if provided
+    if path:
+        path_filter = Path(path).resolve()
+        try:
+            if path_filter.is_relative_to(repo_root):
+                path_filter = path_filter.relative_to(repo_root)
+        except (ValueError, TypeError):
+            pass
+        items = [it for it in items if str(path_filter) in str(it.file)]
+
+    if not items:
+        console.print(f"[dim]No results for:[/dim] {query}")
+        return
+
+    # Deduplicate files (multiple spans might be from same file)
+    seen_files: dict[str, tuple] = {}  # path -> (item, line_ranges)
+    for item in items:
+        loc = item.snippet.location
+        file_path = str(loc.path)
+        line_range = (loc.start_line, loc.end_line)
+        
+        if file_path not in seen_files:
+            seen_files[file_path] = (item, [line_range])
+        else:
+            seen_files[file_path][1].append(line_range)
+
+    # Take top N unique files
+    top_files = list(seen_files.items())[:expand_count]
+
+    console.print(f"[bold]Returning full content for {len(top_files)} files[/bold]")
+    console.print(f"[dim]Query: {query}[/dim]\n")
+
+    # Output in LLM-friendly format
+    for file_path, (item, line_ranges) in top_files:
+        full_path = repo_root / file_path
+        
+        # Header with matched line hints
+        ranges_str = ", ".join(f"L{s}-{e}" for s, e in line_ranges[:3])
+        if len(line_ranges) > 3:
+            ranges_str += f" (+{len(line_ranges) - 3} more)"
+        
+        console.print(f"[bold cyan]━━━ {file_path} ━━━[/bold cyan]")
+        console.print(f"[dim]Matches at: {ranges_str}[/dim]\n")
+        
+        # Read and output full file
+        try:
+            content = full_path.read_text()
+            # Add line numbers for context
+            lines = content.split('\n')
+            for i, line in enumerate(lines, 1):
+                # Highlight matched lines
+                is_match = any(s <= i <= e for s, e in line_ranges)
+                if is_match:
+                    console.print(f"[yellow]{i:>5}[/yellow] │ {line}")
+                else:
+                    console.print(f"[dim]{i:>5}[/dim] │ {line}")
+        except Exception as e:
+            console.print(f"[red]Error reading file: {e}[/red]")
+        
+        console.print()  # spacing between files
+
+
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
     """Core search logic."""
     from llmc.rag_nav.tool_handlers import tool_rag_search
@@ -140,6 +229,9 @@ def search(
     summary: bool = typer.Option(
         True, "--summary/--no-summary", "-s", help="Show enrichment summaries"
     ),
+    expand: int = typer.Option(
+        0, "-e", "--expand", help="Return full file content for top N results (LLM mode)"
+    ),
 ):
     """
     Semantic search over your codebase.
@@ -147,9 +239,13 @@ def search(
     Examples:
         mcgrep search "where is authentication handled?"
         mcgrep search "database connection" -n 20
+        mcgrep search "auth" --expand 3  # Full file content for top 3 hits
     """
     query_str = " ".join(query)
-    _run_search(query_str, path, limit, summary)
+    if expand > 0:
+        _run_search_expanded(query_str, path, limit, expand)
+    else:
+        _run_search(query_str, path, limit, summary)
 
 
 @app.command()
