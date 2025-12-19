@@ -369,10 +369,34 @@ class Agent:
                         }
                     )
         else:
-            # Max rounds reached
-            final_content = (
-                parsed.content if "parsed" in dir() else "Max tool rounds reached."
-            )
+            # Max rounds reached - the last response likely had tool calls
+            # Make one final request WITHOUT tools to get the synthesized answer
+            final_content = parsed.content if "parsed" in dir() else ""
+            
+            if not final_content and messages:
+                # Ask the model to synthesize an answer from what it learned
+                messages.append({
+                    "role": "user",
+                    "content": "Now synthesize your findings into a helpful answer. Do NOT use any more tools. Just answer the original question directly based on what you learned."
+                })
+                
+                # Use a simpler system prompt that doesn't mention tools
+                simple_system = "You are a helpful assistant. Answer questions directly and concisely based on the information gathered."
+                
+                # Request WITHOUT tools to force a text response
+                request = GenerateRequest(
+                    messages=messages,
+                    system=simple_system,
+                    model=self.config.agent.model,
+                    temperature=self.config.ollama.temperature,
+                    max_tokens=self.config.agent.response_reserve,
+                )
+                
+                # Don't pass tools - force text response
+                response = await self.ollama.generate(request)
+                final_content = response.content
+                total_prompt_tokens += response.tokens_prompt
+                total_completion_tokens += response.tokens_completion
 
         # Update session if provided
         if session:
