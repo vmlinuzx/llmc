@@ -214,12 +214,9 @@ class SearchScreen(LLMCScreen):
     }
     """
 
-    BINDINGS = [
-        ("escape", "app.pop_screen", "Back"),
+    BINDINGS = LLMCScreen.BINDINGS + [
         ("ctrl+r", "clear", "Clear"),
         ("enter", "search", "Search"),
-        ("1", "nav_monitor", "Monitor"),
-        ("2", "nav_search", "Search"),
     ]
 
     def __init__(self):

@@ -145,6 +145,29 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 | **`doctor`** | **Diagnose** health | Tools failing? No results? Run this. | `-v` |
 | **`stats`** | **Status** check | Check index size/freshness. | none |
 
+### Unified CLI (New)
+
+The newer `llmc-cli` provides the same functionality with a cleaner interface:
+
+```bash
+llmc-cli analytics search "query"     # Same as: python3 -m llmc.rag.cli search
+llmc-cli debug doctor                 # Same as: python3 -m llmc.rag.cli doctor
+llmc-cli tui                          # Launch interactive TUI
+```
+
+Both CLIs work. Use whichever you prefer.
+
+### Configurable Scoring
+
+Search scoring is tunable via `llmc.toml`:
+
+```toml
+[scoring]
+code_boost = 0.15        # Boost code files in results
+doc_penalty = -0.12      # Penalize docs when searching for code
+stem_match_boost = 0.30  # Boost when query matches filename stem
+```
+
 ### Quick Heuristics
 
 - **`inspect` vs `read_file`:** Always prefer `inspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly. Use `read_file` only for raw byte checks.

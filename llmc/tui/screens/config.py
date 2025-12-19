@@ -24,8 +24,8 @@ from llmc.rag.config import (
     load_rerank_weights,
 )
 
-# We might need to call find_repo_root from llmc.rag.utils
-from llmc.rag.utils import find_repo_root
+# We might need to call find_repo_root from llmc.core
+from llmc.core import find_repo_root
 
 
 class ConfigScreen(Screen):
@@ -34,7 +34,7 @@ class ConfigScreen(Screen):
     """
 
     BINDINGS = [
-        ("escape", "app.pop_screen", "Back"),
+        ("escape", "go_back", "Back"),
     ]
 
     CSS = """
@@ -212,3 +212,11 @@ class ConfigScreen(Screen):
             Static(f"[b]TUI CWD[/b]: {self.app.repo_root}", classes="config-item")
         )  # This is the app's repo_root, might be different than cwd
         container.mount(Static(""))  # Spacer
+    def action_go_back(self) -> None:
+        """Go back to dashboard if nothing to pop."""
+        if len(self.app.screen_stack) > 1:
+            self.app.pop_screen()
+        else:
+            from llmc.tui.screens.dashboard import DashboardScreen
+            self.app.switch_screen(DashboardScreen())
+

@@ -115,7 +115,7 @@ class RAGDoctorScreen(Screen):
 
     BINDINGS = [
         Binding("r", "refresh", "Refresh"),
-        Binding("escape", "app.pop_screen", "Back"),
+        Binding("escape", "go_back", "Back"),
     ]
 
     def __init__(self, profile: str = "default") -> None:
@@ -382,3 +382,11 @@ class RAGDoctorScreen(Screen):
             f"./scripts/te {cmd_suffix}\n"
             f"```"
         )
+    def action_go_back(self) -> None:
+        """Go back to dashboard if nothing to pop."""
+        if len(self.app.screen_stack) > 1:
+            self.app.pop_screen()
+        else:
+            from llmc.tui.screens.dashboard import DashboardScreen
+            self.app.switch_screen(DashboardScreen())
+

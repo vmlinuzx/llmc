@@ -111,7 +111,7 @@ class InspectorScreen(Screen):
     """
 
     BINDINGS = [
-        ("escape", "app.pop_screen", "Back"),
+        ("escape", "go_back", "Back"),
         ("1", "nav_monitor", "Monitor"),
         ("2", "nav_search", "Search"),
         ("3", "nav_inspect", "Inspect"),
@@ -300,3 +300,11 @@ class InspectorScreen(Screen):
 
     def action_nav_inspect(self) -> None:
         pass  # Already here
+    def action_go_back(self) -> None:
+        """Go back to dashboard if nothing to pop."""
+        if len(self.app.screen_stack) > 1:
+            self.app.pop_screen()
+        else:
+            from llmc.tui.screens.dashboard import DashboardScreen
+            self.app.switch_screen(DashboardScreen())
+

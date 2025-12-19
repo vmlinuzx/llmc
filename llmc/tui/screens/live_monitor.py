@@ -95,7 +95,7 @@ class LiveMonitorScreen(Screen):
     """
 
     BINDINGS = [
-        ("escape", "app.pop_screen", "Back"),
+        ("escape", "go_back", "Back"),
         ("p", "toggle_pause", "Pause/Resume"),
         ("c", "clear_feed", "Clear"),
         ("r", "force_refresh", "Refresh"),
@@ -434,3 +434,11 @@ class LiveMonitorScreen(Screen):
         self._paused = False
         self._poll_new_events()
         self._paused = was_paused
+    def action_go_back(self) -> None:
+        """Go back to dashboard if nothing to pop."""
+        if len(self.app.screen_stack) > 1:
+            self.app.pop_screen()
+        else:
+            from llmc.tui.screens.dashboard import DashboardScreen
+            self.app.switch_screen(DashboardScreen())
+

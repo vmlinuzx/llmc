@@ -99,7 +99,7 @@ class AnalyticsScreen(Screen):
     """
 
     BINDINGS = [
-        ("escape", "app.pop_screen", "Back"),
+        ("escape", "go_back", "Back"),
         ("r", "refresh_data", "Refresh"),
     ]
 
@@ -277,3 +277,11 @@ class AnalyticsScreen(Screen):
     def action_refresh_data(self) -> None:
         """Action handler for 'r' key."""
         self.refresh_data()
+    def action_go_back(self) -> None:
+        """Go back to dashboard if nothing to pop."""
+        if len(self.app.screen_stack) > 1:
+            self.app.pop_screen()
+        else:
+            from llmc.tui.screens.dashboard import DashboardScreen
+            self.app.switch_screen(DashboardScreen())
+
