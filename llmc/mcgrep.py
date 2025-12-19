@@ -156,6 +156,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 
     # Run embedding-based semantic search (has scoring fixes for filename matching)
     try:
+        # Fetch many spans to ensure we get enough unique files
         results = search_spans(query, limit=limit, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
@@ -256,7 +257,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 @app.command()
 def search(
     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
-    limit: int = typer.Option(10, "-n", "-m", "--limit", help="Max files to show (default: 10, like mgrep)"),
+    limit: int = typer.Option(100, "-n", "-m", "--limit", help="Max spans to fetch (default: 100). Top 10 files shown in compact view."),
     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
     summary: bool = typer.Option(
         True, "--summary/--no-summary", "-s", help="Show enrichment summaries"
