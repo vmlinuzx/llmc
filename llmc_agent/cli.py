@@ -72,12 +72,6 @@ def main(
         bx -r                               Recall last exchange
         bx -l                               List recent sessions
         bx -s abc123 continue here          Resume specific session
-
-    \b
-    Tools are enabled by default. Tier auto-detected from intent:
-      • Crawl: search/find code
-      • Walk: read files, list dirs
-      • Run: edit/write files (coming soon)
     """
 
     if version:
@@ -242,13 +236,12 @@ async def _run_agent(
 
     # Get response (with session for context)
     if use_tools:
-        tier_names = {0: "Crawl", 1: "Walk", 2: "Run"}
         if not quiet and not json_output:
             console.print("[dim]Tools enabled (tier auto-detected)[/dim]")
         response = await agent.ask_with_tools(prompt, session=session)
-        if not quiet and not json_output and response.tier_used > 0:
+        if not quiet and not json_output and response.tool_calls:
             console.print(
-                f"[dim]Tier: {tier_names.get(response.tier_used, response.tier_used)} | Tools used: {len(response.tool_calls)}[/dim]"
+                f"[dim]Tools used: {len(response.tool_calls)}[/dim]"
             )
     else:
         response = await agent.ask(prompt, session=session)
