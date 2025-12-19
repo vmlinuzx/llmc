@@ -687,8 +687,12 @@ class LlmcMcpServer:
             "linux_fs_move": self._handle_fs_move,
             "linux_fs_delete": self._handle_fs_delete,
             "linux_fs_edit": self._handle_fs_edit,
+            # Bootstrap
+            "00_INIT": self._handle_bootstrap,
         }
-        logger.info("Classic mode: 23 tools registered")
+        # Append bootstrap tool to the list
+        self.tools.append(BOOTSTRAP_TOOL)
+        logger.info("Classic mode: 24 tools registered")
 
     def _init_code_execution_mode(self):
         """
