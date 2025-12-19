@@ -6,20 +6,26 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 import sys
+import pytest
 
 try:
     from mcp import ClientSession
     from mcp.client.sse import sse_client
 except ImportError as e:
-    print(f"ERROR: Failed to import MCP client: {e}")
-    print(
-        "Make sure you're running in the virtual environment with 'mcp' package installed"
-    )
-    sys.exit(1)
+    if __name__ == "__main__":
+        print(f"ERROR: Failed to import MCP client: {e}")
+        print(
+            "Make sure you're running in the virtual environment with 'mcp' package installed"
+        )
+        sys.exit(1)
+    ClientSession = None
+    sse_client = None
 
 
 async def test_mcp_via_sse():
     """Test the MCP server via MCP over SSE."""
+    if ClientSession is None:
+        pytest.skip("mcp not installed")
 
     print("=" * 80)
     print("RMTA - MCP over SSE Testing")
@@ -29,6 +35,9 @@ async def test_mcp_via_sse():
     key_path = Path.home() / ".llmc" / "mcp-api-key"
     if not key_path.exists():
         print("ERROR: API key not found. Start the daemon first.")
+        # If running in pytest, we probably want to skip or fail gracefully
+        if __name__ != "__main__":
+             pytest.skip("API key not found (daemon not running?)")
         return
 
     api_key = key_path.read_text().strip()
@@ -184,6 +193,8 @@ async def test_mcp_via_sse():
         import traceback
 
         traceback.print_exc()
+        if __name__ != "__main__":
+            pytest.fail(f"MCP server communication failed: {e}")
 
 
 async def generate_report(tools, test_results):
