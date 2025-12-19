@@ -165,6 +165,7 @@ class OllamaBackend(Backend):
             model=data.get("model", request.model),
             finish_reason=finish_reason,
             tool_calls=tool_calls,
+            raw_response=data,  # Full response for UTP parser
         )
 
     async def health_check(self) -> bool:

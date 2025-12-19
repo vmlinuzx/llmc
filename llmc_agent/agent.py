@@ -20,6 +20,7 @@ from llmc_agent.backends.base import GenerateRequest
 from llmc_agent.backends.llmc import LLMCBackend, RAGResult
 from llmc_agent.backends.ollama import OllamaBackend
 from llmc_agent.config import Config
+from llmc_agent.format import FormatNegotiator
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
 
 
@@ -67,6 +68,9 @@ class Agent:
         from llmc_agent.tools import ToolRegistry
 
         self.tools = ToolRegistry(allowed_roots=["."])
+
+        # Initialize UTP format negotiator for tool call parsing
+        self.format_negotiator = FormatNegotiator()
 
     async def ask(
         self,
@@ -273,28 +277,46 @@ class Agent:
             total_prompt_tokens += response.tokens_prompt
             total_completion_tokens += response.tokens_completion
 
-            # Check for tool calls
-            if not response.tool_calls:
+            # === UTP: Parse tool calls from any format ===
+            parser = self.format_negotiator.get_call_parser()
+            parsed = parser.parse(response.raw_response or {})
+
+            # Check for tool calls (now works with XML, native, etc.)
+            if not parsed.tool_calls:
                 # No tool calls, we're done
-                final_content = response.content
+                final_content = parsed.content or response.content
                 break
 
-            # Execute tool calls
-            for tc in response.tool_calls:
-                tool = self.tools.get_tool(tc["function"]["name"])
+            # Execute tool calls from parsed response
+            for tc in parsed.tool_calls:
+                tool = self.tools.get_tool(tc.name)
                 if not tool:
+                    # Unknown tool - add error message
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id or "",
+                            "content": json.dumps({"error": f"Tool '{tc.name}' not found"}),
+                        }
+                    )
                     continue
 
                 # Check if available at current tier
-                if not self.tools.is_tool_available(tc["function"]["name"]):
-                    # Tool not available, skip
+                if not self.tools.is_tool_available(tc.name):
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tc.id or "",
+                            "content": json.dumps(
+                                {"error": f"Tool '{tc.name}' not available at tier {self.tools.current_tier}"}
+                            ),
+                        }
+                    )
                     continue
 
                 # Execute tool
                 try:
-                    args = tc["function"]["arguments"]
-                    if isinstance(args, str):
-                        args = json.loads(args)
+                    args = tc.arguments
 
                     # Async or sync execution
                     if asyncio.iscoroutinefunction(tool.function):
@@ -309,18 +331,27 @@ class Agent:
                     )
                     all_tool_calls.append(tool_call)
 
-                    # Add tool result to messages
+                    # Add assistant message with tool call
+                    tc_id = tc.id or f"call_{round_num}_{tc.name}"
                     messages.append(
                         {
                             "role": "assistant",
                             "content": None,
-                            "tool_calls": [tc],
+                            "tool_calls": [
+                                {
+                                    "id": tc_id,
+                                    "function": {
+                                        "name": tc.name,
+                                        "arguments": json.dumps(tc.arguments),
+                                    },
+                                }
+                            ],
                         }
                     )
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tc.get("id", ""),
+                            "tool_call_id": tc_id,
                             "content": json.dumps(result),
                         }
                     )
@@ -330,14 +361,14 @@ class Agent:
                     messages.append(
                         {
                             "role": "tool",
-                            "tool_call_id": tc.get("id", ""),
+                            "tool_call_id": tc.id or "",
                             "content": json.dumps({"error": str(e)}),
                         }
                     )
         else:
             # Max rounds reached
             final_content = (
-                response.content if "response" in dir() else "Max tool rounds reached."
+                parsed.content if "parsed" in dir() else "Max tool rounds reached."
             )
 
         # Update session if provided
