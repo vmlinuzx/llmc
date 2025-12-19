@@ -18,6 +18,7 @@ from llmc.commands import (
     config as config_commands,
     repo as repo_commands,
     service as service_commands,
+    test_mcp as test_mcp_commands,
 )
 from llmc.commands.rag import (
     benchmark,
@@ -200,6 +201,18 @@ debug_app.command(name="export")(export)
 debug_app.command(name="enrich-status")(enrich_status)
 
 app.add_typer(debug_app, name="debug")
+
+
+# ============================================================================
+# TESTING GROUP - RMTA and other test commands
+# ============================================================================
+test_app = typer.Typer(
+    help="Testing and validation commands",
+    no_args_is_help=True,
+)
+test_app.add_typer(test_mcp_commands.app, name="mcp")
+
+app.add_typer(test_app, name="test")
 
 
 # ============================================================================
