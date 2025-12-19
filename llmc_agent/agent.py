@@ -224,6 +224,8 @@ class Agent:
         )
 
         # Always tell the model about available tools
+        # Note: For models with native tool support (like qwen3-next-80b-tools),
+        # the modelfile template handles tool format instructions.
         available_tools = self.tools.get_tools_for_tier()
         if available_tools:
             tool_descriptions = []
@@ -336,13 +338,14 @@ class Agent:
                     messages.append(
                         {
                             "role": "assistant",
-                            "content": None,
+                            "content": "",
                             "tool_calls": [
                                 {
                                     "id": tc_id,
                                     "function": {
                                         "name": tc.name,
-                                        "arguments": json.dumps(tc.arguments),
+                                        # Ollama expects arguments as a dict, not JSON string
+                                        "arguments": tc.arguments,
                                     },
                                 }
                             ],

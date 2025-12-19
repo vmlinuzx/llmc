@@ -52,9 +52,8 @@ class AgentConfig:
 
     # Available models:
     # model: str = "qwen3:4b-instruct"  # Fast, local, limited capability
-    model: str = (
-        "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_K_XL"  # Athena 30B coder
-    )
+    # model: str = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_K_XL"  # Athena 30B coder
+    model: str = "qwen3-next-80b-nothink"  # Boxxie: 80B MoE @ 32 t/s on Athena
     context_budget: int = 6000
     response_reserve: int = 1024
     timeout: int = 300
