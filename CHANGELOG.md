@@ -4,6 +4,28 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Added (2025-12-19)
+
+- **File-Level Descriptions (PR #59 - Jules):**
+  - New `file_descriptions` table in RAG database for stable file summaries
+  - `llmc/rag/enrichment/file_descriptions.py` - generates descriptions from span summaries
+  - Auto-populates during enrichment pipeline
+  - `mcgrep` now uses database descriptions with fallback to span summary proxy
+  - **Impact:** More stable and meaningful file summaries in search results
+
+### Security (2025-12-19)
+
+- **RAG Tools os.chdir Race Condition Fixed (PR #60 - Jules):**
+  - Removed all `os.chdir()` calls from `llmc_mcp/tools/rag.py`
+  - Race conditions in async/threaded contexts eliminated
+  - Now uses explicit `repo_root` parameter passing
+
+- **repo_root Validation Added (PR #60 - Jules):**
+  - New `validate_repo_root()` function validates against `allowed_roots` config
+  - Blocks directory traversal via arbitrary `repo_root` parameters
+  - Backwards compatible: allows any path if `allowed_roots` not configured
+  - New tests in `tests/security/test_rag_security.py`
+
 ### Fixed (2025-12-19)
 
 - **RAG Doctor: Pending Embeddings Lie Fixed:**
