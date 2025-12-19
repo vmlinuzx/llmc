@@ -3,7 +3,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from llmc_mcp.config import McpConfig, McpToolsConfig
-from llmc_mcp.server import LlmcMcpServer
+try:
+    from llmc_mcp.server import LlmcMcpServer
+except ImportError as e:
+    pytest.skip(f"Skipping because mcp dependency is missing: {e}", allow_module_level=True)
 
 
 @pytest.fixture
