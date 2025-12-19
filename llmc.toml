@@ -604,6 +604,30 @@ temperature = 0.2
 [profiles.yolo.rag]
 enabled = true
 
+# ==============================================================================
+# BOXXIE - Qwen3-Next-80B-A3B on Athena (Strix Halo)
+# ==============================================================================
+# Your 80B MoE monster running at 32 t/s via Vulkan unified memory.
+# 512 experts, 10 active per token = 3B effective compute per forward pass.
+# Keep-alive: 1 hour. First request loads ~85GB, subsequent requests instant.
+
+[profiles.boxxie]
+provider = "ollama"
+model = "qwen3-next-80b-nothink"
+url = "http://athena:11434"
+temperature = 0.6
+timeout_seconds = 300  # Allow time for initial model load
+
+[profiles.boxxie.rag]
+enabled = true
+
+[profiles.boxxie-tools]
+provider = "ollama"
+model = "qwen3-next-80b-tools"
+url = "http://athena:11434"
+temperature = 0.6
+timeout_seconds = 300
+
 
 
 

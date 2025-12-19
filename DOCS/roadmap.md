@@ -96,6 +96,72 @@ These are the things that make the current LLMC stack feel solid and intentional
 
 ---
 
+### 1.0.4 Native Ollama/OpenAI Tool Calling Format (P0) 🔥 NEW
+
+**Status:** 🔴 Not started  
+**Added:** 2025-12-18 (discovered during Boxxie integration)
+
+**Problem:** `llmc_agent` (bx) uses Ollama's native tool calling API which returns tool calls in the `tool_calls` field of the response. However, some models (especially custom modelfiles) output tool calls as XML text in the content field:
+
+```xml
+<tools>
+{"name": "search_code", "arguments": {"query": "..."}}
+</tools>
+```
+
+This causes `ask_with_tools()` to:
+1. Receive the XML as text content
+2. Print it to the user instead of executing it
+3. Fail to complete the agentic loop
+
+**Tool Calling Format Landscape:**
+
+| Format | Used By | API Field |
+|--------|---------|-----------|
+| **OpenAI/Ollama Native** | GPT-4, Llama 3.1+, native Ollama models | `response.tool_calls` |
+| **Anthropic XML** | Claude | `<tool_use>` in content |
+| **Custom XML** | Qwen templates, custom modelfiles | `<tools>` or `<tool_call>` in content |
+
+**Solution Options:**
+
+1. **Option A: Content Parser (Quick Fix)**
+   - Add XML parsing to `ask_with_tools()` to detect `<tools>` blocks in content
+   - Extract and execute, then continue loop
+   - Works with any model that outputs XML tool calls
+   - ~4-8 hours
+
+2. **Option B: Native Ollama Tools Only (Clean Fix)**
+   - Ensure all models use Ollama's native `tools` parameter
+   - Model must support native tool calling (check with `ollama show --modelfile`)
+   - Some models may not support this format
+   - ~2-4 hours + model testing
+
+3. **Option C: Multi-Format Adapter (Robust)**
+   - Abstract tool call detection behind `ToolCallParser` interface
+   - `OllamaToolParser`, `AnthropicToolParser`, `XMLToolParser`
+   - Route based on response structure or model config
+   - ~12-20 hours
+
+**Recommended:** Option A first (quick unblock), then Option C for production robustness.
+
+**Files to Modify:**
+- `llmc_agent/agent.py` - `ask_with_tools()` loop
+- `llmc_agent/backends/ollama.py` - `generate_with_tools()` response parsing
+- `llmc_agent/tools.py` - Tool execution
+
+**Success Criteria:**
+- [ ] `bx` can execute tool calls from models that output XML format
+- [ ] Tool results are fed back to model for continuation
+- [ ] Works with `qwen3-next-80b-tools` modelfile
+- [ ] Existing native Ollama tool calling still works
+
+**Why P0:** Blocks local LLM agentic workflows with Boxxie (80B model running at 32 t/s on Strix Halo). This is THE critical path for local frontier-class agents.
+
+**Effort:** 8-20 hours | **Difficulty:** 🟡 Medium (6/10)
+
+---
+
+
 ### ~~1.1 Ruthless MCP Testing Agent (RMTA)~~ ✅ DONE (Phase 1)
 
 **Completed:** Dec 2025
@@ -832,6 +898,51 @@ Collection of architectural improvements identified during code review.
 - Nice to have, not need to have
 
 **Effort:** Unknown (R&D) | **Difficulty:** 🟡 Medium (conceptually simple, integration work)
+
+---
+
+### 3.12 Configurable Tool Calling Format (P2) 🏴‍☠️
+
+**Status:** 🔵 Backlog  
+**Added:** 2025-12-18
+
+**Context:** LLMC standardizes on **OpenAI tool calling format** as the default because:
+- Ollama's native API uses OpenAI-compatible format
+- Most open models (Qwen, Llama, etc.) are trained on OpenAI function calling data
+- It's the de facto industry standard (Schelling point)
+
+However, **Anthropic's approach is arguably better designed**:
+- Cleaner XML structure (`<tool_use>`, `<thinking>`)
+- Explicit separation of reasoning vs tool calls
+- More human-readable format
+
+**Goal:** Make tool calling format configurable per-profile:
+
+```toml
+[profiles.boxxie]
+provider = "ollama"
+model = "qwen3-next-80b-tools"
+tool_format = "openai"  # Default
+
+[profiles.claude-agent]
+provider = "anthropic"
+model = "claude-sonnet-4-20250514"
+tool_format = "anthropic"  # XML-based
+```
+
+**Implementation:**
+1. Add `ToolCallParser` protocol/interface
+2. Implement `OpenAIToolParser` (current default)
+3. Implement `AnthropicToolParser` (XML parsing)
+4. Route based on `tool_format` config or auto-detect from provider
+5. Normalize to internal representation for execution
+
+**Why Later:**
+- OpenAI format works for 95% of use cases today
+- Pragmatism > preference for ecosystem alignment
+- But we're still pirates - keep the option open 🏴‍☠️
+
+**Effort:** 8-12 hours | **Difficulty:** 🟢 Easy (well-defined interfaces)
 
 ---
 
