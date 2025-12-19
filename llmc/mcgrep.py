@@ -139,8 +139,13 @@ def _run_search_expanded(query: str, path: str | None, limit: int, expand_count:
 
 
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
-    """Core search logic using embedding-based semantic search."""
+    """Core search logic using embedding-based semantic search.
+    
+    Output format (mgrep-style, super dense for LLMs):
+    router.py "Router for LLM queries" : L38-52[100], L26-35[100], L7-23[99]
+    """
     from llmc.rag.search import search_spans
+    from collections import defaultdict
 
     try:
         repo_root = find_repo_root()
@@ -151,7 +156,8 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 
     # Run embedding-based semantic search (has scoring fixes for filename matching)
     try:
-        results = search_spans(query, limit=limit, repo_root=repo_root)
+        # Fetch more results than limit to ensure we get enough unique files
+        results = search_spans(query, limit=limit * 5, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
         raise typer.Exit(1)
@@ -159,8 +165,6 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         console.print(f"[red]Search error:[/red] {e}")
         raise typer.Exit(1)
 
-    # Convert SpanMatch results to display format
-    source = "RAG_SEMANTIC"
     items = results
 
     # Filter by path if provided
@@ -175,40 +179,57 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 
     if not items:
         console.print(f"[dim]No results for:[/dim] {query}")
-        console.print(f"[dim]Source: {source}[/dim]")
         return
 
-    # Header
-    console.print(f"[bold]{len(items)} results[/bold] [green]●[/green] semantic\n")
-
-    # Results
-    for i, item in enumerate(items, 1):
+    # Group by file - preserving order of first appearance
+    file_groups: dict[str, list] = {}
+    file_descriptions: dict[str, str] = {}
+    
+    for item in items:
         file_path = str(item.path)
-        start = item.start_line
-        end = item.end_line
-        score = item.normalized_score
-        symbol = item.symbol or ""
+        if file_path not in file_groups:
+            file_groups[file_path] = []
+            # Use first span's summary as file description (truncated)
+            if item.summary:
+                desc = item.summary.split('.')[0]  # First sentence
+                if len(desc) > 60:
+                    desc = desc[:57] + "..."
+                file_descriptions[file_path] = desc
+        file_groups[file_path].append(item)
 
-        # File location with score
-        symbol_str = f" • {symbol}" if symbol else ""
-        console.print(
-            f"[bold cyan]{i}.[/bold cyan] [{score:.1f}] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]{symbol_str}"
-        )
+    # Limit to top N files
+    top_files = list(file_groups.items())[:limit]
+    total_files = len(file_groups)
 
-        # Enrichment summary if available
-        if show_summary and item.summary:
-            summary = item.summary
-            if len(summary) > 120:
-                summary = summary[:117] + "..."
-            console.print(f"   [green]→ {summary}[/green]")
+    # Header
+    console.print(f"[bold]{len(top_files)} files[/bold] (of {total_files}) [green]●[/green] semantic\n")
 
-        console.print()  # spacing
+    # Compact output - one line per file
+    for file_path, spans in top_files:
+        # Build spans string: L38-52[100], L26-35[99], ...
+        span_strs = []
+        for s in spans[:5]:  # Max 5 spans per file
+            span_strs.append(f"L{s.start_line}-{s.end_line}[{s.normalized_score:.0f}]")
+        if len(spans) > 5:
+            span_strs.append(f"+{len(spans)-5}more")
+        
+        spans_compact = ", ".join(span_strs)
+        
+        # File description
+        desc = file_descriptions.get(file_path, "")
+        desc_str = f' "{desc}"' if desc else ""
+        
+        console.print(f"[bold]{file_path}[/bold]{desc_str} : [yellow]{spans_compact}[/yellow]")
+
+    # Footer if truncated
+    if total_files > limit:
+        console.print(f"\n[dim]... +{total_files - limit} more files (use -n to show more)[/dim]")
 
 
 @app.command()
 def search(
     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
-    limit: int = typer.Option(500, "-n", "-m", "--limit", help="Max results (default: 500, like grep)"),
+    limit: int = typer.Option(10, "-n", "-m", "--limit", help="Max files to show (default: 10, like mgrep)"),
     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
     summary: bool = typer.Option(
         True, "--summary/--no-summary", "-s", help="Show enrichment summaries"

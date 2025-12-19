@@ -922,3 +922,19 @@ tool_format = "anthropic"  # XML-based
 - Periodically re‑shape **Next** and **Later** based on what is actually exciting or urgent.
 
 The goal is not to track every tiny task, but to keep a **small, accurate map** of where LLMC is going *from here*.
+## File-Level Descriptions (Planned)
+
+**Status:** Planned  
+**Priority:** Medium  
+
+Add file-level enrichment that generates a ~50 word description of each file's purpose. Currently using first span's summary as a proxy.
+
+**Changes needed:**
+1. Add `file_descriptions` table to RAG database
+2. Add enrichment pipeline phase that summarizes files from their spans
+3. Update mcgrep to use file descriptions instead of first span summary
+
+**Benefits:**
+- More accurate file descriptions in mcgrep output
+- Better LLM context for file-level decisions
+- Enables "what files are related to X" queries
