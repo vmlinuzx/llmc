@@ -34,6 +34,7 @@ from typing import Any, Protocol
 
 from llmc.rag.config_enrichment import EnrichmentBackendSpec
 from llmc.rag.database import Database
+from llmc.rag.enrichment.file_descriptions import update_file_description
 from llmc.rag.enrichment_backends import (
     AttemptRecord,
     BackendAdapter,
@@ -259,6 +260,21 @@ class EnrichmentPipeline:
                 time.sleep(self.cooldown)
 
         duration = time.monotonic() - start_time
+
+        # 3. Update file descriptions for successfully enriched files
+        if succeeded > 0:
+            enriched_files = {
+                str(result.route_decision.slice_view.file_path)
+                for result in results
+                if result.success
+            }
+            for file_path in enriched_files:
+                content_hash_row = self.db.conn.execute(
+                    "SELECT file_hash FROM files WHERE path = ?", (file_path,)
+                ).fetchone()
+                if content_hash_row:
+                    content_hash = content_hash_row[0]
+                    update_file_description(self.db, file_path, content_hash)
 
         return EnrichmentBatchResult(
             total_pending=total_pending,

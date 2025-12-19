@@ -88,6 +88,18 @@ CREATE TABLE IF NOT EXISTS enrichments (
 CREATE INDEX IF NOT EXISTS idx_files_path ON files(path);
 CREATE INDEX IF NOT EXISTS idx_spans_file_id ON spans(file_id);
 CREATE INDEX IF NOT EXISTS idx_spans_span_hash ON spans(span_hash);
+
+CREATE TABLE IF NOT EXISTS file_descriptions (
+    id INTEGER PRIMARY KEY,
+    file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    file_path TEXT UNIQUE NOT NULL,
+    description TEXT,
+    source TEXT,
+    updated_at DATETIME,
+    content_hash TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_descriptions_file_path ON file_descriptions(file_path);
 """
 
 
