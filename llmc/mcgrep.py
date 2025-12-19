@@ -141,11 +141,11 @@ def _run_search_expanded(query: str, path: str | None, limit: int, expand_count:
 def _run_search(query: str, path: str | None, limit: int, show_summary: bool) -> None:
     """Core search logic using embedding-based semantic search.
     
-    Output format (mgrep-style, super dense for LLMs):
-    router.py "Router for LLM queries" : L38-52[100], L26-35[100], L7-23[99]
+    Output format (hybrid):
+    1. Top 10 files: compact (FilePath "Desc" : spans[rank])
+    2. Remaining results: detailed (one span per line with summary)
     """
     from llmc.rag.search import search_spans
-    from collections import defaultdict
 
     try:
         repo_root = find_repo_root()
@@ -156,8 +156,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 
     # Run embedding-based semantic search (has scoring fixes for filename matching)
     try:
-        # Fetch more results than limit to ensure we get enough unique files
-        results = search_spans(query, limit=limit * 5, repo_root=repo_root)
+        results = search_spans(query, limit=limit, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
         raise typer.Exit(1)
@@ -181,6 +180,8 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         console.print(f"[dim]No results for:[/dim] {query}")
         return
 
+    # === PART 1: Top 10 compact file-grouped results ===
+    
     # Group by file - preserving order of first appearance
     file_groups: dict[str, list] = {}
     file_descriptions: dict[str, str] = {}
@@ -189,23 +190,22 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         file_path = str(item.path)
         if file_path not in file_groups:
             file_groups[file_path] = []
-            # Use first span's summary as file description (truncated)
+            # Use first span's summary as file description (first sentence, no truncation)
             if item.summary:
                 desc = item.summary.split('.')[0]  # First sentence
-                if len(desc) > 60:
-                    desc = desc[:57] + "..."
                 file_descriptions[file_path] = desc
         file_groups[file_path].append(item)
 
-    # Limit to top N files
-    top_files = list(file_groups.items())[:limit]
+    # Top 10 files for compact section
+    top_10_files = list(file_groups.items())[:10]
     total_files = len(file_groups)
 
-    # Header
-    console.print(f"[bold]{len(top_files)} files[/bold] (of {total_files}) [green]●[/green] semantic\n")
+    # Header with format explanation
+    console.print(f"[bold]{len(items)} spans in {total_files} files[/bold] [green]●[/green] semantic")
+    console.print("[dim]FilePath \"Description\" : spans[rank][/dim]\n")
 
-    # Compact output - one line per file
-    for file_path, spans in top_files:
+    # Compact output - one line per file (top 10)
+    for file_path, spans in top_10_files:
         # Build spans string: L38-52[100], L26-35[99], ...
         span_strs = []
         for s in spans[:5]:  # Max 5 spans per file
@@ -215,15 +215,42 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         
         spans_compact = ", ".join(span_strs)
         
-        # File description
+        # File description (no truncation)
         desc = file_descriptions.get(file_path, "")
         desc_str = f' "{desc}"' if desc else ""
         
         console.print(f"[bold]{file_path}[/bold]{desc_str} : [yellow]{spans_compact}[/yellow]")
 
-    # Footer if truncated
-    if total_files > limit:
-        console.print(f"\n[dim]... +{total_files - limit} more files (use -n to show more)[/dim]")
+    # === PART 2: Detailed span results (after top 10 files) ===
+    
+    # Get all spans NOT in top 10 files
+    top_10_paths = {fp for fp, _ in top_10_files}
+    remaining_items = [it for it in items if str(it.path) not in top_10_paths]
+    
+    if remaining_items:
+        console.print(f"\n[dim]─── Remaining {len(remaining_items)} spans ───[/dim]\n")
+        
+        for i, item in enumerate(remaining_items, 1):
+            file_path = str(item.path)
+            start = item.start_line
+            end = item.end_line
+            score = item.normalized_score
+            symbol = item.symbol or ""
+
+            # File location with score
+            symbol_str = f" • {symbol}" if symbol else ""
+            console.print(
+                f"[bold cyan]{i}.[/bold cyan] [{score:.1f}] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]{symbol_str}"
+            )
+
+            # Enrichment summary if available
+            if show_summary and item.summary:
+                summary = item.summary
+                if len(summary) > 120:
+                    summary = summary[:117] + "..."
+                console.print(f"   [green]→ {summary}[/green]")
+
+            console.print()  # spacing
 
 
 @app.command()
