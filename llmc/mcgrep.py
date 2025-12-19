@@ -224,7 +224,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 @app.command()
 def search(
     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
-    limit: int = typer.Option(10, "-n", "-m", "--limit", help="Max results"),
+    limit: int = typer.Option(500, "-n", "-m", "--limit", help="Max results (default: 500, like grep)"),
     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
     summary: bool = typer.Option(
         True, "--summary/--no-summary", "-s", help="Show enrichment summaries"

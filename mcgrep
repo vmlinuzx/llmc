@@ -1,0 +1,25 @@
+#!/bin/bash
+# mcgrep - Semantic grep for code. Works anywhere in the repo.
+#
+# Usage:
+#   ./mcgrep "authentication logic"
+#   ./mcgrep "database" --expand 3
+#   ./mcgrep status
+#
+# This wrapper finds the repo's .venv and runs mcgrep through it.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Try repo's .venv first
+if [[ -x "$SCRIPT_DIR/.venv/bin/mcgrep" ]]; then
+    exec "$SCRIPT_DIR/.venv/bin/mcgrep" "$@"
+# Try system mcgrep
+elif command -v mcgrep &>/dev/null; then
+    exec mcgrep "$@"
+# Fallback to python module
+elif [[ -x "$SCRIPT_DIR/.venv/bin/python3" ]]; then
+    exec "$SCRIPT_DIR/.venv/bin/python3" -m llmc.mcgrep "$@"
+else
+    echo "Error: mcgrep not found. Run: pip install -e ." >&2
+    exit 1
+fi
