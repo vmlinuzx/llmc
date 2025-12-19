@@ -248,12 +248,41 @@ Heuristic:
 
 ## 7. Recommended Flows
 
-### Flow A – Understand Before Editing
+### Flow A – LLM-Optimized Search (Primary)
+
+LLMs need **full file context**, not just snippets. Use `mcgrep --expand` first:
+
+1. **Find files semantically with full content:**
+
+   ```bash
+   mcgrep "authentication logic" --expand 3
+   ```
+
+   This returns full file content for the top 3 semantically-matched files,
+   with matched line ranges highlighted.
+
+2. **If you need ALL spans for a specific file:**
+
+   ```bash
+   python3 -m llmc.rag.cli search "auth" --path src/auth.py --limit 100
+   ```
+
+   Use high `--limit` to get all spans, not just 10-20.
+
+3. **For symbol details + graph relationships:**
+
+   ```bash
+   python3 -m llmc.rag.cli inspect --path src/auth.py --symbol UserAuth
+   ```
+
+### Flow B – Quick Span Search (Narrow Queries)
+
+When you already know roughly where to look:
 
 1. Run `search`:
 
    ```bash
-   python3 -m llmc.rag.cli search "user problem or feature" --limit 25 --json
+   python3 -m llmc.rag.cli search "database connection pool" --limit 25
    ```
 
 2. Skim top hits by **path + symbol + snippet**.
@@ -261,9 +290,9 @@ Heuristic:
    - Refine the query (more literal, include identifiers).
    - Or fall back to `rg` / AST tools.
 
-4. Once you know where the logic lives, read the files normally.
+4. Once you know where the logic lives, use `mcgrep --expand` to get full context.
 
-### Flow B – Plan Edits
+### Flow C – Plan Edits
 
 1. Run `plan`:
 
