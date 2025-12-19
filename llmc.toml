@@ -735,3 +735,32 @@ profile = "medical_doc"
 index = "emb_medical_doc"
 sharing = "per-repo"
 index_name_suffix = "{institution}-{repo_id}"
+# ==============================================================================
+# ENRICHMENT PROMPT - Configurable prompt for LLM enrichment
+# ==============================================================================
+# Template uses {path}, {line_start}, {line_end}, {snippet} placeholders.
+# Use {{ and }} to escape literal braces in JSON examples.
+
+[enrichment.prompt]
+# Qwen3 4B is verbose - use terse instructions
+template = """Return ONLY ONE VALID JSON OBJECT in ENGLISH.
+No markdown, no comments, no extra text.
+BE TERSE. Minimum words. No filler.
+
+Output format (keys are FIXED):
+{{"summary_120w":"...","inputs":["..."],"outputs":["..."],
+"side_effects":["..."],"pitfalls":["..."],
+"usage_snippet":"...","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
+
+Rules:
+- summary_120w: <=60 words. TERSE. State WHAT not HOW.
+- inputs/outputs/side_effects/pitfalls: 1-3 word phrases MAX. [] if none.
+- usage_snippet: 1-3 lines max, or "" if unclear.
+- evidence: [{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]
+- No extra keys. Double quotes. No trailing commas.
+
+Code:
+{path} L{line_start}-{line_end}:
+{snippet}
+
+JSON:"""

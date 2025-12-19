@@ -85,17 +85,28 @@ class EnrichmentBatchResult:
         return self.succeeded / self.attempted
 
 
-def build_enrichment_prompt(item: dict[str, Any]) -> str:
+def build_enrichment_prompt(item: dict[str, Any], repo_root: Path | None = None) -> str:
     """Build enrichment prompt from span item.
 
-    This is adapted from qwen_enrich_batch.py's build_prompt function.
+    Reads prompt template from [enrichment.prompt].template in llmc.toml if available,
+    otherwise uses a default terse prompt suitable for Qwen3.
 
     Args:
         item: Span data dict with path, lines, code_snippet, etc.
+        repo_root: Optional repo root for loading config.
 
     Returns:
         Formatted prompt string ready for LLM
     """
+    from llmc.rag.config import load_config
+
+    # Try to load prompt from config
+    template = None
+    try:
+        cfg = load_config(repo_root)
+        template = cfg.get("enrichment", {}).get("prompt", {}).get("template")
+    except Exception:
+        pass  # Use default
     path = item.get("path", item.get("file_path", ""))
     line_start, line_end = item.get("lines", item.get("line_range", [0, 0]))
     snippet = item.get("code_snippet", item.get("content", ""))
@@ -104,30 +115,38 @@ def build_enrichment_prompt(item: dict[str, Any]) -> str:
     if not isinstance(line_start, int) or not isinstance(line_end, int):
         line_start, line_end = 0, 0
 
-    prompt = f"""Return ONLY ONE VALID JSON OBJECT in ENGLISH.
+    # Use config template or default terse prompt
+    if template:
+        # Format the template with our variables
+        prompt = template.format(
+            path=path,
+            line_start=line_start,
+            line_end=line_end,
+            snippet=snippet,
+        )
+    else:
+        # Default terse prompt (suitable for Qwen3 4B which is verbose)
+        prompt = f"""Return ONLY ONE VALID JSON OBJECT in ENGLISH.
 No markdown, no comments, no extra text.
+BE TERSE. Minimum words. No filler.
 
-Output example (structure and keys are FIXED):
+Output format (keys are FIXED):
 {{"summary_120w":"...","inputs":["..."],"outputs":["..."],
 "side_effects":["..."],"pitfalls":["..."],
 "usage_snippet":"...","evidence":[{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]}}
 
 Rules:
-- summary_120w: <=120 English words describing what the code does.
-- inputs/outputs/side_effects/pitfalls: lists of short phrases; use [] if none.
-- usage_snippet: 1–5 line usage example, or "" if unclear.
-- evidence: list of objects:
-  - "field" is one of:
-    "summary_120w","inputs","outputs","side_effects","pitfalls","usage_snippet"
-  - "lines" MUST be [{line_start},{line_end}] for every entry.
-- Do NOT add or rename keys.
-- Use double quotes, no trailing commas.
+- summary_120w: <=60 words. TERSE. State WHAT not HOW.
+- inputs/outputs/side_effects/pitfalls: 1-3 word phrases MAX. [] if none.
+- usage_snippet: 1-3 lines max, or "" if unclear.
+- evidence: [{{"field":"summary_120w","lines":[{line_start},{line_end}]}}]
+- No extra keys. Double quotes. No trailing commas.
 
-Code to analyze:
+Code:
 {path} L{line_start}-{line_end}:
 {snippet}
 
-JSON RESPONSE LATIN-1 CHARACTERS ONLY:"""
+JSON:"""
 
     return prompt
 
