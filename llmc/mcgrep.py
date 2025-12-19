@@ -197,16 +197,16 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
                 file_descriptions[file_path] = desc
         file_groups[file_path].append(item)
 
-    # Top 10 files for compact section
-    top_10_files = list(file_groups.items())[:10]
+    # Top 20 files for compact section
+    top_files = list(file_groups.items())[:20]
     total_files = len(file_groups)
 
     # Header with format explanation
     console.print(f"[bold]{len(items)} spans in {total_files} files[/bold] [green]●[/green] semantic")
     console.print("[dim]FilePath \"Description\" : spans[rank][/dim]\n")
 
-    # Compact output - one line per file (top 10)
-    for file_path, spans in top_10_files:
+    # Compact output - one line per file (top 20)
+    for file_path, spans in top_files:
         # Build spans string: L38-52[100], L26-35[99], ...
         span_strs = []
         for s in spans[:5]:  # Max 5 spans per file
@@ -222,36 +222,32 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         
         console.print(f"[bold]{file_path}[/bold]{desc_str} : [yellow]{spans_compact}[/yellow]")
 
-    # === PART 2: Detailed span results (after top 10 files) ===
+    # === PART 2: Top 10 detailed span results (like mgrep) ===
     
-    # Get all spans NOT in top 10 files
-    top_10_paths = {fp for fp, _ in top_10_files}
-    remaining_items = [it for it in items if str(it.path) not in top_10_paths]
+    console.print(f"\n[dim]─── Top 10 spans (detailed) ───[/dim]\n")
     
-    if remaining_items:
-        console.print(f"\n[dim]─── Remaining {len(remaining_items)} spans ───[/dim]\n")
-        
-        for i, item in enumerate(remaining_items, 1):
-            file_path = str(item.path)
-            start = item.start_line
-            end = item.end_line
-            score = item.normalized_score
-            symbol = item.symbol or ""
+    # Show top 10 spans in detail
+    for i, item in enumerate(items[:10], 1):
+        file_path = str(item.path)
+        start = item.start_line
+        end = item.end_line
+        score = item.normalized_score
+        symbol = item.symbol or ""
 
-            # File location with score
-            symbol_str = f" • {symbol}" if symbol else ""
-            console.print(
-                f"[bold cyan]{i}.[/bold cyan] [{score:.1f}] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]{symbol_str}"
-            )
+        # File location with score
+        symbol_str = f" • {symbol}" if symbol else ""
+        console.print(
+            f"[bold cyan]{i}.[/bold cyan] [{score:.1f}] [bold]{file_path}[/bold]:[yellow]{start}-{end}[/yellow]{symbol_str}"
+        )
 
-            # Enrichment summary if available
-            if show_summary and item.summary:
-                summary = item.summary
-                if len(summary) > 120:
-                    summary = summary[:117] + "..."
-                console.print(f"   [green]→ {summary}[/green]")
+        # Enrichment summary if available
+        if show_summary and item.summary:
+            summary = item.summary
+            if len(summary) > 120:
+                summary = summary[:117] + "..."
+            console.print(f"   [green]→ {summary}[/green]")
 
-            console.print()  # spacing
+        console.print()  # spacing
 
 
 @app.command()

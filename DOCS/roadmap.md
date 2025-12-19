@@ -938,3 +938,20 @@ Add file-level enrichment that generates a ~50 word description of each file's p
 - More accurate file descriptions in mcgrep output
 - Better LLM context for file-level decisions
 - Enables "what files are related to X" queries
+
+## Bug: mcgrep Not Showing Documentation Files
+
+**Status:** Bug  
+**Priority:** High  
+
+The semantic search is only returning code files (.py), not documentation (.md).
+This may be a routing issue or indexing issue where docs aren't in the embeddings.
+
+**Symptoms:**
+- `mcgrep "router"` returns only .py files
+- SDD-Router-Resilience.md and other docs should appear but don't
+
+**Investigation needed:**
+1. Check if docs are in the spans table
+2. Check if docs have embeddings 
+3. Check routing logic (code vs docs route)
