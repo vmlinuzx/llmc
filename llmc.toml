@@ -584,6 +584,13 @@ retention_days = 0  # 0 = keep forever
 [rag]
 enabled = true
 
+[rag.graph]
+enable_expansion = true
+neighbor_score_factor = 0.4
+top_n_expand = 5
+max_neighbors_per = 3
+hub_penalty_threshold = 50
+
 [scoring]
 # P0 FIX: These values must be large enough to overcome semantic similarity
 # bias toward keyword-rich docs. Previous values (0.08, -0.06) were too weak.
@@ -595,6 +602,10 @@ stem_match_boost = 0.30    # Big boost for stem match (router -> router.py)
 partial_match_boost = 0.08
 enable_intent_detection = true
 # code_extensions and doc_extensions use defaults if omitted
+
+[scoring.fusion]
+method = "rrf"  # Options: "max", "rrf"
+rrf_k = 60      # RRF smoothing constant
 
 # ==============================================================================
 # Profiles

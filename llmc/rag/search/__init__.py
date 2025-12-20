@@ -466,6 +466,13 @@ def search_spans(
 
     # 4. Fuse
     fused_dicts = fuse_scores(results_by_route, route_weights)
+
+    # Optional: Graph Expansion
+    if config.get("rag", {}).get("graph", {}).get("enable_expansion", False):
+        from llmc.rag.graph_expand import expand_with_graph
+
+        fused_dicts = expand_with_graph(fused_dicts, repo, config)
+
     top_dicts = fused_dicts[:limit]
 
     # 5. Reconstruct Objects
