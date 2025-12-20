@@ -4,6 +4,16 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Documentation (2025-12-20)
+
+- **Getting Started & CLI Reference Validation (PR #62 - Jules):**
+  - Fixed binary name references (`llmc-cli` → `llmc`) in installation/quickstart guides
+  - Updated deprecated CLI commands (`llmc index` → `llmc repo register` + `llmc service start`)
+  - Replaced `llmc ask` with `llmc chat` in all getting-started guides
+  - Populated empty `DOCS/getting-started/first-project.md` with complete tutorial
+  - Updated `DOCS/user-guide/cli-reference.md` to include `chat` command
+  - Generated `DOCS/.validation-report.md` with validation summary
+
 ### Added (2025-12-20)
 
 - **RAG Scoring System 3.0 - Graph-Enhanced Dynamic Retrieval (IMPLEMENTED):**
