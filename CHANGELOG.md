@@ -6,6 +6,27 @@ All notable changes to LLMC will be documented in this file.
 
 ### Added (2025-12-19)
 
+- **mcread + mcinspect CLI Tools (PR #61 - Jules):**
+  - `mcread <file>` - Read files with graph context (callers, imports, exports, related)
+  - `mcinspect <symbol>` - Inspect symbols with graph neighbors
+  - New `llmc/rag/graph_ops.py` with `get_file_context()` and `get_symbol_context()`
+  - Entry points: `mcread`, `mcinspect`
+  - Graceful degradation when graph unavailable
+  - **Impact:** Agents can now get enriched file/symbol context in one call
+
+- **RMTA Phase 2: llmc test-mcp Command (PR #57 - Jules):**
+  - New `llmc test mcp --mode quick|standard|ruthless` command
+  - `RMTARunner` discovers and executes tests from `tests/ruthless/`
+  - Modes: quick (~30s), standard (~2min), ruthless (~10min)
+  - JSON report output with `--output`
+  - Fail-fast mode with `--fail-fast`
+
+- **Onboarding Polish (PR #58 - Jules):**
+  - Auto-validation after `llmc repo register` 
+  - `llmc/rag/embeddings/check.py` - embedding model availability checks
+  - `rag doctor` now checks Ollama connectivity and model availability
+  - Warns if embedding models are missing
+
 - **File-Level Descriptions (PR #59 - Jules):**
   - New `file_descriptions` table in RAG database for stable file summaries
   - `llmc/rag/enrichment/file_descriptions.py` - generates descriptions from span summaries
