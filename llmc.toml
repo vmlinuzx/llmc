@@ -596,6 +596,10 @@ partial_match_boost = 0.08
 enable_intent_detection = true
 # code_extensions and doc_extensions use defaults if omitted
 
+[scoring.fusion]
+method = "rrf"  # Options: "max", "rrf"
+rrf_k = 60      # RRF smoothing constant
+
 # ==============================================================================
 # Profiles
 # ==============================================================================

@@ -48,7 +48,9 @@ def normalize_scores(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def fuse_scores(
-    route_results: dict[str, list[dict[str, Any]]], route_weights: dict[str, float]
+    route_results: dict[str, list[dict[str, Any]]],
+    route_weights: dict[str, float],
+    config: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Fuse results from multiple routes.
@@ -57,12 +59,27 @@ def fuse_scores(
         route_results: Dict mapping route_name -> list of search result dicts.
                        Each result must have 'slice_id' and 'score'.
         route_weights: Dict mapping route_name -> weight (float).
+        config: Optional configuration dict. If None, loads from llmc.core.load_config().
 
     Returns:
         List of fused result dicts, sorted by final_score descending.
         Each result will have 'score' updated to the fused score.
         Original metadata from the 'best' route result is preserved.
     """
+    if config is None:
+        try:
+            from llmc.core import load_config
+            config = load_config()
+        except ImportError:
+            config = {}
+
+    fusion_config = config.get("scoring", {}).get("fusion", {}) if config else {}
+    method = fusion_config.get("method", "max")
+
+    if method == "rrf":
+        rrf_k = fusion_config.get("rrf_k", 60)
+        return rrf_fuse_scores(route_results, k=rrf_k)
+
     # NOTE: We use RAW scores instead of normalizing per-route.
     # The old approach normalized each route's scores to [0,1], which caused
     # the best doc and best code file to both become 1.0 - defeating the purpose
@@ -101,4 +118,51 @@ def fuse_scores(
     # Sort descending by fused score
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
+    return final_results
+
+
+def rrf_fuse_scores(
+    route_results: dict[str, list[dict[str, Any]]],
+    k: int = 60,
+) -> list[dict[str, Any]]:
+    """
+    Fuse results using Reciprocal Rank Fusion (RRF).
+    score = sum(1 / (k + rank)) for each document across routes.
+    Rank is 1-based.
+    """
+    # Map slice_id -> score
+    merged_scores: dict[str, float] = {}
+    # Map slice_id -> best result object (to preserve metadata)
+    # We'll prioritize the result from the "first" route where it appears,
+    # or just keep the one with the highest individual RRF component?
+    # Usually we just keep one. Let's keep the first one we see or overwrite.
+    # Requirement: "Preserves original result metadata from best-scoring route result"
+    # "best-scoring" in RRF context usually means best rank.
+    # So if doc is rank 1 in r1 and rank 5 in r2, we keep r1's metadata.
+    merged_objs: dict[str, tuple[int, dict[str, Any]]] = {}  # slice_id -> (best_rank, obj)
+
+    for route_name, results in route_results.items():
+        for i, res in enumerate(results):
+            rank = i + 1
+            slice_id = res["slice_id"]
+            
+            # RRF score contribution
+            score_part = 1.0 / (k + rank)
+            merged_scores[slice_id] = merged_scores.get(slice_id, 0.0) + score_part
+
+            # Metadata preservation (lowest rank is best)
+            if slice_id not in merged_objs or rank < merged_objs[slice_id][0]:
+                merged_objs[slice_id] = (rank, res)
+
+    # Build final list
+    final_results = []
+    for slice_id, final_score in merged_scores.items():
+        _, original_res = merged_objs[slice_id]
+        new_res = original_res.copy()
+        new_res["score"] = final_score
+        new_res["_fusion_method"] = "rrf"
+        final_results.append(new_res)
+
+    # Sort descending
+    final_results.sort(key=lambda x: x["score"], reverse=True)
     return final_results
