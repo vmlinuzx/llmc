@@ -212,6 +212,34 @@ def _fetch_enrichment(
     return data
 
 
+def inspect_symbol(repo_root: Path, symbol: str) -> dict[str, Any] | None:
+    """Inspects a symbol and returns its definition.
+
+    Args:
+        repo_root: The root path of the repository.
+        symbol: The symbol to inspect.
+
+    Returns:
+        A dictionary containing the symbol's definition, or None if the symbol
+        is not found.
+    """
+    try:
+        result = inspect_entity(repo_root, symbol=symbol)
+        if not result:
+            return None
+        return {
+            "symbol": symbol,
+            "file": result.path,
+            "start_line": result.primary_span[0] if result.primary_span else 0,
+            "end_line": result.primary_span[1] if result.primary_span else 0,
+            "kind": result.source_mode,
+            "signature": result.snippet,
+            "docstring": result.file_summary,
+        }
+    except Exception:
+        return None
+
+
 def _calculate_entity_score(entity: Any, graph: SchemaGraph | None) -> float:
     """Calculate importance score for an entity."""
     score = 0.0
