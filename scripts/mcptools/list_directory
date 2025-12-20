@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+"""
+list_directory - MCP Filesystem compatible directory listing.
+
+Implements the MCP list_directory tool interface.
+Returns entries with [FILE] or [DIR] prefixes.
+
+Usage:
+    ./list_directory '{"path": "src/"}'
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def validate_path(path: str) -> tuple[bool, str]:
+    """Validate path is under allowed roots."""
+    allowed_roots_str = os.environ.get("LLMC_ALLOWED_ROOTS", os.getcwd())
+    allowed_roots = [Path(r).resolve() for r in allowed_roots_str.split(":")]
+    
+    resolved = Path(path).resolve()
+    
+    for root in allowed_roots:
+        try:
+            resolved.relative_to(root)
+            return True, ""
+        except ValueError:
+            continue
+    
+    return False, f"Path '{path}' is outside allowed roots: {allowed_roots_str}"
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'path' field."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    dir_path = args.get("path")
+    if not dir_path:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'path'"
+        }))
+        sys.exit(1)
+    
+    # Security check
+    valid, error = validate_path(dir_path)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    resolved_path = Path(dir_path).resolve()
+    
+    if not resolved_path.exists():
+        print(json.dumps({
+            "success": False,
+            "error": f"Directory not found: {dir_path}"
+        }))
+        sys.exit(1)
+    
+    if not resolved_path.is_dir():
+        print(json.dumps({
+            "success": False,
+            "error": f"Not a directory: {dir_path}"
+        }))
+        sys.exit(1)
+    
+    try:
+        entries = []
+        for item in sorted(resolved_path.iterdir()):
+            if item.is_dir():
+                entries.append(f"[DIR] {item.name}/")
+            else:
+                entries.append(f"[FILE] {item.name}")
+        
+        print(json.dumps({
+            "success": True,
+            "path": str(resolved_path),
+            "entries": entries,
+            "count": len(entries)
+        }))
+        
+    except PermissionError:
+        print(json.dumps({
+            "success": False,
+            "error": f"Permission denied: {dir_path}"
+        }))
+        sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"List failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -10,22 +10,34 @@
 
 ## 1. Executive Summary
 
-**The Big Insight:** LLMs like Qwen, GPT-4, and Claude were *trained* on specific tool calling patterns. If we implement tools with the **exact same names and signatures**, the models already know how to use them — **zero prompting overhead**.
+**Primary Goal:** Implement the **OpenAI tool specification exactly** as executable scripts, so any tool-calling framework (local models, MCP servers, agents) can use them without adaptation layers.
 
-Instead of:
+**Secondary Benefit:** LLMs like Qwen, GPT-4, and Claude were *trained* on these exact tool names and signatures. Matching the spec means zero prompting overhead — the model's training data IS the documentation.
+
+### The Architecture
+
 ```
-Here are your available tools:
-- read_file(path: str) -> str: Reads a file and returns its content...
-- write_file(path: str, content: str) -> None: Writes content to a file...
-[5KB of tool definitions]
+┌─────────────────────────────────────────────────────────────┐
+│                    Tool Consumers                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │ Boxxie/Qwen  │  │ MCP Server   │  │ Claude Desktop   │   │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘   │
+│         │                 │                   │             │
+│         └────────────────┬┴──────────────────┘             │
+│                          ▼                                  │
+│              ┌───────────────────────┐                      │
+│              │ scripts/openaitools/  │ ← OpenAI spec       │
+│              │ scripts/mcptools/     │ ← MCP spec          │
+│              └───────────┬───────────┘                      │
+│                          │                                  │
+│                          ▼                                  │
+│              ┌───────────────────────┐                      │
+│              │ LLMC RAG / Filesystem │                      │
+│              └───────────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-We just say:
-```
-Tools are in scripts/mcptools/. Use them.
-```
-
-**Context savings: 90%+**. The model's training data IS the documentation.
+**Result:** One implementation, multiple consumers. JSON in, JSON out.
 
 ---
 
@@ -340,35 +352,45 @@ Based on official MCP Filesystem Server specification.
 
 ## 5. Implementation Plan
 
-### Phase 1: MCP Core (4 hours)
+### Phase 1: Core Tools ✅ COMPLETE
 
-| Script | Wraps | Priority |
-|--------|-------|----------|
-| `read_text_file` | Raw file read | P0 |
-| `write_file` | Raw file write | P0 |
-| `list_directory` | `ls` | P0 |
-| `edit_file` | Python difflib | P0 |
-| `search_files` | `fd` or `find` | P1 |
+| Script | Status | Wraps |
+|--------|--------|-------|
+| `openaitools/file_search` | ✅ Done | LLMC RAG `search_spans` |
+| `mcptools/read_text_file` | ✅ Done | Raw file read |
+| `mcptools/write_file` | ✅ Done | Raw file write |
+| `mcptools/list_directory` | ✅ Done | `pathlib.iterdir` |
 
-### Phase 2: Anthropic Tools (2 hours)
+### Phase 2: LLMC Enrichment ✅ COMPLETE
 
-| Script | Wraps | Priority |
-|--------|-------|----------|
-| `bash` | `subprocess.run` | P0 |
-| `text_editor` | Composite of read/write/edit | P1 |
+`file_search` now includes full LLMC enrichment:
 
-### Phase 3: OpenAI + LLMC (2 hours)
+| Enhancement | Status |
+|-------------|--------|
+| Graph context | ✅ Callers/callees from `rag_graph.json` |
+| Enrichment data | ✅ Summaries, inputs/outputs, pitfalls |
+| File content | ✅ Optional code snippets via `include_content` |
+| Routing info | ✅ Via debug mode in `search_spans` |
 
-| Script | Wraps | Priority |
-|--------|-------|----------|
-| `file_search` | `mcgrep --json` | P0 |
-| Symlinks | llmc CLIs | P1 |
+### Phase 3: Additional Tools ✅ COMPLETE
 
-### Phase 4: Integration (2 hours)
+| Script | Status | Wraps |
+|--------|--------|-------|
+| `mcptools/edit_file` | ✅ Done | str_replace pattern editing |
+| `mcptools/search_files` | ✅ Done | `pathlib.rglob` + fnmatch |
+| `anthropictools/bash` | ✅ Done | `subprocess.run` with security |
+| `anthropictools/text_editor` | ✅ Done | view/create/str_replace/insert |
+| `llmctools/mcgrep` | ✅ Done | Symlink to llmc/mcgrep.py |
+| `llmctools/mcwho` | ✅ Done | Symlink to llmc/mcwho.py |
 
-- Update MCP server to shell out to scripts
-- Update Boxxie agent to use script paths
-- Test with Qwen, Claude, GPT-4
+### Phase 4: Integration ✅ COMPLETE
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `llmc_mcp/tools/native_scripts.py` | ✅ Done | Integration module with `call_native_tool()` |
+| `scripts/demo_native_tools.py` | ✅ Done | Comprehensive demo script |
+| Tool definitions | ✅ Done | `get_native_tool_definitions()` for MCP registration |
+| Convenience functions | ✅ Done | `file_search()`, `bash()`, etc. wrappers |
 
 ---
 

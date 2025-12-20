@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""
+bash - Anthropic computer-use compatible shell executor.
+
+Implements the Anthropic bash tool interface.
+Executes shell commands in a subprocess.
+
+WARNING: This is a powerful tool. Use LLMC_ALLOWED_COMMANDS for allowlisting
+or LLMC_ISOLATED=1 for sandboxed execution.
+
+Usage:
+    ./bash '{"command": "ls -la"}'
+    ./bash '{"command": "git status"}'
+"""
+import json
+import os
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+
+# Dangerous commands that should never be executed
+BLOCKED_COMMANDS = {
+    "rm -rf /",
+    "rm -rf /*",
+    "mkfs",
+    ":(){:|:&};:",  # Fork bomb
+    "dd if=/dev/zero of=/dev/sda",
+}
+
+# If set, only these command prefixes are allowed
+ALLOWED_PREFIXES = os.environ.get("LLMC_ALLOWED_COMMANDS", "").split(":") if os.environ.get("LLMC_ALLOWED_COMMANDS") else None
+
+
+def validate_command(command: str) -> tuple[bool, str]:
+    """Validate command is safe to run."""
+    # Check blocked commands
+    normalized = command.strip().lower()
+    for blocked in BLOCKED_COMMANDS:
+        if blocked in normalized:
+            return False, f"Blocked dangerous command pattern: {blocked}"
+    
+    # Check allowlist if configured
+    if ALLOWED_PREFIXES and ALLOWED_PREFIXES[0]:  # Non-empty allowlist
+        allowed = False
+        for prefix in ALLOWED_PREFIXES:
+            if command.strip().startswith(prefix):
+                allowed = True
+                break
+        if not allowed:
+            return False, f"Command not in allowlist. Set LLMC_ALLOWED_COMMANDS or remove restriction."
+    
+    return True, ""
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'command' field."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    command = args.get("command")
+    if not command:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'command'"
+        }))
+        sys.exit(1)
+    
+    timeout = args.get("timeout", 30)
+    cwd = args.get("cwd", os.getcwd())
+    
+    # Security check
+    valid, error = validate_command(command)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
+            env={**os.environ, "PAGER": "cat"}
+        )
+        
+        print(json.dumps({
+            "success": result.returncode == 0,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "exit_code": result.returncode
+        }))
+        
+    except subprocess.TimeoutExpired:
+        print(json.dumps({
+            "success": False,
+            "error": f"Command timed out after {timeout}s",
+            "stdout": "",
+            "stderr": "",
+            "exit_code": -1
+        }))
+        sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Execution failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

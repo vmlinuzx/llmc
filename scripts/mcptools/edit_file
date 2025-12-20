@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""
+edit_file - MCP Filesystem compatible pattern-based file editor.
+
+Implements the MCP edit_file tool interface.
+Uses str_replace style editing with oldText/newText pairs.
+
+Usage:
+    ./edit_file '{"path": "config.py", "edits": [{"oldText": "DEBUG = False", "newText": "DEBUG = True"}]}'
+    ./edit_file '{"path": "config.py", "edits": [...], "dryRun": true}'
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def validate_path(path: str) -> tuple[bool, str]:
+    """Validate path is under allowed roots."""
+    allowed_roots_str = os.environ.get("LLMC_ALLOWED_ROOTS", os.getcwd())
+    allowed_roots = [Path(r).resolve() for r in allowed_roots_str.split(":")]
+    
+    resolved = Path(path).resolve()
+    
+    for root in allowed_roots:
+        try:
+            resolved.relative_to(root)
+            return True, ""
+        except ValueError:
+            continue
+    
+    return False, f"Path '{path}' is outside allowed roots: {allowed_roots_str}"
+
+
+def apply_edits(content: str, edits: list[dict]) -> tuple[str, int, list[str]]:
+    """Apply a list of oldText->newText edits. Returns (new_content, edit_count, diffs)."""
+    result = content
+    applied = 0
+    diffs = []
+    
+    for edit in edits:
+        old_text = edit.get("oldText", "")
+        new_text = edit.get("newText", "")
+        
+        if not old_text:
+            continue
+        
+        if old_text in result:
+            # Generate diff info
+            diffs.append(f"- {old_text[:80]}{'...' if len(old_text) > 80 else ''}")
+            diffs.append(f"+ {new_text[:80]}{'...' if len(new_text) > 80 else ''}")
+            
+            result = result.replace(old_text, new_text, 1)
+            applied += 1
+    
+    return result, applied, diffs
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'path' and 'edits' fields."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    file_path = args.get("path")
+    if not file_path:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'path'"
+        }))
+        sys.exit(1)
+    
+    edits = args.get("edits")
+    if not edits or not isinstance(edits, list):
+        print(json.dumps({
+            "success": False,
+            "error": "Missing or invalid 'edits' field (expected array)"
+        }))
+        sys.exit(1)
+    
+    dry_run = args.get("dryRun", False)
+    
+    # Security check
+    valid, error = validate_path(file_path)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    resolved_path = Path(file_path).resolve()
+    
+    if not resolved_path.exists():
+        print(json.dumps({
+            "success": False,
+            "error": f"File not found: {file_path}"
+        }))
+        sys.exit(1)
+    
+    if not resolved_path.is_file():
+        print(json.dumps({
+            "success": False,
+            "error": f"Not a file: {file_path}"
+        }))
+        sys.exit(1)
+    
+    try:
+        content = resolved_path.read_text(encoding="utf-8")
+        new_content, applied, diffs = apply_edits(content, edits)
+        
+        if applied == 0:
+            print(json.dumps({
+                "success": False,
+                "error": "No matching text found for any edit"
+            }))
+            sys.exit(1)
+        
+        if dry_run:
+            print(json.dumps({
+                "success": True,
+                "dryRun": True,
+                "path": str(resolved_path),
+                "edits_would_apply": applied,
+                "diff": "\n".join(diffs)
+            }))
+        else:
+            resolved_path.write_text(new_content, encoding="utf-8")
+            print(json.dumps({
+                "success": True,
+                "path": str(resolved_path),
+                "edits_applied": applied
+            }))
+        
+    except UnicodeDecodeError:
+        print(json.dumps({
+            "success": False,
+            "error": f"File is not valid UTF-8: {file_path}"
+        }))
+        sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Edit failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

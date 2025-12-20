@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""
+text_editor - Anthropic computer-use compatible text editor.
+
+Implements the Anthropic text_editor tool interface.
+Supports view, create, str_replace, and insert commands.
+
+Usage:
+    ./text_editor '{"command": "view", "path": "src/main.py"}'
+    ./text_editor '{"command": "view", "path": "src/main.py", "view_range": [1, 50]}'
+    ./text_editor '{"command": "create", "path": "new.py", "content": "print(42)"}'
+    ./text_editor '{"command": "str_replace", "path": "main.py", "old_str": "foo", "new_str": "bar"}'
+    ./text_editor '{"command": "insert", "path": "main.py", "insert_line": 10, "content": "# Comment"}'
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def validate_path(path: str) -> tuple[bool, str]:
+    """Validate path is under allowed roots."""
+    allowed_roots_str = os.environ.get("LLMC_ALLOWED_ROOTS", os.getcwd())
+    allowed_roots = [Path(r).resolve() for r in allowed_roots_str.split(":")]
+    
+    resolved = Path(path).resolve()
+    
+    for root in allowed_roots:
+        try:
+            resolved.relative_to(root)
+            return True, ""
+        except ValueError:
+            continue
+    
+    return False, f"Path '{path}' is outside allowed roots: {allowed_roots_str}"
+
+
+def cmd_view(path: Path, view_range: list[int] | None) -> dict:
+    """View file contents."""
+    if not path.exists():
+        return {"success": False, "error": f"File not found: {path}"}
+    
+    try:
+        content = path.read_text(encoding="utf-8")
+        lines = content.splitlines()
+        
+        if view_range and len(view_range) == 2:
+            start, end = view_range
+            # 1-indexed, inclusive
+            start = max(1, start) - 1
+            end = min(len(lines), end)
+            lines = lines[start:end]
+            # Add line numbers
+            numbered = [f"{i + start + 1:4d} | {line}" for i, line in enumerate(lines)]
+            return {
+                "success": True,
+                "content": "\n".join(numbered),
+                "lines_shown": len(numbered),
+                "total_lines": len(content.splitlines())
+            }
+        
+        return {
+            "success": True,
+            "content": content,
+            "lines": len(lines)
+        }
+    except UnicodeDecodeError:
+        return {"success": False, "error": "File is not valid UTF-8"}
+
+
+def cmd_create(path: Path, content: str) -> dict:
+    """Create a new file."""
+    if path.exists():
+        return {"success": False, "error": f"File already exists: {path}. Use str_replace to edit."}
+    
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return {
+            "success": True,
+            "message": f"Created {path}",
+            "bytes_written": len(content.encode("utf-8"))
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def cmd_str_replace(path: Path, old_str: str, new_str: str) -> dict:
+    """Replace exact string in file."""
+    if not path.exists():
+        return {"success": False, "error": f"File not found: {path}"}
+    
+    try:
+        content = path.read_text(encoding="utf-8")
+        
+        if old_str not in content:
+            return {"success": False, "error": "old_str not found in file"}
+        
+        # Count occurrences
+        count = content.count(old_str)
+        if count > 1:
+            return {
+                "success": False, 
+                "error": f"old_str found {count} times. Must be unique. Add more context."
+            }
+        
+        new_content = content.replace(old_str, new_str, 1)
+        path.write_text(new_content, encoding="utf-8")
+        
+        return {
+            "success": True,
+            "message": "Replacement complete",
+            "path": str(path)
+        }
+    except UnicodeDecodeError:
+        return {"success": False, "error": "File is not valid UTF-8"}
+
+
+def cmd_insert(path: Path, insert_line: int, content: str) -> dict:
+    """Insert content at a specific line."""
+    if not path.exists():
+        return {"success": False, "error": f"File not found: {path}"}
+    
+    try:
+        file_content = path.read_text(encoding="utf-8")
+        lines = file_content.splitlines(keepends=True)
+        
+        # insert_line is 1-indexed
+        idx = max(0, min(len(lines), insert_line - 1))
+        
+        # Ensure content ends with newline
+        if not content.endswith("\n"):
+            content += "\n"
+        
+        lines.insert(idx, content)
+        path.write_text("".join(lines), encoding="utf-8")
+        
+        return {
+            "success": True,
+            "message": f"Inserted at line {insert_line}",
+            "path": str(path)
+        }
+    except UnicodeDecodeError:
+        return {"success": False, "error": "File is not valid UTF-8"}
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate command
+    command = args.get("command")
+    if command not in ("view", "create", "str_replace", "insert"):
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid command: {command}. Must be view, create, str_replace, or insert."
+        }))
+        sys.exit(1)
+    
+    file_path = args.get("path")
+    if not file_path:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'path'"
+        }))
+        sys.exit(1)
+    
+    # Security check
+    valid, error = validate_path(file_path)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    resolved_path = Path(file_path).resolve()
+    
+    # Dispatch to command handler
+    if command == "view":
+        result = cmd_view(resolved_path, args.get("view_range"))
+    elif command == "create":
+        content = args.get("content", "")
+        result = cmd_create(resolved_path, content)
+    elif command == "str_replace":
+        old_str = args.get("old_str", "")
+        new_str = args.get("new_str", "")
+        if not old_str:
+            result = {"success": False, "error": "Missing old_str for str_replace"}
+        else:
+            result = cmd_str_replace(resolved_path, old_str, new_str)
+    elif command == "insert":
+        insert_line = args.get("insert_line", 1)
+        content = args.get("content", "")
+        result = cmd_insert(resolved_path, insert_line, content)
+    else:
+        result = {"success": False, "error": "Unknown command"}
+    
+    print(json.dumps(result))
+    if not result.get("success"):
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
