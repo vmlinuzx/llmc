@@ -49,3 +49,7 @@ graph TD
     E -->|Relevant Code| G[LLM Context]
     G -->|Generation| H[Final Answer]
 ```
+
+## Next Steps
+
+Now that you understand the concepts, [install LLMC](installation.md) and create your [first project](first-project.md).
