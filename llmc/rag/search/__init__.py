@@ -478,8 +478,11 @@ def search_spans(
     # 5. Reconstruct Objects
     top_results = []
     for d in top_dicts:
-        # Remove 'slice_id' used for fusion
-        d_clean = {k: v for k, v in d.items() if k != "slice_id"}
+        # Remove 'slice_id' and internal fusion/expansion metadata fields
+        d_clean = {
+            k: v for k, v in d.items() 
+            if k != "slice_id" and not k.startswith("_")
+        }
         # Path object is preserved by asdict
         top_results.append(SpanSearchResult(**d_clean))
 

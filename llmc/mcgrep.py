@@ -28,6 +28,7 @@ from rich.console import Console
 import typer
 
 from llmc.core import find_repo_root
+from llmc.rag.database import Database
 
 console = Console()
 
