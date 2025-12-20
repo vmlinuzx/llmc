@@ -383,11 +383,14 @@ Based on official MCP Filesystem Server specification.
 | `llmctools/mcgrep` | ✅ Done | Symlink to llmc/mcgrep.py |
 | `llmctools/mcwho` | ✅ Done | Symlink to llmc/mcwho.py |
 
-### Phase 4: Integration (TODO)
+### Phase 4: Integration ✅ COMPLETE
 
-- [ ] Update MCP server to delegate to scripts
-- [ ] Update Boxxie agent to use script paths
-- [ ] Test with Qwen, Claude, GPT-4
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `llmc_mcp/tools/native_scripts.py` | ✅ Done | Integration module with `call_native_tool()` |
+| `scripts/demo_native_tools.py` | ✅ Done | Comprehensive demo script |
+| Tool definitions | ✅ Done | `get_native_tool_definitions()` for MCP registration |
+| Convenience functions | ✅ Done | `file_search()`, `bash()`, etc. wrappers |
 
 ---
 
