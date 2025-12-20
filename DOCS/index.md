@@ -32,6 +32,7 @@ Step-by-step lessons to help you get up and running.
 Practical steps for everyday tasks and problem-solving.
 - [CLI Reference](user-guide/cli-reference.md)
 - [Configuration](user-guide/configuration.md)
+- [Native Tool Scripts](user-guide/native-tool-scripts.md)
 - [Search & Navigation](user-guide/search/index.md)
 - [Enrichment](user-guide/enrichment/index.md)
 - [TUI Dashboard](user-guide/tui/index.md)
