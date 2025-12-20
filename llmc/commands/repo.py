@@ -467,6 +467,20 @@ def register(
     if not skip_enrich and stats["spans"] > 0:
         console.print("\n💡 Start enrichment with: llmc service start")
 
+    # Final validation step
+    console.print("\n[bold]🔍 Running validation checks...[/bold]")
+    try:
+        from llmc.commands.repo_validator import print_result, validate_repo
+
+        result = validate_repo(repo_path, check_connectivity=True, check_models=True)
+        print_result(result, verbose=False)
+        if not result.passed:
+            console.print(
+                "\n[yellow]⚠️  Validation finished with issues. Review the output above.[/yellow]"
+            )
+    except Exception as e:
+        console.print(f"  [red]❌ Validation check failed: {e}[/red]")
+
 
 @app.command("bootstrap")
 def bootstrap(
