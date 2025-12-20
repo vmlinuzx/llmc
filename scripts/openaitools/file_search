@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""
+file_search - OpenAI Responses API compatible semantic search.
+
+Implements the OpenAI file_search tool interface for local execution.
+Wraps mcgrep/LLMC RAG for the actual search.
+
+Phase 2: Includes LLMC enrichment (graph context, summaries, code snippets).
+
+Usage:
+    ./file_search '{"query": "authentication middleware", "limit": 10}'
+    ./file_search '{"query": "database", "include_content": true}'
+    echo '{"query": "database connection"}' | ./file_search
+"""
+import json
+import sys
+from pathlib import Path
+
+# Add llmc to path
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from dataclasses import asdict
+
+from llmc.rag.search import search_spans
+from llmc.core import find_repo_root
+
+
+def load_graph_context(repo_root: Path, span_hash: str, file_path: str, start_line: int, end_line: int) -> dict | None:
+    """Load graph context (callers/callees) for a span."""
+    graph_path = repo_root / ".llmc" / "rag_graph.json"
+    if not graph_path.exists():
+        return None
+    
+    try:
+        from llmc.rag.schema import SchemaGraph
+        graph = SchemaGraph.load(graph_path)
+        
+        # Find matching entity by file path and line overlap
+        entities_by_file = {}
+        for ent in graph.entities:
+            fpath = getattr(ent, "file_path", None)
+            if not fpath:
+                parts = ent.path.rsplit(":", 1)
+                if len(parts) == 2:
+                    fpath = parts[0]
+            if fpath:
+                entities_by_file.setdefault(fpath, []).append(ent)
+        
+        # Build relation maps
+        rels_by_src = {}
+        rels_by_dst = {}
+        for rel in graph.relations:
+            rels_by_src.setdefault(rel.src, []).append(rel)
+            rels_by_dst.setdefault(rel.dst, []).append(rel)
+        
+        # Find matching entity
+        rel_path = str(Path(file_path).relative_to(repo_root)) if Path(file_path).is_absolute() else file_path
+        candidates = entities_by_file.get(rel_path, [])
+        
+        for ent in candidates:
+            e_start = getattr(ent, "start_line", None)
+            e_end = getattr(ent, "end_line", None)
+            
+            if e_start is None:
+                try:
+                    suffix = ent.path.rsplit(":", 1)[-1]
+                    if "-" in suffix:
+                        s, e = suffix.split("-")
+                        e_start, e_end = int(s), int(e)
+                    else:
+                        e_start = e_end = int(suffix)
+                except Exception:
+                    continue
+            
+            if e_start is None:
+                continue
+            if e_end is None:
+                e_end = e_start
+            
+            # Check overlap
+            if not (e_end < start_line or e_start > end_line):
+                # Found match - gather neighbors
+                callers = []
+                callees = []
+                
+                for rel in rels_by_src.get(ent.id, []):
+                    if rel.edge == "calls":
+                        callees.append(rel.dst)
+                
+                for rel in rels_by_dst.get(ent.id, []):
+                    if rel.edge == "calls":
+                        callers.append(rel.src)
+                
+                return {
+                    "node_id": ent.id,
+                    "node_type": ent.kind,
+                    "callers": callers[:5],
+                    "callees": callees[:5]
+                }
+        
+        return None
+    except Exception:
+        return None
+
+
+def load_enrichment(repo_root: Path, span_hash: str) -> dict | None:
+    """Load enrichment data for a span."""
+    from llmc.rag.config import index_path_for_read
+    from llmc.rag.database import Database
+    
+    db_path = index_path_for_read(repo_root)
+    if not db_path.exists():
+        return None
+    
+    try:
+        db = Database(db_path)
+        rows = db.conn.execute(
+            """
+            SELECT summary, inputs, outputs, side_effects, pitfalls
+            FROM enrichments WHERE span_hash = ?
+            """,
+            (span_hash,)
+        ).fetchall()
+        db.close()
+        
+        if rows:
+            row = rows[0]
+            return {
+                "summary": row["summary"],
+                "inputs": json.loads(row["inputs"]) if row["inputs"] else None,
+                "outputs": json.loads(row["outputs"]) if row["outputs"] else None,
+                "side_effects": json.loads(row["side_effects"]) if row["side_effects"] else None,
+                "pitfalls": json.loads(row["pitfalls"]) if row["pitfalls"] else None,
+            }
+        return None
+    except Exception:
+        return None
+
+
+def load_content_snippet(file_path: Path, start_line: int, end_line: int, context: int = 2) -> str | None:
+    """Load actual code content for a span."""
+    try:
+        if not file_path.exists():
+            return None
+        
+        lines = file_path.read_text(encoding="utf-8").splitlines()
+        start = max(0, start_line - 1 - context)
+        end = min(len(lines), end_line + context)
+        return "\n".join(lines[start:end])
+    except Exception:
+        return None
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'query' field."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    query = args.get("query")
+    if not query:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'query'"
+        }))
+        sys.exit(1)
+    
+    limit = args.get("limit", 10)
+    include_content = args.get("include_content", False)
+    include_graph = args.get("include_graph", True)
+    include_enrichment = args.get("include_enrichment", True)
+    
+    try:
+        repo_root = find_repo_root()
+        
+        # Call LLMC RAG search with debug=True to get enrichment
+        results = search_spans(query, limit=limit, debug=True)
+        
+        # Format results in OpenAI-compatible structure with LLMC enrichment
+        formatted_results = []
+        for r in results:
+            result = {
+                "path": str(r.path),
+                "symbol": r.symbol,
+                "kind": r.kind,
+                "summary": r.summary or "",
+                "score": r.score,
+                "normalized_score": r.normalized_score,
+                "lines": [r.start_line, r.end_line]
+            }
+            
+            # Add code content if requested
+            if include_content:
+                full_path = repo_root / r.path if not r.path.is_absolute() else r.path
+                snippet = load_content_snippet(full_path, r.start_line, r.end_line)
+                if snippet:
+                    result["content"] = snippet
+            
+            # Add graph context
+            if include_graph:
+                full_path = repo_root / r.path if not r.path.is_absolute() else r.path
+                graph_ctx = load_graph_context(repo_root, r.span_hash, str(full_path), r.start_line, r.end_line)
+                if graph_ctx:
+                    result["graph"] = graph_ctx
+            
+            # Add enrichment data
+            if include_enrichment:
+                enrichment = load_enrichment(repo_root, r.span_hash)
+                if enrichment:
+                    result["enrichment"] = enrichment
+            
+            formatted_results.append(result)
+        
+        print(json.dumps({
+            "success": True,
+            "query": query,
+            "results": formatted_results,
+            "count": len(formatted_results)
+        }))
+        
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Search failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

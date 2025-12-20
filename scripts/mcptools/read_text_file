@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+"""
+read_text_file - MCP Filesystem compatible file reader.
+
+Implements the MCP read_text_file tool interface.
+
+Usage:
+    ./read_text_file '{"path": "src/main.py"}'
+    ./read_text_file '{"path": "README.md", "head": 50}'
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def validate_path(path: str) -> tuple[bool, str]:
+    """Validate path is under allowed roots."""
+    allowed_roots_str = os.environ.get("LLMC_ALLOWED_ROOTS", os.getcwd())
+    allowed_roots = [Path(r).resolve() for r in allowed_roots_str.split(":")]
+    
+    resolved = Path(path).resolve()
+    
+    for root in allowed_roots:
+        try:
+            resolved.relative_to(root)
+            return True, ""
+        except ValueError:
+            continue
+    
+    return False, f"Path '{path}' is outside allowed roots: {allowed_roots_str}"
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'path' field."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    file_path = args.get("path")
+    if not file_path:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'path'"
+        }))
+        sys.exit(1)
+    
+    # Security check
+    valid, error = validate_path(file_path)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    resolved_path = Path(file_path).resolve()
+    
+    if not resolved_path.exists():
+        print(json.dumps({
+            "success": False,
+            "error": f"File not found: {file_path}"
+        }))
+        sys.exit(1)
+    
+    if not resolved_path.is_file():
+        print(json.dumps({
+            "success": False,
+            "error": f"Not a file: {file_path}"
+        }))
+        sys.exit(1)
+    
+    try:
+        content = resolved_path.read_text(encoding="utf-8")
+        lines = content.splitlines(keepends=True)
+        
+        # Apply head/tail filters
+        head = args.get("head")
+        tail = args.get("tail")
+        
+        if head is not None:
+            lines = lines[:head]
+        elif tail is not None:
+            lines = lines[-tail:]
+        
+        final_content = "".join(lines)
+        
+        print(json.dumps({
+            "success": True,
+            "content": final_content,
+            "path": str(resolved_path),
+            "lines": len(lines),
+            "size": len(final_content)
+        }))
+        
+    except UnicodeDecodeError:
+        print(json.dumps({
+            "success": False,
+            "error": f"File is not valid UTF-8: {file_path}"
+        }))
+        sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Read failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

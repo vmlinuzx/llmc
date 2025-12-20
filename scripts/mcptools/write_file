@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""
+write_file - MCP Filesystem compatible file writer.
+
+Implements the MCP write_file tool interface.
+Creates parent directories if needed.
+
+Usage:
+    ./write_file '{"path": "output.txt", "content": "Hello, world!"}'
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def validate_path(path: str) -> tuple[bool, str]:
+    """Validate path is under allowed roots."""
+    allowed_roots_str = os.environ.get("LLMC_ALLOWED_ROOTS", os.getcwd())
+    allowed_roots = [Path(r).resolve() for r in allowed_roots_str.split(":")]
+    
+    # For write, we check the parent directory (file may not exist yet)
+    resolved = Path(path).resolve()
+    
+    for root in allowed_roots:
+        try:
+            resolved.relative_to(root)
+            return True, ""
+        except ValueError:
+            continue
+    
+    return False, f"Path '{path}' is outside allowed roots: {allowed_roots_str}"
+
+
+def main():
+    # Parse input from arg or stdin
+    if len(sys.argv) > 1:
+        raw_input = sys.argv[1]
+    else:
+        raw_input = sys.stdin.read().strip()
+    
+    if not raw_input:
+        print(json.dumps({
+            "success": False,
+            "error": "No input provided. Expected JSON with 'path' and 'content' fields."
+        }))
+        sys.exit(1)
+    
+    try:
+        args = json.loads(raw_input)
+    except json.JSONDecodeError as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Invalid JSON: {e}"
+        }))
+        sys.exit(1)
+    
+    # Validate required fields
+    file_path = args.get("path")
+    if not file_path:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'path'"
+        }))
+        sys.exit(1)
+    
+    content = args.get("content")
+    if content is None:
+        print(json.dumps({
+            "success": False,
+            "error": "Missing required field: 'content'"
+        }))
+        sys.exit(1)
+    
+    # Security check
+    valid, error = validate_path(file_path)
+    if not valid:
+        print(json.dumps({
+            "success": False,
+            "error": error
+        }))
+        sys.exit(2)
+    
+    resolved_path = Path(file_path).resolve()
+    
+    try:
+        # Create parent directories if needed
+        resolved_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Write file
+        bytes_written = resolved_path.write_text(content, encoding="utf-8")
+        
+        print(json.dumps({
+            "success": True,
+            "path": str(resolved_path),
+            "bytes_written": len(content.encode("utf-8"))
+        }))
+        
+    except PermissionError:
+        print(json.dumps({
+            "success": False,
+            "error": f"Permission denied: {file_path}"
+        }))
+        sys.exit(1)
+    except Exception as e:
+        print(json.dumps({
+            "success": False,
+            "error": f"Write failed: {e}"
+        }))
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
