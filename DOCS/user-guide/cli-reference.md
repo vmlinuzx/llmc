@@ -58,6 +58,8 @@ llmc
 │   ├── generate      # Generate docs
 │   └── status        # Docgen status
 │
+├── chat              # AI Coding Assistant
+│
 └── usertest          # RUTA testing
     ├── init
     └── run
@@ -134,6 +136,17 @@ Monitor service logs (alias for `llmc service logs -f`).
 
 ```bash
 llmc monitor
+```
+
+---
+
+### `llmc chat`
+AI coding assistant with RAG-powered context.
+
+```bash
+llmc chat "Where is the routing logic?"
+llmc chat -n "New session"
+llmc chat -r  # Recall last session
 ```
 
 ---
@@ -691,9 +704,8 @@ llmc usertest run my_scenario --manual
 ```bash
 cd /path/to/your/project
 llmc init
-llmc debug index
-llmc service repo add .
 llmc service start
+llmc repo register
 llmc tui
 ```
 

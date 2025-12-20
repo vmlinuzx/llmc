@@ -55,7 +55,7 @@ Install the package with the standard feature set (RAG, TUI, and Agent support):
 pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
 ```
 
-> **Note:** The package name is `llmcwrapper`, but the command-line tool is installed as `llmc-cli`.
+> **Note:** The package name is `llmcwrapper`, but the command-line tool is installed as `llmc`.
 
 ---
 
@@ -95,21 +95,21 @@ Once installed, verify that the CLI is accessible and working correctly.
 
 Check the version:
 ```bash
-llmc-cli --version
+llmc --version
 ```
 
-You should see output indicating the installed version (e.g., `llmc-cli version 0.7.0`).
+You should see output indicating the installed version (e.g., `llmc version 0.7.0`).
 
 You can also view the help menu to see available commands:
 ```bash
-llmc-cli --help
+llmc --help
 ```
 
 ---
 
 ## Troubleshooting
 
-### "Command not found: llmc-cli"
+### "Command not found: llmc"
 
 If you see this error after installation, your installation directory is likely not in your system's `PATH`.
 
