@@ -4,18 +4,29 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
-### Added (2025-12-19)
+### Added (2025-12-20)
 
-- **SDD: RAG Scoring System 3.0 - Graph-Enhanced Dynamic Retrieval:**
-  - Comprehensive SDD synthesized from 285KB of academic research (RepoGraph, RANGER, SetFit, Pinecone studies)
-  - 4-phase implementation plan: RRF Fusion → Graph Expansion → SetFit Router → LLM Reranking
-  - Addresses Roadmap §3.1 "docs-over-code" problem with concrete code deltas and acceptance criteria
-  - Includes implementation code for `rrf_fuse_scores()`, `z_score_fuse_scores()`, `GraphExpander`, `LearnedRouter`, `SetwiseReranker`
-  - Full config reference for `[scoring.fusion]`, `[rag.graph]`, `[routing.classifier]`, `[rag.rerank]`
-  - Evaluation harness with Code@k, MRR_code metrics
-  - Estimated 44-64 hours, phased over 4-6 weeks
-  - **📄 SDD:** `DOCS/planning/SDD_RAG_Scoring_System_3.0.md`
-  - **Research archived to:** `DOCS/research/rag_scoring_3.0/`
+- **RAG Scoring System 3.0 - Graph-Enhanced Dynamic Retrieval (IMPLEMENTED):**
+  - **Phase 1: RRF Fusion + Metrics**
+    - `rrf_fuse_scores()` in `llmc/routing/fusion.py` — rank-based fusion, scale-agnostic
+    - `code_at_k()`, `mrr_code()` metrics in `llmc/rag/eval/metrics.py`
+    - Config: `[scoring.fusion] method = "rrf"` (now default)
+  - **Phase 2: Graph Neighbor Expansion**
+    - `GraphExpander` class in `llmc/rag/graph_expand.py`
+    - Adds 1-hop neighbors with decay factor, hub penalty
+    - Config: `[rag.graph] enable_expansion = true`
+    - Integrated into `search_spans()` pipeline
+  - **Phase 3: Z-Score Fusion + Learned Router**
+    - `z_score_fuse_scores()` — z-score normalizes then weights
+    - `LearnedRouter` stub in `llmc/routing/learned_router.py` (falls back to heuristics)
+    - Config: `[routing.classifier]` (optional, disabled by default)
+  - **Phase 4: LLM Setwise Reranking**
+    - `SetwiseReranker` in `llmc/rag/rerank.py` — LLM selects best subset
+    - Config: `[rag.rerank]` (optional, disabled by default)
+  - **44 new tests** across fusion, graph, metrics, router, rerank
+  - **SDD:** `DOCS/planning/SDD_RAG_Scoring_System_3.0.md`
+
+### Added (2025-12-19)
 
 - **mcread + mcinspect CLI Tools (PR #61 - Jules):**
   - `mcread <file>` - Read files with graph context (callers, imports, exports, related)
