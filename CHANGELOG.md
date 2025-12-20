@@ -6,6 +6,17 @@ All notable changes to LLMC will be documented in this file.
 
 ### Added (2025-12-19)
 
+- **SDD: RAG Scoring System 3.0 - Graph-Enhanced Dynamic Retrieval:**
+  - Comprehensive SDD synthesized from 285KB of academic research (RepoGraph, RANGER, SetFit, Pinecone studies)
+  - 4-phase implementation plan: RRF Fusion → Graph Expansion → SetFit Router → LLM Reranking
+  - Addresses Roadmap §3.1 "docs-over-code" problem with concrete code deltas and acceptance criteria
+  - Includes implementation code for `rrf_fuse_scores()`, `z_score_fuse_scores()`, `GraphExpander`, `LearnedRouter`, `SetwiseReranker`
+  - Full config reference for `[scoring.fusion]`, `[rag.graph]`, `[routing.classifier]`, `[rag.rerank]`
+  - Evaluation harness with Code@k, MRR_code metrics
+  - Estimated 44-64 hours, phased over 4-6 weeks
+  - **📄 SDD:** `DOCS/planning/SDD_RAG_Scoring_System_3.0.md`
+  - **Research archived to:** `DOCS/research/rag_scoring_3.0/`
+
 - **mcread + mcinspect CLI Tools (PR #61 - Jules):**
   - `mcread <file>` - Read files with graph context (callers, imports, exports, related)
   - `mcinspect <symbol>` - Inspect symbols with graph neighbors

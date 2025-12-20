@@ -219,19 +219,27 @@ Automated MCP testing orchestrator. Phase 1 (shell harness) is complete.
 
 ## 3. Later (R&D)
 
-### 3.1 RAG Scoring Research
+### 3.1 RAG Scoring System 3.0 🔥
+
+**Status:** 🟢 SDD Complete - Ready for Implementation  
+**Added:** 2025-12-19
 
 **Problem:** Semantic search for implementation queries returns docs before code.
 
-**Research Questions:**
-1. Optimal weight distribution for code-focused vs doc-focused queries?
-2. Should we route queries by intent detection?
-3. Should we embed code and docs in separate vector spaces?
-4. What metrics define "good" results? (MRR, NDCG?)
+**Solution:** 4-phase architectural evolution to Graph-Enhanced Dynamic Retrieval:
 
-**Current Stopgap:** `_extension_boost()` in search.py - a hack that works for obvious cases.
+| Phase | Focus | Effort | Expected Gain |
+|-------|-------|--------|---------------|
+| **1** | RRF Fusion + Code@k Metric | 8-12h | +10-15% code precision |
+| **2** | Graph Neighbor Expansion | 12-16h | +15-20% recall |
+| **3** | Z-Score Fusion + SetFit Router | 16-24h | +20-30% intent accuracy |
+| **4** | LLM Setwise Reranking | 8-12h | +5-10% top-3 precision |
 
-**Effort:** 20-40 hours | **Difficulty:** 🔴 Hard (research)
+**📄 Full SDD:** `DOCS/planning/SDD_RAG_Scoring_System_3.0.md`
+
+**Research Basis:** 285KB of academic literature synthesized from RepoGraph (ICLR 2025), RANGER, SetFit, Pinecone Hybrid Search studies.
+
+**Total Effort:** 44-64 hours | **Difficulty:** 🟡 Medium (phased)
 
 ---
 
