@@ -1,4 +1,4 @@
-from llmc.routing.fusion import fuse_scores, normalize_scores, rrf_fuse_scores
+from llmc.routing.fusion import fuse_scores, normalize_scores, rrf_fuse_scores, z_score_fuse_scores
 
 # --- Existing Logic Tests (Fixed expectations for Raw Scores) ---
 
@@ -134,3 +134,95 @@ def test_fuse_scores_default_max():
     
     assert fused[0]["score"] == 5.0 # 10 * 0.5
     assert "_fusion_method" not in fused[0] # RRF adds this tag, MAX doesn't currently
+
+
+# --- Z-Score Tests ---
+
+def test_zscore_basic():
+    """Z-score should normalize and weight scores correctly."""
+    route_results = {
+        "r1": [
+            {"slice_id": "a", "score": 100.0},
+            {"slice_id": "b", "score": 50.0},
+            {"slice_id": "c", "score": 0.0},
+        ],
+        "r2": [
+            {"slice_id": "d", "score": 0.95},
+            {"slice_id": "e", "score": 0.85},
+            {"slice_id": "f", "score": 0.75},
+        ],
+    }
+    route_weights = {"r1": 1.0, "r2": 1.0}
+    
+    results = z_score_fuse_scores(route_results, route_weights, fallback_to_rrf=False)
+    
+    assert len(results) == 6
+    assert results[0]["_fusion_method"] == "z_score"
+    # All items should have scores (z-scores can be negative)
+
+
+def test_zscore_fallback_to_rrf():
+    """Should fall back to RRF when too few samples."""
+    route_results = {
+        "r1": [{"slice_id": "a", "score": 10}],  # Only 1 sample
+    }
+    route_weights = {"r1": 1.0}
+    
+    results = z_score_fuse_scores(
+        route_results, route_weights, 
+        fallback_to_rrf=True, 
+        min_samples_for_zscore=5
+    )
+    
+    # Should have fallen back to RRF (1 sample < 5)
+    assert results[0]["_fusion_method"] == "rrf"
+
+
+def test_zscore_std_zero():
+    """Should handle all-same-score case (std=0)."""
+    route_results = {
+        "r1": [
+            {"slice_id": "a", "score": 10.0},
+            {"slice_id": "b", "score": 10.0},
+            {"slice_id": "c", "score": 10.0},
+        ],
+    }
+    route_weights = {"r1": 1.0}
+    
+    # All same score -> std=0 -> z-scores should all be 0
+    results = z_score_fuse_scores(
+        route_results, route_weights, 
+        fallback_to_rrf=False,
+        min_samples_for_zscore=2
+    )
+    
+    assert len(results) == 3
+    # All z-scores should be 0 when std=0
+    for r in results:
+        assert r["score"] == 0.0
+
+
+def test_fuse_scores_dispatch_zscore():
+    """Dispatcher should route to z_score when configured."""
+    route_results = {
+        "r1": [
+            {"slice_id": "a", "score": 100.0},
+            {"slice_id": "b", "score": 50.0},
+            {"slice_id": "c", "score": 0.0},
+        ],
+    }
+    route_weights = {"r1": 1.0}
+    config = {
+        "scoring": {
+            "fusion": {
+                "method": "z_score",
+                "weights": {"r1": 1.0},
+                "fallback_to_rrf": False,
+                "min_samples_for_zscore": 2,
+            }
+        }
+    }
+    
+    results = fuse_scores(route_results, route_weights, config=config)
+    
+    assert results[0]["_fusion_method"] == "z_score"

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+import statistics
 
 
 @dataclass
@@ -80,6 +81,12 @@ def fuse_scores(
         rrf_k = fusion_config.get("rrf_k", 60)
         return rrf_fuse_scores(route_results, k=rrf_k)
 
+    if method == "z_score":
+        weights = fusion_config.get("weights", route_weights)
+        fallback = fusion_config.get("fallback_to_rrf", True)
+        min_samples = fusion_config.get("min_samples_for_zscore", 5)
+        return z_score_fuse_scores(route_results, weights, fallback, min_samples)
+
     # NOTE: We use RAW scores instead of normalizing per-route.
     # The old approach normalized each route's scores to [0,1], which caused
     # the best doc and best code file to both become 1.0 - defeating the purpose
@@ -118,6 +125,87 @@ def fuse_scores(
     # Sort descending by fused score
     final_results.sort(key=lambda x: x["score"], reverse=True)
 
+    return final_results
+
+
+def z_score_fuse_scores(
+    route_results: dict[str, list[dict[str, Any]]],
+    route_weights: dict[str, float],
+    fallback_to_rrf: bool = True,
+    min_samples_for_zscore: int = 5,
+) -> list[dict[str, Any]]:
+    """
+    Z-Score normalized weighted fusion.
+
+    Each route's scores are normalized to z-scores (mean=0, std=1),
+    then weighted and summed. This aligns different score distributions
+    while preserving relative magnitude information.
+
+    Falls back to RRF if sample size is too small for reliable statistics.
+    """
+    # Check if we have enough samples
+    total_samples = sum(len(results) for results in route_results.values())
+    if total_samples < min_samples_for_zscore:
+        if fallback_to_rrf:
+            return rrf_fuse_scores(route_results)
+        # If not falling back, proceed anyway with caution
+
+    # Normalize each route's scores to z-scores
+    normalized_routes: dict[str, list[tuple[str, float, dict[str, Any]]]] = {}
+
+    for route_name, results in route_results.items():
+        if not results:
+            continue
+
+        scores = [r.get("score", 0) for r in results]
+        
+        if len(scores) < 2:
+            # Can't compute std with single sample, use 0.0 as z-score
+            z_scores = [0.0] * len(scores)
+        else:
+            mean = statistics.mean(scores)
+            std = statistics.stdev(scores)
+
+            if std == 0:
+                # All same score - can't normalize, z = 0 for all
+                z_scores = [0.0] * len(scores)
+            else:
+                z_scores = [(s - mean) / std for s in scores]
+
+        normalized_routes[route_name] = [
+            (r["slice_id"], z, r)
+            for r, z in zip(results, z_scores)
+        ]
+
+    # Merge with weights
+    merged: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    for route_name, normalized in normalized_routes.items():
+        weight = route_weights.get(route_name, 1.0)
+
+        for slice_id, z_score, result in normalized:
+            weighted_z = z_score * weight
+
+            if slice_id in merged:
+                current_z, current_result = merged[slice_id]
+                # Sum z-scores (linear combination)
+                # Keep metadata from the result with higher weighted z
+                if weighted_z > current_z:
+                    merged[slice_id] = (current_z + weighted_z, result)
+                else:
+                    merged[slice_id] = (current_z + weighted_z, current_result)
+            else:
+                merged[slice_id] = (weighted_z, result)
+
+    # Build final list
+    final_results = []
+    for slice_id, (final_z, result) in merged.items():
+        r = result.copy()
+        r["score"] = final_z
+        r["_fusion_method"] = "z_score"
+        final_results.append(r)
+
+    final_results.sort(key=lambda x: x["score"], reverse=True)
     return final_results
 
 
