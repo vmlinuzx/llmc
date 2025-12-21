@@ -304,15 +304,18 @@ def _match_nodes(nodes: list[dict], query: str) -> list[dict]:
 
 
 def _resolve_symbol_nodes(nodes: list[dict], symbol: str) -> list[dict]:
+    """Resolve a symbol against raw node dicts using case-insensitive matching.
+    
+    This is a wrapper around the central symbol_resolver for backward compatibility.
+    Uses consistent scoring-based matching: exact > case-insensitive > suffix > contains.
+    """
+    from llmc.symbol_resolver import resolve_symbol_in_nodes
+    
     if not symbol:
         return []
-    q = symbol.lower()
-    out: list[dict] = []
-    for n in nodes:
-        name = _node_name(n).lower()
-        if name.endswith(q) or q in name:
-            out.append(n)
-    return out
+    
+    matches = resolve_symbol_in_nodes(symbol, nodes, max_results=50, name_key="name")
+    return [m.node for m in matches]
 
 
 def build_graph_for_repo(repo_root: Path | str):

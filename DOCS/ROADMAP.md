@@ -12,36 +12,25 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ### 1.0 Case-Insensitive Symbol Resolution (P1) 🔥
 
-**Status:** 🟡 Planned  
+**Status:** ✅ **COMPLETE** (2025-12-21)  
 **Added:** 2025-12-21  
 **Source:** LLMs constantly get casing wrong when using mcinspect, mcwho, etc.
 
-**Problem:** All symbol lookups are case-sensitive. `mcinspect router` fails, but `mcinspect Router` works. LLMs don't reliably know correct casing.
+**Problem:** All symbol lookups were case-sensitive. `mcinspect router` failed, but `mcinspect Router` worked.
 
-**The Architecture Fix:**
-Create a central `llmc/symbol_resolver.py` that ALL tools use:
+**What was built:**
+- Central `llmc/symbol_resolver.py` already existed with scored matching (exact > case-insensitive > suffix > contains)
+- Added `resolve_symbol_in_nodes()` for rag_nav dict compatibility
+- Migrated `llmc/rag_nav/tool_handlers.py` to use central resolver
+- 20 unit tests (9 original + 11 new)
 
-```python
-def resolve_symbol(symbol: str, graph: SchemaGraph) -> list[Entity]:
-    """Case-insensitive, fuzzy symbol resolution. Returns ranked candidates."""
-    symbol_lower = symbol.lower()
-    
-    # 1. Exact case match (best)
-    # 2. Case-insensitive exact match
-    # 3. Case-insensitive suffix match (.Router → Router, DeterministicRouter)
-    # 4. Case-insensitive contains match
-    # 5. Levenshtein distance for typos (optional)
-```
+**All callers now use central resolver:**
+- `llmc/rag/inspector.py` → `resolve_symbol_best()` ✅
+- `llmc/mcwho.py` → `resolve_symbol()` ✅  
+- `llmc/mcinspect.py` → via `inspect_entity()` ✅
+- `llmc/rag_nav/tool_handlers.py` → `resolve_symbol_in_nodes()` ✅
 
-**Callers to update:**
-- `llmc/rag/inspector.py` - `inspect_entity()`
-- `llmc/mcwho.py` - `_find_entity()`
-- `llmc/mcgrep.py` - symbol filtering
-- `llmc/rag_nav/tool_handlers.py` - graph lookups
-
-**Bonus:** Return multiple candidates with scores when ambiguous, let caller decide.
-
-**Effort:** 4-6 hours | **Difficulty:** 🟢 Easy (one module, update callers)
+**Effort:** ~30 minutes (architecture was already correct)
 
 ---
 
