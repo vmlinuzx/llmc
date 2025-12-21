@@ -253,7 +253,7 @@ Heuristic:
 Before diving into code, get the 30-second mental model:
 
 ```bash
-mcschema
+python3 -m llmc.mcschema
 ```
 
 This returns a ~400 token manifest with:
@@ -265,12 +265,12 @@ This returns a ~400 token manifest with:
 
 ### Flow A – LLM-Optimized Search (Primary)
 
-LLMs need **full file context**, not just snippets. Use `mcgrep --expand` first:
+LLMs need **full file context**, not just snippets. Use mcgrep with `--expand` first:
 
 1. **Find files semantically with full content:**
 
    ```bash
-   mcgrep "authentication logic" --expand 3
+   python3 -m llmc.mcgrep "authentication logic" --expand 3
    ```
 
    This returns full file content for the top 3 semantically-matched files,
@@ -287,18 +287,18 @@ LLMs need **full file context**, not just snippets. Use `mcgrep --expand` first:
 3. **For symbol details + graph relationships:**
 
    ```bash
-   mcwho EnrichmentPipeline    # Quick: who calls/uses this?
-   mcinspect EnrichmentPipeline # Deep: full symbol context
+   python3 -m llmc.mcwho EnrichmentPipeline    # Quick: who calls/uses this?
+   python3 -m llmc.mcinspect EnrichmentPipeline # Deep: full symbol context
    ```
 
 ### Flow B – Quick Span Search (Narrow Queries)
 
 When you already know roughly where to look:
 
-1. Run `mcgrep`:
+1. Run mcgrep:
 
    ```bash
-   mcgrep "database connection pool"
+   python3 -m llmc.mcgrep "database connection pool"
    ```
 
    Shows top 20 files with descriptions + top 10 spans with context.
@@ -308,7 +308,7 @@ When you already know roughly where to look:
    - Refine the query (more literal, include identifiers).
    - Or fall back to `rg` / AST tools.
 
-4. Once you know where the logic lives, use `mcgrep --expand 3` to get full context.
+4. Once you know where the logic lives, use `python3 -m llmc.mcgrep --expand 3` to get full context.
 
 ### Flow C – Plan Edits
 
@@ -326,13 +326,15 @@ When you already know roughly where to look:
 
 ### mc* CLI Quick Reference
 
+All commands work via `python3 -m llmc.<tool>`:
+
 | Command | Purpose | Example |
 |---------|---------|---------|
-| `mcschema` | Codebase overview (~400 tokens) | `mcschema --json` |
-| `mcgrep` | Semantic search + file descriptions | `mcgrep "router" --expand 3` |
-| `mcwho` | Who uses/calls this symbol? | `mcwho Database` |
-| `mcinspect` | Deep symbol inspection | `mcinspect --symbol EnrichmentPipeline` |
-| `mcread` | Read file with graph context | `mcread llmc/rag/database.py` |
+| `llmc.mcschema` | Codebase overview (~400 tokens) | `python3 -m llmc.mcschema` |
+| `llmc.mcgrep` | Semantic search + file descriptions | `python3 -m llmc.mcgrep "router"` |
+| `llmc.mcwho` | Who uses/calls this symbol? | `python3 -m llmc.mcwho Database` |
+| `llmc.mcinspect` | Deep symbol inspection | `python3 -m llmc.mcinspect --symbol Foo` |
+| `llmc.mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
 
 ---
 
