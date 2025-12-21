@@ -238,6 +238,9 @@ def stats(
 
 
 def doctor(
+    repo_path: Annotated[
+        Path | None, typer.Option("--repo-path", help="Path to repository")
+    ] = None,
     verbose: Annotated[
         bool, typer.Option("--verbose", "-v", help="Verbose output")
     ] = False,
@@ -248,7 +251,7 @@ def doctor(
     """Diagnose RAG health."""
     from llmc.rag.doctor import run_rag_doctor as run_doctor
 
-    repo_root = find_repo_root()
+    repo_root = find_repo_root(start_path=repo_path)
     result = run_doctor(repo_path=repo_root, verbose=verbose)
 
     if json_output:

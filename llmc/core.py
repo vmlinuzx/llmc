@@ -5,10 +5,12 @@ from typing import Any
 LLMC_VERSION = "0.6.4"  # Bad Mojo release - Dec 2025
 
 
-def find_repo_root(start_path: Path = Path(".")) -> Path:
+def find_repo_root(start_path: Path | None = None) -> Path:
     """
     Find the repository root by looking for .llmc/ or .git/ directories.
     """
+    if start_path is None:
+        start_path = Path(".")
     current = start_path.resolve()
     for parent in [current, *current.parents]:
         if (parent / ".llmc").is_dir():

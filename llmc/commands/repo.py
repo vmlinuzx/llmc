@@ -467,8 +467,22 @@ def register(
     if not skip_enrich and stats["spans"] > 0:
         console.print("\n💡 Start enrichment with: llmc service start")
 
+    # Step 6: Post-registration checks
+    console.print("\n[bold]🔍 Running post-registration checks...[/bold]")
+
+    # Embedding model check
+    try:
+        from llmc.rag.embeddings.check import check_embedding_models
+
+        embedding_results = check_embedding_models(repo_path)
+        for result in embedding_results:
+            if not result.passed:
+                console.print(f"  [yellow]{result.message}[/yellow]")
+    except Exception as e:
+        console.print(f"  [red]❌ Embedding check failed: {e}[/red]")
+
+
     # Final validation step
-    console.print("\n[bold]🔍 Running validation checks...[/bold]")
     try:
         from llmc.commands.repo_validator import print_result, validate_repo
 

@@ -1,144 +1,132 @@
 """
-Functions for checking embedding provider connectivity and model availability.
+Check embedding model availability, primarily for Ollama.
 """
 
+import json
+import urllib.request
+from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List
-
-import requests
+from typing import List
+from urllib.error import URLError
 
 from llmc.core import load_config
 
 
-class CheckResult:
-    """Structured result for a single validation check."""
+@dataclass
+class EmbeddingCheckResult:
+    """Result of a single embedding model check."""
 
-    def __init__(
-        self, check_name: str, passed: bool, message: str, details: Any = None
-    ):
-        self.check_name = check_name
-        self.passed = passed
-        self.message = message
-        self.details = details
-
-    def to_dict(self) -> dict:
-        """Convert result to a dictionary."""
-        return {
-            "check": self.check_name,
-            "passed": self.passed,
-            "message": self.message,
-            "details": self.details,
-        }
+    model_name: str
+    passed: bool
+    message: str
 
 
-def check_ollama_connectivity(api_base: str) -> bool:
-    """Checks if an Ollama server is reachable at the given URL."""
-    try:
-        response = requests.get(api_base, timeout=5)
-        response.raise_for_status()
-        return True
-    except requests.exceptions.RequestException:
-        return False
-
-
-def get_available_ollama_models(api_base: str) -> List[str]:
-    """Gets a list of available model names from an Ollama server."""
-    try:
-        response = requests.get(f"{api_base}/api/tags", timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return [model.get("name") for model in data.get("models", [])]
-    except (requests.exceptions.RequestException, ValueError):
-        return []
-
-
-def check_embedding_models(repo_path: Path) -> List[CheckResult]:
+def check_embedding_models(repo_path: Path) -> List[EmbeddingCheckResult]:
     """
-    Checks Ollama connectivity and embedding model availability based on llmc.toml.
+    Check all configured Ollama embedding models for availability.
+
+    Args:
+        repo_path: The path to the repository root.
+
+    Returns:
+        A list of EmbeddingCheckResult objects.
     """
-    results: list[CheckResult] = []
-    try:
-        config = load_config(repo_path)
-        profiles = config.get("embeddings", {}).get("profiles", {})
-    except Exception as e:
-        results.append(
-            CheckResult("config_load", False, f"Failed to load or parse llmc.toml: {e}")
-        )
-        return results
-
-    if not profiles:
-        results.append(
-            CheckResult("embedding_config", True, "No embedding profiles found to check.")
-        )
-        return results
-
-    checked_urls: set[str] = set()
-
-    for profile_name, profile_config in profiles.items():
-        if profile_config.get("provider") != "ollama":
-            continue
-
-        model_name = profile_config.get("model")
-        ollama_config = profile_config.get("ollama", {})
-        api_base = ollama_config.get("api_base", "http://localhost:11434")
-
-        if not model_name:
-            results.append(
-                CheckResult(
-                    "model_config",
-                    False,
-                    f"Profile '{profile_name}' is missing 'model' name.",
-                    {"profile": profile_name},
-                )
+    config = load_config(repo_path)
+    if not config:
+        return [
+            EmbeddingCheckResult(
+                model_name="unknown",
+                passed=False,
+                message="Could not load llmc.toml",
             )
-            continue
+        ]
 
-        # Check connectivity for each unique URL only once
-        if api_base not in checked_urls:
-            is_connected = check_ollama_connectivity(api_base)
-            if not is_connected:
+    profiles = config.get("embeddings", {}).get("profiles", {})
+    models_by_host = defaultdict(set)
+
+    for _, profile in profiles.items():
+        if profile.get("provider") == "ollama":
+            model_name = profile.get("model")
+            if model_name:
+                # Use the configured api_base or fall back to localhost
+                api_base = profile.get("ollama", {}).get(
+                    "api_base", "http://localhost:11434"
+                )
+                models_by_host[api_base].add(model_name)
+
+    if not models_by_host:
+        return [
+            EmbeddingCheckResult(
+                model_name="none",
+                passed=True,
+                message="No Ollama embedding models configured.",
+            )
+        ]
+
+    results = []
+    for host, models_to_check in models_by_host.items():
+        url = f"{host.rstrip('/')}/api/tags"
+        try:
+            with urllib.request.urlopen(url, timeout=3) as response:
+                if response.status != 200:
+                    for model in models_to_check:
+                        results.append(
+                            EmbeddingCheckResult(
+                                model_name=model,
+                                passed=False,
+                                message=f"Warning: Received status {response.status} from {host}.",
+                            )
+                        )
+                    continue  # Move to the next host
+
+                data = json.loads(response.read().decode("utf-8"))
+                available_models = {
+                    model["name"] for model in data.get("models", [])
+                }
+                available_base_models = {
+                    model["name"].split(":")[0] for model in data.get("models", [])
+                }
+
+                for model_name in models_to_check:
+                    base_model_name = model_name.split(":")[0]
+                    if (
+                        model_name in available_models
+                        or base_model_name in available_base_models
+                    ):
+                        results.append(
+                            EmbeddingCheckResult(
+                                model_name=model_name,
+                                passed=True,
+                                message=f"Embedding model '{model_name}' is available at {host}.",
+                            )
+                        )
+                    else:
+                        results.append(
+                            EmbeddingCheckResult(
+                                model_name=model_name,
+                                passed=False,
+                                message=f"Warning: Embedding model '{model_name}' not found in Ollama at {host}. Suggestion: `ollama pull {model_name}`",
+                            )
+                        )
+
+        except URLError:
+            for model in models_to_check:
                 results.append(
-                    CheckResult(
-                        "ollama_connectivity",
-                        False,
-                        f"Ollama server is not reachable at {api_base}.",
-                        {"url": api_base},
+                    EmbeddingCheckResult(
+                        model_name=model,
+                        passed=False,
+                        message=f"Warning: Ollama is not running or not reachable at {host}.",
                     )
                 )
-                # If we can't connect, we can't check models for this URL
-                checked_urls.add(api_base)
-                # Continue to the next profile, which might use a different URL
-                continue
-
-            checked_urls.add(api_base)
-
-        # If we reach here, we have a connection to the Ollama instance.
-        # Check for the model.
-        available_models = get_available_ollama_models(api_base)
-        # A model name in the config (e.g., "nomic-embed-text") should match
-        # a model in Ollama (e.g., "nomic-embed-text:latest").
-        if not any(m.startswith(model_name) for m in available_models):
-            results.append(
-                CheckResult(
-                    "model_availability",
-                    False,
-                    f"Embedding model '{model_name}' not found in Ollama at {api_base}.",
-                    {
-                        "profile": profile_name,
-                        "model": model_name,
-                        "url": api_base,
-                        "available": available_models,
-                    },
+        except Exception as e:
+            for model in models_to_check:
+                results.append(
+                    EmbeddingCheckResult(
+                        model_name=model,
+                        passed=False,
+                        message=f"An unexpected error occurred while checking {host}: {e}",
+                    )
                 )
-            )
-        else:
-            results.append(
-                CheckResult(
-                    "model_availability",
-                    True,
-                    f"Embedding model '{model_name}' is available in Ollama.",
-                    {"profile": profile_name, "model": model_name, "url": api_base},
-                )
-            )
 
     return results
