@@ -515,7 +515,8 @@ class Database:
         rows = self.conn.execute(
             """
             SELECT spans.span_hash, files.path, files.lang, spans.start_line,
-                   spans.end_line, spans.byte_start, spans.byte_end, spans.slice_type
+                   spans.end_line, spans.byte_start, spans.byte_end, spans.slice_type,
+                   spans.symbol
             FROM spans
             JOIN files ON spans.file_id = files.id
             LEFT JOIN embeddings ON spans.span_hash = embeddings.span_hash
@@ -536,6 +537,7 @@ class Database:
                 byte_start=row["byte_start"],
                 byte_end=row["byte_end"],
                 slice_type=row["slice_type"] or "other",
+                symbol=row["symbol"],
             )
             for row in rows
         ]

@@ -73,6 +73,7 @@ class SpanWorkItem:
     slice_type: str = "other"
     slice_language: str | None = None
     classifier_confidence: float = 0.0
+    symbol: str | None = None  # Function/class name for embedding geometry
 
     def read_bytes(self, repo_root: Path) -> bytes:
         data = (repo_root / self.file_path).read_bytes()
