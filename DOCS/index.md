@@ -63,7 +63,7 @@ Precise technical descriptions of APIs, configuration, and tools.
 ### 👩‍💻 [Development](development/index.md)
 **Contributing**
 Guides for developers working on the LLMC codebase.
-- [Contributing Guide](development/contributing.md)
+- [Contributing Guide](../CONTRIBUTING.md)
 - [Testing](development/testing.md)
 - [Agent Contracts](development/agent-contracts.md)
 
@@ -72,7 +72,7 @@ Guides for developers working on the LLMC codebase.
 ## 📋 [Planning](planning/index.md)
 
 Roadmaps, design documents (SDDs), and project management.
-- [Roadmap](planning/roadmap.md)
+- [Roadmap](ROADMAP.md)
 - [Active SDDs](planning/sdd/index.md)
 - [Completed Work](planning/completed.md)
 
@@ -86,7 +86,7 @@ Roadmaps, design documents (SDDs), and project management.
 | **Run a search** | [Quickstart](getting-started/quickstart.md) |
 | **Configure LLMC** | [Configuration](user-guide/configuration.md) |
 | **Use Claude Desktop** | [MCP Integration](operations/mcp-integration.md) |
-| **Contribute** | [Contributing](development/contributing.md) |
+| **Contribute** | [Contributing](../CONTRIBUTING.md) |
 
 ---
 
