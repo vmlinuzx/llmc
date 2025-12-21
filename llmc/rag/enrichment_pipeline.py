@@ -64,6 +64,7 @@ class EnrichmentResult:
     attempts: list[AttemptRecord]
     route_decision: EnrichmentRouteDecision
     duration_sec: float
+    slice_view: EnrichmentSliceView | None = None  # Added to fix file path access
     error: str | None = None
 
 
@@ -264,9 +265,9 @@ class EnrichmentPipeline:
         # 3. Update file descriptions for successfully enriched files
         if succeeded > 0:
             enriched_files = {
-                str(result.route_decision.slice_view.file_path)
+                str(result.slice_view.file_path)
                 for result in results
-                if result.success
+                if result.success and result.slice_view
             }
             for file_path in enriched_files:
                 content_hash_row = self.db.conn.execute(
@@ -453,6 +454,7 @@ class EnrichmentPipeline:
                 attempts=attempts,
                 route_decision=decision,
                 duration_sec=duration,
+                slice_view=slice_view,
             )
 
         except BackendError as e:
@@ -476,6 +478,7 @@ class EnrichmentPipeline:
                 attempts=getattr(e, "attempts", []),
                 route_decision=decision,
                 duration_sec=duration,
+                slice_view=slice_view,
                 error=str(e),
             )
 
