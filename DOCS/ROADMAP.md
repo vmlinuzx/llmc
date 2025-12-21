@@ -12,7 +12,7 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ### 1.1 CLI Startup Performance (P1)
 
-**Status:** 🟡 Not started  
+**Status:** ✅ **COMPLETE** (2025-12-21)  
 **Added:** 2025-12-17
 
 **Problem:** `llmc --help` takes several seconds due to eager imports of heavy ML libraries.
@@ -20,6 +20,10 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 **Root Cause:** Top-level imports of `transformers`, `torch`, `sentence_transformers`, `sklearn`, `scipy`, `numpy`.
 
 **Fix:** Move heavy imports inside command functions (lazy loading).
+
+**What was built:**
+- Lazy-load heavy imports in CLI commands (RAG/TUI) so `--help` is fast
+- Lazy-load `sentence-transformers` model in `scripts/rag/index_workspace.py` (loads only when indexing, not for `--help`/`--stats`)
 
 **Effort:** 4-6 hours | **Difficulty:** 🟢 Easy
 
@@ -387,4 +391,3 @@ tool_format = "anthropic"  # XML-based
 - Periodically reshape **Next** and **Later** based on what's exciting
 
 The goal is a **small, accurate map** of where LLMC is going from here.
-

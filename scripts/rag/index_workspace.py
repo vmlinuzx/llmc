@@ -15,12 +15,6 @@ import os
 from pathlib import Path
 import sys
 
-import chromadb
-from chromadb.config import Settings
-import git
-from sentence_transformers import SentenceTransformer
-from tqdm import tqdm
-
 try:
     from ast_chunker import ASTChunker
 
@@ -142,13 +136,25 @@ CHUNK_OVERLAP = 200  # characters
 
 
 class WorkspaceIndexer:
-    def __init__(self, workspace_root: Path, db_path: Path):
+    def __init__(self, workspace_root: Path, db_path: Path, *, load_model: bool = True):
         self.workspace_root = workspace_root
         self.db_path = db_path
         self.passage_prefix = os.getenv("LLMC_RAG_PASSAGE_PREFIX", "passage: ")
         self.chunker = ASTChunker(max_chars=CHUNK_SIZE, overlap_chars=CHUNK_OVERLAP)
 
+        self._model = None
+        self._model_name = os.getenv("LLMC_RAG_WORKSPACE_MODEL", "intfloat/e5-base-v2")
+
         # Initialize ChromaDB
+        try:
+            import chromadb
+            from chromadb.config import Settings
+        except ImportError as exc:
+            raise RuntimeError(
+                "chromadb is required for scripts/rag/index_workspace.py. "
+                "Install with: pip install chromadb"
+            ) from exc
+
         self.client = chromadb.PersistentClient(
             path=str(db_path), settings=Settings(anonymized_telemetry=False)
         )
@@ -164,10 +170,23 @@ class WorkspaceIndexer:
             )
             print(f"✅ Created new collection: {COLLECTION_NAME}")
 
-        # Initialize embedding model (runs locally!)
+        if load_model:
+            self._ensure_model()
+
+    def _ensure_model(self) -> None:
+        if self._model is not None:
+            return
+
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "sentence-transformers is required for embedding generation. "
+                "Install with: pip install sentence-transformers"
+            ) from exc
+
         print("🔄 Loading embedding model (sentence-transformers)...")
-        model_name = os.getenv("LLMC_RAG_WORKSPACE_MODEL", "intfloat/e5-base-v2")
-        self.model = SentenceTransformer(model_name)
+        self._model = SentenceTransformer(self._model_name)
         print("✅ Embedding model loaded")
 
     def should_index_file(self, file_path: Path) -> bool:
@@ -201,6 +220,8 @@ class WorkspaceIndexer:
     def get_git_info(self, file_path: Path) -> dict | None:
         """Get git info for file if available"""
         try:
+            import git
+
             repo = git.Repo(file_path, search_parent_directories=True)
             last_commit = next(repo.iter_commits(paths=str(file_path), max_count=1))
             return {
@@ -289,8 +310,9 @@ class WorkspaceIndexer:
 
             # Generate embeddings and add to collection
             if texts:
+                self._ensure_model()
                 prefixed = [f"{self.passage_prefix}{text}" for text in texts]
-                embeddings = self.model.encode(
+                embeddings = self._model.encode(
                     prefixed,
                     show_progress_bar=False,
                     normalize_embeddings=True,
@@ -353,14 +375,23 @@ class WorkspaceIndexer:
         total_chunks = 0
         indexed_files = 0
 
-        with tqdm(total=len(files_to_index), desc="Indexing") as pbar:
+        try:
+            from tqdm import tqdm
+
+            with tqdm(total=len(files_to_index), desc="Indexing") as pbar:
+                for file_path in files_to_index:
+                    chunks = self.index_file(file_path)
+                    if chunks > 0:
+                        total_chunks += chunks
+                        indexed_files += 1
+                    pbar.update(1)
+                    pbar.set_postfix({"files": indexed_files, "chunks": total_chunks})
+        except ImportError:
             for file_path in files_to_index:
                 chunks = self.index_file(file_path)
                 if chunks > 0:
                     total_chunks += chunks
                     indexed_files += 1
-                pbar.update(1)
-                pbar.set_postfix({"files": indexed_files, "chunks": total_chunks})
 
         print("\n✅ Indexing complete!")
         print(f"   Files indexed: {indexed_files}")
@@ -401,7 +432,7 @@ def main():
 
     args = parser.parse_args()
 
-    indexer = WorkspaceIndexer(WORKSPACE_ROOT, CHROMA_DB_PATH)
+    indexer = WorkspaceIndexer(WORKSPACE_ROOT, CHROMA_DB_PATH, load_model=not args.stats)
 
     if args.stats:
         stats = indexer.get_stats()
