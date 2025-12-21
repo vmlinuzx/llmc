@@ -377,7 +377,66 @@ TESTING SKIPPED: <reason>
 
 ---
 
-## 9. Stop / Block Conditions
+## 9. Jules Protocol (Async Agent Delegation)
+
+Jules is an external async coding agent. Use it to parallelize well-scoped tasks.
+
+### When to Use Jules
+
+- Documentation validation/fixes
+- Well-defined refactoring with clear acceptance criteria
+- Adding tests for existing code
+- CLI improvements with existing patterns to follow
+
+### When NOT to Use Jules
+
+- Security-critical changes (keep in-house)
+- Complex architectural decisions
+- Tasks without clear patterns to follow
+
+### Task Description Format
+
+Include in your task description:
+1. **Goal** - What we're trying to achieve
+2. **Problem** - Why this needs to change
+3. **Changes Required** - Specific files and modifications
+4. **Reference Files** - Patterns to follow
+5. **Tests** - Required test coverage
+6. **Acceptance Criteria** - How to know it's done
+
+### CLI Commands
+
+```bash
+# Create a new task
+jules remote new --repo vmlinuzx/llmc --session "Task description"
+
+# List all sessions
+jules remote list --session
+
+# Preview changes (just show diff)
+jules remote pull --session <id>
+
+# Apply changes to local repo
+jules remote pull --session <id> --apply
+```
+
+### Review Process (Agent Responsibility)
+
+When a task shows "Awaiting User Feedback":
+
+1. **Preview:** `jules remote pull --session <id>`
+2. **Review the diff:**
+   - Does the code follow existing patterns?
+   - Are the changes correct?
+   - Does it match the acceptance criteria?
+3. **Apply:** `jules remote pull --session <id> --apply`
+4. **Commit and push** the changes
+
+**Do NOT ask the user to review Jules tasks** - this is the agent's responsibility.
+
+---
+
+## 10. Stop / Block Conditions
 
 Stop and report `BLOCKED` instead of guessing when:
 
@@ -393,7 +452,7 @@ BLOCKED: <short reason>. Waiting for Dave.
 
 ---
 
-## 10. Scope Discipline
+## 11. Scope Discipline
 
 - One **focused** changeset per request unless Dave explicitly widens scope.
 - Stay inside the repo (`/home/$USER/src/llmc`) unless instructed otherwise.
@@ -401,7 +460,7 @@ BLOCKED: <short reason>. Waiting for Dave.
 
 ---
 
-## 11. After Reading This
+## 12. After Reading This
 
 After loading this file:
 
