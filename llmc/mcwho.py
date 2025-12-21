@@ -28,6 +28,8 @@ from rich.console import Console
 import typer
 
 from llmc.core import find_repo_root
+from llmc.rag.schema import SchemaGraph
+from llmc.symbol_resolver import resolve_symbol
 
 console = Console()
 
@@ -38,60 +40,33 @@ app = typer.Typer(
 )
 
 
-def _load_graph(repo_root: Path) -> tuple[list[dict], list[dict]]:
-    """Load nodes and edges from .llmc/rag_graph.json."""
+def _load_graph(repo_root: Path) -> dict[str, list[dict]]:
+    """Load graph data from .llmc/rag_graph.json."""
     graph_path = repo_root / ".llmc" / "rag_graph.json"
     if not graph_path.exists():
-        return [], []
-    
+        return {"entities": [], "relations": []}
+
     try:
         with open(graph_path, encoding="utf-8") as f:
             data = json.load(f)
-        
-        nodes = data.get("nodes") or data.get("entities") or []
-        edges = data.get("edges") or []
-        
-        # Handle schema_graph format
-        if not edges:
-            rels = data.get("relations") or data.get("schema_graph", {}).get("relations") or []
-            if isinstance(rels, list):
-                edges = [
-                    {
-                        "type": str(r.get("edge") or "").upper(),
-                        "source": r.get("src") or r.get("from") or "",
-                        "target": r.get("dst") or r.get("to") or "",
-                    }
-                    for r in rels
-                ]
-        
-        return nodes, edges
+
+        # Adapt old and new graph formats to a consistent structure
+        entities = data.get("entities", data.get("nodes", []))
+        relations = data.get("relations", [])
+
+        if not relations and "edges" in data:  # Handle old edge format
+            relations = [
+                {
+                    "edge": edge.get("type", "").lower(),
+                    "src": edge.get("source"),
+                    "dst": edge.get("target"),
+                }
+                for edge in data["edges"]
+            ]
+
+        return {"entities": entities, "relations": relations}
     except Exception:
-        return [], []
-
-
-def _find_entity(nodes: list[dict], symbol: str) -> dict | None:
-    """Find a node by symbol name (fuzzy match)."""
-    symbol_lower = symbol.lower()
-    
-    # Exact match first
-    for n in nodes:
-        name = (n.get("name") or n.get("id") or "").lower()
-        if name == symbol_lower:
-            return n
-    
-    # Suffix match (e.g., "run" matches "EnrichmentPipeline.run")
-    for n in nodes:
-        name = (n.get("name") or n.get("id") or "").lower()
-        if name.endswith(f".{symbol_lower}") or name.endswith(symbol_lower):
-            return n
-    
-    # Contains match
-    for n in nodes:
-        name = (n.get("name") or n.get("id") or "").lower()
-        if symbol_lower in name:
-            return n
-    
-    return None
+        return {"entities": [], "relations": []}
 
 
 def _get_entity_id(node: dict) -> str:
@@ -124,18 +99,18 @@ def _get_edges_by_type(
     entity_id_lower = entity_id.lower()
     
     for edge in edges:
-        edge_type_actual = (edge.get("type") or edge.get("edge") or "").upper()
+        edge_type_actual = (edge.get("edge") or edge.get("type") or "").upper()
         if edge_type_actual != edge_type.upper():
             continue
-        
-        source = (edge.get("source") or edge.get("src") or "").lower()
-        target = (edge.get("target") or edge.get("dst") or "").lower()
-        
+
+        source = (edge.get("src") or edge.get("source") or "").lower()
+        target = (edge.get("dst") or edge.get("target") or "").lower()
+
         if direction == "incoming" and target == entity_id_lower:
             results.append(edge)
         elif direction == "outgoing" and source == entity_id_lower:
             results.append(edge)
-    
+
     return results
 
 
@@ -194,34 +169,25 @@ def _run_who(
         console.print("Run: mcgrep init")
         raise typer.Exit(1)
     
-    nodes, edges = _load_graph(repo_root)
-    
+    graph_data = _load_graph(repo_root)
+    nodes = graph_data["entities"]
+    edges = graph_data["relations"]
+
     if not nodes:
         console.print("[yellow]No graph found.[/yellow]")
         console.print("Run: llmc analytics graph")
         raise typer.Exit(1)
-    
-    entity = _find_entity(nodes, symbol)
-    
-    if not entity:
+
+    # Reconstruct a SchemaGraph object for the resolver
+    graph = SchemaGraph.from_dict(graph_data)
+    matches = resolve_symbol(symbol, graph, max_results=5)
+
+    if not matches:
         console.print(f"[yellow]Symbol not found:[/yellow] {symbol}")
         console.print(f"[dim]Searched {len(nodes)} entities in graph[/dim]")
-        
-        # Show closest matches
-        symbol_lower = symbol.lower()
-        matches = [
-            n.get("name") or n.get("id") or ""
-            for n in nodes
-            if symbol_lower in (n.get("name") or n.get("id") or "").lower()
-        ][:5]
-        
-        if matches:
-            console.print("\n[dim]Did you mean:[/dim]")
-            for m in matches:
-                console.print(f"  {m}")
-        
         raise typer.Exit(1)
-    
+
+    entity = matches[0].entity.to_dict()
     entity_id = _get_entity_id(entity)
     
     # Header

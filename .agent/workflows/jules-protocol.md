@@ -59,10 +59,24 @@ jules teleport <id>
 ## Current Active Sessions
 Check with: `jules remote list --session`
 
+## Reviewing "Awaiting User Feedback" Tasks
+
+When a Jules task shows "Awaiting User Feedback" status, the **agent should review and apply it**:
+
+1. Preview the changes: `jules remote pull --session <id>`
+2. Review the diff output:
+   - Does the code follow existing patterns?
+   - Are the changes correct?
+   - Does it match the acceptance criteria?
+3. If acceptable, apply: `jules remote pull --session <id> --apply`
+4. Stage, commit, and push the changes
+
+**Do NOT ask the user to review** - this is the agent's responsibility.
+
 ## Tips
 - Jules works best with clear, specific tasks
 - Include reference files so it follows existing patterns
 - Doc validation runs nightly via scheduled task
-- Review PRs carefully before merging
+- Review changes carefully before merging
 
 // turbo-all

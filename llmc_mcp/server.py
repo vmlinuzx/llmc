@@ -1937,10 +1937,10 @@ class LlmcMcpServer:
         from llmc_mcp.tools.fs_protected import write_file_protected
 
         path = args.get("path", "")
-        content = args.get("content", "")
+        content = args.get("content")
         mode = args.get("mode", "rewrite")
         expected_sha256 = args.get("expected_sha256")
-        if not path or content is None:
+        if not path or "content" not in args:
             return [
                 TextContent(type="text", text='{"error": "path and content required"}')
             ]
@@ -1948,16 +1948,21 @@ class LlmcMcpServer:
         # Extract agent/session context for lock tracking
         ctx = McpSessionContext.from_env()
 
-        result = write_file_protected(
-            path=path,
-            allowed_roots=self.config.tools.allowed_roots,
-            content=content,
-            mode=mode,
-            expected_sha256=expected_sha256,
-            agent_id=ctx.agent_id,
-            session_id=ctx.session_id,
-            operation_mode="interactive",
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: write_file_protected(
+                path=path,
+                allowed_roots=self.config.tools.allowed_roots,
+                content=content,
+                mode=mode,
+                expected_sha256=expected_sha256,
+                agent_id=ctx.agent_id,
+                session_id=ctx.session_id,
+                operation_mode="interactive",
+            ),
         )
+
         if result.success:
             return [
                 TextContent(
@@ -1980,7 +1985,13 @@ class LlmcMcpServer:
         exist_ok = args.get("exist_ok", True)
         if not path:
             return [TextContent(type="text", text='{"error": "path required"}')]
-        result = create_directory(path, self.config.tools.allowed_roots, exist_ok)
+
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: create_directory(path, self.config.tools.allowed_roots, exist_ok),
+        )
+
         if result.success:
             return [
                 TextContent(
@@ -2009,14 +2020,19 @@ class LlmcMcpServer:
 
         ctx = McpSessionContext.from_env()
 
-        result = move_file_protected(
-            source=source,
-            dest=dest,
-            allowed_roots=self.config.tools.allowed_roots,
-            agent_id=ctx.agent_id,
-            session_id=ctx.session_id,
-            operation_mode="interactive",
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: move_file_protected(
+                source=source,
+                dest=dest,
+                allowed_roots=self.config.tools.allowed_roots,
+                agent_id=ctx.agent_id,
+                session_id=ctx.session_id,
+                operation_mode="interactive",
+            ),
         )
+
         if result.success:
             return [
                 TextContent(
@@ -2043,14 +2059,19 @@ class LlmcMcpServer:
 
         ctx = McpSessionContext.from_env()
 
-        result = delete_file_protected(
-            path=path,
-            allowed_roots=self.config.tools.allowed_roots,
-            recursive=recursive,
-            agent_id=ctx.agent_id,
-            session_id=ctx.session_id,
-            operation_mode="interactive",
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: delete_file_protected(
+                path=path,
+                allowed_roots=self.config.tools.allowed_roots,
+                recursive=recursive,
+                agent_id=ctx.agent_id,
+                session_id=ctx.session_id,
+                operation_mode="interactive",
+            ),
         )
+
         if result.success:
             return [
                 TextContent(
@@ -2081,16 +2102,21 @@ class LlmcMcpServer:
 
         ctx = McpSessionContext.from_env()
 
-        result = edit_block_protected(
-            path=path,
-            allowed_roots=self.config.tools.allowed_roots,
-            old_text=old_text,
-            new_text=new_text,
-            expected_replacements=expected,
-            agent_id=ctx.agent_id,
-            session_id=ctx.session_id,
-            operation_mode="interactive",
+        loop = asyncio.get_running_loop()
+        result = await loop.run_in_executor(
+            None,
+            lambda: edit_block_protected(
+                path=path,
+                allowed_roots=self.config.tools.allowed_roots,
+                old_text=old_text,
+                new_text=new_text,
+                expected_replacements=expected,
+                agent_id=ctx.agent_id,
+                session_id=ctx.session_id,
+                operation_mode="interactive",
+            ),
         )
+
         if result.success:
             return [
                 TextContent(

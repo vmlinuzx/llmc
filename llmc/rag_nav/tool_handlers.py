@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+from llmc.security import PathSecurityError, normalize_path
+
 # --- Context Gateway integration imports ---
 from llmc.rag.config import load_rerank_weights
 from llmc.rag.db_fts import RagDbNotFound, fts_search
@@ -237,7 +239,15 @@ def _read_snippet(
     repo_root: str, path: str, start_line: int | None, end_line: int | None
 ) -> Snippet:
     """Read file and slice [start_line, end_line]. Lines are 1-based, inclusive."""
-    abspath = os.path.join(repo_root, path) if path else ""
+    try:
+        safe_path = normalize_path(Path(repo_root), path)
+    except PathSecurityError:
+        return Snippet(
+            text="Path outside repository - access denied",
+            location=SnippetLocation(path=path or "", start_line=1, end_line=1),
+        )
+
+    abspath = os.path.join(repo_root, safe_path) if path else ""
     text = ""
     sl = start_line or 1
     el = end_line or (sl + 15)

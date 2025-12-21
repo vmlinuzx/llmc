@@ -7,6 +7,7 @@ import subprocess
 from typing import Any, Literal
 
 from llmc.security import PathSecurityError, normalize_path
+from llmc.symbol_resolver import resolve_symbol_best
 
 from . import database as rag_database
 from .config import index_path_for_read
@@ -311,23 +312,9 @@ def inspect_entity(
     rel_path = None
 
     if symbol and graph:
-        # Try direct symbol match
-        # SchemaGraph entities have 'id', usually "kind:symbol" or just "symbol" depending on version
-        # The indexer uses "kind:module.name". Let's try fuzzy match if exact fails.
-
-        # First, exact ID match attempt (rarely works without prefix)
-        # Then suffix match
-        candidates = []
-        for ent in graph.entities:
-            # Entity ID format: "func:src.main.main_func"
-            # We want to match "src.main.main_func"
-            ent_name = ent.id.split(":", 1)[-1]
-            if ent_name == symbol or ent_name.endswith(f".{symbol}"):
-                candidates.append(ent)
-
-        if candidates:
-            # Pick best match? For now first.
-            target_entity = candidates[0]
+        target_entity = resolve_symbol_best(symbol, graph)
+        if target_entity:
+            # The entity's file_path is the authoritative source.
             rel_path = (
                 Path(target_entity.file_path) if target_entity.file_path else None
             )
