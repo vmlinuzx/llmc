@@ -35,7 +35,11 @@ def read_file_command(
     end_line: int = typer.Option(None, "-e", "--end", help="End line (1-indexed)"),
     emit_training: bool = typer.Option(False, "--emit-training", help="Output OpenAI-format training data"),
 ):
-    """Read a file with graph context."""
+    """Read a file with graph context.
+    
+    For binary documents (PDF, DOCX, etc.), automatically reads from the
+    markdown sidecar if available. This makes PDFs readable by LLMs.
+    """
     try:
         repo_root = find_repo_root()
     except Exception:
@@ -43,12 +47,34 @@ def read_file_command(
         raise typer.Exit(1)
 
     full_path = repo_root / file_path
-    if not full_path.exists():
-        console.print(f"[red]File not found:[/red] {file_path}")
-        raise typer.Exit(1)
-
-    # Read content
-    content = full_path.read_text()
+    
+    # Check if this is a sidecar-eligible file (PDF, DOCX, etc.)
+    sidecar_content = None
+    sidecar_source = None
+    try:
+        from llmc.rag.sidecar import is_sidecar_eligible, get_sidecar_path
+        
+        if is_sidecar_eligible(Path(file_path)):
+            sidecar_path = get_sidecar_path(Path(file_path), repo_root)
+            if sidecar_path.exists():
+                import gzip
+                with gzip.open(sidecar_path, "rt", encoding="utf-8") as f:
+                    sidecar_content = f.read()
+                sidecar_source = str(sidecar_path.relative_to(repo_root))
+    except ImportError:
+        pass  # Sidecar module not available
+    
+    # Use sidecar content if available, otherwise read original file
+    if sidecar_content:
+        content = sidecar_content
+        content_source = f"{file_path} (via sidecar: {sidecar_source})"
+    else:
+        if not full_path.exists():
+            console.print(f"[red]File not found:[/red] {file_path}")
+            raise typer.Exit(1)
+        content = full_path.read_text()
+        content_source = file_path
+    
     lines = content.splitlines()
 
     # Apply line range if specified
@@ -72,9 +98,9 @@ def read_file_command(
         return
 
     if json_output:
-        _emit_json(file_path, lines, graph_context)
+        _emit_json(file_path, lines, graph_context, sidecar_source)
     else:
-        _emit_human(file_path, lines, graph_context)
+        _emit_human(file_path, lines, graph_context, sidecar_source)
 
 
 def _emit_read_training(
@@ -103,9 +129,14 @@ def _emit_read_training(
     print(emit_training_example(example, include_schema=True))
 
 
-def _emit_human(file_path: str, lines: list[str], ctx: dict | None):
+def _emit_human(file_path: str, lines: list[str], ctx: dict | None, sidecar_source: str | None):
     """Human-readable output with graph context."""
     console.print(f"[bold cyan]━━━ {file_path} ━━━[/bold cyan]")
+    
+    # Show sidecar info if reading from converted document
+    if sidecar_source:
+        console.print(f"[dim green]📄 Reading from sidecar: {sidecar_source}[/dim green]")
+        console.print(f"[dim](Original document converted to markdown for readability)[/dim]\n")
 
     if ctx:
         if ctx.get("purpose"):
@@ -140,7 +171,7 @@ def _emit_human(file_path: str, lines: list[str], ctx: dict | None):
         console.print(f"[dim]{i:>5}[/dim] │ {line}")
 
 
-def _emit_json(file_path: str, lines: list[str], ctx: dict | None):
+def _emit_json(file_path: str, lines: list[str], ctx: dict | None, sidecar_source: str | None):
     """JSON output for programmatic use."""
     output = {
         "file": file_path,
@@ -148,6 +179,9 @@ def _emit_json(file_path: str, lines: list[str], ctx: dict | None):
         "line_count": len(lines),
         "graph_context": ctx,
     }
+    if sidecar_source:
+        output["sidecar_source"] = sidecar_source
+        output["note"] = "Content read from markdown sidecar (original document was converted)"
     print(json.dumps(output, indent=2))
 
 

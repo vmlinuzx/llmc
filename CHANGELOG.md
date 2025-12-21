@@ -16,6 +16,20 @@ All notable changes to LLMC will be documented in this file.
   - Fixed CLI patterns for both `mcinspect` and `mcread` (now work without subcommands)
   - Added `.agent/workflows/jules-protocol.md` for sending tasks to Jules
 
+- **Document Sidecar System (Roadmap 2.6) - In Progress:**
+  - **PDF, DOCX, PPTX, RTF → gzipped markdown** sidecars for proper RAG indexing
+  - Solves: PDF chunking loses structure, embeddings noisy, "can't find topic in PDF" complaints
+  - New `llmc/rag/sidecar.py` module with `SidecarConverter` class
+  - Pluggable converters: `PdfToMarkdown` (pymupdf), `DocxToMarkdown`, `PptxToMarkdown`, `RtfToMarkdown`
+  - Sidecar storage: `.llmc/sidecars/<rel_path>.md.gz` mirroring repo structure
+  - Freshness tracking: regenerate only when `source.mtime > sidecar.mtime`
+  - Database: new `sidecar_path` column in `files` table
+  - Lifecycle management: orphan cleanup when source files deleted
+  - New CLI: `llmc rag sidecar list|clean|generate`
+  - Optional dependencies: `pip install llmc[sidecar]` (PDF only) or `pip install llmc[sidecar-full]`
+  - **SDD:** `DOCS/planning/SDD_Document_Sidecar_System.md`
+  - **Branch:** `feature/document-sidecar-system`
+
 - **Onboarding Polish (Roadmap 2.5 - Jules):**
   - Auto-run validation checks after `llmc repo register`
   - `check_embedding_models()` in `llmc/rag/embeddings/check.py`

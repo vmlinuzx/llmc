@@ -202,8 +202,24 @@ def embedding_plan(
 
 
 def _format_embedding_text(item, code: str, max_chars: int = 4000) -> str:
-    """Format span for embedding, truncating to avoid Ollama batch overflow."""
-    header = f"{item.file_path} • {item.lang} • lines {item.start_line}-{item.end_line}"
+    """Format span for embedding, including file path and symbol for semantic geometry.
+
+    The embedding text includes structured metadata to improve semantic matching:
+    - File path: helps queries like "router" match files in router.py
+    - Symbol name: helps queries like "fuse_scores" match that specific function
+    - Language/lines: context for the embedding model
+
+    This solves the 'embedding geometry' problem where searching for a PDF's
+    exact title wouldn't find it because only content was being embedded.
+    """
+    # Build structured header for better semantic matching
+    header_parts = [f"File: {item.file_path}"]
+    if item.symbol:
+        header_parts.append(f"Symbol: {item.symbol}")
+    header_parts.append(f"Language: {item.lang}")
+    header_parts.append(f"Lines: {item.start_line}-{item.end_line}")
+    header = "\n".join(header_parts)
+
     body = code.strip()
     if not body:
         return header

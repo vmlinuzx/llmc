@@ -1543,5 +1543,233 @@ def show_weights(path: str | None) -> None:
         click.echo(f"Error: {e}", err=True)
 
 
+# ===========================================================================
+# Sidecar Management Commands
+# ===========================================================================
+
+@cli.group(help="Manage document sidecars (PDF, DOCX → markdown conversion).")
+def sidecar() -> None:
+    """Document sidecar management."""
+    pass
+
+
+@sidecar.command("list")
+@click.argument("path", required=False)
+@click.option("--json", "as_json", is_flag=True, help="Emit as JSON.")
+def sidecar_list(path: str | None, as_json: bool) -> None:
+    """List all document sidecars and their freshness status."""
+    repo_root = _find_repo_root()
+    
+    try:
+        from .sidecar import get_sidecar_path, is_sidecar_stale
+    except ImportError:
+        click.echo("Error: Sidecar module not available.", err=True)
+        sys.exit(1)
+    
+    sidecars_dir = repo_root / ".llmc" / "sidecars"
+    if not sidecars_dir.exists():
+        if as_json:
+            click.echo(json.dumps({"sidecars": [], "summary": {"total": 0}}))
+        else:
+            click.echo("No sidecars found.")
+        return
+    
+    results = []
+    for sc in sorted(sidecars_dir.rglob("*.md.gz")):
+        try:
+            rel_sidecar = sc.relative_to(sidecars_dir)
+            source_rel = str(rel_sidecar).removesuffix(".md.gz")
+            source_path = repo_root / source_rel
+            
+            # Filter by path if specified
+            if path and not source_rel.startswith(path):
+                continue
+            
+            # Determine status
+            if not source_path.exists():
+                status = "orphan"
+            elif is_sidecar_stale(Path(source_rel), repo_root):
+                status = "stale"
+            else:
+                status = "fresh"
+            
+            size_kb = sc.stat().st_size / 1024
+            results.append({
+                "source": source_rel,
+                "sidecar": str(sc.relative_to(repo_root)),
+                "status": status,
+                "size_kb": round(size_kb, 1),
+            })
+        except Exception:
+            pass
+    
+    if as_json:
+        summary = {
+            "total": len(results),
+            "fresh": sum(1 for r in results if r["status"] == "fresh"),
+            "stale": sum(1 for r in results if r["status"] == "stale"),
+            "orphan": sum(1 for r in results if r["status"] == "orphan"),
+        }
+        click.echo(json.dumps({"sidecars": results, "summary": summary}, indent=2))
+    else:
+        if not results:
+            click.echo("No sidecars found.")
+            return
+        for r in results:
+            status_icon = {"fresh": "✓", "stale": "!", "orphan": "×"}.get(r["status"], "?")
+            click.echo(f"{status_icon} [{r['status']:<6}] {r['source']}")
+        
+        total = len(results)
+        fresh = sum(1 for r in results if r["status"] == "fresh")
+        stale = sum(1 for r in results if r["status"] == "stale")
+        orphan = sum(1 for r in results if r["status"] == "orphan")
+        click.echo(f"\nSummary: {total} sidecars ({fresh} fresh, {stale} stale, {orphan} orphan)")
+
+
+@sidecar.command("clean")
+@click.option("--dry-run", "-n", is_flag=True, help="Show what would be removed.")
+@click.option("--json", "as_json", is_flag=True, help="Emit as JSON.")
+def sidecar_clean(dry_run: bool, as_json: bool) -> None:
+    """Remove orphaned sidecars (source files no longer exist)."""
+    repo_root = _find_repo_root()
+    
+    try:
+        from .sidecar import cleanup_orphan_sidecars
+    except ImportError:
+        click.echo("Error: Sidecar module not available.", err=True)
+        sys.exit(1)
+    
+    sidecars_dir = repo_root / ".llmc" / "sidecars"
+    if not sidecars_dir.exists():
+        if as_json:
+            click.echo(json.dumps({"orphans_removed": 0}))
+        else:
+            click.echo("No sidecars directory found.")
+        return
+    
+    # Find orphans
+    orphans = []
+    for sc in sidecars_dir.rglob("*.md.gz"):
+        try:
+            rel_sidecar = sc.relative_to(sidecars_dir)
+            source_rel = str(rel_sidecar).removesuffix(".md.gz")
+            source_path = repo_root / source_rel
+            if not source_path.exists():
+                orphans.append(str(sc.relative_to(repo_root)))
+        except Exception:
+            pass
+    
+    if not orphans:
+        if as_json:
+            click.echo(json.dumps({"orphans_removed": 0, "orphans": []}))
+        else:
+            click.echo("✓ No orphaned sidecars found.")
+        return
+    
+    if dry_run:
+        if as_json:
+            click.echo(json.dumps({"dry_run": True, "would_remove": orphans}))
+        else:
+            click.echo(f"Would remove {len(orphans)} orphaned sidecars:")
+            for o in orphans:
+                click.echo(f"  × {o}")
+    else:
+        removed = cleanup_orphan_sidecars(repo_root)
+        if as_json:
+            click.echo(json.dumps({"orphans_removed": removed}))
+        else:
+            click.echo(f"✓ Removed {removed} orphaned sidecars.")
+
+
+@sidecar.command("generate")
+@click.argument("path")
+@click.option("--force", "-f", is_flag=True, help="Regenerate even if fresh.")
+@click.option("--json", "as_json", is_flag=True, help="Emit as JSON.")
+def sidecar_generate(path: str, force: bool, as_json: bool) -> None:
+    """Generate or regenerate sidecar for a document or directory."""
+    repo_root = _find_repo_root()
+    
+    try:
+        from .sidecar import SidecarConverter, is_sidecar_eligible, is_sidecar_stale
+    except ImportError:
+        click.echo("Error: Sidecar module not available.", err=True)
+        sys.exit(1)
+    
+    target = Path(path)
+    if not target.is_absolute():
+        target = repo_root / target
+    
+    if not target.exists():
+        if as_json:
+            click.echo(json.dumps({"error": f"Path not found: {path}"}))
+        else:
+            click.echo(f"Error: Path not found: {path}", err=True)
+        sys.exit(1)
+    
+    # Collect files
+    files_to_process = []
+    if target.is_file():
+        if is_sidecar_eligible(target):
+            files_to_process.append(target)
+    else:
+        for ext in [".pdf", ".docx", ".pptx", ".rtf"]:
+            for f in target.rglob(f"*{ext}"):
+                if is_sidecar_eligible(f):
+                    files_to_process.append(f)
+    
+    if not files_to_process:
+        if as_json:
+            click.echo(json.dumps({"generated": 0, "skipped": 0, "failed": 0}))
+        else:
+            click.echo("No eligible documents found.")
+        return
+    
+    converter = SidecarConverter()
+    generated = 0
+    skipped = 0
+    failed = 0
+    results = []
+    
+    for file_path in files_to_process:
+        try:
+            rel_path = file_path.relative_to(repo_root)
+        except ValueError:
+            rel_path = file_path
+        
+        if not force and not is_sidecar_stale(rel_path, repo_root):
+            skipped += 1
+            results.append({"path": str(rel_path), "status": "skipped"})
+            continue
+        
+        try:
+            sc = converter.convert(rel_path, repo_root)
+            if sc:
+                generated += 1
+                results.append({"path": str(rel_path), "status": "generated"})
+            else:
+                skipped += 1
+                results.append({"path": str(rel_path), "status": "no_converter"})
+        except Exception as e:
+            failed += 1
+            results.append({"path": str(rel_path), "status": "failed", "error": str(e)})
+    
+    if as_json:
+        click.echo(json.dumps({
+            "generated": generated,
+            "skipped": skipped,
+            "failed": failed,
+            "results": results,
+        }, indent=2))
+    else:
+        for r in results:
+            if r["status"] == "generated":
+                click.echo(f"✓ Generated: {r['path']}")
+            elif r["status"] == "skipped":
+                click.echo(f"- Skipped (fresh): {r['path']}")
+            elif r["status"] == "failed":
+                click.echo(f"✗ Failed: {r['path']} ({r.get('error', 'unknown')})")
+        click.echo(f"\nSummary: {generated} generated, {skipped} skipped, {failed} failed")
+
+
 if __name__ == "__main__":
     cli()

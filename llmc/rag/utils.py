@@ -36,6 +36,14 @@ def iter_source_files(
 def _iter_directory(
     repo_root: Path, directory: Path, matcher: Callable[[Path], bool]
 ) -> Iterator[Path]:
+    # Check if sidecar module is available
+    try:
+        from llmc.rag.sidecar import is_sidecar_eligible
+        sidecar_available = True
+    except ImportError:
+        sidecar_available = False
+        is_sidecar_eligible = lambda x: False
+    
     exclude_dirs = get_exclude_dirs(repo_root)
     for root, dirs, files in os.walk(directory):
         root_path = Path(root)
@@ -52,7 +60,8 @@ def _iter_directory(
             rel = (root_path / file).relative_to(repo_root)
             if matcher(rel):
                 continue
-            if is_supported(rel):
+            # Yield if it's a supported source file OR if it's sidecar-eligible (PDF, DOCX, etc.)
+            if is_supported(rel) or (sidecar_available and is_sidecar_eligible(rel)):
                 yield rel
 
 

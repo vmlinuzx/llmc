@@ -31,13 +31,27 @@ from .utils import (
     iter_source_files,
 )
 
-# Import sidecar generator (optional dependency)
+# Import sidecar generator (optional dependency - for code documentation)
 try:
     from .sidecar_generator import SidecarGenerator
 
     SIDECAR_AVAILABLE = True
 except ImportError:
     SIDECAR_AVAILABLE = False
+
+# Import document sidecar system (for PDF/DOCX conversion)
+try:
+    from .sidecar import (
+        SidecarConverter,
+        get_sidecar_path,
+        is_sidecar_eligible,
+        is_sidecar_stale,
+        get_converter as get_doc_sidecar_converter,
+    )
+
+    DOC_SIDECAR_AVAILABLE = True
+except ImportError:
+    DOC_SIDECAR_AVAILABLE = False
 
 log = logging.getLogger(__name__)
 
@@ -148,6 +162,88 @@ def generate_sidecar_if_enabled(
         return None
 
 
+def generate_doc_sidecar_if_needed(
+    file_path: Path, repo_root: Path
+) -> tuple[Path | None, bytes | None]:
+    """Generate markdown sidecar for documents (PDF, DOCX, etc.) if stale.
+    
+    Args:
+        file_path: Relative file path
+        repo_root: Repository root path
+        
+    Returns:
+        Tuple of (sidecar_path, markdown_bytes) if generated, (None, None) otherwise
+    """
+    if not DOC_SIDECAR_AVAILABLE:
+        return None, None
+    
+    if not is_sidecar_eligible(file_path):
+        return None, None
+    
+    # Check if sidecar generation is disabled
+    if os.environ.get("LLMC_DOC_SIDECARS", "1") == "0":
+        return None, None
+    
+    # Skip if sidecar is fresh
+    if not is_sidecar_stale(file_path, repo_root):
+        # Sidecar exists and is fresh, just read it
+        sidecar_path = get_sidecar_path(file_path, repo_root)
+        try:
+            import gzip
+            with gzip.open(sidecar_path, "rt", encoding="utf-8") as f:
+                content = f.read()
+            return sidecar_path, content.encode("utf-8")
+        except Exception:
+            pass  # Fall through to regenerate
+    
+    # Generate new sidecar
+    try:
+        converter = get_doc_sidecar_converter()
+        sidecar_path = converter.convert(file_path, repo_root)
+        if sidecar_path:
+            content = converter.read_sidecar(sidecar_path)
+            if content:
+                return sidecar_path, content.encode("utf-8")
+    except Exception as e:
+        log.warning(f"Failed to generate doc sidecar for {file_path}: {e}")
+    
+    return None, None
+
+
+def cleanup_doc_sidecar(file_path: Path, repo_root: Path) -> bool:
+    """Remove orphaned document sidecar when source file is deleted.
+    
+    Args:
+        file_path: Relative path of deleted source file
+        repo_root: Repository root path
+        
+    Returns:
+        True if sidecar was deleted, False otherwise
+    """
+    if not DOC_SIDECAR_AVAILABLE:
+        return False
+    
+    if not is_sidecar_eligible(file_path):
+        return False
+    
+    sidecar_path = get_sidecar_path(file_path, repo_root)
+    if sidecar_path.exists():
+        try:
+            sidecar_path.unlink()
+            log.info(f"Removed orphan sidecar: {sidecar_path}")
+            
+            # Try to remove empty parent directories
+            try:
+                sidecar_path.parent.rmdir()
+            except OSError:
+                pass  # Directory not empty
+            
+            return True
+        except Exception as e:
+            log.warning(f"Failed to remove orphan sidecar {sidecar_path}: {e}")
+    
+    return False
+
 def index_repo(
     include_paths: Iterable[Path] | None = None,
     since: str | None = None,
@@ -202,9 +298,21 @@ def index_repo(
 
             lang = language_for_path(relative_path)
             if not lang:
-                counts["skipped"] += 1
-                continue
-            source = absolute_path.read_bytes()
+                # Check if this is a document that can be converted to a sidecar
+                doc_sidecar_path, doc_content = generate_doc_sidecar_if_needed(
+                    relative_path, repo_root
+                )
+                if doc_sidecar_path and doc_content:
+                    # Use the sidecar markdown content instead
+                    lang = "markdown"
+                    source = doc_content
+                    counts["sidecars"] += 1
+                    log.info(f"Generated document sidecar: {relative_path} -> {doc_sidecar_path}")
+                else:
+                    counts["skipped"] += 1
+                    continue
+            else:
+                source = absolute_path.read_bytes()
 
             # INCREMENTAL INDEXING: Skip files with unchanged content
             new_hash = compute_hash(source)
@@ -319,6 +427,8 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
             if not absolute.exists():
                 with db.transaction():
                     db.delete_file(rel)
+                # Clean up any associated document sidecar
+                cleanup_doc_sidecar(rel, repo_root)
                 counts["deleted"] += 1
                 continue
             # Respect ignore rules (gitignore + .ragignore + LLMC_RAG_EXCLUDE)
@@ -339,11 +449,23 @@ def sync_paths(paths: Iterable[Path]) -> IndexStats:
 
             lang = language_for_path(rel)
             if not lang:
-                counts["deleted"] += 1
-                with db.transaction():
-                    db.delete_file(rel)
-                continue
-            source = absolute.read_bytes()
+                # Check if this is a document that can be converted to a sidecar
+                doc_sidecar_path, doc_content = generate_doc_sidecar_if_needed(
+                    rel, repo_root
+                )
+                if doc_sidecar_path and doc_content:
+                    # Use the sidecar markdown content instead
+                    lang = "markdown"
+                    source = doc_content
+                    counts["sidecars"] += 1
+                    log.info(f"Generated document sidecar: {rel} -> {doc_sidecar_path}")
+                else:
+                    counts["deleted"] += 1
+                    with db.transaction():
+                        db.delete_file(rel)
+                    continue
+            else:
+                source = absolute.read_bytes()
 
             # INCREMENTAL INDEXING: Skip files with unchanged content
             new_hash = compute_hash(source)
