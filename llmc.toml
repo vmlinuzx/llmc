@@ -1,4 +1,22 @@
 # ==============================================================================
+# LLMC Main Configuration
+# ==============================================================================
+# This is the central configuration file for the LLMC application.
+# It contains settings for all major components, including:
+# - [agent]: The default agent configuration.
+# - [embeddings]: Embedding models and profiles.
+# - [routing]: Query routing to different embedding models.
+# - [daemon]: The background file processing daemon.
+# - [enrichment]: Data enrichment chains and models.
+# - [mcp]: The Model Context Protocol server.
+# - [tool_envelope]: The shell command middleware.
+# - [rag]: Retrieval-Augmented Generation settings.
+# - [profiles]: Different configuration profiles for various use cases.
+#
+# For more details on the configuration options, see the documentation.
+#
+
+# ==============================================================================
 # Agent (bx) Configuration
 # ==============================================================================
 
@@ -459,7 +477,7 @@ auto_rotation_interval = 0
 # Philosophy: LLMs are alien intelligences that already know Unix.
 
 [tool_envelope]
-enabled = false  # Disabled: causing friction with duplicate searches + grep
+enabled = true  # Disabled: causing friction with duplicate searches + grep
 passthrough_timeout_seconds = 30
 
 [tool_envelope.workspace]

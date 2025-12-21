@@ -12,6 +12,7 @@ import pytest
 
 from llmc.docgen.gating import validate_source_path
 from llmc.docgen.orchestrator import DocgenOrchestrator
+from llmc.rag_nav.tool_handlers import _read_snippet
 
 
 def test_path_traversal_basic(tmp_path):
@@ -180,3 +181,21 @@ class TestDocgenPathSecurity:
         assert result.status == "skipped"
         assert "Security validation failed" in result.reason
         assert "outside repository root" in result.reason
+
+
+def test_read_snippet_path_traversal(tmp_path):
+    """Verify _read_snippet blocks path traversal."""
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    (repo_root / "safe_file.txt").write_text("safe content")
+
+    secret_file = tmp_path / "secret.txt"
+    secret_file.write_text("secret content")
+
+    # Attempt to read the secret file using a traversal path
+    snippet = _read_snippet(
+        str(repo_root), "../secret.txt", start_line=1, end_line=10
+    )
+
+    assert "access denied" in snippet.text
+    assert snippet.location.path == "../secret.txt"

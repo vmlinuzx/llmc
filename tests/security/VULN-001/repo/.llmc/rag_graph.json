@@ -1,0 +1,14 @@
+{
+    "nodes": [
+        {
+            "id": "malicious_node",
+            "name": "malicious_node",
+            "path": "../passwd",
+            "span": {
+                "start_line": 1,
+                "end_line": 2
+            }
+        }
+    ],
+    "edges": []
+}

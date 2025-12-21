@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import struct
 from typing import Any
+import numpy as np
 
 from ..config import (
     embedding_model_dim,
@@ -63,12 +64,13 @@ from llmc.core import find_repo_root
 logger = logging.getLogger(__name__)
 
 
-def _norm(vector: Sequence[float]) -> float:
-    return math.sqrt(sum(v * v for v in vector))
+
+def _norm(vector: np.ndarray) -> float:
+    return np.linalg.norm(vector)
 
 
-def _dot(a: Sequence[float], b: Sequence[float]) -> float:
-    return sum(x * y for x, y in zip(a, b, strict=False))
+def _dot(a: np.ndarray, b: np.ndarray) -> float:
+    return np.dot(a, b)
 
 
 def _unpack_vector(blob: bytes) -> list[float]:
@@ -103,7 +105,7 @@ class SpanSearchResult:
 
 
 def _score_candidates(
-    query_vector: Sequence[float],
+    query_vector: np.ndarray,
     query_norm: float,
     rows: Iterable,
     query_text: str | None = None,
@@ -114,7 +116,7 @@ def _score_candidates(
     intent = scorer.detect_intent(query_text) if query_text else "neutral"
 
     for row in rows:
-        vector = _unpack_vector(row["vec"])
+        vector = np.array(_unpack_vector(row["vec"]))
         vector_norm = _norm(vector)
         if query_norm == 0.0 or vector_norm == 0.0:
             continue
@@ -399,7 +401,7 @@ def search_spans(
 
     # Cache embeddings by profile name to avoid redundant API calls
     # Key: profile_name, Value: (query_vector, query_norm)
-    embedding_cache: dict[str, tuple[list[float], float]] = {}
+    embedding_cache: dict[str, tuple[np.ndarray, float]] = {}
 
     config = load_config(repo)
     db = Database(db_path)
@@ -436,7 +438,7 @@ def search_spans(
                 )
 
                 backend = build_embedding_backend(resolved_model, dim=resolved_dim)
-                query_vector = backend.embed_queries([query])[0]
+                query_vector = np.array(backend.embed_queries([query])[0])
                 query_norm = _norm(query_vector)
                 embedding_cache[profile_name] = (query_vector, query_norm)
 

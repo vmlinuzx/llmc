@@ -1,6 +1,6 @@
 import pytest
 
-from llmc_mcp.tools.fs import PathSecurityError, read_file, validate_path
+from llmc_mcp.tools.fs import PathSecurityError, delete_file, read_file, validate_path, write_file
 
 
 def test_path_traversal_blocked(tmp_path):
@@ -54,3 +54,43 @@ def test_read_file_traversal(tmp_path):
 
     assert result.success is False
     assert "outside allowed roots" in result.error
+
+
+def test_write_file_traversal_blocked(tmp_path):
+    """
+    Verify that write_file operations outside allowed roots are blocked.
+    """
+    allowed_root = tmp_path / "allowed"
+    allowed_root.mkdir()
+    roots = [str(allowed_root)]
+
+    malicious_output = tmp_path / "malicious.txt"
+
+    # Attempt to write using path traversal
+    traversal_path = allowed_root / "../malicious.txt"
+    result = write_file(str(traversal_path), "malicious content", roots)
+
+    assert result.success is False
+    assert "outside allowed roots" in result.error or "PathSecurityError" in result.error
+    assert not malicious_output.exists()
+
+
+def test_delete_file_traversal_blocked(tmp_path):
+    """
+    Verify that delete_file operations outside allowed roots are blocked.
+    """
+    allowed_root = tmp_path / "allowed"
+    allowed_root.mkdir()
+    roots = [str(allowed_root)]
+
+    # Create a target file outside the allowed root
+    target_file = tmp_path / "target.txt"
+    target_file.write_text("important data")
+
+    # Attempt to delete using path traversal
+    traversal_path = allowed_root / "../target.txt"
+    result = delete_file(str(traversal_path), roots)
+
+    assert result.success is False
+    assert "outside allowed roots" in result.error or "PathSecurityError" in result.error
+    assert target_file.exists()

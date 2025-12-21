@@ -104,14 +104,36 @@ class Config:
 
     @classmethod
     def load(cls, config_path: str | None = None) -> Config:
-        """Load configuration with precedence."""
+        """
+        Load agent configuration from multiple sources with a defined precedence.
+
+        The configuration is loaded in the following order (lowest to highest precedence):
+        1.  **Built-in Defaults:** The default values defined in the dataclasses.
+        2.  **User Global Config (`~/.llmc/agent.toml`):** User-specific settings that apply
+            across all projects.
+        3.  **Repo-Local Config (`./.llmc/agent.toml`):** Project-specific settings that
+            are shared among collaborators.
+        4.  **Main `llmc.toml`:** The `[agent]` section of the root `llmc.toml` is loaded,
+            allowing for centralized configuration of all components.
+        5.  **Environment Variables:** `LLMC_AGENT_*` or legacy `BX_*` variables can be
+            used to override any settings from the configuration files.
+        6.  **CLI Flags:** Command-line arguments (processed in `llmc_agent.cli`) have the
+            highest precedence.
+
+        Args:
+            config_path: An optional path to a specific configuration file to load. This
+                file will be loaded with higher precedence than the standard files.
+
+        Returns:
+            A `Config` object with the merged configuration.
+        """
         config = cls()
 
         # Load from files (lowest to highest priority)
         config_files = [
-            Path.home() / ".llmc" / "agent.toml",
-            Path.cwd() / ".llmc" / "agent.toml",
-            Path.cwd() / "llmc.toml",  # Check main llmc.toml for [agent] section
+            Path.home() / ".llmc" / "agent.toml",  # 2. User global config
+            Path.cwd() / ".llmc" / "agent.toml",   # 3. Repo-local config
+            Path.cwd() / "llmc.toml",              # 4. Main llmc.toml [agent] section
         ]
 
         if config_path:
@@ -121,8 +143,10 @@ class Config:
             if path.exists():
                 config = _merge_config(config, _load_toml(path))
 
-        # Apply environment overrides
+        # 5. Apply environment overrides
         config = _apply_env_overrides(config)
+
+        # 6. CLI flags are applied in the CLI module.
 
         return config
 
