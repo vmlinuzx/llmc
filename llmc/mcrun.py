@@ -29,6 +29,7 @@ from rich.console import Console
 import typer
 
 from llmc.core import find_repo_root
+from llmc.training_data import ToolCallExample, emit_training_example
 
 console = Console()
 
@@ -138,6 +139,7 @@ def run(
     timeout: int = typer.Option(None, "-t", "--timeout", help="Timeout in seconds"),
     json_output: bool = typer.Option(False, "--json", help="JSON output"),
     quiet: bool = typer.Option(False, "-q", "--quiet", help="Suppress output, just return exit code"),
+    emit_training: bool = typer.Option(False, "--emit-training", help="Output OpenAI-format training data"),
 ):
     """
     Run a command and capture output.
@@ -188,6 +190,11 @@ def run(
     
     result = _run_command(command, work_dir, timeout)
     
+    # Training data mode
+    if emit_training:
+        _emit_run_training(command, result, cwd)
+        return
+    
     if quiet:
         raise typer.Exit(0 if result["success"] else result["exit_code"])
     
@@ -199,6 +206,32 @@ def run(
     # Exit with command's exit code
     if not result["success"]:
         raise typer.Exit(result["exit_code"] if result["exit_code"] > 0 else 1)
+
+
+def _emit_run_training(command: str, result: dict, cwd: str | None) -> None:
+    """Emit OpenAI-format training data for this command run."""
+    # Build concise output
+    output = result["stdout"]
+    if len(output) > 500:
+        output = output[:497] + "..."
+    
+    if result["success"]:
+        tool_output = f"Exit code: 0\n{output}"
+    else:
+        tool_output = f"Exit code: {result['exit_code']}\n{result['stderr']}"
+    
+    arguments = {"command": command}
+    if cwd:
+        arguments["cwd"] = cwd
+    
+    example = ToolCallExample(
+        tool_name="run_cmd",
+        arguments=arguments,
+        user_query=f"Run: {command}",
+        tool_output=tool_output,
+    )
+    
+    print(emit_training_example(example, include_schema=True))
 
 
 def main():

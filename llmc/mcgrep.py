@@ -29,6 +29,7 @@ import typer
 
 from llmc.core import find_repo_root
 from llmc.rag.database import Database
+from llmc.training_data import ToolCallExample, emit_training_example
 
 console = Console()
 
@@ -88,6 +89,62 @@ def _merge_line_ranges(ranges: list[tuple[int, int]]) -> list[tuple[int, int]]:
 
     merged.append((cur_start, cur_end))
     return merged
+
+
+def _emit_search_training(query: str, path: str | None, limit: int) -> None:
+    """Emit OpenAI-format training data for this search.
+    
+    Outputs a JSON training example that can be used to fine-tune models
+    on LLMC tool calling patterns.
+    """
+    from llmc.rag.search import search_spans
+    import json
+
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]", err=True)
+        raise typer.Exit(1)
+
+    # Run search to get results
+    try:
+        results = search_spans(query, limit=min(limit, 10), repo_root=repo_root)
+    except Exception as e:
+        console.print(f"[red]Search error:[/red] {e}", err=True)
+        raise typer.Exit(1)
+
+    # Build tool output (simplified version of normal output)
+    output_lines = []
+    for i, item in enumerate(results[:10], 1):
+        file_path = str(item.path)
+        start = item.start_line
+        end = item.end_line
+        score = item.normalized_score
+        summary = item.summary or ""
+        if len(summary) > 100:
+            summary = summary[:97] + "..."
+        output_lines.append(f"{i}. [{score:.0f}] {file_path}:{start}-{end}")
+        if summary:
+            output_lines.append(f"   {summary}")
+    
+    tool_output = "\n".join(output_lines) if output_lines else "No results found."
+
+    # Build training example
+    arguments = {"query": query}
+    if path:
+        arguments["path"] = path
+    if limit != 10:
+        arguments["limit"] = limit
+
+    example = ToolCallExample(
+        tool_name="rag_search",
+        arguments=arguments,
+        user_query=f"Search the codebase for: {query}",
+        tool_output=tool_output,
+    )
+
+    # Output as JSON
+    print(emit_training_example(example, include_schema=True))
 
 
 def _run_search_expanded(query: str, path: str | None, limit: int, expand_count: int) -> None:
@@ -520,6 +577,9 @@ def search(
     expand: int = typer.Option(
         0, "-e", "--expand", help="Return full file content for top N results (LLM mode)"
     ),
+    emit_training: bool = typer.Option(
+        False, "--emit-training", help="Output OpenAI-format training data instead of normal output"
+    ),
 ):
     """
     Semantic search over your codebase.
@@ -538,6 +598,12 @@ def search(
         raise typer.BadParameter("Use either --extract or --expand, not both.")
 
     query_str = " ".join(query)
+    
+    # Training data mode - emit OpenAI-format example
+    if emit_training:
+        _emit_search_training(query_str, path, limit)
+        return
+    
     if extract > 0:
         _run_search_extracted(query_str, path, limit, extract, context, summary)
     elif expand > 0:

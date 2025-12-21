@@ -125,7 +125,7 @@ Things that make LLMC nicer to live with.
 
 ### 2.2 Thin CLI Wrappers for MCP Tools (P1) 🎯
 
-**Status:** 🟡 **MOSTLY COMPLETE** - CLIs done, training emit pending  
+**Status:** ✅ **COMPLETE** (2025-12-21)  
 **Added:** 2025-12-19
 
 **Goal:** Create dead-simple CLI wrappers for MCP tools, enriched with schema graph data where useful.
@@ -158,11 +158,12 @@ Each CLI is a *demonstration* of correct tool usage. Run `mcgrep "router"` → g
 | `mcinspect` | Graph neighbor hints (callers/callees) | ✅ Implemented |
 | `list_dir` | Connectivity ranking | 🟡 Planned |
 
-**Training Data Generation (Future):**
-1. `mcgrep --emit-training` → outputs OpenAI tool call + response JSON
-2. Collect corpus of tool usage patterns across repos
-3. Fine-tune local models (Qwen, Llama) on LLMC-specific tool calling
-4. Models learn: "when user asks X, call tool Y with args Z"
+**Training Data Generation:**
+- [x] `--emit-training` flag on: `mcgrep`, `mcinspect`, `mcread`, `mcrun`
+- [x] OpenAI-compatible JSON output format
+- [x] Includes tool schemas for fine-tuning
+- [ ] Collect corpus of tool usage patterns across repos (future)
+- [ ] Fine-tune local models (Qwen, Llama) on LLMC-specific tool calling (future)
 
 **Why This Matters:**
 - No MCP required - models learn tool patterns directly
@@ -170,10 +171,10 @@ Each CLI is a *demonstration* of correct tool usage. Run `mcgrep "router"` → g
 - Graph enrichment teaches models to chain tools intelligently
 - Fine-tuned models > prompt engineering for tool usage
 
-**Implementation:**
-1. Start with `mcinspect` (existing `llmc analytics inspect` is buried)
-2. Add `mcread` with graph header
-3. Add `--emit-training` flag for training data generation
+**What was built:**
+1. All mc* CLIs complete with graph enrichment
+2. `llmc/training_data.py` - shared module for training data generation
+3. `--emit-training` flag on mcgrep, mcinspect, mcread, mcrun
 
 **Effort:** 12-16 hours (CLIs) + 8-12 hours (training emit) | **Difficulty:** 🟢 Easy → 🟡 Medium
 

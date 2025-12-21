@@ -32,6 +32,14 @@ All notable changes to LLMC will be documented in this file.
   - Returns exit code, stdout, stderr in structured format
   - **All mc* CLIs now complete:** mcgrep, mcwho, mcschema, mcinspect, mcread, mcrun
 
+- **`--emit-training` Flag (Roadmap 2.2 Complete!):**
+  - Added to: `mcgrep`, `mcinspect`, `mcread`, `mcrun`
+  - Outputs OpenAI-compatible JSON for fine-tuning local models
+  - Format: `{"messages": [...], "tools": [...]}`
+  - Includes tool schemas with each example
+  - New module: `llmc/training_data.py` for shared training data generation
+  - **Usage:** `mcgrep "router" --emit-training > training.jsonl`
+
 ### Documentation (2025-12-21)
 
 - **Documentation Validation and Cleanup (PR #63 - Jules):**

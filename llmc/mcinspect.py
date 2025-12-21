@@ -19,6 +19,7 @@ from rich.console import Console
 
 from llmc.core import find_repo_root
 from llmc.rag.inspector import InspectionResult, inspect_entity
+from llmc.training_data import ToolCallExample, emit_training_example
 
 console = Console()
 app = typer.Typer(name="mcinspect", help="Inspect symbols with graph context.")
@@ -32,6 +33,7 @@ def inspect_symbol_command(
     full: bool = typer.Option(False, "--full", help="Show full definition"),
     capsule: bool = typer.Option(False, "--capsule", help="Show compact summary"),
     json_output: bool = typer.Option(False, "--json", help="JSON output"),
+    emit_training: bool = typer.Option(False, "--emit-training", help="Output OpenAI-format training data"),
 ):
     """Inspect a symbol with graph context."""
     try:
@@ -50,6 +52,11 @@ def inspect_symbol_command(
         console.print(f"[red]Symbol not found:[/red] {symbol}")
         raise typer.Exit(1)
 
+    # Training data mode
+    if emit_training:
+        _emit_inspect_training(symbol, result)
+        return
+
     if json_output:
         _emit_json(result)
     elif full:
@@ -58,6 +65,41 @@ def inspect_symbol_command(
         _emit_capsule(result)
     else:
         _emit_summary(result)
+
+
+def _emit_inspect_training(symbol: str, result: InspectionResult) -> None:
+    """Emit OpenAI-format training data for this inspection."""
+    # Build concise output
+    primary_symbol = result.defined_symbols[0] if result.defined_symbols else None
+    symbol_name = primary_symbol.name if primary_symbol else symbol
+    kind = primary_symbol.type if primary_symbol else "symbol"
+    
+    output_lines = [f"{symbol_name} ({kind}, {result.path})"]
+    
+    if result.file_summary:
+        summary = result.file_summary
+        if len(summary) > 150:
+            summary = summary[:147] + "..."
+        output_lines.append(f"Summary: {summary}")
+    
+    if result.incoming_calls:
+        callers = ", ".join([c.symbol for c in result.incoming_calls[:3]])
+        output_lines.append(f"Called by: {callers}")
+    
+    if result.outgoing_calls:
+        callees = ", ".join([c.symbol for c in result.outgoing_calls[:3]])
+        output_lines.append(f"Calls: {callees}")
+    
+    tool_output = "\n".join(output_lines)
+    
+    example = ToolCallExample(
+        tool_name="inspect_symbol",
+        arguments={"symbol": symbol},
+        user_query=f"What is {symbol}?",
+        tool_output=tool_output,
+    )
+    
+    print(emit_training_example(example, include_schema=True))
 
 
 def _format_size(path: str) -> tuple[int, int]:

@@ -18,6 +18,7 @@ import sys
 
 from llmc.core import find_repo_root
 from llmc.rag.graph_ops import load_graph, get_file_context
+from llmc.training_data import ToolCallExample, emit_training_example
 
 console = Console()
 app = typer.Typer(name="mcread", help="Read files with graph context.")
@@ -32,6 +33,7 @@ def read_file_command(
         None, "-s", "--start", help="Start line (1-indexed)"
     ),
     end_line: int = typer.Option(None, "-e", "--end", help="End line (1-indexed)"),
+    emit_training: bool = typer.Option(False, "--emit-training", help="Output OpenAI-format training data"),
 ):
     """Read a file with graph context."""
     try:
@@ -64,10 +66,41 @@ def read_file_command(
         except Exception:
             pass  # Graceful degradation
 
+    # Training data mode
+    if emit_training:
+        _emit_read_training(file_path, lines, start_line, end_line)
+        return
+
     if json_output:
         _emit_json(file_path, lines, graph_context)
     else:
         _emit_human(file_path, lines, graph_context)
+
+
+def _emit_read_training(
+    file_path: str, lines: list[str], start_line: int | None, end_line: int | None
+) -> None:
+    """Emit OpenAI-format training data for this file read."""
+    # Build concise output (first 20 lines or less)
+    content_preview = "\n".join(lines[:20])
+    if len(lines) > 20:
+        content_preview += f"\n... ({len(lines) - 20} more lines)"
+    
+    # Build arguments
+    arguments = {"path": file_path}
+    if start_line:
+        arguments["start_line"] = start_line
+    if end_line:
+        arguments["end_line"] = end_line
+    
+    example = ToolCallExample(
+        tool_name="read_file",
+        arguments=arguments,
+        user_query=f"Show me the contents of {file_path}",
+        tool_output=content_preview,
+    )
+    
+    print(emit_training_example(example, include_schema=True))
 
 
 def _emit_human(file_path: str, lines: list[str], ctx: dict | None):
