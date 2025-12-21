@@ -23,7 +23,7 @@ console = Console()
 app = typer.Typer(name="mcread", help="Read files with graph context.")
 
 
-@app.command("read")
+@app.command()
 def read_file_command(
     file_path: str = typer.Argument(..., help="File to read"),
     raw: bool = typer.Option(False, "--raw", help="Skip graph enrichment"),
@@ -120,8 +120,6 @@ def _emit_json(file_path: str, lines: list[str], ctx: dict | None):
 
 def main():
     """Entry point."""
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] != "read":
-        sys.argv.insert(1, "read")
     app()
 
 

@@ -5,27 +5,32 @@ mcinspect - Inspect symbols with graph context.
 Usage:
     mcinspect inspect Router
     mcinspect inspect llmc.router.Router
-    mcinspect inspect Router --raw         # Definition only, no graph
+    mcinspect inspect Router --full         # Full definition
+    mcinspect inspect Router --capsule      # Compact summary
+    mcinspect inspect Router --json         # JSON output
 """
 
-from pathlib import Path
-import typer
-from rich.console import Console
 import json
 import sys
+from pathlib import Path
+
+import typer
+from rich.console import Console
 
 from llmc.core import find_repo_root
-from llmc.rag.graph_ops import load_graph, get_symbol_context
-from llmc.rag.inspector import inspect_symbol
+from llmc.rag.inspector import InspectionResult, inspect_entity
 
 console = Console()
 app = typer.Typer(name="mcinspect", help="Inspect symbols with graph context.")
 
 
-@app.command("inspect")
+@app.command()
 def inspect_symbol_command(
-    symbol: str = typer.Argument(..., help="Symbol to inspect (e.g., Router, llmc.router.Router)"),
-    raw: bool = typer.Option(False, "--raw", help="Skip graph enrichment"),
+    symbol: str = typer.Argument(
+        ..., help="Symbol to inspect (e.g., Router, llmc.router.Router)"
+    ),
+    full: bool = typer.Option(False, "--full", help="Show full definition"),
+    capsule: bool = typer.Option(False, "--capsule", help="Show compact summary"),
     json_output: bool = typer.Option(False, "--json", help="JSON output"),
 ):
     """Inspect a symbol with graph context."""
@@ -35,68 +40,102 @@ def inspect_symbol_command(
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         raise typer.Exit(1)
 
-    # Get symbol definition
-    definition = inspect_symbol(repo_root, symbol)
-    if not definition:
+    try:
+        result = inspect_entity(repo_root, symbol=symbol)
+    except ValueError as e:
+        console.print(f"[red]Error:[/red] {e}")
+        raise typer.Exit(1)
+
+    if not result:
         console.print(f"[red]Symbol not found:[/red] {symbol}")
         raise typer.Exit(1)
 
-    # Get graph context
-    graph_context = None
-    if not raw:
-        try:
-            graph = load_graph(repo_root)
-            graph_context = get_symbol_context(graph, symbol)
-        except Exception:
-            pass  # Graceful degradation
-
     if json_output:
-        _emit_json(symbol, definition, graph_context)
+        _emit_json(result)
+    elif full:
+        _emit_full(result)
+    elif capsule:
+        _emit_capsule(result)
     else:
-        _emit_human(symbol, definition, graph_context)
+        _emit_summary(result)
 
 
-def _emit_human(symbol: str, defn: dict, ctx: dict | None):
-    """Human-readable output."""
-    kind = defn.get("kind", "symbol")
-    console.print(f"[bold cyan]━━━ {symbol} ({kind}) ━━━[/bold cyan]")
-    console.print(f"File: {defn['file']}:{defn['start_line']}-{defn['end_line']}")
+def _format_size(path: str) -> tuple[int, int]:
+    """Get line count and byte size."""
+    try:
+        p = Path(path)
+        byte_size = p.stat().st_size
+        with open(p, "r", encoding="utf-8", errors="ignore") as f:
+            line_count = sum(1 for _ in f)
+        return line_count, byte_size
+    except Exception:
+        return 0, 0
 
-    if defn.get("docstring"):
-        console.print(f"[dim]Purpose: {defn['docstring'][:100]}...[/dim]")
 
+def _emit_summary(result: InspectionResult):
+    """Human-readable summary output (default)."""
+    primary_symbol = result.defined_symbols[0] if result.defined_symbols else None
+    symbol_name = primary_symbol.name if primary_symbol else "File"
+    kind = primary_symbol.type if primary_symbol else "file"
+    start_line = (
+        result.primary_span[0] if result.primary_span and result.primary_span[0] else 0
+    )
+    end_line = (
+        result.primary_span[1] if result.primary_span and result.primary_span[1] else 0
+    )
+
+    console.print(
+        f"[bold cyan]{symbol_name}[/bold cyan] ({kind}, {result.path}:{start_line}-{end_line})"
+    )
+
+    if result.file_summary:
+        console.print(f"'{result.file_summary}'")
+
+    if result.incoming_calls:
+        callers = ", ".join([c.symbol for c in result.incoming_calls])
+        console.print(f"[green]Called by:[/green] {callers}")
+    if result.outgoing_calls:
+        callees = ", ".join([c.symbol for c in result.outgoing_calls])
+        console.print(f"[blue]Calls:[/blue] {callees}")
+
+    lines, size_bytes = _format_size(result.path)
+    console.print(f"Size: {lines} lines, {size_bytes / 1024:.1f}KB")
+
+
+def _emit_capsule(result: InspectionResult):
+    """Ultra-compact 5-10 line output."""
+    primary_symbol = result.defined_symbols[0] if result.defined_symbols else None
+    symbol_name = primary_symbol.name if primary_symbol else "File"
+
+    console.print(f"[bold cyan]{symbol_name} ({result.path})[/bold cyan]")
+    if result.file_summary:
+        console.print(f"Purpose: {result.file_summary}")
+
+    if result.defined_symbols:
+        exports = ", ".join([s.name for s in result.defined_symbols[:3]])
+        console.print(f"Key Exports: {exports}")
+    if result.incoming_calls:
+        deps = ", ".join([c.symbol for c in result.incoming_calls[:3]])
+        console.print(f"Dependencies: {deps}")
+
+
+def _emit_full(result: InspectionResult):
+    """Existing behavior for when full content is needed."""
+    console.print(
+        f"[bold cyan]━━━ {result.defined_symbols[0].name if result.defined_symbols else 'File'} ━━━[/bold cyan]"
+    )
+    console.print(f"File: {result.path}")
     console.print("\n[bold]Definition:[/bold]")
-    console.print(f"  {defn['signature']}")
-
-    if ctx:
-        console.print("\n[bold]Graph Neighbors:[/bold]")
-        if ctx.get("callers"):
-            callers = ", ".join(ctx["callers"][:5])
-            console.print(f"  [green]Callers ({len(ctx['callers'])}):[/green] {callers}")
-        if ctx.get("callees"):
-            callees = ", ".join(ctx["callees"][:5])
-            console.print(f"  [blue]Callees ({len(ctx['callees'])}):[/blue] {callees}")
-        if ctx.get("extends"):
-            console.print(f"  [yellow]Extends:[/yellow] {ctx['extends']}")
-
-        console.print(f"\n[dim]See also: mcwho {symbol} (for full caller/callee graph)[/dim]")
+    console.print(result.snippet)
 
 
-def _emit_json(symbol: str, definition: dict, graph_context: dict | None):
+def _emit_json(result: InspectionResult):
     """JSON output for programmatic use."""
-    output = {
-        "symbol": symbol,
-        "definition": definition,
-        "graph_context": graph_context,
-    }
-    print(json.dumps(output, indent=2))
+    print(json.dumps(result.to_dict(), indent=2))
 
 
 def main():
     """Entry point."""
-    # Handle bare symbol without 'inspect' subcommand
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] != "inspect":
-        sys.argv.insert(1, "inspect")
     app()
 
 
