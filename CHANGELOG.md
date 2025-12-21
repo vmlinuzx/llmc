@@ -4,6 +4,14 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Documentation (2025-12-21)
+
+- **Documentation Validation and Cleanup (PR #63 - Jules):**
+  - Fixed broken links in `concepts.md` → redirected to `../architecture/index.md`
+  - Corrected package name in `installation.md` (`llmcwrapper` → `llmc`)
+  - Removed internal `usertest` commands from public `cli-reference.md`
+  - Updated validation report with new findings and flagged missing architecture docs
+
 ### Documentation (2025-12-20)
 
 - **Getting Started & CLI Reference Validation (PR #62 - Jules):**
