@@ -13,3 +13,4 @@ uvicorn>=0.27.0
 python-multipart>=0.0.6
 tree-sitter>=0.20.2
 tree-sitter-languages>=1.9.0
+urllib3>=2.6.0
