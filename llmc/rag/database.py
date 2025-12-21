@@ -193,6 +193,8 @@ class Database:
             ("enrichments", "prompt_eval_count", "INTEGER"),
             ("enrichments", "total_duration_ns", "INTEGER"),
             ("enrichments", "backend_host", "TEXT"),
+            # Sidecar system (2025-12 - for PDF/DOCX conversion)
+            ("files", "sidecar_path", "TEXT"),
         ]
         for table, column, coltype in migrations:
             try:

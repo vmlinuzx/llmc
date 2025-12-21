@@ -279,9 +279,11 @@ Automated MCP testing orchestrator. Phase 1 (shell harness) is complete.
 
 ### 2.6 PDF Sidecar System (P1) 📄
 
-**Status:** 🟡 Planned  
+**Status:** 🔄 In Progress  
 **Added:** 2025-12-21  
-**Source:** Reddit thread on RAG failures with PDFs
+**Source:** Reddit thread on RAG failures with PDFs  
+**SDD:** `DOCS/planning/SDD_Document_Sidecar_System.md`  
+**Branch:** `feature/document-sidecar-system`
 
 **The Problem:**
 Everyone is trying to chunk PDFs directly and getting garbage:
