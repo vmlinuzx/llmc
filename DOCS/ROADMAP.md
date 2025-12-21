@@ -27,33 +27,20 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ### 1.2 File-Level Descriptions
 
-**Status:** 🟡 Planned  
+**Status:** ✅ **COMPLETE** (2025-12-21)  
 **Priority:** Medium  
 
-Add file-level enrichment that generates a ~50 word description of each file's purpose. Currently using first span's summary as a proxy in mcgrep.
+Implemented file-level enrichment that generates ~50 word descriptions of each file's purpose.
 
-**Changes needed:**
-1. Add `file_descriptions` table to RAG database
-2. Add enrichment pipeline phase that summarizes files from their spans
-3. Update mcgrep to use file descriptions instead of first span summary
+**What was built:**
+- `llmc debug file-descriptions` CLI command with `--mode cheap|rich` and `--force`
+- Intelligent span prioritization: classes > modules > top-level functions
+- Staleness tracking via `input_hash` - only recomputes when content changes
+- `mcgrep` now shows real file descriptions, falls back to span proxy if none
 
-**Proposed DB schema:**
-```sql
-CREATE TABLE IF NOT EXISTS file_descriptions (
-    file_id INTEGER PRIMARY KEY REFERENCES files(id) ON DELETE CASCADE,
-    summary TEXT NOT NULL,
-    input_hash TEXT NOT NULL,
-    model TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    schema_ver TEXT
-);
-```
+**Run:** `llmc debug file-descriptions --force` to populate for existing repos.
 
-**Staleness strategy:**
-- `input_hash = sha256(files.file_hash + top_span_hashes + algo_version)`
-- Two-tier: cheap (compress existing span summaries) or rich (one LLM call per file)
-
-**Effort:** 8-12 hours | **Difficulty:** 🟡 Medium
+**Effort:** ~4 hours | **Difficulty:** 🟢 Easy (simpler than estimated)
 
 ---
 

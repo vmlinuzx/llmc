@@ -27,6 +27,7 @@ from llmc.commands.rag import (
     enrich,
     enrich_status,
     export,
+    file_descriptions,
     graph,
     index,
     inspect,
@@ -199,6 +200,7 @@ debug_app.command(name="plan")(plan)
 debug_app.command(name="inspect")(inspect)
 debug_app.command(name="export")(export)
 debug_app.command(name="enrich-status")(enrich_status)
+debug_app.command(name="file-descriptions")(file_descriptions)
 
 app.add_typer(debug_app, name="debug")
 

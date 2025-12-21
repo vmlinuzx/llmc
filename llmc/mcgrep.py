@@ -395,7 +395,11 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
     file_descriptions: dict[str, str] = {}
 
     # Get file descriptions from the database
-    db_path = repo_root / ".rag" / "index_v2.db"
+    from llmc.rag.config import index_path_for_read
+    try:
+        db_path = index_path_for_read(repo_root)
+    except Exception:
+        db_path = repo_root / ".rag" / "index_v2.db"  # Fallback
     if db_path.exists():
         db = Database(db_path)
         rows = db.conn.execute("SELECT file_path, description FROM file_descriptions").fetchall()

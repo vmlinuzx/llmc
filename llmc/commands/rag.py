@@ -723,6 +723,64 @@ def enrich_status(
         typer.echo(f"Time to all high-priority enrichments: {t_all:.2f}s")
 
 
+def file_descriptions(
+    mode: Annotated[
+        str, typer.Option(help="Generation mode: 'cheap' (span compression) or 'rich' (LLM)")
+    ] = "cheap",
+    force: Annotated[
+        bool, typer.Option(help="Force regeneration even if descriptions are fresh")
+    ] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit results as JSON")
+    ] = False,
+):
+    """Generate stable file-level descriptions for mcgrep and LLM context.
+    
+    This command creates ~50 word descriptions for each file based on its
+    enriched spans. The descriptions are cached and only regenerated when
+    the file content or its spans change.
+    
+    Modes:
+        cheap: Compress top span summaries (fast, no LLM)
+        rich: Use LLM to generate descriptions (slower, better quality)
+    """
+    from llmc.rag.config import index_path_for_read
+    from llmc.rag.database import Database
+    from llmc.rag.enrichment.file_descriptions import generate_all_file_descriptions
+
+    repo_root = find_repo_root()
+    db_file = index_path_for_read(repo_root)
+    if not db_file.exists():
+        typer.echo("No index database found. Run `llmc index` first.")
+        raise typer.Exit(code=1)
+
+    db = Database(db_file)
+    try:
+        def progress_callback(current: int, total: int) -> None:
+            if not json_output:
+                typer.echo(f"\r  Processing: {current}/{total} files", nl=False)
+
+        results = generate_all_file_descriptions(
+            db=db,
+            repo_root=repo_root,
+            mode=mode,
+            force=force,
+            progress_callback=progress_callback if not json_output else None,
+        )
+    finally:
+        db.close()
+
+    if json_output:
+        typer.echo(json.dumps(results, indent=2))
+    else:
+        typer.echo()  # newline after progress
+        typer.echo(f"✅ File descriptions: {results['updated']} updated, {results['skipped']} skipped, {results['failed']} failed")
+        if results['updated'] > 0:
+            typer.echo(f"   Mode: {mode}")
+        if force:
+            typer.echo("   (forced regeneration)")
+
+
 def export(
     output: Annotated[
         str | None, typer.Option("-o", "--output", help="Output archive path")

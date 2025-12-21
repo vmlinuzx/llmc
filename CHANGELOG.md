@@ -59,12 +59,15 @@ All notable changes to LLMC will be documented in this file.
   - `rag doctor` now checks Ollama connectivity and model availability
   - Warns if embedding models are missing
 
-- **File-Level Descriptions (PR #59 - Jules):**
-  - New `file_descriptions` table in RAG database for stable file summaries
-  - `llmc/rag/enrichment/file_descriptions.py` - generates descriptions from span summaries
-  - Auto-populates during enrichment pipeline
+- **File-Level Descriptions - Complete Implementation (Roadmap 1.2):**
+  - `llmc debug file-descriptions` CLI command to generate/regenerate all file descriptions
+  - Intelligent span prioritization: classes > modules > top-level functions
+  - Staleness detection via `input_hash` - only regenerates when content changes
+  - Two modes: `--mode cheap` (span compression, default) and `--mode rich` (LLM per file)
+  - `--force` flag to regenerate even if fresh
   - `mcgrep` now uses database descriptions with fallback to span summary proxy
-  - **Impact:** More stable and meaningful file summaries in search results
+  - 15 new tests in `tests/rag/test_file_descriptions.py`
+  - **Impact:** Stable, meaningful file summaries instead of arbitrary first-span proxy
 
 ### Security (2025-12-19)
 

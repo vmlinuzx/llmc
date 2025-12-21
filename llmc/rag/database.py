@@ -200,6 +200,35 @@ class Database:
             except sqlite3.OperationalError:
                 pass
 
+        # Table migrations (for existing databases that predate certain tables)
+        # file_descriptions: Added 2025-12 for stable file-level summaries
+        self._conn.execute("""
+            CREATE TABLE IF NOT EXISTS file_descriptions (
+                id INTEGER PRIMARY KEY,
+                file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+                file_path TEXT UNIQUE NOT NULL,
+                description TEXT,
+                source TEXT,
+                updated_at DATETIME,
+                content_hash TEXT,
+                input_hash TEXT
+            )
+        """)
+        # Add input_hash column if not exists (for databases with old schema that
+        # has the table but not the column - must be done BEFORE creating the index)
+        try:
+            self._conn.execute("ALTER TABLE file_descriptions ADD COLUMN input_hash TEXT")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_file_descriptions_file_path "
+            "ON file_descriptions(file_path)"
+        )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_file_descriptions_input_hash "
+            "ON file_descriptions(input_hash)"
+        )
+
     def close(self) -> None:
         self._conn.close()
 
