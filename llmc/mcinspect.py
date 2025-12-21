@@ -115,7 +115,7 @@ def _format_size(path: str) -> tuple[int, int]:
 
 
 def _emit_summary(result: InspectionResult):
-    """Human-readable summary output (default)."""
+    """Human-readable summary output (default) - shows all enriched chunks."""
     primary_symbol = result.defined_symbols[0] if result.defined_symbols else None
     symbol_name = primary_symbol.name if primary_symbol else "File"
     kind = primary_symbol.type if primary_symbol else "file"
@@ -133,15 +133,82 @@ def _emit_summary(result: InspectionResult):
     if result.file_summary:
         console.print(f"'{result.file_summary}'")
 
+    # Query database for all enriched chunks for this symbol
+    try:
+        repo_root = find_repo_root()
+        chunks = _get_enriched_chunks(repo_root, symbol_name, result.path)
+        
+        if chunks:
+            console.print(f"\n[bold]Chunks ({len(chunks)}):[/bold]")
+            for chunk in chunks:
+                name = chunk['name']
+                chunk_kind = chunk['kind']
+                sl, el = chunk['start_line'], chunk['end_line']
+                summary = chunk['summary']
+                
+                # Truncate summary for display
+                if len(summary) > 100:
+                    summary = summary[:97] + "..."
+                
+                console.print(f"  [yellow]{name}[/yellow] ({chunk_kind}) L{sl}-{el}")
+                console.print(f"    {summary}")
+    except Exception:
+        pass  # Graceful degradation if DB unavailable
+
     if result.incoming_calls:
         callers = ", ".join([c.symbol for c in result.incoming_calls])
-        console.print(f"[green]Called by:[/green] {callers}")
+        console.print(f"\n[green]Called by:[/green] {callers}")
     if result.outgoing_calls:
         callees = ", ".join([c.symbol for c in result.outgoing_calls])
         console.print(f"[blue]Calls:[/blue] {callees}")
 
     lines, size_bytes = _format_size(result.path)
-    console.print(f"Size: {lines} lines, {size_bytes / 1024:.1f}KB")
+    console.print(f"\nSize: {lines} lines, {size_bytes / 1024:.1f}KB")
+
+
+def _get_enriched_chunks(repo_root: Path, symbol: str, file_path: str) -> list[dict]:
+    """Get all enriched chunks for a symbol from the database."""
+    from llmc.rag.database import Database
+    from llmc.rag.config import index_path_for_read
+    
+    try:
+        db_path = index_path_for_read(repo_root)
+    except Exception:
+        db_path = repo_root / ".rag" / "index_v2.db"
+    
+    if not db_path.exists():
+        return []
+    
+    db = Database(db_path)
+    
+    # Find spans for this symbol (parent class/function) with enrichments
+    cursor = db.conn.execute('''
+        SELECT s.symbol, s.kind, s.start_line, s.end_line, e.summary
+        FROM spans s
+        JOIN enrichments e ON s.span_hash = e.span_hash
+        WHERE s.symbol LIKE ?
+        AND e.summary IS NOT NULL
+        ORDER BY s.start_line
+    ''', (f'%{symbol}%',))
+    
+    chunks = []
+    for row in cursor.fetchall():
+        # Extract just the method name from full symbol
+        full_name = row['symbol'] or ''
+        name = full_name.split('.')[-1] if '.' in full_name else full_name
+        
+        chunks.append({
+            'name': name,
+            'full_name': full_name,
+            'kind': row['kind'] or 'unknown',
+            'start_line': row['start_line'] or 0,
+            'end_line': row['end_line'] or 0,
+            'summary': row['summary'] or '',
+        })
+    
+    db.close()
+    return chunks
+
 
 
 def _emit_capsule(result: InspectionResult):
