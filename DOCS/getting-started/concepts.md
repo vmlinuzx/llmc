@@ -16,6 +16,8 @@ To use LLMC effectively, visualize the process in three stages:
 2.  **Understanding (Embeddings):** It converts these code structures into mathematical vectors called *embeddings*. These vectors capture the *meaning* of the code, not just the keywords.
 3.  **Retrieval (Search):** When you ask a question, LLMC converts your query into a vector and finds the code vectors that are mathematically closest to it.
 
+For a deeper dive, see the [Architecture Overview](../architecture/index.md).
+
 ## Key Terminology
 
 We use specific terms to describe how code is processed:

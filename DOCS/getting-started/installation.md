@@ -52,10 +52,10 @@ source .venv/bin/activate
 Install the package with the standard feature set (RAG, TUI, and Agent support):
 
 ```bash
-pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
+pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmc[rag,tui,agent]"
 ```
 
-> **Note:** The package name is `llmcwrapper`, but the command-line tool is installed as `llmc`.
+> **Note:** The package name is `llmc`.
 
 ---
 

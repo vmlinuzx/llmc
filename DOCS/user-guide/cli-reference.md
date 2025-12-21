@@ -60,9 +60,8 @@ llmc
 │
 ├── chat              # AI Coding Assistant
 │
-└── usertest          # RUTA testing
-    ├── init
-    └── run
+└── test              # Testing tools
+    └── mcp           # MCP compliance testing
 ```
 
 ---
@@ -666,36 +665,6 @@ llmc docs userguide
 
 ---
 
-## RUTA Commands
-
-### `llmc usertest init`
-Initialize RUTA artifacts directory.
-
-```bash
-llmc usertest init
-```
-
----
-
-### `llmc usertest run`
-Run a user test scenario.
-
-```bash
-# Run by scenario ID
-llmc usertest run my_scenario
-
-# Run by path
-llmc usertest run tests/usertests/scenario.yaml
-
-# Manual mode
-llmc usertest run my_scenario --manual
-```
-
-**Options:**
-- `--suite TAG` - Test suite tag
-- `--manual` - Run in manual mode (no agent)
-
----
 
 ## Workflows
 
