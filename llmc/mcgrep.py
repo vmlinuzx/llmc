@@ -495,6 +495,18 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         "Tip: use --extract for code context.[/dim]\n"
     )
 
+    # Check for sidecar-eligible files (for display)
+    sidecar_files: set[str] = set()
+    try:
+        from llmc.rag.sidecar import is_sidecar_eligible, get_sidecar_path
+        for file_path in list(code_groups.keys()) + list(docs_groups.keys()):
+            if is_sidecar_eligible(Path(file_path)):
+                sidecar_path = get_sidecar_path(Path(file_path), repo_root)
+                if sidecar_path.exists():
+                    sidecar_files.add(file_path)
+    except ImportError:
+        pass  # Sidecar module not available
+
     def _print_file_group(file_path: str, spans: list) -> None:
         span_strs = []
         for s in spans[:5]:  # Max 5 spans per file
@@ -506,7 +518,10 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         desc = file_descriptions.get(file_path, "")
         desc_str = f' "{desc}"' if desc else ""
         
-        console.print(f"[bold]{file_path}[/bold]{desc_str} : [yellow]{spans_compact}[/yellow]")
+        # Add sidecar indicator for PDF/DOCX files with readable sidecars
+        sidecar_hint = " [dim green]📄 readable[/dim green]" if file_path in sidecar_files else ""
+        
+        console.print(f"[bold]{file_path}[/bold]{desc_str}{sidecar_hint} : [yellow]{spans_compact}[/yellow]")
 
     # === CODE section (top 20) ===
     console.print("[bold cyan]── CODE ──[/bold cyan]")
