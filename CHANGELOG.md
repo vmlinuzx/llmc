@@ -4,6 +4,18 @@ All notable changes to LLMC will be documented in this file.
 
 ## [Unreleased]
 
+### Added (2025-12-21)
+
+- **Context-Efficient Inspect (Roadmap 1.4 - Jules + Antigravity):**
+  - `mcinspect` now defaults to **summary mode** (~50 tokens vs 5000)
+  - `--capsule` flag: ultra-compact 5-10 line architecture summary
+  - `--full` flag: preserved original behavior for when code dump is needed
+  - Surfaces callers/callees directly in output (was hidden in graph drill-down)
+  - **Example:** `mcinspect EnrichmentPipeline` now returns symbol + summary + graph edges + size
+  - **Impact:** LLMs can now answer "what is X?" without burning 10% of context window
+  - Fixed CLI patterns for both `mcinspect` and `mcread` (now work without subcommands)
+  - Added `.agent/workflows/jules-protocol.md` for sending tasks to Jules
+
 ### Documentation (2025-12-21)
 
 - **Documentation Validation and Cleanup (PR #63 - Jules):**
