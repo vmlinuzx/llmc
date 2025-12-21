@@ -9,50 +9,14 @@ description = "LLM cost compression through intelligent RAG and multi-tier routi
 authors = [{name="LLMC Core"}]
 readme = "README.md"
 requires-python = ">=3.9"
-dependencies = ["requests>=2.31", "tomli; python_version<'3.11'", "typer>=0.9.0", "rich>=13.0.0", "tomli-w>=1.0.0", "textual>=0.41.0", "tomlkit>=0.12.0", "simpleeval>=1.0.0"]
+dependencies = ["requests", "tomli; python_version<'3.11'", "typer", "rich", "tomli-w", "textual", "tomlkit", "simpleeval", "urllib3>=2.6.0"]
 
 [project.optional-dependencies]
-rag = [
-  "setuptools>=68.0.0",
-  "tree_sitter==0.20.1",
-  "tree_sitter_languages==1.9.1",
-  "click>=8.1.7",
-  "jsonschema>=4.23.0",
-  "sentence-transformers>=3.0.0",
-  "chromadb>=0.4.22",
-  "langchain>=0.1.0",
-  "watchdog>=3.0.0",
-  "gitpython>=3.1.40",
-  "pathspec>=0.12.0",
-  "pyyaml>=6.0.1",
-  "tqdm>=4.66.1",
-  "mcp>=0.9.0",
-  "psutil>=5.9.0",   # Cross-platform process & system monitoring
-  "humanize>=4.0.0", # Human-readable sizes and times
-  "mistune>=3.1.0",
-]
-tui = [
-  "typer>=0.9.0",
-  "rich>=13.0.0",
-  "textual>=0.41.0",
-]
-daemon = [
-  "uvicorn>=0.30.0",  # ASGI server for HTTP transport
-  "httpx>=0.27.0",    # HTTP client for health checks
-]
-agent = [
-  "httpx>=0.27.0",    # Ollama client
-  "click>=8.1.7",     # CLI framework
-  # rich already a core dep
-]
-dev = [
-  "pytest>=7.4.0",
-  "pytest-cov>=4.1.0",
-  "mypy>=1.8.0",
-  "types-toml>=0.10.0",
-  "types-requests>=2.31.0",
-  "ruff>=0.1.0",
-]
+rag = ["setuptools", "tree_sitter", "tree_sitter_languages", "click", "jsonschema", "sentence-transformers", "chromadb", "langchain", "watchdog", "gitpython", "pathspec", "pyyaml", "tqdm", "mcp", "psutil", "humanize", "mistune"]
+tui = ["typer", "rich", "textual"]
+daemon = ["uvicorn", "httpx"]
+agent = ["httpx", "click"]
+dev = ["pytest", "pytest-cov", "mypy", "types-toml", "types-requests", "ruff"]
 
 [tool.setuptools]
 # Explicitly declare which top-level packages are part of the install.
