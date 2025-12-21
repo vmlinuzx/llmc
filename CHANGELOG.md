@@ -24,6 +24,14 @@ All notable changes to LLMC will be documented in this file.
   - Integrated into `rag doctor` command
   - Non-blocking: warnings only, doesn't fail registration
 
+- **mcrun CLI (Roadmap 2.2):**
+  - New `mcrun` command for running shell commands with structured output
+  - `--json` flag for programmatic JSON output
+  - `--cwd` flag for specifying working directory
+  - `--timeout` flag for time limits
+  - Returns exit code, stdout, stderr in structured format
+  - **All mc* CLIs now complete:** mcgrep, mcwho, mcschema, mcinspect, mcread, mcrun
+
 ### Documentation (2025-12-21)
 
 - **Documentation Validation and Cleanup (PR #63 - Jules):**

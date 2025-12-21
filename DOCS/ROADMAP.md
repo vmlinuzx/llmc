@@ -125,7 +125,7 @@ Things that make LLMC nicer to live with.
 
 ### 2.2 Thin CLI Wrappers for MCP Tools (P1) 🎯
 
-**Status:** 🟡 Planned  
+**Status:** 🟡 **MOSTLY COMPLETE** - CLIs done, training emit pending  
 **Added:** 2025-12-19
 
 **Goal:** Create dead-simple CLI wrappers for MCP tools, enriched with schema graph data where useful.
@@ -146,16 +146,17 @@ Each CLI is a *demonstration* of correct tool usage. Run `mcgrep "router"` → g
 |-----|----------|---------------|--------|
 | `mcgrep` | `rag_search` | `{"name": "rag_search", ...}` | ✅ DONE |
 | `mcwho` | `rag_where_used` | `{"name": "rag_where_used", ...}` | ✅ DONE |
-| `mcinspect` | `inspect` | `{"name": "inspect", ...}` | 🟡 Planned |
-| `mcread` | `read_file` | `{"name": "read_file", ...}` | 🟡 Planned |
-| `mcrun` | `run_cmd` | `{"name": "run_cmd", ...}` | 🟡 Planned |
+| `mcschema` | (orientation) | N/A | ✅ DONE |
+| `mcinspect` | `inspect` | `{"name": "inspect", ...}` | ✅ DONE (2025-12-21) |
+| `mcread` | `read_file` | `{"name": "read_file", ...}` | ✅ DONE (2025-12-21) |
+| `mcrun` | `run_cmd` | `{"name": "run_cmd", ...}` | ✅ DONE (2025-12-21) |
 
 **Graph Enrichment:**
 | Tool | Enhancement |
 |------|-------------|
-| `read_file` | "Related: 3 callers, 5 imports" header |
-| `inspect` | Graph neighbor hints |
-| `list_dir` | Connectivity ranking |
+| `mcread` | "Related: 3 callers, 5 imports" header | ✅ Implemented |
+| `mcinspect` | Graph neighbor hints (callers/callees) | ✅ Implemented |
+| `list_dir` | Connectivity ranking | 🟡 Planned |
 
 **Training Data Generation (Future):**
 1. `mcgrep --emit-training` → outputs OpenAI tool call + response JSON
