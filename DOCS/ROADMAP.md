@@ -240,6 +240,63 @@ Automated MCP testing orchestrator. Phase 1 (shell harness) is complete.
 
 ---
 
+### 2.6 PDF Sidecar System (P1) 📄
+
+**Status:** 🟡 Planned  
+**Added:** 2025-12-21  
+**Source:** Reddit thread on RAG failures with PDFs
+
+**The Problem:**
+Everyone is trying to chunk PDFs directly and getting garbage:
+- PDF parsing loses structure (tables, headings, columns)
+- Chunking splits semantic units arbitrarily  
+- Embeddings on PDF text produce noisy matches
+- Users report "it couldn't find a topic that's clearly in the PDF"
+
+**The Solution: Sidecar Conversion**
+
+1. **Mirror structure:** Create `.llmc/sidecars/` that mirrors the repo structure
+2. **Convert PDFs to markdown:** `docs/spec.pdf` → `.llmc/sidecars/docs/spec.pdf.md`
+3. **Enrich the markdown:** Our TechDocsExtractor works perfectly on markdown
+4. **Report the PDF as source:** Search results show `docs/spec.pdf:page15`, not the sidecar
+
+```
+docs/
+├── spec.pdf                    # Original PDF (user's file)
+└── .llmc/sidecars/docs/
+    └── spec.pdf.md             # Converted markdown (LLMC's working copy)
+```
+
+**The Enrichment Loop:**
+1. Indexer detects `*.pdf` files
+2. Checks if sidecar exists and is fresh (`mtime` comparison)
+3. If stale: runs `pdf2md` (using existing tool or pdfplumber/pymupdf)
+4. Indexes the markdown sidecar
+5. Maps spans back to PDF source: `file_path = "docs/spec.pdf"` (not sidecar)
+
+**Why This Works:**
+- **TechDocsExtractor** already handles markdown beautifully (heading-aware, anchors)
+- **Graph edges** work normally (REFERENCES, REQUIRES, etc.)
+- **Search results** point to the real PDF, not implementation detail
+- **Users see:** "Found in docs/spec.pdf, page 15, section 'Authentication'"
+
+**Implementation:**
+1. Add `PdfSidecarExtractor` that wraps conversion + TechDocsExtractor
+2. Add `pdf2md` step (pymupdf, pdfplumber, or VLM for complex layouts)
+3. Sidecar path mapping in `files` table (`sidecar_path` column?)
+4. Update mcgrep to show PDF path, not sidecar path
+
+**Advanced (Phase 2):**
+- VLM extraction for complex PDFs (tables, diagrams → descriptions)
+- Per-page images as fallback for layout-heavy docs
+- Citation-stable page references in graph edges
+
+**Effort:** 8-12 hours | **Difficulty:** 🟡 Medium
+
+**📄 Reference:** Reddit thread on RAG failures, existing `pdf2md` tool
+
+---
+
 ## 3. Later (R&D)
 
 ### 3.1 RAG Scoring System 3.0 🔥
