@@ -279,11 +279,10 @@ Automated MCP testing orchestrator. Phase 1 (shell harness) is complete.
 
 ### 2.6 PDF Sidecar System (P1) 📄
 
-**Status:** 🔄 In Progress  
+**Status:** ✅ **COMPLETE** (2025-12-21)  
 **Added:** 2025-12-21  
 **Source:** Reddit thread on RAG failures with PDFs  
-**SDD:** `DOCS/planning/SDD_Document_Sidecar_System.md`  
-**Branch:** `feature/document-sidecar-system`
+**SDD:** `DOCS/planning/SDD_Document_Sidecar_System.md`
 
 **The Problem:**
 Everyone is trying to chunk PDFs directly and getting garbage:
@@ -292,47 +291,41 @@ Everyone is trying to chunk PDFs directly and getting garbage:
 - Embeddings on PDF text produce noisy matches
 - Users report "it couldn't find a topic that's clearly in the PDF"
 
-**The Solution: Sidecar Conversion**
+**What was built:**
 
-1. **Mirror structure:** Create `.llmc/sidecars/` that mirrors the repo structure
-2. **Convert PDFs to gzipped markdown:** `docs/spec.pdf` → `.llmc/sidecars/docs/spec.pdf.md.gz`
-3. **Enrich the markdown:** Our TechDocsExtractor works perfectly on markdown
-4. **Report the PDF as source:** Search results show `docs/spec.pdf:page15`, not the sidecar
+1. **Core Infrastructure (`llmc/rag/sidecar.py`):**
+   - `SidecarConverter` class with pluggable converters
+   - `PdfToMarkdown` (pymupdf), `DocxToMarkdown`, `PptxToMarkdown`, `RtfToMarkdown`
+   - Freshness checking (`is_sidecar_stale`)
+   - Orphan cleanup (`cleanup_orphan_sidecars`)
 
+2. **Indexer Integration:**
+   - `_iter_directory()` now yields sidecar-eligible files (PDF/DOCX)
+   - `index_repo()` and `sync_paths()` generate sidecars automatically
+   - `sidecar_path` column in files table for tracking
+
+3. **CLI Commands (`llmc rag sidecar`):**
+   - `list` - Show all sidecars + freshness status
+   - `clean` - Remove orphaned sidecars
+   - `generate` - Force regenerate sidecars for a path
+
+4. **Tool Integration:**
+   - `mcread` is sidecar-aware (reads markdown for PDFs transparently)
+   - `mcgrep` shows 📄 indicator for files with sidecars
+
+5. **Embedding Geometry Fix:**
+   - File path and symbol now included in embedding text
+   - Fixes "can't find PDF by title" issue
+
+**Usage:**
+```bash
+llmc rag sidecar list           # Show all sidecars + freshness
+llmc rag sidecar clean          # Remove orphans
+llmc rag sidecar generate path/ # Force regenerate
+mcread docs/spec.pdf            # Reads sidecar markdown transparently
 ```
-docs/
-├── spec.pdf                    # Original PDF (500KB)
-└── .llmc/sidecars/docs/
-    └── spec.pdf.md.gz          # Gzipped markdown (~5KB, 99% smaller)
-```
 
-**The Enrichment Loop:**
-1. Indexer detects `*.pdf` files
-2. Checks if sidecar exists and is fresh (`mtime` comparison)
-3. If stale: runs `pdf2md` (using existing tool or pdfplumber/pymupdf)
-4. Indexes the markdown sidecar
-5. Maps spans back to PDF source: `file_path = "docs/spec.pdf"` (not sidecar)
-
-**Why This Works:**
-- **TechDocsExtractor** already handles markdown beautifully (heading-aware, anchors)
-- **Graph edges** work normally (REFERENCES, REQUIRES, etc.)
-- **Search results** point to the real PDF, not implementation detail
-- **Users see:** "Found in docs/spec.pdf, page 15, section 'Authentication'"
-
-**Implementation:**
-1. Add `PdfSidecarExtractor` that wraps conversion + TechDocsExtractor
-2. Add `pdf2md` step (pymupdf, pdfplumber, or VLM for complex layouts)
-3. Sidecar path mapping in `files` table (`sidecar_path` column?)
-4. Update mcgrep to show PDF path, not sidecar path
-
-**Advanced (Phase 2):**
-- VLM extraction for complex PDFs (tables, diagrams → descriptions)
-- Per-page images as fallback for layout-heavy docs
-- Citation-stable page references in graph edges
-
-**Effort:** 8-12 hours | **Difficulty:** 🟡 Medium
-
-**📄 Reference:** Reddit thread on RAG failures, existing `pdf2md` tool
+**Effort:** ~12 hours | **Difficulty:** 🟡 Medium
 
 ---
 
@@ -340,25 +333,25 @@ docs/
 
 ### 3.1 RAG Scoring System 3.0 🔥
 
-**Status:** 🟢 SDD Complete - Ready for Implementation  
+**Status:** ✅ **COMPLETE** (2025-12-20)  
 **Added:** 2025-12-19
 
 **Problem:** Semantic search for implementation queries returns docs before code.
 
-**Solution:** 4-phase architectural evolution to Graph-Enhanced Dynamic Retrieval:
+**What was built:**
 
-| Phase | Focus | Effort | Expected Gain |
-|-------|-------|--------|---------------|
-| **1** | RRF Fusion + Code@k Metric | 8-12h | +10-15% code precision |
-| **2** | Graph Neighbor Expansion | 12-16h | +15-20% recall |
-| **3** | Z-Score Fusion + SetFit Router | 16-24h | +20-30% intent accuracy |
-| **4** | LLM Setwise Reranking | 8-12h | +5-10% top-3 precision |
+All 4 phases implemented and merged via Dialectical Autocoding:
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **1** | RRF Fusion + Code@k Metric | ✅ Complete |
+| **2** | Graph Neighbor Expansion | ✅ Complete |
+| **3** | Z-Score Fusion + SetFit Router | ✅ Complete |
+| **4** | LLM Setwise Reranking | ✅ Complete |
 
 **📄 Full SDD:** `DOCS/planning/SDD_RAG_Scoring_System_3.0.md`
 
 **Research Basis:** 285KB of academic literature synthesized from RepoGraph (ICLR 2025), RANGER, SetFit, Pinecone Hybrid Search studies.
-
-**Total Effort:** 44-64 hours | **Difficulty:** 🟡 Medium (phased)
 
 ---
 
