@@ -16,6 +16,14 @@ All notable changes to LLMC will be documented in this file.
   - Fixed CLI patterns for both `mcinspect` and `mcread` (now work without subcommands)
   - Added `.agent/workflows/jules-protocol.md` for sending tasks to Jules
 
+- **Onboarding Polish (Roadmap 2.5 - Jules):**
+  - Auto-run validation checks after `llmc repo register`
+  - `check_embedding_models()` in `llmc/rag/embeddings/check.py`
+  - Verifies Ollama connectivity and configured model availability
+  - Helpful warnings: "Embedding model 'bge-m3' not found. Suggestion: `ollama pull bge-m3`"
+  - Integrated into `rag doctor` command
+  - Non-blocking: warnings only, doesn't fail registration
+
 ### Documentation (2025-12-21)
 
 - **Documentation Validation and Cleanup (PR #63 - Jules):**

@@ -240,9 +240,14 @@ Automated MCP testing orchestrator. Phase 1 (shell harness) is complete.
 
 ### 2.5 Onboarding Polish (P2)
 
-- [ ] Auto-run validation after `repo add`
-- [ ] Integration with `rag doctor`
-- [ ] Embedding model availability check
+**Status:** ✅ **COMPLETE** (2025-12-21)
+
+**What was built:**
+- [x] Auto-run validation after `repo register`
+- [x] Integration with `rag doctor` (embedding checks in health report)
+- [x] Embedding model availability check (`check_embedding_models()`)
+- [x] Helpful suggestions when models missing: `ollama pull model-name`
+- [x] Non-blocking: warnings only, doesn't fail registration
 
 ---
 
