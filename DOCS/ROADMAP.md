@@ -256,15 +256,15 @@ Everyone is trying to chunk PDFs directly and getting garbage:
 **The Solution: Sidecar Conversion**
 
 1. **Mirror structure:** Create `.llmc/sidecars/` that mirrors the repo structure
-2. **Convert PDFs to markdown:** `docs/spec.pdf` → `.llmc/sidecars/docs/spec.pdf.md`
+2. **Convert PDFs to gzipped markdown:** `docs/spec.pdf` → `.llmc/sidecars/docs/spec.pdf.md.gz`
 3. **Enrich the markdown:** Our TechDocsExtractor works perfectly on markdown
 4. **Report the PDF as source:** Search results show `docs/spec.pdf:page15`, not the sidecar
 
 ```
 docs/
-├── spec.pdf                    # Original PDF (user's file)
+├── spec.pdf                    # Original PDF (500KB)
 └── .llmc/sidecars/docs/
-    └── spec.pdf.md             # Converted markdown (LLMC's working copy)
+    └── spec.pdf.md.gz          # Gzipped markdown (~5KB, 99% smaller)
 ```
 
 **The Enrichment Loop:**
