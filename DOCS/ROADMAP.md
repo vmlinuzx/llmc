@@ -44,6 +44,42 @@ Implemented file-level enrichment that generates ~50 word descriptions of each f
 
 ---
 
+### 1.4 Context-Efficient Inspect (P1) 🔥
+
+**Status:** 🟡 Planned  
+**Added:** 2025-12-21  
+**Source:** Codex feedback — `inspect --full` consumed 10% of context window for a "what is this repo" question
+
+**Problem:** Current `mcinspect --full` dumps entire file contents. For quick orientation questions, most of that context is noise.
+
+**Proposed Fixes:**
+
+1. **Default to summary mode** — No `--full` by default:
+   - Symbol name + kind + file path
+   - Summary (from enrichment)
+   - Top 3 callers/callees (from graph)
+   - Line count + byte size
+
+2. **Add `--capsule` mode** — 5-10 line architecture summary:
+   - Purpose (file description)
+   - Key exports (symbols)
+   - Who depends on this? (top edges)
+   - No code dumps
+
+3. **Surface graph edges in default output** — Show callers/callees inline:
+   ```
+   EnrichmentPipeline (class, llmc/rag/enrichment_pipeline.py:45)
+   "Orchestrates batch LLM enrichment with backend cascade"
+   Called by: service.run(), workers.execute_enrichment()
+   Calls: Database.write_enrichment(), backend.generate()
+   ```
+
+**The Goal:** Answer "what does X do?" in ~50 tokens, not 5000.
+
+**Effort:** 3-4 hours | **Difficulty:** 🟢 Easy
+
+---
+
 ### 1.3 Security Polish (P2)
 
 **Remaining from 2025-12-17 audit:**
