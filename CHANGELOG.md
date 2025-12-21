@@ -16,7 +16,7 @@ All notable changes to LLMC will be documented in this file.
   - Fixed CLI patterns for both `mcinspect` and `mcread` (now work without subcommands)
   - Added `.agent/workflows/jules-protocol.md` for sending tasks to Jules
 
-- **Document Sidecar System (Roadmap 2.6) - In Progress:**
+- **Document Sidecar System (Roadmap 2.6) - COMPLETE:**
   - **PDF, DOCX, PPTX, RTF → gzipped markdown** sidecars for proper RAG indexing
   - Solves: PDF chunking loses structure, embeddings noisy, "can't find topic in PDF" complaints
   - New `llmc/rag/sidecar.py` module with `SidecarConverter` class
@@ -26,9 +26,26 @@ All notable changes to LLMC will be documented in this file.
   - Database: new `sidecar_path` column in `files` table
   - Lifecycle management: orphan cleanup when source files deleted
   - New CLI: `llmc rag sidecar list|clean|generate`
+  - `mcread` and `mcgrep` are now sidecar-aware (transparent markdown reading for PDFs)
   - Optional dependencies: `pip install llmc[sidecar]` (PDF only) or `pip install llmc[sidecar-full]`
   - **SDD:** `DOCS/planning/SDD_Document_Sidecar_System.md`
-  - **Branch:** `feature/document-sidecar-system`
+
+- **Embedding Geometry Fix (Roadmap 2.6):**
+  - **Problem:** Searching for "Graph-Enhanced Dynamic Scoring" didn't find the PDF with that exact title
+  - **Root Cause:** Only span content was embedded, not file path or symbol name
+  - **Fix:** `_format_embedding_text()` now prepends structured headers to all embeddings:
+    ```
+    File: llmc/rag/scoring.py
+    Symbol: fuse_scores
+    Language: python
+    Lines: 155-230
+    
+    <actual code content>
+    ```
+  - **Impact:** Semantic search now matches file names, paths, and symbol names
+  - `SpanWorkItem` updated with `symbol` field
+  - `pending_embeddings` query updated to fetch symbol
+  - **Re-index required:** Run `llmc rag index --force` to benefit from new geometry
 
 - **Onboarding Polish (Roadmap 2.5 - Jules):**
   - Auto-run validation checks after `llmc repo register`
