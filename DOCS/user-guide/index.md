@@ -39,3 +39,4 @@ Task-oriented guides for getting things done with LLMC.
 | [Domain Guides](domains/index.md) | Code, docs, medical repos |
 | [Docgen](docgen.md) | Automated documentation generation |
 | [Tool Envelope](tool-envelope.md) | Shell command enrichment |
+| [RUTA](ruta.md) | Ruthless User Testing Agent |

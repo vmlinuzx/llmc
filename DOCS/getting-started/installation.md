@@ -129,7 +129,7 @@ If you try to install with `pip` on modern Linux distributions without a virtual
 
 **Solution:** Use a virtual environment (see "Manual Installation") or use `pipx`:
 ```bash
-pipx install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
+pipx install "git+https://github.com/vmlinuzx/llmc.git#egg=llmc[rag,tui,agent]"
 ```
 
 ### Permission Errors

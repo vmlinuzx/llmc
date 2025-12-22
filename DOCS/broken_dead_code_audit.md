@@ -71,8 +71,8 @@ The test suite is currently in a broken state due to the issues above and bad te
     However, the script still exists and is heavily tested by `tests/test_qwen_enrich_batch_static.py` and `tests/test_enrichment_cascade_builder.py`. This suggests a partial migration where the old code is kept alive by its own tests despite being conceptually replaced.
 
 ## 5. Broken Documentation
-*   **`DOCS/user-guide/enrichment/providers.md`**: References `from tools.rag.enrichment_pipeline import EnrichmentPipeline`.
-*   **`DOCS/user-guide/docgen.md`**: References `from tools.rag.database import Database`.
-*   **`llmc/docgen/README.md`**: References `from tools.rag.database import Database`.
+*   **`DOCS/user-guide/enrichment/providers.md`**: References `from llmc.rag.enrichment_pipeline import EnrichmentPipeline`.
+*   **`DOCS/user-guide/docgen.md`**: References `from llmc.rag.database import Database`.
+*   **`llmc/docgen/README.md`**: References `from llmc.rag.database import Database`.
 
 These import paths are invalid because `tools` is missing.
