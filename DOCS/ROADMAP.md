@@ -355,7 +355,42 @@ All 4 phases implemented and merged via Dialectical Autocoding:
 
 ---
 
-### 3.2 Distributed Parallel Enrichment
+### 3.2 Event-Driven Enrichment Queue (P1) 🔥
+
+**Status:** 🟡 SDD Complete  
+**Added:** 2025-12-21  
+**SDD:** `DOCS/planning/SDD_Event_Driven_Enrichment_Queue.md`  
+**Prerequisite for:** 3.3 Distributed Parallel Enrichment
+
+**Problem:** Enrichment daemon polls ALL registered repos every 60s, even when 19/20 have zero pending work. Massive waste of CPU, prevents multi-worker scaling.
+
+**Solution:** Central work queue with event-driven wake-up:
+- Indexer pushes to queue when spans created
+- Workers block on notification pipe (zero CPU when idle)
+- Multiple workers pull from same queue (trivial parallelism)
+
+**Phases:**
+| Phase | Description | Difficulty | Effort |
+|-------|-------------|------------|--------|
+| 0 | Central Work Queue (SQLite) | 🟢 Easy | 4-6h |
+| 1 | Indexer Integration (push on create) | 🟢 Easy | 2-3h |
+| 2 | Event Notification (pipe/signal) | 🟡 Medium | 3-4h |
+| 3 | Worker Refactor (queue consumers) | 🟡 Medium | 4-6h |
+| 4 | Multi-Worker Support | 🟢 Easy | 2-3h |
+| 5 | Remote Workers (HTTP API) | 🟡 Medium | 6-8h |
+
+**Success Metrics:**
+- Idle CPU: 15% → <1%
+- Work discovery: 60s → <2s  
+- Throughput: 1x → Nx (N workers)
+
+**Total Effort:** 22-30 hours | **Difficulty:** 🟡 Medium
+
+---
+
+### 3.3 Distributed Parallel Enrichment
+
+**Status:** 🔴 Blocked (depends on 3.2)
 
 **Problem:** Single-host, synchronous enrichment underutilizes multi-GPU homelab.
 
@@ -372,20 +407,18 @@ All 4 phases implemented and merged via Dialectical Autocoding:
   (3 concurrent)   (1 concurrent)    (1 concurrent)
 ```
 
-**Phases:**
-| Phase | Description | Effort |
-|-------|-------------|--------|
-| 0 | Async refactor (httpx) | 8-12h |
-| 1 | Multi-host dispatcher | 12-16h |
-| 2 | Per-host concurrency | 8-12h |
-| 3 | Result aggregation | 8-12h |
-| 4 | Per-host metrics | 4-8h |
+**Note:** Phase 4+5 of 3.2 (Event-Driven Queue) implements most of this. Once the queue exists, adding remote workers is straightforward.
 
-**Total Effort:** 40-60 hours | **Difficulty:** 🔴 Hard
+**Remaining after 3.2:**
+- Multiple Ollama backends per worker
+- GPU load balancing
+- Per-host concurrency tuning
+
+**Additional Effort:** 8-12 hours (on top of 3.2) | **Difficulty:** 🟢 Easy (with queue in place)
 
 ---
 
-### 3.3 Chat Session RAG
+### 3.4 Chat Session RAG
 
 **Idea:** Use LLMC's chunking/embedding pipeline for past conversations.
 - Semantic search: "That conversation where we discussed X"
@@ -395,7 +428,7 @@ All 4 phases implemented and merged via Dialectical Autocoding:
 
 ---
 
-### 3.4 Configurable Tool Calling Format
+### 3.5 Configurable Tool Calling Format
 
 **Context:** LLMC uses OpenAI format (industry standard), but Anthropic's XML format is cleaner.
 
