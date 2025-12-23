@@ -76,6 +76,14 @@ The Architect from Hell descended upon LLMC with a magnifying glass and a vendet
 
 ## [Unreleased]
 
+### Schema Integrity Fix (Phase 0-2 Complete)
+
+- **Schema Compliance & Integrity (P0):**
+  - **Version Gating:** Implemented `PRAGMA user_version` based schema management (Phase 0). Eliminates ~22 redundant `ALTER TABLE` calls on every startup.
+  - **Imports Persistence:** `SpanRecord.imports` is now persisted in SQLite (Phase 1). Fixes data loss where dependency analysis was discarded after indexing.
+  - **Graph Staleness Detection:** Linked `rag_graph.db` to `index_v2.db` via `span_hash` (Phase 2). Added `graph_meta` table to track build timestamps and detect drift.
+  - **Impact:** Fixes "split-brain" syndrome between index and graph, enables reliable dependency analysis recovery.
+
 ### Added (2025-12-21)
 
 - **Context-Efficient Inspect (Roadmap 1.4 - Jules + Antigravity):**

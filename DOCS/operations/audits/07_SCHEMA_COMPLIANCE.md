@@ -1,40 +1,35 @@
-# Audit Charter: Schema Compliance & Data Integrity
+# Audit Report: Schema Compliance & Integrity
 
-**Target Systems:**
-*   `llmc/rag/database.py` (The Source of Truth... allegedly)
-*   `llmc/rag/graph_db.py` (The Graph Store)
-*   `llmc/rag/schema.py` (The Data Models)
-*   `.rag/index_v2.db` (The SQLite Artifact)
+**Audit ID:** 07
+**Status:** RESOLVED
+**Date:** 2025-12-23
+**Auditor:** A-Team (Builder)
 
-**The Objective:**
-Ensure that what we *think* is in the database is actually what *is* in the database. Detect drift between Python code, SQL DDL, and runtime migrations.
+## Executive Summary
 
-**Specific Hunting Grounds:**
+The SQLite schema management strategy was causing significant performance overhead and data consistency issues ("split-brain" syndrome) between the primary index and derived artifacts. This audit confirms the successful implementation of a version-gated schema management system and the persistence of critical dependency data.
 
-1.  **The Migration Swamp:**
-    *   Inspect `database.py::_run_migrations`.
-    *   Are we adding columns in Python that aren't in the `SCHEMA` constant?
-    *   Are there "temporary" migrations from 2024 still running in 2025?
-    *   *Sin:* Defined in `SCHEMA`, missing in `INSERT`, or vice versa.
+## Findings & Resolution
 
-2.  **The Orphanage:**
-    *   Check for `spans` referencing non-existent `files`.
-    *   Check for `enrichments` referencing non-existent `spans`.
-    *   Although `FOREIGN KEY` constraints are enabled (`PRAGMA foreign_keys = ON`), verify they are actually respected during bulk inserts.
+| Finding | Severity | Resolution | Status |
+|---------|----------|------------|--------|
+| **Schema Drift / Startup Overhead** | High | Implemented `PRAGMA user_version` gating. Startup no longer runs 22+ `ALTER TABLE` statements. | ✅ Fixed |
+| **Data Loss (Imports)** | High | Added `imports` column to `spans` table and updated persistence logic. Dependency analysis is now saved. | ✅ Fixed |
+| **Graph/Index Split Brain** | Medium | Added `span_hash` to `rag_graph.db` nodes and implemented `graph_meta` for staleness detection. | ✅ Fixed |
 
-3.  **The Type Lie:**
-    *   Review `SpanRecord` vs `spans` table.
-    *   Are we storing booleans as integers? Integers as strings?
-    *   Check `metadata` JSON blobs. Are they becoming unstructured dumping grounds?
+## verification
 
-4.  **The Ghost Columns:**
-    *   Identify columns in `SCHEMA` that are **never** read or written by the Python code.
-    *   *Action:* If it's dead, bury it.
+### Test Coverage
+New tests were added to verify the integrity of the fixes:
+- `tests/test_database_schema_phase0.py`: Verifies version inference and migration logic.
+- `tests/test_database_schema_phase1.py`: Verifies schema column presence and imports roundtrip.
+- `tests/test_graph_staleness.py`: Verifies graph metadata and staleness detection.
 
-5.  **Graph Integrity:**
-    *   Check `llmc/rag/graph_db.py`.
-    *   Ensure `nodes.id` consistency between the graph DB and the main index.
-    *   Verify `edges` do not point to void IDs.
+### Manual Verification
+- **Startup:** Confirmed 0 `ALTER TABLE` calls on fresh DBs.
+- **Persistence:** Verified `imports` field survives DB roundtrip.
+- **Linkage:** Verified `span_hash` is populated in graph nodes.
 
-**Command for Jules:**
-`audit_schema --persona=architect --target=llmc/rag`
+## Conclusion
+
+The schema integrity issues identified in `DOCS/planning/SDD_Schema_Integrity_Fix.md` have been fully addressed. The database layer is now more robust, performant, and capable of supporting advanced dependency analysis features.
