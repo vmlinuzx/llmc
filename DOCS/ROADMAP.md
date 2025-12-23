@@ -402,6 +402,31 @@ provider = "openai"
 
 ---
 
+### 1.5 Schema Compliance & Integrity (P0) 🚨
+
+**Status:** 🔴 Todo  
+**Added:** 2025-12-23  
+**Source:** Architect Audit #7  
+**Audit Report:** `DOCS/operations/audits/REPORTS/07_SCHEMA_COMPLIANCE_REPORT.md`
+
+**Problem:** The database schema is a mess of "apply patch later" logic. `SCHEMA` constant is stale. `SpanRecord` dataclass promises `imports` data but the DB discards it (data loss).
+
+**Audit Findings:**
+- **Migration Swamp:** `SCHEMA` constant misses 12+ columns that are added via patch migrations.
+- **Data Loss:** `SpanRecord.imports` exists in Python but is NOT persisted to SQLite.
+- **Ghost Columns:** `embeddings` table stores `route_name`/`profile_name` that are never read.
+- **Split Brain:** `.rag/index_v2.db` (SQLite) and `.llmc/rag_graph.db` (Graph) are totally separate universes with no referential integrity.
+
+**The Plan:**
+1. **Sync SCHEMA:** Update `database.py` constants to match reality.
+2. **Fix Imports:** Persist `imports` list to DB (JSON column).
+3. **Graph Linkage:** Add foreign key references between graph nodes and index spans.
+4. **Clean House:** Remove unused columns and unify `database.py` vs `graph_db.py`.
+
+**Effort:** 8-12 hours | **Difficulty:** 🟡 Medium
+
+---
+
 ## 3. Later (R&D)
 
 ### 3.1 RAG Scoring System 3.0 🔥

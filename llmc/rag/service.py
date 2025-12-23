@@ -571,12 +571,14 @@ class RAGService:
             router = build_router_from_toml(repo)
 
             # Create pipeline with new backend factory that supports all providers
+            log_dir = repo / "logs"
             pipeline = EnrichmentPipeline(
                 db=db,
                 router=router,
                 backend_factory=create_backend_from_spec,
                 prompt_builder=build_enrichment_prompt,
                 repo_root=repo,
+                log_dir=log_dir,
                 max_failures_per_span=self.tracker.max_failures,
                 cooldown_seconds=cooldown,
                 code_first=code_first,
@@ -922,6 +924,7 @@ class RAGService:
 
                     # Build router and pipeline
                     router = build_router_from_toml(repo)
+                    log_dir = repo / "logs"
 
                     pipeline = EnrichmentPipeline(
                         db=db,
@@ -929,6 +932,7 @@ class RAGService:
                         backend_factory=create_backend_from_spec,
                         prompt_builder=build_enrichment_prompt,
                         repo_root=repo,
+                        log_dir=log_dir,
                         max_failures_per_span=self.tracker.max_failures,
                         cooldown_seconds=0,
                         code_first=code_first,

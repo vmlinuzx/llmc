@@ -126,19 +126,20 @@ def _cmd_config(config: DaemonConfig, json_output: bool) -> int:
 
 def _cmd_doctor(config: DaemonConfig) -> int:
     """Basic health checks for daemon environment."""
+    logger = get_logger("rag_daemon.doctor", config)
     ok = True
 
-    print("LLMC RAG Daemon Doctor")
-    print("======================")
+    logger.info("LLMC RAG Daemon Doctor")
+    logger.info("======================")
 
     # Registry file
     registry_path = config.registry_path
     if not registry_path.exists():
-        print(f"[WARN] Registry file does not exist: {registry_path}")
-        print("       Daemon will idle with 0 repos until one is registered.")
+        logger.warning(f"Registry file does not exist: {registry_path}")
+        logger.warning("Daemon will idle with 0 repos until one is registered.")
     else:
         if not os.access(registry_path, os.R_OK):
-            print(f"[ERROR] Registry not readable: {registry_path}")
+            logger.error(f"Registry not readable: {registry_path}")
             ok = False
 
     # State store / log / control directories (existence + basic writability)
@@ -150,17 +151,17 @@ def _cmd_doctor(config: DaemonConfig) -> int:
         if not path.exists():
             try:
                 path.mkdir(parents=True, exist_ok=True)
-                print(f"[INFO] Created missing {label} directory at {path}")
+                logger.info(f"Created missing {label} directory at {path}")
             except Exception as exc:  # pragma: no cover - defensive
-                print(f"[ERROR] Could not create {label} directory {path}: {exc}")
+                logger.error(f"Could not create {label} directory {path}: {exc}")
                 ok = False
                 continue
 
         if not os.access(path, os.W_OK):
-            print(f"[ERROR] {label} not writable: {path}")
+            logger.error(f"{label} not writable: {path}")
             ok = False
         else:
-            print(f"[OK] {label}: {path}")
+            logger.info(f"{label}: {path}")
 
     return 0 if ok else 1
 

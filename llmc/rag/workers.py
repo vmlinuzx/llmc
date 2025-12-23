@@ -101,9 +101,8 @@ def enrichment_plan(
             # Source file vanished (e.g., moved or deleted) – drop related spans so the plan stays healthy.
             with db.transaction():
                 db.delete_file(item.file_path)
-            print(
-                f"[enrichment_plan] skipped missing file {item.file_path}",
-                file=sys.stderr,
+            log.warning(
+                f"[enrichment_plan] skipped missing file {item.file_path}"
             )
             continue
         plan.append(
