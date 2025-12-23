@@ -159,6 +159,18 @@ def generate_schema(
     
     db = Database(db_path)
     stats = db.stats()
+
+    # Check for graph staleness
+    try:
+        from llmc.rag.graph_db import GraphDatabase
+        graph_db_path = repo_root / ".llmc" / "rag_graph.db"
+        if graph_db_path.exists():
+            with GraphDatabase(graph_db_path) as graph_db:
+                if graph_db.is_stale(db):
+                    console.print("[yellow]Warning: Graph is stale. Run 'llmc-cli service restart' to update.[/yellow]")
+    except Exception:
+        pass
+
     file_descriptions = _get_file_descriptions(db) if include_descriptions else {}
     
     # Get all file paths

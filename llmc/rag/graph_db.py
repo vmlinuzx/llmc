@@ -1,11 +1,23 @@
-import json
-import sqlite3
 from collections.abc import Iterable
+from datetime import UTC, datetime
+import json
+import logging
 from pathlib import Path
-from typing import Any, NamedTuple
+import sqlite3
+from typing import TYPE_CHECKING, Any, NamedTuple
+
+if TYPE_CHECKING:
+    from .database import Database
+
+logger = logging.getLogger(__name__)
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
+
+CREATE TABLE IF NOT EXISTS graph_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT
+);
 
 CREATE TABLE IF NOT EXISTS nodes (
     id TEXT PRIMARY KEY,
@@ -14,11 +26,13 @@ CREATE TABLE IF NOT EXISTS nodes (
     kind TEXT,
     start_line INTEGER,
     end_line INTEGER,
+    span_hash TEXT,
     metadata TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_nodes_name ON nodes(name);
 CREATE INDEX IF NOT EXISTS idx_nodes_name_lower ON nodes(lower(name));
 CREATE INDEX IF NOT EXISTS idx_nodes_path ON nodes(path);
+CREATE INDEX IF NOT EXISTS idx_nodes_span_hash ON nodes(span_hash);
 
 CREATE TABLE IF NOT EXISTS edges (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +60,7 @@ class Node(NamedTuple):
     kind: str | None = None
     start_line: int | None = None
     end_line: int | None = None
+    span_hash: str | None = None
     metadata: dict[str, Any] | None = None
 
 class Edge(NamedTuple):
@@ -92,8 +107,8 @@ class GraphDatabase:
         with self._get_new_conn() as conn:
             conn.executemany(
                 """
-                INSERT OR REPLACE INTO nodes (id, name, path, kind, start_line, end_line, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT OR REPLACE INTO nodes (id, name, path, kind, start_line, end_line, span_hash, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     (
@@ -103,6 +118,7 @@ class GraphDatabase:
                         n.kind,
                         n.start_line,
                         n.end_line,
+                        n.span_hash,
                         json.dumps(n.metadata) if n.metadata else None,
                     )
                     for n in nodes
@@ -394,6 +410,35 @@ class GraphDatabase:
                 conn.close()
 
 
+    def get_meta(self, key: str) -> str | None:
+        conn = self._get_conn()
+        try:
+            row = conn.execute(
+                "SELECT value FROM graph_meta WHERE key = ?", (key,)
+            ).fetchone()
+            return row[0] if row else None
+        finally:
+            if not self._shared_conn:
+                conn.close()
+
+    def is_stale(self, index_db: "Database") -> bool:
+        """Return True if graph was built from older index data."""
+        stored_mtime = self.get_meta("index_db_mtime")
+        # Ensure we're comparing floats
+        if not stored_mtime:
+            return True
+            
+        try:
+            stored_ts = float(stored_mtime)
+        except (ValueError, TypeError):
+            return True
+
+        current_mtime = index_db.conn.execute(
+            "SELECT MAX(mtime) FROM files"
+        ).fetchone()[0]
+        
+        return stored_ts < (current_mtime or 0)
+
     def _row_to_node(self, row: sqlite3.Row) -> Node:
         return Node(
             id=row["id"],
@@ -402,6 +447,7 @@ class GraphDatabase:
             kind=row["kind"],
             start_line=row["start_line"],
             end_line=row["end_line"],
+            span_hash=row["span_hash"],
             metadata=json.loads(row["metadata"]) if row["metadata"] else None,
         )
 
@@ -477,6 +523,7 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
         end_line = span.get("end_line") or span.get("end") or n.get("end_line")
         
         metadata = n.get("metadata")
+        span_hash = (metadata or {}).get("span_hash") if metadata else None
         
         nodes.append(Node(
             id=nid,
@@ -485,6 +532,7 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
             kind=kind,
             start_line=int(start_line) if start_line else None,
             end_line=int(end_line) if end_line else None,
+            span_hash=span_hash,
             metadata=metadata,
         ))
     
@@ -506,10 +554,47 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
     # Remove existing database and create fresh
     if db_path.exists():
         db_path.unlink()
-    
+
+    # Get max mtime from index to detect staleness
+    index_path = repo_root / ".llmc" / "rag" / "index_v2.db"
+    max_mtime = 0.0
+    if index_path.exists():
+        try:
+            with sqlite3.connect(index_path) as idx_conn:
+                row = idx_conn.execute("SELECT MAX(mtime) FROM files").fetchone()
+                if row and row[0]:
+                    max_mtime = float(row[0])
+        except Exception:
+            pass  # If index is busy or broken, use 0.0 (will be stale)
+
     db = GraphDatabase(db_path)
     db.bulk_insert_nodes(nodes)
     db.bulk_insert_edges(edges)
+    
+    # Write staleness metadata
+    with db._get_new_conn() as conn:
+        conn.execute(
+            "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
+            ("index_db_mtime", str(max_mtime))
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
+            ("built_at", datetime.now(UTC).isoformat())
+        )
+        conn.commit()
+    
+    # Audit span_hash coverage
+    with db._get_new_conn() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
+        linked = conn.execute("SELECT COUNT(*) FROM nodes WHERE span_hash IS NOT NULL").fetchone()[0]
+        if total > 0:
+            logger.info(
+                "Graph integrity: %d/%d nodes linked to index (%.1f%%)",
+                linked,
+                total,
+                (linked / total * 100),
+            )
+
     db.vacuum()
     
     return db

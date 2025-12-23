@@ -42,6 +42,24 @@ def inspect_symbol_command(
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         raise typer.Exit(1)
 
+    # Check for graph staleness
+    try:
+        from llmc.rag.database import Database
+        from llmc.rag.graph_db import GraphDatabase
+        from llmc.rag.config import index_path_for_read
+        
+        index_path = index_path_for_read(repo_root)
+        graph_path = repo_root / ".llmc" / "rag_graph.db"
+        
+        if index_path.exists() and graph_path.exists():
+            with GraphDatabase(graph_path) as graph_db:
+                index_db = Database(index_path)
+                if graph_db.is_stale(index_db):
+                    console.print("[yellow]Warning: Graph is stale. Run 'llmc-cli service restart' to update.[/yellow]")
+                index_db.close()
+    except Exception:
+        pass  # Don't block on check failure
+
     try:
         result = inspect_entity(repo_root, symbol=symbol)
     except ValueError as e:

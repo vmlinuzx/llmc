@@ -23,7 +23,8 @@ CREATE TABLE IF NOT EXISTS files (
     lang TEXT NOT NULL,
     file_hash TEXT NOT NULL,
     size INTEGER NOT NULL,
-    mtime REAL NOT NULL
+    mtime REAL NOT NULL,
+    sidecar_path TEXT
 );
 
 CREATE TABLE IF NOT EXISTS spans (
@@ -41,7 +42,8 @@ CREATE TABLE IF NOT EXISTS spans (
     slice_type TEXT,
     slice_language TEXT,
     classifier_confidence REAL,
-    classifier_version TEXT
+    classifier_version TEXT,
+    imports TEXT
 );
 
 CREATE TABLE IF NOT EXISTS embeddings_meta (
@@ -85,6 +87,12 @@ CREATE TABLE IF NOT EXISTS enrichments (
     content_language TEXT,
     content_type_confidence REAL,
     content_type_source TEXT,
+    tokens_per_second REAL,
+    eval_count INTEGER,
+    eval_duration_ns INTEGER,
+    prompt_eval_count INTEGER,
+    total_duration_ns INTEGER,
+    backend_host TEXT,
     FOREIGN KEY (span_hash) REFERENCES spans(span_hash) ON DELETE CASCADE
 );
 
@@ -99,11 +107,15 @@ CREATE TABLE IF NOT EXISTS file_descriptions (
     description TEXT,
     source TEXT,
     updated_at DATETIME,
-    content_hash TEXT
+    content_hash TEXT,
+    input_hash TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_file_descriptions_file_path ON file_descriptions(file_path);
+CREATE INDEX IF NOT EXISTS idx_file_descriptions_input_hash ON file_descriptions(input_hash);
 """
+
+DB_SCHEMA_VERSION = 7
 
 
 class Database:
@@ -111,7 +123,7 @@ class Database:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = self._open_and_prepare()
-        self._run_migrations()
+        # _run_versioned_migrations is now called inside _open_and_prepare
         self._ensure_fts()
 
     @property
@@ -143,6 +155,7 @@ class Database:
                 s.slice_language,
                 s.classifier_confidence,
                 s.classifier_version,
+                s.imports,
                 f.path AS file_path,
                 f.lang AS lang
             FROM spans AS s
@@ -169,45 +182,113 @@ class Database:
             slice_language=row["slice_language"],
             classifier_confidence=row["classifier_confidence"] or 0.0,
             classifier_version=row["classifier_version"] or "",
+            imports=json.loads(row["imports"]) if row["imports"] else [],
         )
 
-    def _run_migrations(self) -> None:
-        migrations = [
-            ("enrichments", "inputs", "TEXT"),
-            ("enrichments", "outputs", "TEXT"),
-            ("enrichments", "side_effects", "TEXT"),
-            ("enrichments", "pitfalls", "TEXT"),
-            ("enrichments", "usage_snippet", "TEXT"),
-            # Phase 1 routing migrations
-            ("spans", "slice_type", "TEXT"),
-            ("spans", "slice_language", "TEXT"),
-            ("spans", "classifier_confidence", "REAL"),
-            ("spans", "classifier_version", "TEXT"),
-            ("embeddings", "route_name", "TEXT"),
-            ("embeddings", "profile_name", "TEXT"),
-            ("enrichments", "content_type", "TEXT"),
-            ("enrichments", "content_language", "TEXT"),
-            ("enrichments", "content_type_confidence", "REAL"),
-            ("enrichments", "content_type_source", "TEXT"),
-            # Performance metrics (2025-12 - for model comparison)
-            ("enrichments", "tokens_per_second", "REAL"),
-            ("enrichments", "eval_count", "INTEGER"),
-            ("enrichments", "eval_duration_ns", "INTEGER"),
-            ("enrichments", "prompt_eval_count", "INTEGER"),
-            ("enrichments", "total_duration_ns", "INTEGER"),
-            ("enrichments", "backend_host", "TEXT"),
-            # Sidecar system (2025-12 - for PDF/DOCX conversion)
-            ("files", "sidecar_path", "TEXT"),
-        ]
-        for table, column, coltype in migrations:
-            try:
-                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
-            except sqlite3.OperationalError:
-                pass
+    def _get_existing_columns(self, table: str) -> set[str]:
+        """Return set of column names for a table using PRAGMA table_info."""
+        rows = self._conn.execute(f"PRAGMA table_info({table})").fetchall()
+        return {row[1] for row in rows}  # column name is at index 1
+
+    def _infer_schema_version(self, conn: sqlite3.Connection) -> int:
+        """Infer schema version from column presence for legacy DBs."""
+
+        def has_column(table: str, column: str) -> bool:
+            rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+            return any(r[1] == column for r in rows)
+
+        # Work backwards from latest to find highest matching version
+        if has_column("spans", "imports"):
+            return 7  # v7 added spans.imports
+        if has_column("enrichments", "tokens_per_second"):
+            return 6  # v6 added perf metrics
+        if has_column("enrichments", "content_type"):
+            return 5  # v5 added content_type
+        if has_column("embeddings", "route_name"):
+            return 4  # v4 added route_name
+        if has_column("spans", "slice_type"):
+            return 3  # v3 added slice_type
+        if has_column("enrichments", "inputs"):
+            return 2  # v2 added inputs/outputs
+        return 1  # Base schema
+
+    def _run_versioned_migrations(self, conn: sqlite3.Connection, from_version: int) -> None:
+        """Run only migrations needed to upgrade from from_version to current."""
+        # Version 2: Added inputs/outputs/side_effects/pitfalls/usage_snippet
+        if from_version < 2:
+            migrations = [
+                ("enrichments", "inputs", "TEXT"),
+                ("enrichments", "outputs", "TEXT"),
+                ("enrichments", "side_effects", "TEXT"),
+                ("enrichments", "pitfalls", "TEXT"),
+                ("enrichments", "usage_snippet", "TEXT"),
+            ]
+            for table, column, coltype in migrations:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                except sqlite3.OperationalError:
+                    pass
+
+        # Version 3: Added slice_type, slice_language, classifier_*
+        if from_version < 3:
+            migrations = [
+                ("spans", "slice_type", "TEXT"),
+                ("spans", "slice_language", "TEXT"),
+                ("spans", "classifier_confidence", "REAL"),
+                ("spans", "classifier_version", "TEXT"),
+            ]
+            for table, column, coltype in migrations:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                except sqlite3.OperationalError:
+                    pass
+
+        # Version 4: Added route_name, profile_name
+        if from_version < 4:
+            migrations = [
+                ("embeddings", "route_name", "TEXT"),
+                ("embeddings", "profile_name", "TEXT"),
+            ]
+            for table, column, coltype in migrations:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                except sqlite3.OperationalError:
+                    pass
+
+        # Version 5: Added content_type, content_language, etc.
+        if from_version < 5:
+            migrations = [
+                ("enrichments", "content_type", "TEXT"),
+                ("enrichments", "content_language", "TEXT"),
+                ("enrichments", "content_type_confidence", "REAL"),
+                ("enrichments", "content_type_source", "TEXT"),
+            ]
+            for table, column, coltype in migrations:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                except sqlite3.OperationalError:
+                    pass
+
+        # Version 6: Added performance metrics and sidecar_path
+        if from_version < 6:
+            migrations = [
+                ("enrichments", "tokens_per_second", "REAL"),
+                ("enrichments", "eval_count", "INTEGER"),
+                ("enrichments", "eval_duration_ns", "INTEGER"),
+                ("enrichments", "prompt_eval_count", "INTEGER"),
+                ("enrichments", "total_duration_ns", "INTEGER"),
+                ("enrichments", "backend_host", "TEXT"),
+                ("files", "sidecar_path", "TEXT"),
+            ]
+            for table, column, coltype in migrations:
+                try:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                except sqlite3.OperationalError:
+                    pass
 
         # Table migrations (for existing databases that predate certain tables)
         # file_descriptions: Added 2025-12 for stable file-level summaries
-        self._conn.execute("""
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS file_descriptions (
                 id INTEGER PRIMARY KEY,
                 file_id INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
@@ -222,14 +303,14 @@ class Database:
         # Add input_hash column if not exists (for databases with old schema that
         # has the table but not the column - must be done BEFORE creating the index)
         try:
-            self._conn.execute("ALTER TABLE file_descriptions ADD COLUMN input_hash TEXT")
+            conn.execute("ALTER TABLE file_descriptions ADD COLUMN input_hash TEXT")
         except sqlite3.OperationalError:
             pass  # Column already exists
-        self._conn.execute(
+        conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_file_descriptions_file_path "
             "ON file_descriptions(file_path)"
         )
-        self._conn.execute(
+        conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_file_descriptions_input_hash "
             "ON file_descriptions(input_hash)"
         )
@@ -242,14 +323,34 @@ class Database:
         self._conn.execute("VACUUM")
 
     def _open_and_prepare(self) -> sqlite3.Connection:
-        """Open the sqlite database, quarantining corrupt files if needed."""
+        """Open the sqlite database with version-gated schema management."""
         attempts = 0
         while True:
             attempts += 1
             conn = sqlite3.connect(str(self.path))
             conn.row_factory = sqlite3.Row
             try:
-                conn.executescript(SCHEMA)
+                current_version = conn.execute("PRAGMA user_version").fetchone()[0]
+
+                if current_version == 0:
+                    # Check if this is fresh DB or pre-gating legacy
+                    tables = conn.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table'"
+                    ).fetchall()
+                    if not tables or all(t[0].startswith("sqlite_") for t in tables):
+                        # Fresh DB - apply latest schema directly
+                        conn.executescript(SCHEMA)
+                    else:
+                        # Pre-gating legacy DB - infer version and migrate
+                        inferred = self._infer_schema_version(conn)
+                        self._run_versioned_migrations(conn, inferred)
+                    conn.execute(f"PRAGMA user_version = {DB_SCHEMA_VERSION}")
+                elif current_version < DB_SCHEMA_VERSION:
+                    # Post-gating DB - run only needed migrations
+                    self._run_versioned_migrations(conn, current_version)
+                    conn.execute(f"PRAGMA user_version = {DB_SCHEMA_VERSION}")
+                # else: current_version == DB_SCHEMA_VERSION, no action needed
+
             except sqlite3.DatabaseError as exc:
                 conn.close()
                 if not self._should_recover_from(exc) or attempts >= 2:
@@ -357,8 +458,9 @@ class Database:
                 INSERT OR REPLACE INTO spans (
                     file_id, symbol, kind, start_line, end_line,
                     byte_start, byte_end, span_hash, doc_hint,
-                    slice_type, slice_language, classifier_confidence, classifier_version
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    slice_type, slice_language, classifier_confidence, classifier_version,
+                    imports
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -375,6 +477,7 @@ class Database:
                         span.slice_language,
                         span.classifier_confidence,
                         span.classifier_version,
+                        json.dumps(span.imports) if span.imports else None,
                     )
                     for span in new_spans
                 ],
@@ -663,7 +766,9 @@ class Database:
                 spans.end_line,
                 files.path AS file_path,
                 COALESCE(enrichments.summary, spans.doc_hint, '') AS summary,
-                {table_name}.vec
+                {table_name}.vec,
+                {table_name}.route_name,
+                {table_name}.profile_name
             FROM {table_name}
             JOIN spans ON spans.span_hash = {table_name}.span_hash
             JOIN files ON files.id = spans.file_id
@@ -742,6 +847,7 @@ class Database:
                 s.slice_language,
                 s.classifier_confidence,
                 s.classifier_version,
+                s.imports,
                 f.path AS file_path,
                 f.lang AS lang
             FROM spans AS s
@@ -763,6 +869,7 @@ class Database:
                 slice_language=row["slice_language"],
                 classifier_confidence=row["classifier_confidence"] or 0.0,
                 classifier_version=row["classifier_version"] or "",
+                imports=json.loads(row["imports"]) if row["imports"] else [],
             )
             for row in rows
         ]
