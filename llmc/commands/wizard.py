@@ -61,6 +61,7 @@ RECOMMENDED_EMBED = [
 ]
 
 
+from llmc.security import validate_ollama_url
 def _check_ollama(url: str) -> tuple[bool, list[str]]:
     """Check Ollama connectivity and return available models."""
     try:
@@ -68,6 +69,9 @@ def _check_ollama(url: str) -> tuple[bool, list[str]]:
         url = url.rstrip("/")
         if not url.startswith(("http://", "https://")):
             url = f"http://{url}"
+
+        # Security: Validate URL before making a request
+        validate_ollama_url(url)
 
         # Check tags endpoint
         resp = requests.get(f"{url}/api/tags", timeout=5)

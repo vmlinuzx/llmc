@@ -198,7 +198,11 @@ class Database:
         ]
         for table, column, coltype in migrations:
             try:
-                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coltype}")
+                # Note: This uses string formatting because table and column names
+                # cannot be parameterized in SQL. The inputs are controlled by the
+                # static `migrations` list above, so this is safe.
+                query = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + coltype
+                self._conn.execute(query)
             except sqlite3.OperationalError:
                 pass
 
