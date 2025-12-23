@@ -13,6 +13,7 @@ Core commands: config, tui, monitor
 
 
 import typer
+import re
 
 from llmc.commands import (
     config as config_commands,
@@ -62,6 +63,19 @@ def monitor():
     service_commands.logs(follow=True, lines=50)
 
 
+def _sanitize_input(text: str) -> str:
+    """Sanitize input to prevent injection attacks."""
+    if not text:
+        return text
+    # Remove potentially dangerous characters
+    # ; (command chaining)
+    # < > (redirection/html)
+    # ' (sql/shell quotes)
+    # -- (sql comments)
+    pattern = r"[;<>']|--"
+    return re.sub(pattern, "", text)
+
+
 @app.command()
 def chat(
     prompt: str = typer.Argument(None, help="Question to ask about the codebase"),
@@ -94,6 +108,7 @@ def chat(
     # Build args for the click CLI
     args = []
     if prompt:
+        prompt = _sanitize_input(prompt)
         args.append(prompt)
     if new:
         args.append("-n")
