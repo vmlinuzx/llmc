@@ -46,6 +46,8 @@ Primary CLI for LLMC operations
 │             graph navigation        │
 │ debug       Troubleshooting and     │
 │             diagnostic commands     │
+│ test        Testing and validation  │
+│             commands                │
 │ docs        LLMC documentation and  │
 │             guides                  │
 ╰─────────────────────────────────────╯

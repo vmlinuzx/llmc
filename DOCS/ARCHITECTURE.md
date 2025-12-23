@@ -246,7 +246,5 @@ pytest tests/test_rmta*.py tests/test_mcp*.py
 
 ## Related Documentation
 
-- [Roadmap](planning/roadmap.md) - Current and planned work
+- [Roadmap](ROADMAP.md) - Current and planned work
 - [CLI Reference](user-guide/cli-reference.md) - Command documentation
-- [MCP Hybrid Mode SDD](planning/SDD_MCP_Hybrid_Mode.md) - MCP architecture details
-- [Domain RAG Tech Docs](legacy/SDD_Domain_RAG_Tech_Docs.md) - Tech docs support

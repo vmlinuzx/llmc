@@ -12,7 +12,7 @@ cd /path/to/llmc
 pip install -e .
 ```
 
-This installs the `llmc` command globally.
+This installs the `llmc-cli` command globally.
 
 ---
 
@@ -21,7 +21,7 @@ This installs the `llmc` command globally.
 The CLI is organized into logical groups for discoverability:
 
 ```
-llmc
+llmc-cli
 ├── init              # Bootstrap workspace
 ├── config            # Interactive config TUI
 ├── tui               # Main TUI dashboard
@@ -70,31 +70,31 @@ llmc
 
 ```bash
 # Initialize a new repository
-llmc init
+llmc-cli init
 
 # Start the RAG service
-llmc service repo add .
-llmc service start
+llmc-cli service repo add .
+llmc-cli service start
 
 # Search semantically
-llmc analytics search "how does authentication work?"
+llmc-cli analytics search "how does authentication work?"
 
 # View stats
-llmc analytics stats
+llmc-cli analytics stats
 
 # Launch TUI
-llmc tui
+llmc-cli tui
 ```
 
 ---
 
 ## Core Commands
 
-### `llmc init`
+### `llmc-cli init`
 Bootstrap `.llmc/` workspace and configuration.
 
 ```bash
-llmc init
+llmc-cli init
 ```
 
 Creates:
@@ -105,20 +105,20 @@ Creates:
 
 ---
 
-### `llmc config`
+### `llmc-cli config`
 Launch the interactive enrichment configuration TUI.
 
 ```bash
-llmc config
+llmc-cli config
 ```
 
 ---
 
-### `llmc tui`
+### `llmc-cli tui`
 Launch the interactive TUI dashboard.
 
 ```bash
-llmc tui
+llmc-cli tui
 ```
 
 Features:
@@ -130,31 +130,31 @@ Features:
 
 ---
 
-### `llmc monitor`
-Monitor service logs (alias for `llmc service logs -f`).
+### `llmc-cli monitor`
+Monitor service logs (alias for `llmc-cli service logs -f`).
 
 ```bash
-llmc monitor
+llmc-cli monitor
 ```
 
 ---
 
-### `llmc chat`
+### `llmc-cli chat`
 AI coding assistant with RAG-powered context.
 
 ```bash
-llmc chat "Where is the routing logic?"
-llmc chat -n "New session"
-llmc chat -r  # Recall last session
+llmc-cli chat "Where is the routing logic?"
+llmc-cli chat -n "New session"
+llmc-cli chat -r  # Recall last session
 ```
 
 ---
 
-### `llmc --version`
+### `llmc-cli --version`
 Show version information and repository status.
 
 ```bash
-llmc --version
+llmc-cli --version
 # Output:
 # LLMC v0.6.0
 # Root: /home/user/src/myproject
@@ -165,18 +165,18 @@ llmc --version
 
 ## Analytics Commands
 
-### `llmc analytics search`
+### `llmc-cli analytics search`
 Semantic search over indexed code.
 
 ```bash
 # Basic search
-llmc analytics search "JWT verification"
+llmc-cli analytics search "JWT verification"
 
 # Limit results
-llmc analytics search "database connection" --limit 20
+llmc-cli analytics search "database connection" --limit 20
 
 # JSON output
-llmc analytics search "error handling" --json
+llmc-cli analytics search "error handling" --json
 ```
 
 **Options:**
@@ -185,15 +185,15 @@ llmc analytics search "error handling" --json
 
 ---
 
-### `llmc analytics stats`
+### `llmc-cli analytics stats`
 Print summary statistics for the current index.
 
 ```bash
 # Human-readable stats
-llmc analytics stats
+llmc-cli analytics stats
 
 # JSON output
-llmc analytics stats --json
+llmc-cli analytics stats --json
 ```
 
 **Output:**
@@ -208,18 +208,18 @@ Est. Remote Tokens: 308,600
 
 ---
 
-### `llmc analytics benchmark`
+### `llmc-cli analytics benchmark`
 Run embedding quality benchmark.
 
 ```bash
 # Run benchmark
-llmc analytics benchmark
+llmc-cli analytics benchmark
 
 # JSON output
-llmc analytics benchmark --json
+llmc-cli analytics benchmark --json
 
 # Adjust thresholds
-llmc analytics benchmark --top1-threshold 0.8 --margin-threshold 0.15
+llmc-cli analytics benchmark --top1-threshold 0.8 --margin-threshold 0.15
 ```
 
 **Options:**
@@ -229,18 +229,18 @@ llmc analytics benchmark --top1-threshold 0.8 --margin-threshold 0.15
 
 ---
 
-### `llmc analytics where-used`
+### `llmc-cli analytics where-used`
 Find where a symbol is used.
 
 ```bash
 # Find usages
-llmc analytics where-used search_spans
+llmc-cli analytics where-used search_spans
 
 # Limit results
-llmc analytics where-used Database --limit 50
+llmc-cli analytics where-used Database --limit 50
 
 # JSON output
-llmc analytics where-used index_repo --json
+llmc-cli analytics where-used index_repo --json
 ```
 
 **Options:**
@@ -249,18 +249,18 @@ llmc analytics where-used index_repo --json
 
 ---
 
-### `llmc analytics lineage`
+### `llmc-cli analytics lineage`
 Show symbol lineage (dependencies).
 
 ```bash
 # Show lineage
-llmc analytics lineage search_spans
+llmc-cli analytics lineage search_spans
 
 # Deeper traversal
-llmc analytics lineage Database --depth 5
+llmc-cli analytics lineage Database --depth 5
 
 # JSON output
-llmc analytics lineage index_repo --json
+llmc-cli analytics lineage index_repo --json
 ```
 
 **Options:**
@@ -271,18 +271,18 @@ llmc analytics lineage index_repo --json
 
 ## Debug Commands
 
-### `llmc debug index`
+### `llmc-cli debug index`
 Index the repository (full or incremental).
 
 ```bash
 # Full index
-llmc debug index
+llmc-cli debug index
 
 # Incremental (since commit)
-llmc debug index --since HEAD~10
+llmc-cli debug index --since HEAD~10
 
 # Skip JSONL export
-llmc debug index --no-export
+llmc-cli debug index --no-export
 ```
 
 **Options:**
@@ -291,31 +291,31 @@ llmc debug index --no-export
 
 ---
 
-### `llmc debug doctor`
+### `llmc-cli debug doctor`
 Diagnose RAG health and identify issues.
 
 ```bash
 # Basic health check
-llmc debug doctor
+llmc-cli debug doctor
 
 # Verbose output
-llmc debug doctor --verbose
+llmc-cli debug doctor --verbose
 ```
 
 ---
 
-### `llmc debug sync`
+### `llmc-cli debug sync`
 Incrementally update spans for selected files.
 
 ```bash
 # Sync specific files
-llmc debug sync --path llmc/rag/search.py --path llmc/rag/indexer.py
+llmc-cli debug sync --path llmc/rag/search.py --path llmc/rag/indexer.py
 
 # Sync files changed since commit
-llmc debug sync --since HEAD~5
+llmc-cli debug sync --since HEAD~5
 
 # Read paths from stdin
-git diff --name-only HEAD~10 | llmc debug sync --stdin
+git diff --name-only HEAD~10 | llmc-cli debug sync --stdin
 ```
 
 **Options:**
@@ -325,21 +325,21 @@ git diff --name-only HEAD~10 | llmc debug sync --stdin
 
 ---
 
-### `llmc debug enrich`
+### `llmc-cli debug enrich`
 Run LLM-based enrichment on spans.
 
 ```bash
 # Dry run (preview work)
-llmc debug enrich --dry-run
+llmc-cli debug enrich --dry-run
 
 # Enrich 50 spans
-llmc debug enrich --limit 50
+llmc-cli debug enrich --limit 50
 
 # Use specific model
-llmc debug enrich --model gpt-4 --limit 10
+llmc-cli debug enrich --model gpt-4 --limit 10
 
 # Skip recently changed files
-llmc debug enrich --cooldown 300
+llmc-cli debug enrich --cooldown 300
 ```
 
 **Options:**
@@ -355,21 +355,21 @@ llmc debug enrich --cooldown 300
 
 ---
 
-### `llmc debug embed`
+### `llmc-cli debug embed`
 Generate embeddings for spans.
 
 ```bash
 # Dry run
-llmc debug embed --dry-run
+llmc-cli debug embed --dry-run
 
 # Generate embeddings
-llmc debug embed --limit 100
+llmc-cli debug embed --limit 100
 
 # Use specific model
-llmc debug embed --model sentence-transformers/all-MiniLM-L6-v2
+llmc-cli debug embed --model sentence-transformers/all-MiniLM-L6-v2
 
 # Specify dimension
-llmc debug embed --dim 384
+llmc-cli debug embed --dim 384
 ```
 
 **Options:**
@@ -380,18 +380,18 @@ llmc debug embed --dim 384
 
 ---
 
-### `llmc debug graph`
+### `llmc-cli debug graph`
 Build a schema graph for the repository.
 
 ```bash
 # Build graph (requires enrichment)
-llmc debug graph
+llmc-cli debug graph
 
 # Allow empty enrichment
-llmc debug graph --no-require-enrichment
+llmc-cli debug graph --no-require-enrichment
 
 # Custom output path
-llmc debug graph --output /tmp/my_graph.json
+llmc-cli debug graph --output /tmp/my_graph.json
 ```
 
 **Options:**
@@ -400,18 +400,18 @@ llmc debug graph --output /tmp/my_graph.json
 
 ---
 
-### `llmc debug plan`
+### `llmc-cli debug plan`
 Generate a retrieval plan for a query.
 
 ```bash
 # Generate plan
-llmc debug plan "Where do we validate user input?"
+llmc-cli debug plan "Where do we validate user input?"
 
 # Adjust confidence threshold
-llmc debug plan "authentication flow" --min-confidence 0.7
+llmc-cli debug plan "authentication flow" --min-confidence 0.7
 
 # More results
-llmc debug plan "error handling" --limit 100
+llmc-cli debug plan "error handling" --limit 100
 ```
 
 **Options:**
@@ -420,21 +420,21 @@ llmc debug plan "error handling" --limit 100
 
 ---
 
-### `llmc debug inspect`
+### `llmc-cli debug inspect`
 Deep dive into a file or symbol with graph context.
 
 ```bash
 # Inspect by symbol
-llmc debug inspect --symbol llmc.rag.search.search_spans
+llmc-cli debug inspect --symbol llmc.rag.search.search_spans
 
 # Inspect by file path
-llmc debug inspect --path llmc/rag/search.py
+llmc-cli debug inspect --path llmc/rag/search.py
 
 # Include full source
-llmc debug inspect --path llmc/rag/search.py --full
+llmc-cli debug inspect --path llmc/rag/search.py --full
 
 # Focus on specific line
-llmc debug inspect --path llmc/rag/search.py --line 42
+llmc-cli debug inspect --path llmc/rag/search.py --line 42
 ```
 
 **Options:**
@@ -445,15 +445,15 @@ llmc debug inspect --path llmc/rag/search.py --line 42
 
 ---
 
-### `llmc debug export`
+### `llmc-cli debug export`
 Export all RAG data to tar.gz archive.
 
 ```bash
 # Export with auto-generated name
-llmc debug export
+llmc-cli debug export
 
 # Custom output path
-llmc debug export --output /tmp/rag_backup.tar.gz
+llmc-cli debug export --output /tmp/rag_backup.tar.gz
 ```
 
 **Options:**
@@ -461,77 +461,77 @@ llmc debug export --output /tmp/rag_backup.tar.gz
 
 ---
 
-### `llmc debug enrich-status`
+### `llmc-cli debug enrich-status`
 Show enrichment runner metrics and code-first status.
 
 ```bash
 # Human-readable output
-llmc debug enrich-status
+llmc-cli debug enrich-status
 
 # JSON output
-llmc debug enrich-status --json
+llmc-cli debug enrich-status --json
 ```
 
 ---
 
-### `llmc docs generate`
+### `llmc-cli docs generate`
 Generate documentation for repository files.
 
 ```bash
-llmc docs generate
+llmc-cli docs generate
 ```
 
 ---
 
-### `llmc docs status`
+### `llmc-cli docs status`
 Show documentation generation status.
 
 ```bash
-llmc docs status
+llmc-cli docs status
 ```
 
 ---
 
 ## Service Management
 
-### `llmc service start`
+### `llmc-cli service start`
 Start the RAG service daemon.
 
 ```bash
 # Start with default interval (180s)
-llmc service start
+llmc-cli service start
 
 # Custom interval
-llmc service start --interval 300
+llmc-cli service start --interval 300
 ```
 
 **Options:**
 - `--interval N` - Enrichment cycle interval in seconds (default: 180)
 
 **Prerequisites:**
-- At least one repository registered (`llmc service repo add`)
+- At least one repository registered (`llmc-cli service repo add`)
 - Systemd available
 
 ---
 
-### `llmc service stop`
+### `llmc-cli service stop`
 Stop the RAG service daemon.
 
 ```bash
-llmc service stop
+llmc-cli service stop
 ```
 
 ---
 
-### `llmc service restart`
+### `llmc-cli service restart`
 Restart the RAG service daemon.
 
 ```bash
 # Restart with current settings
-llmc service restart
+llmc-cli service restart
 
 # Update interval on restart
-llmc service restart --interval 120
+llmc-cli service restart --interval 120
 ```
 
 **Options:**
@@ -539,11 +539,11 @@ llmc service restart --interval 120
 
 ---
 
-### `llmc service status`
+### `llmc-cli service status`
 Show service status and registered repos.
 
 ```bash
-llmc service status
+llmc-cli service status
 ```
 
 **Output:**
@@ -563,18 +563,18 @@ llmc service status
 
 ---
 
-### `llmc service logs`
+### `llmc-cli service logs`
 View service logs via journalctl.
 
 ```bash
 # View last 50 lines
-llmc service logs
+llmc-cli service logs
 
 # View last 100 lines
-llmc service logs --lines 100
+llmc-cli service logs --lines 100
 
 # Follow logs (like tail -f)
-llmc service logs --follow
+llmc-cli service logs --follow
 ```
 
 **Options:**
@@ -583,47 +583,47 @@ llmc service logs --follow
 
 ---
 
-### `llmc service enable`
+### `llmc-cli service enable`
 Enable service to start on user login.
 
 ```bash
-llmc service enable
+llmc-cli service enable
 ```
 
 ---
 
-### `llmc service disable`
+### `llmc-cli service disable`
 Disable service from starting on user login.
 
 ```bash
-llmc service disable
+llmc-cli service disable
 ```
 
 ---
 
-### `llmc service repo add`
+### `llmc-cli service repo add`
 Register a repository for enrichment.
 
 ```bash
-llmc service repo add /path/to/repo
+llmc-cli service repo add /path/to/repo
 ```
 
 ---
 
-### `llmc service repo remove`
+### `llmc-cli service repo remove`
 Unregister a repository.
 
 ```bash
-llmc service repo remove /path/to/repo
+llmc-cli service repo remove /path/to/repo
 ```
 
 ---
 
-### `llmc service repo list`
+### `llmc-cli service repo list`
 List all registered repositories.
 
 ```bash
-llmc service repo list
+llmc-cli service repo list
 ```
 
 **Output:**
@@ -638,29 +638,29 @@ Registered repositories (2):
 
 ## Documentation Commands
 
-### `llmc docs readme`
+### `llmc-cli docs readme`
 Display the LLMC README.
 
 ```bash
-llmc docs readme
+llmc-cli docs readme
 ```
 
 ---
 
-### `llmc docs quickstart`
+### `llmc-cli docs quickstart`
 Display the quickstart guide.
 
 ```bash
-llmc docs quickstart
+llmc-cli docs quickstart
 ```
 
 ---
 
-### `llmc docs userguide`
+### `llmc-cli docs userguide`
 Display the user guide.
 
 ```bash
-llmc docs userguide
+llmc-cli docs userguide
 ```
 
 ---
@@ -672,39 +672,39 @@ llmc docs userguide
 
 ```bash
 cd /path/to/your/project
-llmc init
-llmc service start
-llmc repo register
-llmc tui
+llmc-cli init
+llmc-cli service start
+llmc-cli repo register
+llmc-cli tui
 ```
 
 ### Daily Development
 
 ```bash
 # After making changes
-llmc debug sync --since HEAD~1
+llmc-cli debug sync --since HEAD~1
 
 # Search for something
-llmc analytics search "authentication"
+llmc-cli analytics search "authentication"
 
 # Check service health
-llmc service status
+llmc-cli service status
 ```
 
 ### Troubleshooting
 
 ```bash
 # Check RAG health
-llmc debug doctor --verbose
+llmc-cli debug doctor --verbose
 
 # View service logs
-llmc service logs --follow
+llmc-cli service logs --follow
 
 # Rebuild index
-llmc debug index
+llmc-cli debug index
 
 # Rebuild graph
-llmc debug graph
+llmc-cli debug graph
 ```
 
 ---
@@ -713,23 +713,23 @@ llmc debug graph
 
 | Previous Command | New Command |
 |:-----------------|:------------|
-| `llmc search` | `llmc analytics search` |
-| `llmc stats` | `llmc analytics stats` |
-| `llmc benchmark` | `llmc analytics benchmark` |
-| `llmc nav where-used` | `llmc analytics where-used` |
-| `llmc nav lineage` | `llmc analytics lineage` |
-| `llmc index` | `llmc debug index` |
-| `llmc doctor` | `llmc debug doctor` |
-| `llmc sync` | `llmc debug sync` |
-| `llmc enrich` | `llmc debug enrich` |
-| `llmc embed` | `llmc debug embed` |
-| `llmc graph` | `llmc debug graph` |
-| `llmc plan` | `llmc debug plan` |
-| `llmc inspect` | `llmc debug inspect` |
-| `llmc export` | `llmc debug export` |
-| `llmc enrich-status` | `llmc debug enrich-status` |
-| `llmc docs generate` | `llmc docs generate` |
-| `llmc docs status` | `llmc docs status` |
+| `llmc search` | `llmc-cli analytics search` |
+| `llmc stats` | `llmc-cli analytics stats` |
+| `llmc benchmark` | `llmc-cli analytics benchmark` |
+| `llmc nav where-used` | `llmc-cli analytics where-used` |
+| `llmc nav lineage` | `llmc-cli analytics lineage` |
+| `llmc index` | `llmc-cli debug index` |
+| `llmc doctor` | `llmc-cli debug doctor` |
+| `llmc sync` | `llmc-cli debug sync` |
+| `llmc enrich` | `llmc-cli debug enrich` |
+| `llmc embed` | `llmc-cli debug embed` |
+| `llmc graph` | `llmc-cli debug graph` |
+| `llmc plan` | `llmc-cli debug plan` |
+| `llmc inspect` | `llmc-cli debug inspect` |
+| `llmc export` | `llmc-cli debug export` |
+| `llmc enrich-status` | `llmc-cli debug enrich-status` |
+| `llmc docs generate` | `llmc-cli docs generate` |
+| `llmc docs status` | `llmc-cli docs status` |
 
 ---
 
@@ -739,13 +739,13 @@ Install shell completion for better UX:
 
 ```bash
 # Bash
-llmc --install-completion bash
+llmc-cli --install-completion bash
 
 # Zsh
-llmc --install-completion zsh
+llmc-cli --install-completion zsh
 
 # Fish
-llmc --install-completion fish
+llmc-cli --install-completion fish
 ```
 
 ---
@@ -754,7 +754,7 @@ llmc --install-completion fish
 
 ### "No index database found"
 
-Run `llmc debug index` first to create the index.
+Run `llmc-cli debug index` first to create the index.
 
 ### "Systemd not available"
 
@@ -771,14 +771,13 @@ pip install -e .
 
 Check service status and logs:
 ```bash
-llmc service status
-llmc service logs --lines 100
+llmc-cli service status
+llmc-cli service logs --lines 100
 ```
 
 ---
 
 ## See Also
 
-- [SDD: Unified CLI v2](../planning/sdd/SDD_Unified_CLI_v2.md) - Design document
 - [AGENTS.md](../../AGENTS.md) - Agent protocols and workflows
-- [ROADMAP.md](../roadmap.md) - Project roadmap
+- [ROADMAP.md](../ROADMAP.md) - Project roadmap
