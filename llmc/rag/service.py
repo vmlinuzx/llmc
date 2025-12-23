@@ -653,10 +653,11 @@ class RAGService:
                     f"{quality_result.get('short_count', 0)} short",
                 )
 
-        # Step 5: Rebuild RAG Graph (Unified CLI support)
-        print("  📊 Rebuilding RAG Graph...")
-        build_graph_for_repo(repo)
-        print("  ✅ Graph rebuilt successfully")
+        # Step 5: Rebuild RAG Graph (only when work was done - prevents Idle Hammer bug)
+        if work_done:
+            print("  📊 Rebuilding RAG Graph...")
+            build_graph_for_repo(repo)
+            print("  ✅ Graph rebuilt successfully")
 
         # Step 6: Database Maintenance (Vacuum)
         try:

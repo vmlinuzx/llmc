@@ -2,6 +2,78 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.8.0] - "Burned Popcorn" 🍿 - 2025-12-23
+
+### Purple Flavor: **Burned Popcorn**
+
+The Architect from Hell descended upon LLMC with a magnifying glass and a vendetta. What emerged from the flames is a system that no longer burns CPU cycles doing nothing.
+
+### Performance (Critical Fixes from Audit #1)
+
+- **CRITICAL: "Idle Hammer" Bug Fixed (P0):**
+  - `llmc/rag/service.py`: `build_graph_for_repo()` was called unconditionally at end of every `process_repo()` cycle
+  - Even when `work_done == False`, we were doing full AST scans and graph rebuilds
+  - **Impact:** 100% CPU usage on idle systems with large repos
+  - **Fix:** Wrapped in `if work_done:` check
+  - **Result:** CPU → ~0% when enrichment queue is empty
+
+- **CRITICAL: O(N) Hash Scan Eliminated (P1):**
+  - `llmc/rag/runner.py`: `detect_changes()` was calling `current_hashes()` which SHA256'd **every file** on every poll cycle
+  - For a 1000-file repo, this meant 1000 crypto hashes just to discover "nothing changed"
+  - **Fix:** New `current_hashes_smart()` uses mtime/size as fast filter before hashing
+  - `load_cached_file_meta()` fetches (hash, mtime, size) from DB for comparison
+  - **Result:** 10-100x I/O reduction. Now only hashes files whose metadata changed
+
+- **ORDER BY RANDOM() Eliminated (P2):**
+  - `llmc/rag/database.py`: `pending_enrichments()` was using `ORDER BY RANDOM()` with 10x overfetch
+  - Forces O(N log N) sort on potentially 100K+ rows just to get 32 random samples
+  - **Fix:** ROWID-based random offset sampling - O(1) per probe instead of full table sort
+  - Small pending counts (≤500) use sequential ORDER BY id (already fast)
+  - Large pending counts use random ROWID offsets with indexed seeks
+
+- **Graph Index Cache Added (P2):**
+  - `llmc/rag/graph_index.py`: `load_indices()` was parsing JSON graph on every tool call
+  - **Fix:** mtime-aware cache invalidates automatically when graph file changes
+  - **Result:** Eliminates redundant JSON parsing for repeated tool calls
+
+### Performance (Audit #4 Fixes)
+
+- **Context Pinning Strategy Implemented:**
+  - `llmc_agent/agent.py`: Old truncation dropped oldest messages first
+  - **The Bug:** In long sessions, agent would forget its original objective
+  - **Fix:** Pinning strategy protects first 2 messages (original objective) + last 6 messages (recent context)
+  - Middle messages are truncated first, preserving both task understanding and recency
+
+- **select.select() → selectors.DefaultSelector:**
+  - `llmc_mcp/te/process.py`: Was using vintage 1984 `select.select()` for I/O
+  - Limited to FD_SETSIZE (1024 fds), scales O(N)
+  - **Fix:** Now uses `selectors.DefaultSelector` which maps to epoll on Linux, kqueue on BSD
+  - **Result:** O(1) scalability, no FD limit
+
+### Added
+
+- **Architect Audit Framework:**
+  - `DOCS/operations/audits/` - 6 audit charters with systematic hunting grounds
+  - `DOCS/operations/audits/00_MASTER_PERSONA.md` - The Architect persona definition
+  - `DOCS/operations/audits/REPORT_2025-12-23_RAG_ENRICHMENT.md` - Full audit report
+
+- **Observability Roadmap Item (2.9):**
+  - Documented the 197 `print()` calls scattered across `llmc/rag/`
+  - Prescription: migrate to proper `logging` with UI/Log separation
+  - Effort: ~4-6 hours (future work, tracked in ROADMAP.md)
+
+### Files Changed
+
+- `llmc/rag/service.py` - Idle Hammer fix
+- `llmc/rag/runner.py` - Smart mtime/size change detection
+- `llmc/rag/database.py` - ROWID-based sampling
+- `llmc/rag/graph_index.py` - mtime-aware graph caching
+- `llmc_agent/agent.py` - Context pinning strategy
+- `llmc_mcp/te/process.py` - selectors.DefaultSelector
+- `DOCS/ROADMAP.md` - Observability roadmap item
+
+---
+
 ## [Unreleased]
 
 ### Added (2025-12-21)

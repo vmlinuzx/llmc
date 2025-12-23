@@ -329,6 +329,40 @@ mcread docs/spec.pdf            # Reads sidecar markdown transparently
 
 ---
 
+### 2.9 Observability & Logging Hygiene (P2) 🔍
+
+**Status:** 🟡 Planned  
+**Added:** 2025-12-23  
+**Source:** Architect Audit #5
+
+**Problem:** 197 `print()` calls scattered across `llmc/rag/`. This is not a logging system - it's a teenager's diary scrawled on the bathroom wall.
+
+**The Evidence:**
+- `llmc/rag/database.py`: `print(f"Error loading enrichment DB: {e}")` → Lost when run as background service
+- `llmc/rag/schema.py`: `print(f"Parse error...")` → Should be `logger.error()`
+- `llmc/rag/service.py`: Carnival of prints: `print("🚀 RAG service started...")`
+- No separation between user-facing CLI output and system logs
+
+**The Prescription:**
+1. **Banish print():** Every `print()` in `llmc/rag/` (except CLI entry points) → `logger.info/warning/error()`
+2. **Centralize Configuration:** Use `logging.yaml` or `dictConfig` in `llmc/rag_daemon/logging_utils.py`
+3. **UI/Log Separation:**
+   - User-facing messages (CLI) → `rich.console.Console().print()`
+   - System events (service) → `logging` to file/syslog
+   - Never mix them
+
+**Files to Audit:**
+| File | print() Count | Priority |
+|------|---------------|----------|
+| `llmc/rag/service.py` | ~40 | HIGH |
+| `llmc/rag/runner.py` | ~15 | MEDIUM |
+| `llmc/rag/database.py` | ~10 | MEDIUM |
+| `llmc/rag/schema.py` | ~8 | LOW |
+
+**Effort:** ~4-6 hours | **Difficulty:** 🟢 Easy (mechanical refactor)
+
+---
+
 ## 3. Later (R&D)
 
 ### 3.1 RAG Scoring System 3.0 🔥

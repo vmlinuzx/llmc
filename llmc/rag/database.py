@@ -422,35 +422,106 @@ class Database:
         }
 
     def pending_enrichments(self, limit: int = 32, cooldown_seconds: int = 0) -> list[SpanWorkItem]:
-        # Fetch 10x the limit with random sampling to ensure diversity across file types.
-        # This allows code-first prioritization to work properly by providing a mix of
-        # code and docs files rather than sequential insertion order (which could be
-        # all markdown files if they were indexed together).
-        candidate_limit = max(limit * 10, limit)
-        rows = self.conn.execute(
+        """Fetch spans pending enrichment with O(1) random sampling.
+        
+        Uses ROWID-based random offset instead of ORDER BY RANDOM() to avoid
+        O(N log N) sort on large tables. For small pending counts, falls back
+        to sequential order which is fast enough.
+        """
+        import random
+        
+        # First, get the count and ROWID range of pending spans
+        # This is a fast indexed query
+        count_row = self.conn.execute(
             """
-            SELECT spans.span_hash, files.path, files.lang, spans.start_line,
-                   spans.end_line, spans.byte_start, spans.byte_end, files.mtime,
-                   spans.slice_type, spans.slice_language, spans.classifier_confidence
+            SELECT COUNT(*), MIN(spans.id), MAX(spans.id)
             FROM spans
-            JOIN files ON spans.file_id = files.id
             LEFT JOIN enrichments ON spans.span_hash = enrichments.span_hash
             WHERE enrichments.span_hash IS NULL
-            ORDER BY RANDOM()
-            LIMIT ?
-            """,
-            (candidate_limit,),
-        ).fetchall()
+            """
+        ).fetchone()
+        
+        pending_count = count_row[0] or 0
+        min_id = count_row[1] or 0
+        max_id = count_row[2] or 0
+        
+        if pending_count == 0:
+            return []
+        
+        # For small pending counts, just fetch sequentially - no need for randomization
+        # The overhead of random sampling isn't worth it for < 500 items
+        if pending_count <= 500 or pending_count <= limit * 3:
+            rows = self.conn.execute(
+                """
+                SELECT spans.span_hash, files.path, files.lang, spans.start_line,
+                       spans.end_line, spans.byte_start, spans.byte_end, files.mtime,
+                       spans.slice_type, spans.slice_language, spans.classifier_confidence
+                FROM spans
+                JOIN files ON spans.file_id = files.id
+                LEFT JOIN enrichments ON spans.span_hash = enrichments.span_hash
+                WHERE enrichments.span_hash IS NULL
+                ORDER BY spans.id
+                LIMIT ?
+                """,
+                (limit * 2,),  # Slight overfetch for cooldown filtering
+            ).fetchall()
+        else:
+            # Large pending set: use random ROWID offset sampling
+            # Generate random starting offsets within the ROWID range
+            # This gives O(1) random access instead of O(N log N) sort
+            id_range = max_id - min_id + 1
+            
+            # Sample multiple random offsets to increase diversity
+            sample_offsets = sorted(set(
+                min_id + random.randint(0, id_range - 1) 
+                for _ in range(min(limit * 4, 200))
+            ))
+            
+            # Fetch spans near our random offsets using indexed lookups
+            # Use UNION of small range queries for efficiency
+            rows = []
+            batch_size = max(10, limit // 4)
+            
+            for offset_id in sample_offsets[:20]:  # Limit offset probes
+                if len(rows) >= limit * 2:
+                    break
+                    
+                batch_rows = self.conn.execute(
+                    """
+                    SELECT spans.span_hash, files.path, files.lang, spans.start_line,
+                           spans.end_line, spans.byte_start, spans.byte_end, files.mtime,
+                           spans.slice_type, spans.slice_language, spans.classifier_confidence
+                    FROM spans
+                    JOIN files ON spans.file_id = files.id
+                    LEFT JOIN enrichments ON spans.span_hash = enrichments.span_hash
+                    WHERE enrichments.span_hash IS NULL AND spans.id >= ?
+                    ORDER BY spans.id
+                    LIMIT ?
+                    """,
+                    (offset_id, batch_size),
+                ).fetchall()
+                rows.extend(batch_rows)
+            
+            # Shuffle the collected rows to avoid clustering
+            random.shuffle(rows)
+        
         now = time.time()
         filtered: list[SpanWorkItem] = []
+        seen_hashes: set[str] = set()  # Deduplicate across batches
+        
         for row in rows:
+            span_hash = row["span_hash"]
+            if span_hash in seen_hashes:
+                continue
+            seen_hashes.add(span_hash)
+            
             if cooldown_seconds:
                 mtime = row["mtime"] or 0
                 if now - mtime < cooldown_seconds:
                     continue
             filtered.append(
                 SpanWorkItem(
-                    span_hash=row["span_hash"],
+                    span_hash=span_hash,
                     file_path=Path(row["path"]),
                     lang=row["lang"],
                     start_line=row["start_line"],

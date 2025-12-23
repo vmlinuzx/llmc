@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 import logging
 import os
 import select
+import selectors
 import shlex
 import signal as sigmod
 import subprocess
@@ -211,7 +212,10 @@ def read_output(proc_id: str, timeout_sec: float = 1.0) -> tuple[str, str]:
     """
     Read available output from a managed process.
 
-    Uses select() for non-blocking read with timeout.
+    Uses selectors.DefaultSelector (epoll on Linux, kqueue on BSD/macOS)
+    for scalable non-blocking I/O. Unlike select.select(), this:
+    - Scales O(1) instead of O(N) for fd count
+    - Not limited to FD_SETSIZE (typically 1024)
 
     Args:
         proc_id: Process ID
@@ -230,35 +234,42 @@ def read_output(proc_id: str, timeout_sec: float = 1.0) -> tuple[str, str]:
     output_parts = []
     deadline = time.time() + timeout_sec
 
-    # Non-blocking read using select
+    # Use selectors for scalable I/O (epoll on Linux)
+    sel = selectors.DefaultSelector()
     stdout_fd = mp.p.stdout.fileno()
+    
+    try:
+        sel.register(stdout_fd, selectors.EVENT_READ)
+        
+        while True:
+            remaining = deadline - time.time()
+            if remaining <= 0:
+                break
 
-    while True:
-        remaining = deadline - time.time()
-        if remaining <= 0:
-            break
+            # Check if data available (epoll/kqueue under the hood)
+            events = sel.select(timeout=min(remaining, 0.1))
 
-        # Check if data available
-        readable, _, _ = select.select([stdout_fd], [], [], min(remaining, 0.1))
-
-        if stdout_fd in readable:
-            try:
-                # Read available data (non-blocking) via os.read
-                # This avoids the blocking behavior of file.read()
-                chunk = os.read(stdout_fd, 4096)
-                if chunk:
-                    output_parts.append(chunk)
-                    mp.last_activity = time.time()
-                else:
-                    # EOF - process likely exited
+            if events:
+                try:
+                    # Read available data (non-blocking) via os.read
+                    # This avoids the blocking behavior of file.read()
+                    chunk = os.read(stdout_fd, 4096)
+                    if chunk:
+                        output_parts.append(chunk)
+                        mp.last_activity = time.time()
+                    else:
+                        # EOF - process likely exited
+                        break
+                except Exception:
                     break
-            except Exception:
-                break
-        else:
-            # No data available, check if we should keep waiting
-            # If process exited, stop waiting
-            if not mp.is_running():
-                break
+            else:
+                # No data available, check if we should keep waiting
+                # If process exited, stop waiting
+                if not mp.is_running():
+                    break
+    finally:
+        sel.unregister(stdout_fd)
+        sel.close()
 
     # Decode captured bytes
     output_bytes = b"".join(output_parts)

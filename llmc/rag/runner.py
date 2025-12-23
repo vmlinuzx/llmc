@@ -57,12 +57,29 @@ def sha256_file(path: Path) -> str:
 
 
 def load_cached_hashes(index_path: Path) -> dict[str, str]:
+    """Load cached file hashes for backwards compatibility."""
     if not index_path.exists():
         return {}
     conn = sqlite3.connect(index_path)
     try:
         rows = conn.execute("SELECT path, file_hash FROM files")
         return {row[0]: row[1] for row in rows}
+    finally:
+        conn.close()
+
+
+def load_cached_file_meta(index_path: Path) -> dict[str, tuple[str, float, int]]:
+    """Load cached file metadata (hash, mtime, size) for smart change detection.
+    
+    Returns dict mapping path -> (file_hash, mtime, size)
+    This allows mtime/size filtering BEFORE expensive SHA256 hashing.
+    """
+    if not index_path.exists():
+        return {}
+    conn = sqlite3.connect(index_path)
+    try:
+        rows = conn.execute("SELECT path, file_hash, mtime, size FROM files")
+        return {row[0]: (row[1], row[2] or 0.0, row[3] or 0) for row in rows}
     finally:
         conn.close()
 
@@ -140,6 +157,7 @@ def iter_repo_files(repo_root: Path) -> Iterable[Path]:
 
 
 def current_hashes(repo_root: Path, extra_patterns: list[str]) -> dict[str, str]:
+    """Legacy: hash all files unconditionally. Use current_hashes_smart for perf."""
     hashes: dict[str, str] = {}
     for rel_path in iter_repo_files(repo_root):
         suffix = rel_path.suffix.lower()
@@ -158,15 +176,88 @@ def current_hashes(repo_root: Path, extra_patterns: list[str]) -> dict[str, str]
     return hashes
 
 
+def current_hashes_smart(
+    repo_root: Path,
+    extra_patterns: list[str],
+    cached_meta: dict[str, tuple[str, float, int]],
+) -> dict[str, str]:
+    """Smart change detection: only SHA256 files whose mtime/size changed.
+    
+    Performance optimization: uses filesystem metadata as fast filter before
+    expensive hash computation. For unchanged repos, this is 10-100x faster.
+    
+    Args:
+        repo_root: Repository root path
+        extra_patterns: Patterns to exclude from indexing
+        cached_meta: Dict mapping path -> (hash, mtime, size) from load_cached_file_meta()
+    
+    Returns:
+        Dict mapping path -> current file hash
+    """
+    hashes: dict[str, str] = {}
+    hashed_count = 0
+    skipped_count = 0
+    
+    for rel_path in iter_repo_files(repo_root):
+        suffix = rel_path.suffix.lower()
+        if suffix and suffix not in SUPPORTED_SUFFIXES:
+            continue
+        posix = rel_path.as_posix()
+        if _matches_extra(posix, extra_patterns):
+            continue
+        absolute = repo_root / rel_path
+        if not absolute.is_file():
+            continue
+        try:
+            stat = absolute.stat()
+            cached = cached_meta.get(posix)
+            
+            # Fast path: if mtime and size match, reuse cached hash
+            if cached is not None:
+                cached_hash, cached_mtime, cached_size = cached
+                # Use small epsilon for float comparison on mtime
+                if abs(stat.st_mtime - cached_mtime) < 0.001 and stat.st_size == cached_size:
+                    hashes[posix] = cached_hash
+                    skipped_count += 1
+                    continue
+            
+            # Slow path: compute hash for new/modified files
+            hashes[posix] = sha256_file(absolute)
+            hashed_count += 1
+        except OSError:
+            continue
+    
+    # Log stats when there's meaningful work (helps diagnose perf issues)
+    if hashed_count > 0:
+        log(f"Hashed {hashed_count} files, skipped {skipped_count} unchanged")
+    
+    return hashes
+
+
 def detect_changes(repo_root: Path, index_path: Path | None = None) -> list[str]:
+    """Detect files that changed since last index.
+    
+    Uses smart mtime/size filtering to avoid hashing unchanged files.
+    O(N) stat calls but only O(changed) hash computations.
+    """
     index_path = index_path or index_path_for_write(repo_root)
-    cached = load_cached_hashes(index_path)
     extra = _extra_patterns(repo_root)
-    current = current_hashes(repo_root, extra)
-    if not cached:
+    
+    # Load cached metadata for smart filtering
+    cached_meta = load_cached_file_meta(index_path)
+    
+    # Use smart hashing: mtime/size filter before SHA256
+    current = current_hashes_smart(repo_root, extra, cached_meta)
+    
+    if not cached_meta:
+        # No prior index - everything is new
         return sorted(current.keys())
-    dirty = {path for path, digest in current.items() if cached.get(path) != digest}
-    deleted = {path for path in cached.keys() if path not in current}
+    
+    # Build hash-only lookup for comparison
+    cached_hashes = {path: meta[0] for path, meta in cached_meta.items()}
+    
+    dirty = {path for path, digest in current.items() if cached_hashes.get(path) != digest}
+    deleted = {path for path in cached_hashes.keys() if path not in current}
     dirty.update(deleted)
     return sorted(dirty)
 

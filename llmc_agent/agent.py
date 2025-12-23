@@ -116,7 +116,11 @@ class Agent:
         history_tokens = 0
 
         if session and session.messages:
-            # Include history (oldest messages may be dropped if over budget)
+            # PINNING STRATEGY: Protect critical context from truncation
+            # Pin: First 2 messages (user's original objective + first response)
+            # Pin: Last 3 turns (6 messages) for recent context continuity
+            # Truncate: Middle messages first
+            
             available_for_history = (
                 self.config.agent.context_budget
                 - count_tokens(system_prompt)
@@ -124,12 +128,60 @@ class Agent:
                 - self.config.agent.response_reserve
             ) // 2  # Reserve half for history, half for headroom
 
-            # Add messages from newest to oldest until budget exhausted
-            for msg in reversed(session.messages):
-                if history_tokens + msg.tokens > available_for_history:
-                    break
-                messages.insert(0, {"role": msg.role, "content": msg.content})
-                history_tokens += msg.tokens
+            all_msgs = session.messages
+            n = len(all_msgs)
+            
+            # Define pinned regions
+            PIN_HEAD = 2  # First 2 messages (original objective)
+            PIN_TAIL = 6  # Last 6 messages (3 turns of user+assistant)
+            
+            if n <= PIN_HEAD + PIN_TAIL:
+                # Session is small enough - include everything that fits
+                for msg in reversed(all_msgs):
+                    if history_tokens + msg.tokens > available_for_history:
+                        break
+                    messages.insert(0, {"role": msg.role, "content": msg.content})
+                    history_tokens += msg.tokens
+            else:
+                # Large session - use pinning strategy
+                head_msgs = all_msgs[:PIN_HEAD]
+                tail_msgs = all_msgs[-PIN_TAIL:]
+                middle_msgs = all_msgs[PIN_HEAD:-PIN_TAIL]
+                
+                # Calculate token costs
+                head_tokens = sum(m.tokens for m in head_msgs)
+                tail_tokens = sum(m.tokens for m in tail_msgs)
+                pinned_tokens = head_tokens + tail_tokens
+                
+                if pinned_tokens <= available_for_history:
+                    # Add pinned head (always)
+                    for msg in head_msgs:
+                        messages.append({"role": msg.role, "content": msg.content})
+                        history_tokens += msg.tokens
+                    
+                    # Add as much middle as fits (from most recent backward)
+                    remaining_budget = available_for_history - pinned_tokens
+                    middle_to_add = []
+                    for msg in reversed(middle_msgs):
+                        if sum(m.tokens for m in middle_to_add) + msg.tokens > remaining_budget:
+                            break
+                        middle_to_add.insert(0, msg)
+                    
+                    for msg in middle_to_add:
+                        messages.append({"role": msg.role, "content": msg.content})
+                        history_tokens += msg.tokens
+                    
+                    # Add pinned tail (always)
+                    for msg in tail_msgs:
+                        messages.append({"role": msg.role, "content": msg.content})
+                        history_tokens += msg.tokens
+                else:
+                    # Budget too tight even for pinned - prioritize tail (recency)
+                    for msg in reversed(tail_msgs):
+                        if history_tokens + msg.tokens > available_for_history:
+                            break
+                        messages.insert(0, {"role": msg.role, "content": msg.content})
+                        history_tokens += msg.tokens
 
         # Add current user message
         messages.append({"role": "user", "content": user_content})

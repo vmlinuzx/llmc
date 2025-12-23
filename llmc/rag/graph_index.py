@@ -18,9 +18,15 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
+import time
 from typing import Any
 
 ALLOWED_EDGE_TYPES: set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"}
+
+# Cache for loaded graph indices: repo_path -> (mtime, GraphIndices)
+# This avoids re-parsing large JSON graphs on every tool call
+_INDICES_CACHE: dict[str, tuple[float, "GraphIndices"]] = {}
+
 
 
 class GraphNotFound(FileNotFoundError):
@@ -258,6 +264,9 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
     """
     Load GraphIndices for the given repository root.
 
+    Uses mtime-aware caching to avoid re-parsing the JSON graph on every call.
+    Cache invalidates when the underlying file changes.
+
     Raises GraphNotFound when the `.llmc/rag_graph.json` payload is missing
     or cannot be interpreted as a usable graph.
     """
@@ -266,6 +275,23 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
     if not graph_path.is_file():
         raise GraphNotFound(str(graph_path))
 
+    # Check cache with mtime validation
+    cache_key = str(graph_path.resolve())
+    now = time.time()
+    
+    try:
+        current_mtime = graph_path.stat().st_mtime
+    except OSError:
+        current_mtime = 0.0
+    
+    cached = _INDICES_CACHE.get(cache_key)
+    if cached is not None:
+        cached_mtime, cached_indices = cached
+        # Revalidate: if mtime matches and we're within TTL, use cached
+        if current_mtime == cached_mtime:
+            return cached_indices
+
+    # Cache miss or stale - reload
     graph_payload = _read_graph_payload(graph_path)
     indices = build_indices_from_graph(graph_payload)
 
@@ -273,6 +299,9 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
     if not indices.symbol_to_files and not indices.symbol_to_callee_files:
         raise GraphNotFound(str(graph_path))
 
+    # Store in cache
+    _INDICES_CACHE[cache_key] = (current_mtime, indices)
+    
     return indices
 
 

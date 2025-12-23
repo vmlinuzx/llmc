@@ -27,7 +27,6 @@ from llmc.rag.graph_index import (
     where_used_files as where_used_files_from_index,
 )
 from llmc.rag.graph_stitch import Neighbor, expand_search_items
-from llmc.rag.locator import identify_symbol_at_line
 from llmc.rag.rerank import RerankHit, rerank_hits
 from llmc.rag_nav.gateway import compute_route as _compute_route
 from llmc.rag_nav.models import (
@@ -56,106 +55,6 @@ def _rag_graph_path(repo_root: Path | str) -> Path:
     """Internal helper: path to the RAG Nav graph JSON."""
     return Path(repo_root) / ".llmc" / "rag_graph.json"
 
-
-def _attach_graph_enrichment(repo_root: Path | str, items: list[Any]):
-    """Attach enrichment data from loaded graph nodes to result items.
-
-    Args:
-        repo_root: Repository root path
-        items: List of SearchItem, WhereUsedItem, or LineageItem objects
-
-    Returns:
-        The modified list of items with enrichment attached where found.
-    """
-    nodes, _ = _load_graph(repo_root)
-    if not nodes:
-        return items
-
-    # Index nodes by file path for fast lookup (legacy/fallback)
-    nodes_by_path: dict[str, list[dict]] = {}
-    # Also index by ID for AST lookup
-    nodes_by_id: dict[str, dict] = {}
-
-    for n in nodes:
-        p = _node_path(n)
-        if p:
-            nodes_by_path.setdefault(p, []).append(n)
-
-        nid = _node_name(n)
-        # Normalize ID: strip prefix if present
-        if nid.startswith("sym:"):
-            nid = nid[4:]
-        elif nid.startswith("type:"):
-            nid = nid[5:]
-        nodes_by_id[nid] = n
-
-    # Cache for file content to avoid re-reading per item
-    source_cache = {}
-
-    for item in items:
-        if not item.file:
-            continue
-
-        best_node = None
-
-        # Strategy 1: Fuzzy AST Linking (Resilient to line shifts)
-        # Only works if we have line number info
-        if item.snippet and item.snippet.location:
-            # Read file content
-            if item.file not in source_cache:
-                try:
-                    source_cache[item.file] = (Path(repo_root) / item.file).read_text(
-                        errors="ignore"
-                    )
-                except Exception:
-                    source_cache[item.file] = None
-
-            source = source_cache[item.file]
-            if source:
-                sl = item.snippet.location.start_line
-                # Find the symbol name at this line in the *current* file
-                symbol_id = identify_symbol_at_line(source, sl)
-                # DEBUG
-                # print(f"DEBUG: file={item.file} line={sl} symbol_id={symbol_id}")
-                if symbol_id:
-                    # Construct graph ID: {stem}.{symbol}
-                    # This matches schema.py's ID generation
-                    stem = Path(item.file).stem
-                    graph_id = f"{stem}.{symbol_id}"
-
-                    # DEBUG
-                    # print(f"DEBUG: constructed graph_id={graph_id}")
-                    # print(f"DEBUG: nodes_by_id keys={list(nodes_by_id.keys())[:5]}")
-
-                    if graph_id in nodes_by_id:
-                        best_node = nodes_by_id[graph_id]
-
-        # Strategy 2: Legacy Line Overlap (Fallback)
-        if not best_node:
-            candidates = nodes_by_path.get(item.file, [])
-            if item.snippet and item.snippet.location:
-                sl = item.snippet.location.start_line
-                el = item.snippet.location.end_line
-
-                for node in candidates:
-                    n_start, n_end = _node_span(node)
-                    if n_start is not None and n_end is not None:
-                        # Check for overlap or containment
-                        if not (el < n_start or sl > n_end):
-                            best_node = node
-                            break
-
-        if best_node:
-            metadata = best_node.get("metadata")
-            if metadata:
-                enrich = EnrichmentData(
-                    summary=metadata.get("summary"),
-                    usage_guide=metadata.get("usage_guide"),
-                )
-                if enrich.summary or enrich.usage_guide:
-                    item.enrichment = enrich
-
-    return items
 
 
 def _graph_path(repo_root: Path | str) -> Path:
@@ -767,8 +666,6 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
                 source=source,
                 freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
             )
-            # Phase 3: Attach graph enrichment if available
-            res.items = _attach_graph_enrichment(repo_root, res.items)
 
             return _maybe_attach_enrichment_search(repo_root, res)
         except (RagDbNotFound, RuntimeError):
@@ -794,8 +691,6 @@ def tool_rag_search(repo_root, query: str, limit: int | None = None) -> SearchRe
         source=source,
         freshness_state=getattr(route, "freshness_state", "UNKNOWN"),
     )
-    # Phase 3: Attach graph enrichment if available (even for fallback search if graph exists)
-    res.items = _attach_graph_enrichment(repo_root, res.items)
 
     return _maybe_attach_enrichment_search(repo_root, res)
 
@@ -825,7 +720,6 @@ def tool_rag_where_used(
                 source=source,
                 freshness_state=route.freshness_state,
             )
-            res.items = _attach_graph_enrichment(repo_root, res.items)
             return _maybe_attach_enrichment_where_used(repo_root, res)
         except (IndexGraphNotFound, Exception):
             # Any graph loading/indexing issue should route to the local fallback.
@@ -850,7 +744,6 @@ def tool_rag_where_used(
         source=source,
         freshness_state=route.freshness_state,
     )
-    res.items = _attach_graph_enrichment(repo_root, res.items)
     return _maybe_attach_enrichment_where_used(repo_root, res)
 
 
@@ -893,7 +786,6 @@ def tool_rag_lineage(
                 source=source,
                 freshness_state=route.freshness_state,
             )
-            res.items = _attach_graph_enrichment(repo_root, res.items)
             return _maybe_attach_enrichment_lineage(repo_root, res)
         except (IndexGraphNotFound, Exception):
             # Any graph loading/indexing issue should route to the local fallback.
@@ -920,7 +812,6 @@ def tool_rag_lineage(
         source=source,
         freshness_state=route.freshness_state,
     )
-    res.items = _attach_graph_enrichment(repo_root, res.items)
     return _maybe_attach_enrichment_lineage(repo_root, res)
 
 
