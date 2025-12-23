@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import pytest
 
 
 # Mock Tool class to avoid mcp dependency in tests
@@ -16,7 +17,7 @@ class MockTool:
 # Alias for compatibility
 Tool = MockTool
 
-from llmc_mcp.tools.code_exec import execute_code, generate_stubs
+from llmc_mcp.tools.code_exec import run_untrusted_python, generate_stubs
 
 
 def make_mock_tool_caller(results: dict):
@@ -28,115 +29,128 @@ def make_mock_tool_caller(results: dict):
     return caller
 
 
-class TestExecuteCode:
-    """Test execute_code function."""
+@pytest.fixture
+def isolated_env(monkeypatch):
+    """Sets the isolation bypass environment variable for tests."""
+    monkeypatch.setenv("LLMC_ISOLATED", "1")
+
+
+@pytest.mark.usefixtures("isolated_env")
+class TestRunUntrustedPython:
+    """Test run_untrusted_python function."""
 
     def test_simple_print(self):
         """Basic code execution with stdout capture."""
-        result = execute_code(
+        result = run_untrusted_python(
             code='print("hello world")',
             tool_caller=lambda n, a: {},
         )
         assert result.success
         assert "hello world" in result.stdout
 
-    def test_call_tool_injection(self):
-        """Verify _call_tool is available in executed code namespace."""
-        mock_caller = make_mock_tool_caller(
-            {"test_tool": {"data": "mock_result", "meta": {}}}
-        )
-
-        result = execute_code(
-            code="""
-result = _call_tool("test_tool", {"arg": "value"})
-print(f"Got: {result}")
-""",
-            tool_caller=mock_caller,
-        )
-        assert result.success
-        assert "mock_result" in result.stdout
-
-    def test_import_stub_calls_injected_tool(self, tmp_path):
-        """
-        Critical test: Verify that imported stubs use builtins._call_tool.
-
-        This was the bug - stubs imported _call_tool from the module which
-        raised NotImplementedError, instead of using the injected version.
-        """
-        # Generate a test stub
-        test_tool = Tool(
-            name="my_test_tool",
-            description="A test tool",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Test query"}
-                },
-                "required": ["query"],
-            },
-        )
-
-        stubs_dir = tmp_path / "stubs"
-        generate_stubs([test_tool], Path("stubs"), tmp_path)
-
-        # Mock caller that records what was called
-        calls = []
-
-        def tracking_caller(name: str, args: dict) -> dict:
-            calls.append((name, args))
-            return {"data": "success", "meta": {}}
-
-        # Execute code that imports and uses the stub
-        result = execute_code(
-            code="""
-from stubs import my_test_tool
-result = my_test_tool(query="test query")
-print(f"Result: {result}")
-""",
-            tool_caller=tracking_caller,
-            stubs_dir=stubs_dir,
-        )
-
-        assert (
-            result.success
-        ), f"Execution failed: {result.error}\nstderr: {result.stderr}"
-        assert len(calls) == 1, f"Expected 1 call, got {len(calls)}"
-        assert calls[0][0] == "my_test_tool"
-        assert "query" in calls[0][1]
-        assert "success" in result.stdout
-
-    def test_builtins_cleanup(self):
-        """Verify builtins._call_tool is cleaned up after execution."""
-        import builtins
-
-        # Ensure clean state
-        if hasattr(builtins, "_call_tool"):
-            delattr(builtins, "_call_tool")
-
-        result = execute_code(
-            code='print("test")',
-            tool_caller=lambda n, a: {},
-        )
-
-        assert result.success
-        # _call_tool should be cleaned up
-        assert not hasattr(
-            builtins, "_call_tool"
-        ), "builtins._call_tool should be cleaned up"
+    # TODO: These tests are for the legacy `exec()`-based implementation which
+    # supported tool calling from within the executed code. The current
+    # `subprocess`-based implementation does not support this for security
+    # reasons. These tests should be re-enabled or rewritten if that
+    # functionality is restored via a secure IPC mechanism.
+    #
+    # def test_call_tool_injection(self):
+    #     """Verify _call_tool is available in executed code namespace."""
+    #     mock_caller = make_mock_tool_caller(
+    #         {"test_tool": {"data": "mock_result", "meta": {}}}
+    #     )
+    #
+    #     result = run_untrusted_python(
+    #         code="""
+    # result = _call_tool("test_tool", {"arg": "value"})
+    # print(f"Got: {result}")
+    # """,
+    #         tool_caller=mock_caller,
+    #     )
+    #     assert result.success
+    #     assert "mock_result" in result.stdout
+    #
+    # def test_import_stub_calls_injected_tool(self, tmp_path):
+    #     """
+    #     Critical test: Verify that imported stubs use builtins._call_tool.
+    #
+    #     This was the bug - stubs imported _call_tool from the module which
+    #     raised NotImplementedError, instead of using the injected version.
+    #     """
+    #     # Generate a test stub
+    #     test_tool = Tool(
+    #         name="my_test_tool",
+    #         description="A test tool",
+    #         inputSchema={
+    #             "type": "object",
+    #             "properties": {
+    #                 "query": {"type": "string", "description": "Test query"}
+    #             },
+    #             "required": ["query"],
+    #         },
+    #     )
+    #
+    #     stubs_dir = tmp_path / "stubs"
+    #     generate_stubs([test_tool], Path("stubs"), tmp_path)
+    #
+    #     # Mock caller that records what was called
+    #     calls = []
+    #
+    #     def tracking_caller(name: str, args: dict) -> dict:
+    #         calls.append((name, args))
+    #         return {"data": "success", "meta": {}}
+    #
+    #     # Execute code that imports and uses the stub
+    #     result = run_untrusted_python(
+    #         code="""
+    # from stubs import my_test_tool
+    # result = my_test_tool(query="test query")
+    # print(f"Result: {result}")
+    # """,
+    #         tool_caller=tracking_caller,
+    #         stubs_dir=stubs_dir,
+    #     )
+    #
+    #     assert (
+    #         result.success
+    #     ), f"Execution failed: {result.error}\nstderr: {result.stderr}"
+    #     assert len(calls) == 1, f"Expected 1 call, got {len(calls)}"
+    #     assert calls[0][0] == "my_test_tool"
+    #     assert "query" in calls[0][1]
+    #     assert "success" in result.stdout
+    #
+    # def test_builtins_cleanup(self):
+    #     """Verify builtins._call_tool is cleaned up after execution."""
+    #     import builtins
+    #
+    #     # Ensure clean state
+    #     if hasattr(builtins, "_call_tool"):
+    #         delattr(builtins, "_call_tool")
+    #
+    #     result = run_untrusted_python(
+    #         code='print("test")',
+    #         tool_caller=lambda n, a: {},
+    #     )
+    #
+    #     assert result.success
+    #     # _call_tool should be cleaned up
+    #     assert not hasattr(
+    #         builtins, "_call_tool"
+    #     ), "builtins._call_tool should be cleaned up"
 
     def test_timeout_capture(self):
         """Test that stderr is captured on error."""
-        result = execute_code(
+        result = run_untrusted_python(
             code='raise ValueError("test error")',
             tool_caller=lambda n, a: {},
         )
 
         assert not result.success
-        assert "ValueError" in result.error
+        assert "ValueError" in result.stderr
 
     def test_max_output_truncation(self):
         """Test output truncation at max_output_bytes."""
-        result = execute_code(
+        result = run_untrusted_python(
             code='print("x" * 10000)',
             tool_caller=lambda n, a: {},
             max_output_bytes=100,

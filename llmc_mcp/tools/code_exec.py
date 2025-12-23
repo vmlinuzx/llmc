@@ -6,6 +6,11 @@ Claude navigates .llmc/stubs/ filesystem, reads tool definitions on-demand,
 writes Python code that imports and calls them. 98% token reduction.
 
 Reference: https://www.anthropic.com/engineering/code-execution-with-mcp
+
+SECURITY:
+The `run_untrusted_python` tool in this module does NOT provide a sandbox.
+It is a critical vulnerability to use this tool outside of a securely isolated
+environment (e.g., a locked-down Docker container).
 """
 
 from __future__ import annotations
@@ -225,7 +230,7 @@ def _call_tool(name: str, args: dict) -> dict:
     )
 
 
-def execute_code(
+def run_untrusted_python(
     code: str,
     tool_caller: callable,
     timeout: int = 30,
@@ -233,14 +238,19 @@ def execute_code(
     stubs_dir: Path | None = None,
 ) -> CodeExecResult:
     """
-    Execute Python code with access to LLMC tool stubs.
-
+    Execute untrusted Python code without a sandbox.
+    WARNING: This tool does NOT provide a sandbox. The executed code can access
+    the filesystem and network. It is CRITICAL that this tool is only used in
+    a securely isolated environment (e.g., a Docker container with restricted
+    permissions).
     The code can import from 'stubs' to access tool functions.
     Only stdout/stderr and explicit return values are captured.
     
     SECURITY: 
+    - CRITICAL: No sandbox is provided.
     - Requires isolated environment (Docker, K8s, nsjail).
-    - Code runs in a subprocess for process isolation.
+    - Code runs in a subprocess for process isolation, but this does NOT
+      prevent filesystem or network access.
     - NOTE: tool_caller is NOT available in subprocess mode (stubs won't work).
       This is a security tradeoff - full stub support requires the orchestrator
       pattern where Claude iterates: execute code -> get result -> execute more.
@@ -260,7 +270,7 @@ def execute_code(
     # SECURITY: Only allow execution in isolated environments
     from llmc_mcp.isolation import require_isolation
     try:
-        require_isolation("execute_code")
+        require_isolation("run_untrusted_python")
     except RuntimeError as e:
         return CodeExecResult(
             success=False,
