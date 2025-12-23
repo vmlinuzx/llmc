@@ -508,6 +508,7 @@ TOOLS: list[Tool] = [
                 "mode": {
                     "type": "string",
                     "enum": ["rewrite", "append"],
+                    "description": "Write mode: 'rewrite' to overwrite entire file, 'append' to add to end.",
                     "default": "rewrite",
                 },
                 "expected_sha256": {
@@ -525,7 +526,11 @@ TOOLS: list[Tool] = [
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "Directory path to create"},
-                "exist_ok": {"type": "boolean", "default": True},
+                "exist_ok": {
+                    "type": "boolean",
+                    "description": "If True, don't raise error if directory exists.",
+                    "default": True,
+                },
             },
             "required": ["path"],
         },
