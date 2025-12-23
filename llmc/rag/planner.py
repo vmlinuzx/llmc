@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 import re
@@ -206,10 +207,19 @@ def _score_to_confidence(score: float) -> float:
 
 
 def _append_plan_log(repo_root: Path, payload: dict[str, object]) -> None:
+    """Append a planner log entry with timestamp and repo context."""
     log_path = repo_root / "logs" / "planner_metrics.jsonl"
     log_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Add required schema fields per SDD Observability spec
+    enriched_payload = {
+        "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "repo_root": str(repo_root.resolve()),
+        **payload,
+    }
+    
     with log_path.open("a", encoding="utf-8") as handle:
-        json.dump(payload, handle, ensure_ascii=False)
+        json.dump(enriched_payload, handle, ensure_ascii=False)
         handle.write("\n")
 
 

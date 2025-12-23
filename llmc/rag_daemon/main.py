@@ -182,14 +182,14 @@ def main(argv: list[str] | None = None) -> int:
     try:
         config = load_config(args.config)
     except FileNotFoundError as exc:
-        print(f"error: {exc}")
-        print(
+        sys.stderr.write(f"error: {exc}\n")
+        sys.stderr.write(
             "Hint: create a daemon config at ~/.llmc/rag-daemon.yml "
-            "or set LLMC_RAG_DAEMON_CONFIG / pass --config."
+            "or set LLMC_RAG_DAEMON_CONFIG / pass --config.\n"
         )
         return 1
     except Exception as exc:  # pragma: no cover - defensive
-        print(f"error: failed to load daemon config: {exc}")
+        sys.stderr.write(f"error: failed to load daemon config: {exc}\n")
         return 1
 
     if getattr(args, "log_level", None):
@@ -206,7 +206,7 @@ def main(argv: list[str] | None = None) -> int:
     if command == "doctor":
         return _cmd_doctor(config)
 
-    print(f"error: unknown command '{command}'")
+    sys.stderr.write(f"error: unknown command '{command}'\n")
     _print_top_level_help()
     return 1
 
