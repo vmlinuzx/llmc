@@ -135,45 +135,72 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 
 ## 5. RAG Tooling Reference
 
-**Command Prefix:** `python3 -m llmc.rag.cli`
+**Primary Interface:** The `mc*` CLI tools. These are thin, graph-enriched wrappers around the RAG system.
 
-| Tool | Purpose | When to use | Key Flags |
-| :--- | :--- | :--- | :--- |
-| **`search`** | **Find** concepts/code | "Where is X?", "How does Y work?" | `--limit 20` |
-| **`plan`** | **Target** files for edit | "I need to implement feature Z." | `--limit 50`, `--min-confidence 0.6` |
-| **`inspect`** | **Deep Dive** (Preferred) | "Understand this file/symbol." | `--path`, `--symbol`, `--full` |
-| **`doctor`** | **Diagnose** health | Tools failing? No results? Run this. | `-v` |
-| **`stats`** | **Status** check | Check index size/freshness. | none |
+| Command | Purpose | Example |
+|---------|---------|--------|
+| `mcschema` | Codebase overview (~400 tokens) | `python3 -m llmc.mcschema` |
+| `mcgrep` | Semantic search + file descriptions | `python3 -m llmc.mcgrep "router"` |
+| `mcwho` | Who uses/calls this symbol? | `python3 -m llmc.mcwho Database` |
+| `mcinspect` | Deep symbol inspection + graph | `python3 -m llmc.mcinspect Foo` |
+| `mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
+| `mcrun` | Execute command with logging | `python3 -m llmc.mcrun pytest tests/` |
 
-### Unified CLI (New)
+### Training Data Generation
 
-The newer `llmc-cli` provides the same functionality with a cleaner interface:
+All `mc*` tools support `--emit-training` to generate OpenAI-format tool calling examples:
 
 ```bash
-llmc-cli analytics search "query"     # Same as: python3 -m llmc.rag.cli search
-llmc-cli debug doctor                 # Same as: python3 -m llmc.rag.cli doctor
-llmc-cli tui                          # Launch interactive TUI
+python3 -m llmc.mcgrep "authentication" --emit-training
 ```
 
-Both CLIs work. Use whichever you prefer.
-
-### Configurable Scoring
-
-Search scoring is tunable via `llmc.toml`:
-
-```toml
-[scoring]
-code_boost = 0.15        # Boost code files in results
-doc_penalty = -0.12      # Penalize docs when searching for code
-stem_match_boost = 0.30  # Boost when query matches filename stem
-```
+This outputs JSON showing the tool schema + invocation + response, suitable for fine-tuning.
 
 ### Quick Heuristics
 
-- **`inspect` vs `read_file`:** Always prefer `inspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly. Use `read_file` only for raw byte checks.
-- **`search`:** If results are weird, try more literal queries or fallback to `grep`.
-- **`plan`:** Use for multi-file changes. If confidence is low, verify targets with `search` or `inspect`.
-- **`doctor`:** Your first step if the RAG system seems "dumb" or broken.
+- **`mcinspect` vs `read_file`:** Always prefer `mcinspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly.
+- **`mcgrep`:** If results are weird, try more literal queries or fallback to `rg`.
+- **`llmc debug doctor`:** Your first step if the RAG system seems broken.
+
+---
+
+## 5.5 OpenAI Tool Calling Convention
+
+**The Insight:** LLMs have been trained extensively on OpenAI function calling format. LLMC tools follow this format, so there's zero learning curve.
+
+### Why This Matters
+
+**Before (Expensive):**
+```markdown
+## Tools
+Here are 30 tools with their schemas...
+[10KB of JSON definitions]
+```
+
+**After (Cheap):**
+```markdown
+## Tools
+Use OpenAI-standard tool calling. Available locally:
+- mcgrep <query> - semantic code search
+- mcwho <symbol> - find callers/callees
+- mcinspect <symbol> - deep inspection
+```
+
+### The Pattern
+
+Models already know `{"name": "...", "arguments": {...}}` format from training. Just tell them the tool names → they infer the schema.
+
+### MCP Equivalents
+
+| CLI Tool | MCP Tool | OpenAI Schema |
+|----------|----------|---------------|
+| `mcgrep` | `rag_search` | `{"name": "rag_search", "arguments": {"query": "..."}}` |
+| `mcwho` | `rag_where_used` | `{"name": "rag_where_used", "arguments": {"symbol": "..."}}` |
+| `mcinspect` | `inspect` | `{"name": "inspect", "arguments": {"symbol": "..."}}` |
+| `mcread` | `read_file` | `{"name": "read_file", "arguments": {"path": "..."}}` |
+| `mcrun` | `run_cmd` | `{"name": "run_cmd", "arguments": {"cmd": "..."}}` |
+
+Same instructions work for MCP, CLI, or local execution.
 
 ---
 
@@ -326,15 +353,16 @@ When you already know roughly where to look:
 
 ### mc* CLI Quick Reference
 
-All commands work via `python3 -m llmc.<tool>`:
+See **Section 5** for the authoritative `mc*` CLI table. All commands:
 
-| Command | Purpose | Example |
-|---------|---------|---------|
-| `llmc.mcschema` | Codebase overview (~400 tokens) | `python3 -m llmc.mcschema` |
-| `llmc.mcgrep` | Semantic search + file descriptions | `python3 -m llmc.mcgrep "router"` |
-| `llmc.mcwho` | Who uses/calls this symbol? | `python3 -m llmc.mcwho Database` |
-| `llmc.mcinspect` | Deep symbol inspection | `python3 -m llmc.mcinspect --symbol Foo` |
-| `llmc.mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
+```bash
+python3 -m llmc.mcschema              # Codebase orientation
+python3 -m llmc.mcgrep "query"        # Semantic search
+python3 -m llmc.mcwho Symbol          # Who calls/uses this?
+python3 -m llmc.mcinspect Symbol      # Deep inspection + graph
+python3 -m llmc.mcread path/to/file   # Read with context
+python3 -m llmc.mcrun "command"       # Execute with logging
+```
 
 ---
 

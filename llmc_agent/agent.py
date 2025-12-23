@@ -16,9 +16,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from llmc_agent.backends.base import GenerateRequest
+from llmc_agent.backends.base import Backend, GenerateRequest
 from llmc_agent.backends.llmc import LLMCBackend, RAGResult
 from llmc_agent.backends.ollama import OllamaBackend
+from llmc_agent.backends.openai_compat import OpenAICompatBackend
 from llmc_agent.config import Config
 from llmc_agent.format import FormatNegotiator
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
@@ -52,13 +53,28 @@ class Agent:
     def __init__(self, config: Config):
         self.config = config
 
-        # Initialize backends
-        self.ollama = OllamaBackend(
-            base_url=config.ollama.url,
-            timeout=config.ollama.timeout,
-            temperature=config.ollama.temperature,
-            num_ctx=config.ollama.num_ctx,
-        )
+        # Initialize LLM backend based on provider
+        self.backend: Backend
+        if config.agent.provider == "openai":
+            # Use OpenAI-compatible backend (llama-server, vLLM, etc.)
+            self.backend = OpenAICompatBackend(
+                base_url=config.openai.url,
+                api_key=config.openai.api_key,
+                timeout=config.openai.timeout,
+                temperature=config.openai.temperature,
+                model=config.openai.model,
+            )
+            # For compatibility, also expose as .ollama (legacy code paths)
+            self.ollama = self.backend
+        else:
+            # Default: Ollama backend
+            self.backend = OllamaBackend(
+                base_url=config.ollama.url,
+                timeout=config.ollama.timeout,
+                temperature=config.ollama.temperature,
+                num_ctx=config.ollama.num_ctx,
+            )
+            self.ollama = self.backend
 
         self.rag: LLMCBackend | None = None
         if config.rag.enabled:
@@ -406,6 +422,15 @@ class Agent:
 
                     # Add assistant message with tool call
                     tc_id = tc.id or f"call_{round_num}_{tc.name}"
+                    
+                    # Format arguments based on provider
+                    # OpenAI/llama-server: Arguments must be JSON string
+                    # Ollama: Arguments should be dict
+                    if self.config.agent.provider == "openai":
+                        args_formatted = json.dumps(tc.arguments) if isinstance(tc.arguments, dict) else tc.arguments
+                    else:
+                        args_formatted = tc.arguments
+                    
                     messages.append(
                         {
                             "role": "assistant",
@@ -413,10 +438,10 @@ class Agent:
                             "tool_calls": [
                                 {
                                     "id": tc_id,
+                                    "type": "function",  # Required by OpenAI spec
                                     "function": {
                                         "name": tc.name,
-                                        # Ollama expects arguments as a dict, not JSON string
-                                        "arguments": tc.arguments,
+                                        "arguments": args_formatted,
                                     },
                                 }
                             ],

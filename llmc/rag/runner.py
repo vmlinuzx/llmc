@@ -4,6 +4,7 @@ import argparse
 from collections.abc import Iterable, Sequence
 import hashlib
 import json
+import logging
 import os
 from pathlib import Path
 import sqlite3
@@ -14,6 +15,7 @@ from .config import index_path_for_write
 from llmc.core import find_repo_root
 from .lang import EXTENSION_LANG
 
+logger = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SUPPORTED_SUFFIXES = {ext.lower() for ext in EXTENSION_LANG.keys()}
 DEFAULT_EXCLUDE_DIRS = {
@@ -28,7 +30,7 @@ DEFAULT_EXCLUDE_DIRS = {
 
 
 def log(msg: str) -> None:
-    print(f"[rag-runner] {msg}")
+    logger.info(msg)
 
 
 def env_bool(name: str, default: bool = False) -> bool:
@@ -230,7 +232,7 @@ def current_hashes_smart(
     # Log stats when there's meaningful work (helps diagnose perf issues)
     if hashed_count > 0:
         log(f"Hashed {hashed_count} files, skipped {skipped_count} unchanged")
-    
+
     return hashes
 
 
@@ -305,10 +307,10 @@ def run_embed(repo_root: Path, limit: int) -> str:
 
     if stdout:
         # Preserve the original embed CLI output in service logs.
-        print(stdout)
+        logger.info(stdout)
     if stderr:
         # Surface embedding errors that would otherwise be hidden when run via the daemon.
-        print(stderr, file=sys.stderr)
+        logger.error(stderr)
 
     if result.returncode != 0:
         # Propagate a rich error object while keeping existing caller behavior.

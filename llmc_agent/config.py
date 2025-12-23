@@ -47,12 +47,33 @@ class RAGConfig:
 
 
 @dataclass
+class OpenAIConfig:
+    """OpenAI-compatible backend configuration.
+    
+    Works with llama.cpp server, vLLM, text-generation-inference,
+    and other OpenAI-compatible endpoints.
+    """
+
+    url: str = "http://athena:8080/v1"  # llama-server on Athena
+    api_key: str | None = None
+    timeout: int = 300
+    temperature: float = 0.6
+    model: str | None = None  # If set, overrides agent.model for this backend
+
+
+@dataclass
 class AgentConfig:
     """Agent configuration."""
 
+    # Available providers:
+    # provider: str = "ollama"  # Ollama API (default)
+    # provider: str = "openai"  # OpenAI-compatible API (llama-server, vLLM, etc.)
+    provider: str = "ollama"  # Default backend
+    
     # Available models:
     # model: str = "qwen3:4b-instruct"  # Fast, local, limited capability
     # model: str = "hf.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF:Q8_K_XL"  # Athena 30B coder
+    # model: str = "gpt-oss-120b-F16.gguf"  # GPT-OSS-120B on llama-server (use provider=openai)
     model: str = "qwen3-next-80b-nothink"  # Boxxie: 80B MoE @ 32 t/s on Athena
     context_budget: int = 6000
     response_reserve: int = 1024
@@ -97,6 +118,7 @@ class Config:
 
     agent: AgentConfig = field(default_factory=AgentConfig)
     ollama: OllamaConfig = field(default_factory=OllamaConfig)
+    openai: OpenAIConfig = field(default_factory=OpenAIConfig)
     rag: RAGConfig = field(default_factory=RAGConfig)
     session: SessionConfig = field(default_factory=SessionConfig)
     ui: UIConfig = field(default_factory=UIConfig)
@@ -165,6 +187,8 @@ def _merge_config(config: Config, data: dict[str, Any]) -> Config:
 
     if "agent" in data:
         agent_data = data["agent"]
+        if "provider" in agent_data:
+            config.agent.provider = agent_data["provider"]
         if "model" in agent_data:
             config.agent.model = agent_data["model"]
         if "context_budget" in agent_data:
@@ -173,6 +197,19 @@ def _merge_config(config: Config, data: dict[str, Any]) -> Config:
             config.agent.response_reserve = agent_data["response_reserve"]
         if "timeout" in agent_data:
             config.agent.timeout = agent_data["timeout"]
+
+    if "openai" in data:
+        openai_data = data["openai"]
+        if "url" in openai_data:
+            config.openai.url = openai_data["url"]
+        if "api_key" in openai_data:
+            config.openai.api_key = openai_data["api_key"]
+        if "timeout" in openai_data:
+            config.openai.timeout = openai_data["timeout"]
+        if "temperature" in openai_data:
+            config.openai.temperature = openai_data["temperature"]
+        if "model" in openai_data:
+            config.openai.model = openai_data["model"]
 
     if "ollama" in data:
         ollama_data = data["ollama"]
@@ -237,16 +274,20 @@ def _apply_env_overrides(config: Config) -> Config:
 
     env_map = {
         # New LLMC_AGENT_* style
+        "LLMC_AGENT_PROVIDER": ("agent", "provider"),
         "LLMC_AGENT_MODEL": ("agent", "model"),
         "LLMC_AGENT_CONTEXT_BUDGET": ("agent", "context_budget", int),
         "LLMC_OLLAMA_URL": ("ollama", "url"),
         "LLMC_OLLAMA_TIMEOUT": ("ollama", "timeout", int),
+        "LLMC_OPENAI_URL": ("openai", "url"),
+        "LLMC_OPENAI_TIMEOUT": ("openai", "timeout", int),
         "LLMC_RAG_ENABLED": (
             "rag",
             "enabled",
             lambda x: x.lower() in ("true", "1", "yes"),
         ),
         # Legacy BX_* style (for backwards compat)
+        "BX_PROVIDER": ("agent", "provider"),
         "BX_MODEL": ("agent", "model"),
         "BX_AGENT_MODEL": ("agent", "model"),
         "BX_CONTEXT_BUDGET": ("agent", "context_budget", int),

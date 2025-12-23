@@ -14,6 +14,7 @@ Classifies summaries into exactly one terminal class:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 import re
 from typing import Literal, Optional
 
@@ -43,6 +44,7 @@ PLACEHOLDER_PATTERNS = [
 # Punctuation to strip during normalization (ASCII + common Unicode)
 PUNCTUATION_TO_STRIP = r'[\s\t\n\r.,;:!?()\[\]{}"\'`~…—–•。、《》，；：' + "'" + r"]+"
 
+logger = logging.getLogger(__name__)
 QualityClass = Literal["OK", "SHORT", "PLACEHOLDER", "EMPTY"]
 
 
@@ -225,13 +227,13 @@ def test_classifier():
     goldset_path = Path(__file__).resolve().parents[2] / "qa" / "goldset_en_cjk.csv"
 
     if not goldset_path.exists():
-        print(f"WARNING: Gold set not found at {goldset_path}")
+        logger.warning("Gold set not found at %s", goldset_path)
         return
 
     with open(goldset_path) as f:
         reader = csv.DictReader(f)
-        print(f"\n{'Testing classifier against gold set':=^70}")
-        print(f"Rule version: {RULE_VERSION}\n")
+        logger.info("Testing classifier against gold set")
+        logger.info("Rule version: %s", RULE_VERSION)
 
         passed = 0
         failed = 0
@@ -245,18 +247,20 @@ def test_classifier():
             actual = result.classification
 
             if actual == expected:
-                print(f"✓ {row_id}: {actual} (OK)")
+                logger.info("✓ %s: %s (OK)", row_id, actual)
                 passed += 1
             else:
-                print(f"✗ {row_id}: expected {expected}, got {actual}")
-                print(f"  Summary: {summary[:60]}")
-                print(f"  Reason: {result.reason}")
+                logger.error("✗ %s: expected %s, got %s", row_id, expected, actual)
+                logger.error("  Summary: %s", summary[:60])
+                logger.error("  Reason: %s", result.reason)
                 failed += 1
 
         total = passed + failed
-        print(f"\n{'=' * 70}")
-        print(f"Results: {passed}/{total} passed ({passed / total * 100:.1f}%)")
-        print(f"{'=' * 70}\n")
+        logger.info("=" * 70)
+        logger.info(
+            "Results: %d/%d passed (%.1f%%)", passed, total, passed / total * 100
+        )
+        logger.info("=" * 70)
 
         return failed == 0
 

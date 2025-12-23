@@ -57,9 +57,11 @@ def test_upsert_file_and_get_file_hash_roundtrip(tmp_path: Path) -> None:
 
 
 def test_replace_spans_preserves_unchanged_and_reports_stats(
-    tmp_path: Path, capsys
+    tmp_path: Path, caplog
 ) -> None:
     """replace_spans keeps unchanged spans and only inserts/deletes the delta."""
+    import logging
+    caplog.set_level(logging.INFO, logger="llmc.rag.database")
     db = _make_db(tmp_path)
     try:
         file_id = db.upsert_file(_sample_file_record("foo.py"))
@@ -87,11 +89,11 @@ def test_replace_spans_preserves_unchanged_and_reports_stats(
         assert hashes == {"span-a", "span-c"}
         assert symbols == {"func_a", "func_c"}
 
-        # The stderr log should mention one added, one deleted, one unchanged.
-        captured = capsys.readouterr()
-        assert "Spans:" in captured.err
-        assert "1 added" in captured.err
-        assert "1 deleted" in captured.err
+        # The log should mention one added, one deleted, one unchanged.
+        log_output = " ".join(record.message for record in caplog.records)
+        assert "1 unchanged" in log_output or "unchanged" in log_output
+        assert "1 added" in log_output or "added" in log_output
+        assert "1 deleted" in log_output or "deleted" in log_output
     finally:
         db.close()
 

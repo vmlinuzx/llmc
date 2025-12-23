@@ -71,7 +71,18 @@ def _index_edges(graph: dict) -> dict[str, set[str]]:
     return neighbors
 
 
-def load_neighbor_index(repo_root: Path) -> dict[str, set[str]]:
+def load_neighbor_index(repo_root: Path) -> dict[str, set[str]] | None:
+    """Load neighbor index, preferring SQLite when available.
+    
+    Returns None if SQLite is available (stitch_neighbors will use DB directly).
+    Returns dict if using JSON fallback.
+    """
+    db_path = repo_root / ".llmc" / "rag_graph.db"
+    if db_path.is_file():
+        # Signal to caller to use SQLite directly
+        return None
+    
+    # JSON fallback
     graph_path = repo_root / ".llmc" / "rag_graph.json"
     if not graph_path.exists():
         raise GraphNotFound(str(graph_path))
@@ -82,10 +93,33 @@ def load_neighbor_index(repo_root: Path) -> dict[str, set[str]]:
 def stitch_neighbors(
     repo_root: Path, seed_paths: Iterable[str], limit: int, hops: int = 1
 ) -> list[Neighbor]:
-    """Return neighbor file paths (1..hops) for given seed paths, unique and capped."""
+    """Return neighbor file paths (1..hops) for given seed paths, unique and capped.
+    
+    Uses O(1) SQLite queries when database is available.
+    Falls back to in-memory JSON index otherwise.
+    """
     idx = load_neighbor_index(repo_root)
-    seen: set[str] = set(seed_paths)
-    frontier: set[str] = set(seed_paths)
+    seed_list = list(seed_paths)
+    
+    # SQLite path: O(1) query via GraphDatabase
+    if idx is None:
+        try:
+            from llmc.rag.graph_db import GraphDatabase
+            
+            db_path = repo_root / ".llmc" / "rag_graph.db"
+            with GraphDatabase(db_path) as db:
+                neighbor_paths = db.get_file_neighbors(seed_list, limit=limit)
+            return [Neighbor(path=p, weight=1.0, reason="neighbor") for p in neighbor_paths]
+        except Exception:
+            # Fallback to JSON if SQLite fails
+            graph_path = repo_root / ".llmc" / "rag_graph.json"
+            if not graph_path.exists():
+                raise GraphNotFound(str(graph_path))
+            idx = _index_edges(_read_json(graph_path))
+    
+    # In-memory path: dict traversal (JSON-based)
+    seen: set[str] = set(seed_list)
+    frontier: set[str] = set(seed_list)
     out: list[Neighbor] = []
 
     for _ in range(max(1, hops)):

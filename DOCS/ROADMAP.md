@@ -112,12 +112,20 @@ Size: 716 lines, 24.2KB
 
 ### 1.3 Security Polish (P2)
 
-**Remaining from 2025-12-17 audit:**
+**Status:** ✅ **COMPLETE** (2025-12-23)  
+**Added:** 2025-12-17  
+**SDD:** `DOCS/planning/SDD_Security_Polish.md`
 
-| Priority | Issue | Location | Risk |
-|----------|-------|----------|------|
-| **P2** | `os.chdir()` in RAG tools | `llmc_mcp/tools/rag.py` | MEDIUM - race conditions |
-| **P2** | Unvalidated `repo_root` in RAG | `llmc_mcp/tools/rag.py` | MEDIUM - no `allowed_roots` check |
+**What was fixed (PR #60 - Jules):**
+
+| Priority | Issue | Fix |
+|----------|-------|-----|
+| **P2** | `os.chdir()` in RAG tools | ✅ Removed all `os.chdir()` from `llmc_mcp/tools/rag.py` |
+| **P2** | Unvalidated `repo_root` in RAG | ✅ Added `validate_repo_root()` with `allowed_roots` check |
+
+**Tests:**
+- `tests/security/test_rag_security.py` - 4 tests for `validate_repo_root()`
+- `tests/mcp/test_fs_security.py` - 3 tests for path traversal + symlink escape
 
 **📄 Full Report:** `tests/REPORTS/current/rem_mcp_2025-12-17.md`
 
@@ -208,7 +216,7 @@ Each CLI is a *demonstration* of correct tool usage. Run `mcgrep "router"` → g
 
 ### 2.3 AGENTS.md: OpenAI Tool Calling Convention (P1)
 
-**Status:** 🔴 Blocked (depends on 2.2)  
+**Status:** ✅ **COMPLETE** (2025-12-23)  
 **Added:** 2025-12-19
 
 **Goal:** Update AGENTS.md to tell LLMs to use OpenAI-standard tool calling with the `mc*` CLIs.
@@ -219,37 +227,21 @@ LLMs have been trained *relentlessly* on OpenAI function calling format. If LLMC
 - **Minimal context** - no need to dump 10KB of tool schemas
 - **Same training pattern** works for MCP, CLI, or fine-tuning
 
-**Before (Expensive):**
-```markdown
-## Tools
-Here are 30 tools with their schemas...
-[10KB of JSON definitions]
-```
+**What was built:**
+1. **Simplified Section 5 (RAG Tooling Reference):**
+   - Replaced verbose flag tables with clean `mc*` CLI reference
+   - Added `--emit-training` documentation for training data generation
 
-**After (Cheap):**
-```markdown
-## Tools
-Use OpenAI-standard tool calling. Available locally:
-- `mcgrep <query>` - semantic code search (rag_search)
-- `mcwho <symbol>` - find callers/callees (rag_where_used)
-- `mcread <file>` - read file with graph context (read_file)
-```
+2. **Added Section 5.5 (OpenAI Tool Calling Convention):**
+   - Explains the paradigm shift (expensive schema dumps → cheap tool names)
+   - MCP equivalents table mapping CLI → MCP → OpenAI format
+   - "The Pattern" section showing models already know the format
 
-**Why This Works:**
-1. Models know `{"name": "...", "arguments": {...}}` format from training
-2. Just tell them the tool names → they infer the schema
-3. Graph-enriched outputs teach correct tool chaining
-4. **Same instructions work for MCP, CLI, or local execution**
+3. **Deduplicated mc* CLI Reference:**
+   - Section 7 now points to Section 5 as authoritative source
+   - Consistent examples across the document
 
-**Prerequisite:** Section 2.2 must be complete first (need the CLIs to exist)
-
-**Changes to AGENTS.md:**
-- Add section: "OpenAI Tool Calling Convention"
-- List `mc*` tools with their MCP equivalents
-- Remove verbose schema dumps
-- Keep RAG-first contract, but simplify tool docs
-
-**Effort:** 2-4 hours | **Difficulty:** 🟢 Easy (just docs)
+**Effort:** ~30 minutes | **Difficulty:** 🟢 Easy (just docs)
 
 ---
 
@@ -360,6 +352,54 @@ mcread docs/spec.pdf            # Reads sidecar markdown transparently
 | `llmc/rag/schema.py` | ~8 | LOW |
 
 **Effort:** ~4-6 hours | **Difficulty:** 🟢 Easy (mechanical refactor)
+
+---
+
+### 2.10 Multi-Backend LLM Providers (P1) 🔌
+
+**Status:** ✅ **Phase 1 COMPLETE** (2025-12-23)  
+**Added:** 2025-12-23  
+**Source:** Athena runs llama.cpp, other machines run Ollama. LLMC must be polyglot.
+
+**The Problem:**
+- Ollama has API quirks (different tool_calls format, Modelfile dance)
+- llama.cpp server uses proper OpenAI-compatible API
+- Different servers have different backends - need to work with all of them
+- Homelab has: Athena (llama.cpp), Desktop (Ollama), Laptop (Ollama)
+
+**What Was Built (Phase 1):**
+1. **`OpenAICompatBackend`** (`llmc_agent/backends/openai_compat.py`):
+   - Works with llama-server, vLLM, text-generation-inference, OpenAI
+   - Full tool calling support via OpenAI API format
+   - Proper `choices[0].message` parsing
+
+2. **Config-Driven Provider Selection:**
+   - `[agent] provider = "openai"` or `"ollama"`
+   - `[openai]` section for llama-server config
+   - Environment override: `LLMC_AGENT_PROVIDER=openai`
+
+3. **UTP Parser Fix:**
+   - `OpenAINativeParser` now handles both Ollama and OpenAI response formats
+   - Properly extracts tool_calls from `choices[0].message.tool_calls`
+
+**Usage:**
+```bash
+# Use llama-server (OpenAI-compatible)
+LLMC_AGENT_PROVIDER=openai bx "your question"
+
+# Or set permanently in llmc.toml:
+[agent]
+provider = "openai"
+```
+
+**Remaining (Phase 2+):**
+- [ ] Per-profile provider selection (different profiles → different backends)
+- [ ] Enrichment chain support for OpenAI-compatible backends
+- [ ] Health check that tests ALL configured backends
+- [ ] Auto-failover between backends
+- [ ] vLLM-specific backend (tensor parallelism, continuous batching)
+
+**Effort:** Phase 1: ~4 hours ✅ | Phase 2+: 8-12 hours | **Difficulty:** 🟡 Medium
 
 ---
 

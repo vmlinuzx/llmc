@@ -395,6 +395,10 @@ def build_graph_for_repo(repo_root: Path | str):
     }
     try:
         rag_path.write_text(json.dumps(payload), encoding="utf-8")
+        
+        # Build SQLite database for O(1) queries
+        from llmc.rag.graph_db import build_from_json
+        build_from_json(repo_root_path)
     except Exception:
         # Writing the nav graph is best-effort; status + legacy graph already exist.
         pass
@@ -502,6 +506,13 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
 
     # 4. Save the enriched graph
     _save_schema_graph(repo_root, base_graph)
+    
+    # 5. Build SQLite database for O(1) queries
+    try:
+        from llmc.rag.graph_db import build_from_json
+        build_from_json(repo_root)
+    except Exception as e:
+        _enrich_log.warning(f"SQLite graph build failed: {e}")
 
     return base_graph
 

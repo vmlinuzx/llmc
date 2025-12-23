@@ -21,6 +21,7 @@ Usage:
 import argparse
 from datetime import UTC, datetime
 import json
+import logging
 import os
 from pathlib import Path
 import signal
@@ -66,6 +67,7 @@ except Exception:
     LLMCLogManager = None  # type: ignore
 
 # State file locations (override via env for constrained environments)
+logger = logging.getLogger(__name__)
 _state_override = os.environ.get("LLMC_RAG_SERVICE_STATE")
 if _state_override:
     STATE_FILE = Path(os.path.expanduser(_state_override)).resolve()
@@ -381,7 +383,7 @@ def _stream_systemd_logs_follow(lines: int) -> int:
                 err = (
                     result.stderr or ""
                 ).strip() or f"journalctl exited with {result.returncode}"
-                print(f"[logs] journalctl error: {err}", file=sys.stderr)
+                logger.error("journalctl error: %s", err)
                 return 1
 
             output = result.stdout or ""
@@ -456,7 +458,7 @@ class RAGService:
 
     def handle_signal(self, signum, frame):
         """Handle shutdown signals gracefully."""
-        print(f"\nReceived signal {signum}, shutting down gracefully...")
+        logger.info("Received signal %s, shutting down gracefully...", signum)
         self.running = False
 
     def _load_logging_cfg(self, repo_root: Path) -> dict:
@@ -519,10 +521,10 @@ class RAGService:
         """
         repo = Path(repo_path)
         if not repo.exists():
-            print(f"⚠️  Repo not found: {repo_path}")
+            logger.warning("Repo not found: %s", repo_path)
             return False
 
-        print(f"🔄 Processing {repo.name}...")
+        logger.info("Processing %s...", repo.name)
         work_done = False
 
         # Import proper runner functions
@@ -537,12 +539,12 @@ class RAGService:
             changes = detect_changes(repo, index_path=index_path)
             if changes:
                 run_sync(repo, changes)
-                print(f"  ✅ Synced {len(changes)} changed files")
+                logger.info("Synced %d changed files for %s", len(changes), repo.name)
                 work_done = True
             else:
-                print("  ℹ️  No file changes detected")
+                logger.info("No file changes detected for %s", repo.name)
         except Exception as e:
-            print(f"  ⚠️  Sync failed: {e}")
+            logger.error("Sync failed for %s", repo.name, exc_info=e)
             # Continue anyway - enrichment might still work
 
         # Step 2: Enrich pending spans using EnrichmentPipeline
@@ -582,14 +584,17 @@ class RAGService:
                 starvation_ratio_low=starvation_low,
             )
 
-            print(
-                f"  🤖 Enriching with EnrichmentPipeline (batch_size={batch_size})",
-                flush=True,
+            logger.info(
+                "Enriching with EnrichmentPipeline (batch_size=%d) for %s",
+                batch_size,
+                repo.name,
             )
 
             def progress_cb(current, total):
                 if current % 5 == 0 or current == total:
-                    print(f"    ... processed {current}/{total} spans", flush=True)
+                    logger.info(
+                        "... processed %d/%d spans for %s", current, total, repo.name
+                    )
 
             result = pipeline.process_batch(
                 limit=batch_size,
@@ -600,25 +605,34 @@ class RAGService:
             # Report results
             if result.attempted > 0:
                 work_done = True
-                print(
-                    f"  ✅ Enriched {result.succeeded}/{result.attempted} spans ({result.success_rate:.0%} success)"
+                logger.info(
+                    "Enriched %d/%d spans (%.0f%% success) for %s",
+                    result.succeeded,
+                    result.attempted,
+                    result.success_rate,
+                    repo.name,
                 )
                 if result.failed > 0:
-                    print(f"     ⚠️  {result.failed} failures, {result.skipped} skipped")
+                    logger.warning(
+                        "%d failures, %d skipped during enrichment for %s",
+                        result.failed,
+                        result.skipped,
+                        repo.name,
+                    )
             else:
-                print("  ℹ️  No spans pending enrichment")
+                logger.info("No spans pending enrichment for %s", repo.name)
         finally:
             db.close()
 
         # RAG doctor: quick index/enrichment health snapshot
         doctor_result = run_rag_doctor(repo)
-        print(format_rag_doctor_summary(doctor_result, repo.name))
+        logger.info(format_rag_doctor_summary(doctor_result, repo.name))
 
         # GPU Cooldown: Give Ollama time to unload enrichment LLM before loading embedding model
         # This prevents model runner crashes when both use the same Ollama server
         gpu_cooldown = float(os.getenv("OLLAMA_GPU_COOLDOWN_SEC", "3.0"))
         if gpu_cooldown > 0:
-            print(f"  ⏳ GPU cooldown ({gpu_cooldown}s)...")
+            logger.info("GPU cooldown (%.1fs)...", gpu_cooldown)
             time.sleep(gpu_cooldown)
 
         # Step 3: Generate embeddings for enriched spans
@@ -630,18 +644,20 @@ class RAGService:
                 embedded = embed_result.get("embedded", 0)
                 if embedded > 0:
                     work_done = True
-                    print(f"  ✅ Generated {embedded} embeddings")
+                    logger.info("Generated %d embeddings for %s", embedded, repo.name)
                 else:
-                    print("  ℹ️  No spans pending embedding")
+                    logger.info("No spans pending embedding for %s", repo.name)
             else:
-                print(f"  ✅ Embedding complete (limit={embed_limit})")
+                logger.info(
+                    "Embedding complete (limit=%d) for %s", embed_limit, repo.name
+                )
         except Exception as e:
-            print(f"  ⚠️  Embedding failed: {e}")
+            logger.error("Embedding failed for %s", repo.name, exc_info=e)
 
         # Step 4: Quality check (if enabled)
         if os.getenv("ENRICH_QUALITY_CHECK", "on").lower() == "on":
             quality_result = run_quality_check(repo)
-            print(format_quality_summary(quality_result, repo.name))
+            logger.info(format_quality_summary(quality_result, repo.name))
 
             # Log quality issues
             if quality_result["status"] == "FAIL":
@@ -655,35 +671,39 @@ class RAGService:
 
         # Step 5: Rebuild RAG Graph (only when work was done - prevents Idle Hammer bug)
         if work_done:
-            print("  📊 Rebuilding RAG Graph...")
+            logger.info("Rebuilding RAG Graph for %s...", repo.name)
             build_graph_for_repo(repo)
-            print("  ✅ Graph rebuilt successfully")
+            logger.info("Graph rebuilt successfully for %s", repo.name)
 
         # Step 6: Database Maintenance (Vacuum)
         try:
             vacuum_interval_hours = get_vacuum_interval_hours(repo)
             last_vacuum = self.state.get_last_vacuum(str(repo))
             now = time.time()
-            print(
-                f"DEBUG: Vacuum check: now={now}, last_vacuum={last_vacuum}, interval={vacuum_interval_hours*3600}, condition={now - last_vacuum > vacuum_interval_hours * 3600}"
+            logger.debug(
+                "Vacuum check: now=%s, last_vacuum=%s, interval=%s, condition=%s",
+                now,
+                last_vacuum,
+                vacuum_interval_hours * 3600,
+                now - last_vacuum > vacuum_interval_hours * 3600,
             )
             if now - last_vacuum > vacuum_interval_hours * 3600:
-                print("  🧹 Running database vacuum...")
+                logger.info("Running database vacuum for %s...", repo.name)
                 db_path = index_path_for_write(repo)
                 db = Database(db_path)
                 db.vacuum()
                 db.close()
 
                 self.state.update_last_vacuum(str(repo))
-                print("  ✅ Database vacuum complete")
+                logger.info("Database vacuum complete for %s", repo.name)
                 work_done = True
         except Exception as e:
-            print(f"  ⚠️  Database vacuum failed: {e}")
+            logger.error("Database vacuum failed for %s", repo.name, exc_info=e)
 
         if not work_done:
-            print(f"  ℹ️  {repo.name}: Nothing to do")
+            logger.info("%s: Nothing to do", repo.name)
         else:
-            print(f"  ✅ {repo.name} processing complete")
+            logger.info("%s processing complete", repo.name)
 
         return work_done
 
@@ -706,8 +726,8 @@ class RAGService:
         if mode == "event" and WATCHER_AVAILABLE:
             return self.run_loop_event(interval)
         elif mode == "event" and not WATCHER_AVAILABLE:
-            print(
-                "⚠️  Event mode requested but inotify not available, falling back to poll mode"
+            logger.warning(
+                "Event mode requested but inotify not available, falling back to poll mode"
             )
         return self.run_loop_poll(interval)
 
@@ -725,9 +745,9 @@ class RAGService:
         try:
             current = os.nice(0)
             os.nice(nice_level - current)
-            print(f"   Nice level: +{nice_level}")
+            logger.info("Nice level set to +%d", nice_level)
         except (OSError, PermissionError) as e:
-            print(f"   ⚠️  Could not set nice level: {e}")
+            logger.warning("Could not set nice level", exc_info=e)
 
         # Initialize watchers for all registered repos
         debounce_seconds = float(self._daemon_cfg.get("debounce_seconds", 2.0))
@@ -738,7 +758,7 @@ class RAGService:
             try:
                 repo = Path(repo_path)
                 if not repo.exists():
-                    print(f"   ⚠️  Repo not found, skipping watch: {repo_path}")
+                    logger.warning("Repo not found, skipping watch: %s", repo_path)
                     continue
                 watcher = RepoWatcher(
                     repo,
@@ -748,27 +768,26 @@ class RAGService:
                 watcher.start()
                 watchers.append(watcher)
             except Exception as e:
-                print(f"   ⚠️  Failed to watch {repo_path}: {e}")
+                logger.error("Failed to watch %s", repo_path, exc_info=e)
 
         self.state.set_running(os.getpid())
-        print(f"🚀 RAG service started (PID {os.getpid()})")
-        print("   Mode: event-driven (inotify)")
-        print(f"   Watching {len(watchers)} repos")
-        print(f"   Debounce: {debounce_seconds}s")
-        print(f"   Housekeeping interval: {housekeeping_interval}s")
+        logger.info("RAG service started (PID %d)", os.getpid())
+        logger.info("Mode: event-driven (inotify)")
+        logger.info("Watching %d repos", len(watchers))
+        logger.info("Debounce: %s", debounce_seconds)
+        logger.info("Housekeeping interval: %s", housekeeping_interval)
 
         watch_limit = get_inotify_watch_limit()
         if watch_limit:
-            print(f"   inotify watch limit: {watch_limit}")
-        print()
+            logger.info("inotify watch limit: %s", watch_limit)
 
         # Initial processing - catch up on any pending work
-        print("📋 Initial sync for all repos...")
+        logger.info("Initial sync for all repos...")
         for repo in self.state.state["repos"]:
             if not self.running:
                 break
             self.process_repo(repo)
-        print("✅ Initial sync complete\n")
+        logger.info("Initial sync complete")
 
         last_housekeeping = time.time()
 
@@ -785,7 +804,7 @@ class RAGService:
             ready_repos = queue.get_ready()
 
             if ready_repos:
-                print(f"\n📂 Changes detected in {len(ready_repos)} repo(s)")
+                logger.info("Changes detected in %d repo(s)", len(ready_repos))
                 for repo in ready_repos:
                     if not self.running:
                         break
@@ -799,7 +818,7 @@ class RAGService:
                 last_housekeeping = now
 
         # Cleanup
-        print("\n🛑 Stopping file watchers...")
+        logger.info("Stopping file watchers...")
         for watcher in watchers:
             try:
                 watcher.stop()
@@ -807,7 +826,7 @@ class RAGService:
                 pass
 
         self.state.set_stopped()
-        print("👋 RAG service stopped")
+        logger.info("RAG service stopped")
 
     def _periodic_housekeeping(self):
         """Run periodic maintenance tasks (log rotation, vacuum check, idle enrichment)."""
@@ -828,9 +847,9 @@ class RAGService:
                     result = self._log_manager.rotate_logs(log_dir)
                     self._last_rotate = now
                     if result.get("rotated_files", 0) > 0:
-                        print(f"🔄 Rotated {result['rotated_files']} log files")
+                        logger.info("Rotated %d log files", result["rotated_files"])
         except Exception as e:
-            print(f"  ⚠️  Housekeeping failed: {e}")
+            logger.warning("Housekeeping failed", exc_info=e)
 
         # Idle enrichment - run enrichment when daemon is idle
         self._run_idle_enrichment()
@@ -867,7 +886,7 @@ class RAGService:
         if self._enrichment_daily_cost >= max_daily_cost:
             return  # Cost limit reached for today
 
-        print(f"\n🧠 Idle enrichment: Processing up to {batch_size} spans...")
+        logger.info("Idle enrichment: Processing up to %d spans...", batch_size)
 
         # Run enrichment for each registered repo
         total_enriched = 0
@@ -894,8 +913,10 @@ class RAGService:
 
                     if dry_run:
                         pending_count = len(db.pending_enrichments(limit=batch_size))
-                        print(
-                            f"  📋 [DRY-RUN] {repo.name}: Would enrich {pending_count} spans"
+                        logger.info(
+                            "[DRY-RUN] %s: Would enrich %d spans",
+                            repo.name,
+                            pending_count,
                         )
                         continue
 
@@ -923,15 +944,19 @@ class RAGService:
                         # Estimate cost (rough: $0.15/1M tokens, ~500 tokens/span)
                         estimated_cost = result.succeeded * 0.000075
                         total_cost += estimated_cost
-                        print(
-                            f"  ✅ {repo.name}: Enriched {result.succeeded}/{result.attempted} spans (~${estimated_cost:.4f})"
+                        logger.info(
+                            "%s: Enriched %d/%d spans (~$%.4f)",
+                            repo.name,
+                            result.succeeded,
+                            result.attempted,
+                            estimated_cost,
                         )
 
                 finally:
                     db.close()
 
             except Exception as e:
-                print(f"  ⚠️  {repo.name}: Idle enrichment failed: {e}")
+                logger.error("%s: Idle enrichment failed", repo.name, exc_info=e)
 
         # Update tracking
         self._last_idle_enrichment = now
@@ -940,11 +965,15 @@ class RAGService:
         )
 
         if total_enriched > 0:
-            print(
-                f"  📊 Idle enrichment complete: {total_enriched} spans, ~${total_cost:.4f} (daily: ${self._enrichment_daily_cost:.4f}/${max_daily_cost:.2f})"
+            logger.info(
+                "Idle enrichment complete: %d spans, ~$%.4f (daily: $%.4f/$%.2f)",
+                total_enriched,
+                total_cost,
+                self._enrichment_daily_cost,
+                max_daily_cost,
             )
         else:
-            print("  ℹ️  No spans pending enrichment")
+            logger.info("No spans pending enrichment during idle cycle")
 
     def run_loop_poll(self, interval: int):
         """Legacy polling service loop with idle throttling."""
@@ -956,18 +985,17 @@ class RAGService:
         try:
             current = os.nice(0)
             os.nice(nice_level - current)  # Adjust relative to current
-            print(f"   Nice level: +{nice_level}")
+            logger.info("Nice level set to +%d", nice_level)
         except (OSError, PermissionError) as e:
-            print(f"   ⚠️  Could not set nice level: {e}")
+            logger.warning("Could not set nice level", exc_info=e)
 
         self.state.set_running(os.getpid())
-        print(f"🚀 RAG service started (PID {os.getpid()})")
-        print(f"   Tracking {len(self.state.state['repos'])} repos")
-        print(f"   Interval: {interval}s")
-        print(
-            f"   Idle backoff: enabled (max {self._daemon_cfg.get('idle_backoff_max', 10)}x)"
+        logger.info("RAG service started (PID %d)", os.getpid())
+        logger.info("Tracking %d repos", len(self.state.state["repos"]))
+        logger.info("Interval: %ds", interval)
+        logger.info(
+            "Idle backoff: enabled (max %dx)", self._daemon_cfg.get("idle_backoff_max", 10)
         )
-        print()
 
         # Idle tracking
         idle_cycles = 0
@@ -1010,9 +1038,11 @@ class RAGService:
                         result = self._log_manager.rotate_logs(log_dir)
                         self._last_rotate = now
                         if result.get("rotated_files", 0) > 0:
-                            print(f"🔄 Rotated {result['rotated_files']} log files")
+                            logger.info(
+                                "Rotated %d log files", result["rotated_files"]
+                            )
             except Exception as e:
-                print(f"  ⚠️  Log rotation check failed: {e}")
+                logger.warning("Log rotation check failed", exc_info=e)
 
             # Calculate sleep with exponential backoff when idle
             multiplier = min(base**idle_cycles, max_mult)
@@ -1022,13 +1052,15 @@ class RAGService:
 
             if sleep_time > 0 and self.running:
                 if idle_cycles > 0:
-                    print(f"💤 Idle x{idle_cycles} → sleeping {int(sleep_time)}s...\n")
+                    logger.info(
+                        "Idle x%d -> sleeping %ds...", idle_cycles, int(sleep_time)
+                    )
                 else:
-                    print(f"💤 Sleeping {int(sleep_time)}s...\n")
+                    logger.info("Sleeping %ds...", int(sleep_time))
                 self._interruptible_sleep(sleep_time)
 
         self.state.set_stopped()
-        print("👋 RAG service stopped")
+        logger.info("RAG service stopped")
 
     def _interruptible_sleep(self, seconds: float):
         """Sleep in 5s chunks so signals are handled promptly."""

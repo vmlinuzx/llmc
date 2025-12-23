@@ -1,0 +1,11 @@
+[0;35m
+╔══════════════════════════════════════════════════════════════╗
+║ Rem - Dependency Demon                                       ║
+╚══════════════════════════════════════════════════════════════╝
+[0m
+[0;36mℹ Target: /home/vmlinux/src/llmc[0m
+YOLO mode is enabled. All tool calls will be automatically approved.
+Loaded cached credentials.
+Loading extension: conductor
+Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 0s.. Retrying after 319.258005ms...
+I have completed the dependency analysis and the report has been saved to `./tests/REPORTS/current/rem_dependency_2025-12-23.md`.

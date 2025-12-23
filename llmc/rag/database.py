@@ -3,12 +3,15 @@ from __future__ import annotations
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
 import json
+import logging
 from pathlib import Path
 import sqlite3
 import struct
 import time
 
 from .types import EnrichmentRecord, FileRecord, SpanRecord, SpanWorkItem
+
+logger = logging.getLogger(__name__)
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
@@ -319,16 +322,15 @@ class Database:
         # SAFETY GUARD: Don't delete existing spans if extractor returned empty
         # This prevents silent extractor failures from nuking enrichments
         if not spans and existing_hashes:
-            import sys
             # Get file path for better logging
             file_row = self.conn.execute(
                 "SELECT path FROM files WHERE id = ?", (file_id,)
             ).fetchone()
             file_path = file_row[0] if file_row else f"file_id={file_id}"
-            print(
-                f"⚠️  EXTRACTOR RETURNED 0 SPANS for {file_path} "
-                f"(preserving {len(existing_hashes)} existing spans)",
-                file=sys.stderr,
+            logger.warning(
+                "Extractor returned 0 spans for %s, preserving %d existing spans",
+                file_path,
+                len(existing_hashes),
             )
             return  # Preserve existing spans, don't nuke them
 
@@ -380,11 +382,12 @@ class Database:
 
         # Log the delta for visibility (helpful for debugging and metrics)
         if to_add or to_delete:
-            import sys
-
-            print(
-                f"    📊 Spans: {len(unchanged)} unchanged, {len(to_add)} added, {len(to_delete)} deleted",
-                file=sys.stderr,
+            logger.info(
+                "Spans delta for file_id=%d: %d unchanged, %d added, %d deleted",
+                file_id,
+                len(unchanged),
+                len(to_add),
+                len(to_delete),
             )
 
     def get_file_hash(self, path: Path) -> str | None:

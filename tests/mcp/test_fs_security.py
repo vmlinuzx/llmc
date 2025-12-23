@@ -44,7 +44,8 @@ def test_symlink_escape_prevention(tmp_path):
 
     result = read_file(str(link), allowed_roots=[str(safe_root)])
     assert result.success is False
-    assert "Symlink escapes" in result.error
+    # Symlink escapes are blocked via path resolution - resolved path lands outside allowed roots
+    assert "outside allowed roots" in result.error
 
 
 def test_default_is_full_access(tmp_path):

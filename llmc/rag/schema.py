@@ -13,6 +13,7 @@ import ast
 from dataclasses import dataclass, field
 import hashlib
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,8 @@ from typing import Any
 from tree_sitter import Node
 
 from .lang import parse_source
+
+logger = logging.getLogger(__name__)
 
 
 # Minimal language detection without tree-sitter dependency
@@ -202,7 +205,7 @@ class PythonSchemaExtractor:
             self.visit_module(tree)
         except SyntaxError as e:
             # Parser failed, skip this file gracefully
-            print(f"Parse error in {self.file_path}: {e}")
+            logger.warning("Parse error in %s", self.file_path, exc_info=e)
             return [], []
 
         return self.entities, self.relations
@@ -476,7 +479,7 @@ class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
             self._extract_imports(self.tree)
             self._walk(self.tree)
         except Exception as e:
-            print(f"Parse error in {self.file_path}: {e}")
+            logger.warning("Parse error in %s", self.file_path, exc_info=e)
             return [], []
 
         return self.entities, self.relations
@@ -761,7 +764,7 @@ def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relati
         with open(file_path, "rb") as f:
             content = f.read()
     except Exception as e:
-        print(f"Failed to read {file_path}: {e}")
+        logger.error("Failed to read %s", file_path, exc_info=e)
         return [], []
 
     # Use Python AST parser for .py files
@@ -771,7 +774,7 @@ def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relati
             extractor = PythonSchemaExtractor(file_path, source_str)
             return extractor.extract()
         except UnicodeDecodeError:
-            print(f"Failed to decode {file_path} as UTF-8")
+            logger.warning("Failed to decode %s as UTF-8", file_path, exc_info=True)
             return [], []
 
     # Use tree-sitter parser for TypeScript/JavaScript
@@ -780,7 +783,7 @@ def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relati
             ts_extractor = TypeScriptSchemaExtractor(file_path, content, lang)
             return ts_extractor.extract()
         except Exception as e:
-            print(f"Tree-sitter extraction failed for {file_path}: {e}")
+            logger.error("Tree-sitter extraction failed for %s", file_path, exc_info=e)
             return [], []
 
     # Other languages not yet supported
@@ -950,16 +953,19 @@ def build_enriched_schema_graph(
     total_enrichments = len(enrichments)
     coverage_pct = (enriched_count / total_entities * 100) if total_entities > 0 else 0
 
-    print(
-        f"    📊 Enrichment integration: {enriched_count}/{total_entities} entities enriched ({coverage_pct:.1f}%)"
+    logger.info(
+        "Enrichment integration: %d/%d entities enriched (%.1f%%)",
+        enriched_count,
+        total_entities,
+        coverage_pct,
     )
-    print(f"    📊 Database had {total_enrichments} enrichments available")
+    logger.info("Database had %d enrichments available", total_enrichments)
 
     if unmatched_entities and len(unmatched_entities) <= 10:
-        print(f"    ⚠️  Unmatched entities: {unmatched_entities[:10]}")
+        logger.warning("Unmatched entities: %s", unmatched_entities[:10])
     elif unmatched_entities:
-        print(
-            f"    ⚠️  {len(unmatched_entities)} entities could not be matched to enrichments"
+        logger.warning(
+            "%d entities could not be matched to enrichments", len(unmatched_entities)
         )
 
     return graph

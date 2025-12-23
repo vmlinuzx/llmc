@@ -21,11 +21,29 @@
 # ==============================================================================
 
 [agent]
+# provider = "openai"  # Use llama-server for GPT-OSS-120B
 model = "qwen3-next-80b-tools"  # Boxxie: 80B MoE @ 32 t/s - uses native tool calling template
 
 [ollama]
 url = "http://athena:11434"
 timeout = 300
+
+# ==============================================================================
+# OpenAI-Compatible Backend (llama.cpp server)
+# ==============================================================================
+# Use with: bx --model gpt-oss-120b (after setting provider = "openai" in [agent])
+# Or use the gpt-oss profile: bx --model gpt-oss-120b-F16.gguf
+# 
+# llama-server runs on http://athena:8080 with Vulkan GPU acceleration.
+# Service: systemctl --user status llama-server
+# Supports tool calling via OpenAI-compatible API.
+
+[openai]
+url = "http://athena:8080/v1"
+timeout = 300
+temperature = 0.6
+model = "gpt-oss-120b-F16.gguf"  # Model name as llama-server knows it
+
 
 # ==============================================================================
 # Embeddings
@@ -677,6 +695,28 @@ timeout_seconds = 300
 definition_format = "openai"  # How to send tool definitions to the model
 call_parser = "auto"          # "auto" | "openai" | "anthropic" - auto detects XML or native
 result_format = "openai"      # How to format tool results back to model
+
+# ==============================================================================
+# GPT-OSS-120B - via llama.cpp server (Vulkan)
+# ==============================================================================
+# 116B parameter model running on Athena via llama-server.
+# Uses OpenAI-compatible API on port 8080.
+# Supports native tool calling with excellent reasoning.
+
+[profiles.gpt-oss]
+provider = "openai"
+model = "gpt-oss-120b-F16.gguf"
+url = "http://athena:8080/v1"
+temperature = 0.6
+timeout_seconds = 300
+
+[profiles.gpt-oss.rag]
+enabled = true
+
+[profiles.gpt-oss.tools]
+definition_format = "openai"
+call_parser = "auto"
+result_format = "openai"
 
 
 

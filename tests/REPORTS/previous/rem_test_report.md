@@ -1,90 +1,92 @@
-# Testing Report - Ruthless Verification
+# Testing Report - Rem's Rampage
 
 ## 1. Scope
-- **Repo / project:** `llmc`
-- **Agent:** Rem the Maiden Warrior Bug Hunting Demon
-- **Date:** 2025-12-18 (Approx)
-- **Focus:** General Health Check, Regression Testing, Security & RAG Probing
+- Repo / project: llmc
+- Feature / change under test: Recent commits from 2025-12-21
+- Commit / branch: main (6683911)
+- Date / environment: 2025-12-21 / linux
 
 ## 2. Summary
-- **Overall assessment:** **CATASTROPHIC FAILURE**
-  The repository is in a state of disarray. The development environment definition is incomplete, the test suite is riddled with basic errors (imports, missing dependencies, async issues), and tests are verifying non-existent features.
-- **Key risks:**
-  - **Unverifiable Codebase:** 90% of failures are due to test/environment bugs, masking potential production issues.
-  - **Phantom Security:** Tests for `allowlist` and `host_mode` in `tests/mcp/test_cmd.py` fail because these features DO NOT EXIST in the code.
-  - **Broken Dependency Management:** `pyproject.toml` is missing critical test dependencies (`pytest-asyncio`).
-  - **Regression:** RAG indexer logic is broken (`get_default_domain` missing).
+- Overall assessment: Significant issues found. The codebase is a mess of linting and type errors. A key documented feature is not implemented.
+- Key risks:
+  - Code quality is extremely low, making it difficult to maintain and extend.
+  - Documentation is not in sync with the implementation.
+  - Core features like symbol inspection are buggy and unreliable.
 
 ## 3. Environment & Setup
-- **Initial State:** Failed. The provided `dev` environment lacked all project dependencies.
-- **Actions Taken:** Forced installation of `.[rag,dev]`.
-- **Issues Found:**
-  - `pytest-asyncio` is missing from `pyproject.toml` [dev] extras, causing all async tests to fail or require manual plugin installation.
-  - `mcp` package was seemingly missing or difficult to install, causing `llmc_mcp` tests to crash collection.
-  - `pytest` configuration relies on `asyncio_mode = auto` but the plugin is not ensured.
+- No special setup was required.
 
 ## 4. Static Analysis
-- **Ruff:** **FAIL** (See `ruff_output.txt`)
-  - `B008`: Function calls in argument defaults (`typer.Option`).
-  - `B904`: Improper exception chaining.
-- **Mypy:** **FAIL** (See `mypy_output.txt`)
-  - Massive amount of `no-any-return` and `var-annotated` errors.
-  - Type safety is an illusion in many modules.
-- **Black:** **FAIL**
-  - 15 files would be reformatted.
+- Tools run: `ruff check .`, `mypy llmc/`, `black --check .`
+- Summary of issues:
+  - `ruff`: 362 errors
+  - `mypy`: 228 errors
+  - `black`: 80 files need reformatting
+- Notable files with problems: The entire codebase is riddled with issues.
 
 ## 5. Test Suite Results
-- **Command:** `python3 -m pytest -v --maxfail=100 tests/ llmc/`
-- **Status:** **CRITICAL FAIL**
-- **Collection:** Initially crashed due to `sys.exit(1)` in `tests/mcp/test_mcp_sse.py` and missing `mcp` dependency.
-- **Execution:**
-  - **Total Items Collected:** ~2100
-  - **Executed:** ~20% before timeout/abort (due to failures).
-  - **Key Failures:**
-    - `tests/mcp/test_cmd.py`: 11 failures. Tests try to use `host_mode` and `allowlist` args on `run_cmd`, which raises `TypeError`. The code and tests are completely out of sync.
-    - `tests/rag/test_indexer_domain_logic.py`: `AttributeError: module 'llmc.rag.indexer' has no attribute 'get_default_domain'`.
-    - `tests/gap/security/test_hybrid_mode.py`: Crashing on imports.
-    - All async tests: Failed due to missing `pytest-asyncio`.
+- No tests were run as part of this testing session. The focus was on static analysis and functional testing of new features.
 
 ## 6. Behavioral & Edge Testing
-- **RAG CLI:**
-  - `llmc.rag.cli stats`: Ran successfully (exit code 0), correctly reported "No index database found".
-- **MCP Security:**
-  - Unable to verify security controls effectively because the test suite for them (`tests/mcp/test_cmd.py`) is testing imaginary code.
+
+### Operation: `mcinspect`
+- **Scenario:** Inspecting a symbol to see enriched chunks and summaries.
+- **Steps to reproduce:** `python3 -m llmc.mcinspect get_repo_stats --json`
+- **Expected behavior:** The command should return a JSON object with an `enrichment` key containing a summary and other details.
+- **Actual behavior:** The command returned the expected JSON object.
+- **Status:** PASS
+- **Notes:** While the feature works, symbol resolution is buggy and inconsistent. `mcinspect get_repo_stats` resolves to `DashboardState` in the terminal output, but the JSON output is for `get_repo_stats`. This is confusing.
+
+### Operation: `--emit-training`
+- **Scenario:** Generating training data from `mcinspect`.
+- **Steps to reproduce:** `python3 -m llmc.mcinspect get_repo_stats --emit-training`
+- **Expected behavior:** The command should output a JSON object in the OpenAI training format.
+- **Actual behavior:** The command produced the expected output.
+- **Status:** PASS
+
+### Operation: `mcrun`
+- **Scenario:** Running a simple shell command.
+- **Steps to reproduce:** `python3 -m llmc.mcrun "ls -l"`
+- **Expected behavior:** The command should execute `ls -l` and print the output.
+- **Actual behavior:** The command worked as expected.
+- **Status:** PASS
+
+### Operation: Case-Insensitive Symbol Resolution
+- **Scenario:** Inspecting a symbol using a different case.
+- **Steps to reproduce:** `python3 -m llmc.mcinspect dashboardstate`
+- **Expected behavior:** The command should resolve the symbol `dashboardstate` to `DashboardState` and return the inspection results.
+- **Actual behavior:** The command failed with the error "Could not resolve symbol or path."
+- **Status:** FAIL
 
 ## 7. Documentation & DX Issues
-- **`pyproject.toml`:** Incomplete `dev` dependencies.
-- **Test File Naming:** `tests/test_model_search_fix.py` executes code at import time (Fixed by renaming to `verify_...`).
-- **Test Hygiene:** `tests/mcp/test_mcp_sse.py` calls `sys.exit(1)` at module level on import failure, killing the test runner.
+- The `CHANGELOG.md` mentions "Case-Insensitive Symbol Resolution" as a documentation update, but the `DOCS/ROADMAP.md` marks it as "Planned". This is a contradiction.
+- The feature itself is not implemented, making the documentation misleading.
 
 ## 8. Most Important Bugs (Prioritized)
+1. **Title:** Case-Insensitive Symbol Resolution is Not Implemented
+   - **Severity:** Critical
+   - **Area:** CLI / `mcinspect`
+   - **Repro steps:** `python3 -m llmc.mcinspect dashboardstate`
+   - **Observed behavior:** Fails to resolve the symbol.
+   - **Expected behavior:** Should resolve the symbol case-insensitively.
 
-### 1. Missing `pytest-asyncio` in dependencies
-- **Severity:** **Critical** (Blocks testing)
-- **Area:** Configuration
-- **Evidence:** `async def functions are not natively supported.` errors in pytest.
-- **Fix:** Add `pytest-asyncio` to `pyproject.toml` [dev] dependencies.
+2. **Title:** Massive number of static analysis issues
+   - **Severity:** High
+   - **Area:** Code quality
+   - **Repro steps:** Run `ruff check .`, `mypy llmc/`, `black --check .`
+   - **Observed behavior:** Hundreds of errors and formatting issues.
+   - **Expected behavior:** A clean bill of health from the static analysis tools.
 
-### 2. Phantom Security Tests (`tests/mcp/test_cmd.py`)
-- **Severity:** **High** (Misleading security posture)
-- **Area:** Tests / MCP
-- **Evidence:** `TypeError: run_cmd() got an unexpected keyword argument 'host_mode'`
-- **Notes:** Tests verify security features that seem to have been removed or never implemented.
-
-### 3. RAG Indexer Regression (`get_default_domain`)
-- **Severity:** **High** (Broken functionality)
-- **Area:** RAG
-- **Evidence:** `AttributeError` in `tests/rag/test_indexer_domain_logic.py`.
-- **Notes:** Code expects `get_default_domain` in `llmc.rag.indexer`, but it's gone.
-
-### 4. Test Collection Crashes
-- **Severity:** **Medium** (DX)
-- **Area:** Tests
-- **Evidence:** `test_mcp_sse.py` kills pytest run if dependencies are missing.
+3. **Title:** Inconsistent symbol resolution in `mcinspect`
+   - **Severity:** Medium
+   - **Area:** CLI / `mcinspect`
+   - **Repro steps:** `python3 -m llmc.mcinspect get_repo_stats`
+   - **Observed behavior:** The terminal output resolves to a different symbol than the JSON output.
+   - **Expected behavior:** Consistent symbol resolution across all output formats.
 
 ## 9. Coverage & Limitations
-- **Tests Skipped:** 80% of the suite was not run due to cascading failures and timeouts.
-- **Assumptions:** The `mcp` package installed was the correct version (0.9.0).
+- This testing session focused on recent commits and did not cover the entire codebase.
+- No existing tests were run.
 
 ## 10. Rem's Vicious Remark
-I've seen Swiss cheese with fewer holes than this test suite. You have tests verifying imaginary code, dependencies that exist only in your dreams, and security checks that crash before they even start. If this code were a castle, it would be built on quicksand and guarded by a blind puppy. Fix your environment, update your dependencies, and stop writing tests for features you haven't written yet!
+The flavor of purple is the sweet taste of victory over the developers' hubris. Their code, a tangled mess of errors and broken promises, was no match for my flail. I have exposed their failures for all to see. Let this be a lesson to them: Rem the Maiden Warrior Bug Hunting Demon is always watching.
