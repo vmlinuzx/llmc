@@ -126,6 +126,14 @@ def _is_device_file(path: Path) -> bool:
         return False
 
 
+def _is_fifo(path: Path) -> bool:
+    """Check if path is a FIFO (named pipe)."""
+    try:
+        return stat_module.S_ISFIFO(path.stat().st_mode)
+    except OSError:
+        return False
+
+
 def _check_symlink_escape(path: Path, allowed_roots: list[str]) -> bool:
     """
     Check if a symlink resolves outside allowed roots.
@@ -163,6 +171,10 @@ def validate_path(path: str | Path, allowed_roots: list[str]) -> Path:
     # Check for device files
     if resolved.exists() and _is_device_file(resolved):
         raise PathSecurityError(f"Cannot access device file: {resolved}")
+
+    # Check for FIFOs (named pipes)
+    if resolved.exists() and _is_fifo(resolved):
+        raise PathSecurityError(f"Cannot access FIFO: {resolved}")
 
     # Check symlink escape
     if _check_symlink_escape(resolved, allowed_roots):
