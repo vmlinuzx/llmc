@@ -2,6 +2,18 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.8.2] - "Hotdog Water Pt. II" 🌭 - 2025-12-23
+
+### Fixed
+
+- **Legacy DB Path Detection:** `check_and_migrate_all_repos()` now checks all 3 possible DB locations:
+  - `.llmc/rag/index_v2.db` (current standard)
+  - `.llmc/index_v2.db` (legacy path 1)
+  - `.rag/index_v2.db` (legacy path 2)
+- Fixes "table spans has no column named imports" crashes for repos with legacy DB paths
+
+---
+
 ## [0.8.1] - "Hotdog Water" 🌭 - 2025-12-23
 
 ### Purple Flavor: **Hotdog Water**

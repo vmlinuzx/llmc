@@ -1076,10 +1076,20 @@ def check_and_migrate_all_repos(repos: list[str]) -> dict[str, int]:
     results = {}
     for repo_path in repos:
         repo = Path(repo_path)
-        # Construct db path: {repo}/.llmc/rag/index_v2.db
-        db_path = repo / ".llmc" / "rag" / "index_v2.db"
+        # Check all possible DB locations (legacy path confusion)
+        possible_paths = [
+            repo / ".llmc" / "rag" / "index_v2.db",  # Current standard
+            repo / ".llmc" / "index_v2.db",           # Legacy path 1
+            repo / ".rag" / "index_v2.db",            # Legacy path 2
+        ]
 
-        if not db_path.exists():
+        db_path = None
+        for p in possible_paths:
+            if p.exists():
+                db_path = p
+                break
+
+        if db_path is None:
             continue
 
         try:

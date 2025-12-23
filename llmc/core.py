@@ -2,7 +2,7 @@ from pathlib import Path
 import tomllib
 from typing import Any
 
-LLMC_VERSION = "0.8.1"  # Hotdog Water release - Dec 2025
+LLMC_VERSION = "0.8.2"  # Hotdog Water Pt. II - legacy path detection fix
 
 
 def find_repo_root(start_path: Path | None = None) -> Path:
