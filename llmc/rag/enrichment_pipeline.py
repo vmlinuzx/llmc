@@ -27,10 +27,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+import logging
 from pathlib import Path
 import sys
 import time
-from typing import Any, Protocol, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Protocol
 
 from llmc.rag.config_enrichment import EnrichmentBackendSpec
 from llmc.rag.database import Database
@@ -49,6 +50,8 @@ from llmc.rag.enrichment_router import (
 
 if TYPE_CHECKING:
     from llmc.rag.enrichment_logger import EnrichmentLogger
+
+_logger = logging.getLogger(__name__)
 
 
 class BackendFactory(Protocol):
@@ -392,7 +395,7 @@ class EnrichmentPipeline:
                 # Fallback if llmc package not available
                 pass
             except Exception as e:
-                print(f"  ⚠️  Prioritization failed: {e}", file=sys.stderr)
+                _logger.warning("Prioritization failed: %s", e)
                 # Fallback to original order
 
         # Truncate to original limit if we fetched more
@@ -508,9 +511,8 @@ class EnrichmentPipeline:
             try:
                 code_snippet = span.read_source(self.repo_root)
             except Exception as e:
-                print(
-                    f"  ⚠️  Could not read source for {slice_view.span_hash}: {e}",
-                    file=sys.stderr,
+                _logger.warning(
+                    "Could not read source for %s: %s", slice_view.span_hash, e
                 )
 
         return {
@@ -628,10 +630,10 @@ class EnrichmentPipeline:
             )
 
             if edge_result.edges_created > 0:
-                print(
-                    f"  📊 Created {edge_result.edges_created} graph edges "
-                    f"({edge_result.edges_unresolved} unresolved)",
-                    flush=True,
+                _logger.info(
+                    "Created %d graph edges (%d unresolved)",
+                    edge_result.edges_created,
+                    edge_result.edges_unresolved,
                 )
 
         except ImportError:
@@ -639,7 +641,7 @@ class EnrichmentPipeline:
             pass
         except Exception as e:
             # Log but don't fail enrichment for edge creation errors
-            print(f"  ⚠️  Edge creation failed: {e}", file=sys.stderr)
+            _logger.warning("Edge creation failed: %s", e)
 
     def _is_failed(self, span_hash: str) -> bool:
         """Check if span has exceeded failure threshold."""
