@@ -12,8 +12,9 @@ Core commands: config, tui, monitor
 """
 
 
-import typer
 import re
+
+import typer
 
 from llmc.commands import (
     config as config_commands,
@@ -36,6 +37,7 @@ from llmc.commands.rag import (
     nav_where_used,
     plan,
     repair_logs,
+    schema_check,
     search,
     stats,
     sync,
@@ -218,6 +220,7 @@ debug_app.command(name="export")(export)
 debug_app.command(name="enrich-status")(enrich_status)
 debug_app.command(name="file-descriptions")(file_descriptions)
 debug_app.command(name="repair-logs")(repair_logs)
+debug_app.command(name="schema-check")(schema_check)
 
 app.add_typer(debug_app, name="debug")
 

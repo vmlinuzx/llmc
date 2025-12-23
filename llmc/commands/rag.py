@@ -267,7 +267,7 @@ def doctor(
 
     stats = result.get("stats")
     if stats:
-        typer.echo(f"\n📊 Stats:")
+        typer.echo("\n📊 Stats:")
         typer.echo(f"   Files: {stats.get('files', 0)}")
         typer.echo(f"   Spans: {stats.get('spans', 0)}")
         typer.echo(f"   Enrichments: {stats.get('enrichments', 0)} (pending: {stats.get('pending_enrichments', 0)})")
@@ -277,13 +277,13 @@ def doctor(
 
     issues = result.get("issues", [])
     if issues:
-        typer.echo(f"\n⚠️ Issues:")
+        typer.echo("\n⚠️ Issues:")
         for issue in issues:
             typer.echo(f"   • {issue}")
 
     top_pending = result.get("top_pending_files", [])
     if top_pending:
-        typer.echo(f"\n📋 Top pending files:")
+        typer.echo("\n📋 Top pending files:")
         for f in top_pending:
             typer.echo(f"   • {f['path']} ({f['pending_spans']} spans)")
 
@@ -1071,3 +1071,72 @@ def repair_logs(
         typer.echo(f"   Corrupt lines discarded: {discarded_count}")
         typer.echo(f"   Original backed up to: {result['backup_path']}")
 
+
+def schema_check(
+    migrate: Annotated[
+        bool, typer.Option("--migrate", help="Force migration on all repos")
+    ] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Emit as JSON")
+    ] = False,
+):
+    """Check and optionally migrate schema versions for all registered repos."""
+    import sqlite3
+
+    from llmc.rag.database import DB_SCHEMA_VERSION, check_and_migrate_all_repos
+    from llmc.rag.service import ServiceState
+
+    state = ServiceState()
+    repos = state.state.get("repos", [])
+
+    if not repos:
+        if json_output:
+            typer.echo("{}")
+        else:
+            typer.echo("No repositories registered.")
+        return
+
+    # Pre-check versions (raw read) to detect changes
+    pre_versions = {}
+    for repo_path in repos:
+        try:
+            db_path = Path(repo_path) / ".llmc" / "rag" / "index_v2.db"
+            if db_path.exists():
+                with sqlite3.connect(db_path) as conn:
+                    # Just read version, no migration trigger
+                    ver = conn.execute("PRAGMA user_version").fetchone()[0]
+                    pre_versions[str(repo_path)] = ver
+        except Exception:
+            pass
+
+    # Run check/migration (Database class triggers migration on init)
+    if migrate and not json_output:
+        typer.echo("Checking schema versions (migration enabled)...")
+
+    results = check_and_migrate_all_repos(repos)
+
+    if json_output:
+        typer.echo(json.dumps(results, indent=2))
+        return
+
+    # Display results
+    for repo_path in repos:
+        repo_name = Path(repo_path).name
+        final_ver = results.get(repo_path)
+        
+        if final_ver is None:
+            continue
+            
+        if final_ver == -1:
+            typer.echo(f"{repo_name}: FAILED: Error checking database")
+            continue
+
+        initial_ver = pre_versions.get(repo_path)
+        
+        # If we had a version before and it changed, it was migrated
+        if initial_ver is not None and initial_ver != final_ver:
+             typer.echo(f"{repo_name}: v{initial_ver} → v{final_ver} (migrated)")
+        elif final_ver == DB_SCHEMA_VERSION:
+             typer.echo(f"{repo_name}: v{final_ver} ✓")
+        else:
+             typer.echo(f"{repo_name}: v{final_ver}")
