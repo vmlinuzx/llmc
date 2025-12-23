@@ -876,7 +876,17 @@ class RAGService:
         self._run_idle_enrichment()
 
     def _run_idle_enrichment(self):
-        """Run batch enrichment during idle periods if configured."""
+        """Run batch enrichment during idle periods if configured.
+        
+        If [enrichment.pool] is enabled, uses pool workers for parallel processing.
+        Otherwise, falls back to sequential pipeline enrichment.
+        """
+        # Check if pool mode is enabled - if so, use that instead
+        pool_cfg = self._toml_cfg.get("enrichment", {}).get("pool", {})
+        if pool_cfg.get("enabled", False):
+            self._run_pool_enrichment()
+            return
+        
         idle_cfg = self._daemon_cfg.get("idle_enrichment", {})
         print(f"🔍 idle_enrichment called: enabled={idle_cfg.get('enabled', False)}")  # TRACE
 
@@ -1001,6 +1011,40 @@ class RAGService:
             )
         else:
             logger.info("No spans pending enrichment during idle cycle")
+
+    def _run_pool_enrichment(self):
+        """Run pool-based enrichment with multiple workers.
+        
+        This method:
+        1. Spawns pool workers if not already running
+        2. Feeds the central work queue from registered repos
+        3. Workers pull from queue and process in parallel
+        """
+        # Lazy init pool manager
+        if not hasattr(self, "_pool_manager"):
+            try:
+                from llmc.rag.pool_config import load_pool_config
+                from llmc.rag.pool_manager import PoolManager
+                
+                pool_cfg = load_pool_config(self._toml_cfg)
+                self._pool_manager = PoolManager(pool_cfg, self._repo_root)
+                
+                # Start workers
+                print(f"🚀 Starting pool workers ({len(pool_cfg.workers)} configured)...")
+                self._pool_manager.start_all()
+            except Exception as e:
+                logger.error("Failed to initialize pool manager", exc_info=e)
+                return
+        
+        # Feed the queue
+        from llmc.rag.work_queue import feed_queue_from_repos
+        repos = self.state.state["repos"]
+        added = feed_queue_from_repos(repos, limit_per_repo=100)
+        if added > 0:
+            print(f"📥 Fed {added} items to work queue")
+        
+        # Monitor workers (restart crashed ones)
+        self._pool_manager.monitor_workers()
 
     def run_loop_poll(self, interval: int):
         """Legacy polling service loop with idle throttling."""
