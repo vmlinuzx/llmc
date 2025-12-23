@@ -187,7 +187,8 @@ class TechDocsEnrichment(BaseModel):
             warnings=llm_output.get("warnings", []),
             related_topics=llm_output.get("related_topics", []),
             audience=llm_output.get("audience", "mixed"),
-            evidence=llm_output.get("evidence", []),
+            # Coerce evidence to list - LLM sometimes returns "" instead of []
+            evidence=llm_output.get("evidence") if isinstance(llm_output.get("evidence"), list) else [],
         )
 
 

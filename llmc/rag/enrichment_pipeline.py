@@ -676,6 +676,16 @@ class EnrichmentPipeline:
 
         # 1. Log to JSONL (structured, always)
         if self.enrichment_logger:
+            # Extract backend info from successful attempt
+            successful_attempt = next((a for a in attempts if a.success), None)
+            backend_name = None
+            server = None
+            provider = None
+            if successful_attempt:
+                backend_name = getattr(successful_attempt, "backend_name", None)
+                server = getattr(successful_attempt, "host", None)
+                provider = getattr(successful_attempt, "provider", None)
+
             self.enrichment_logger.log_success(
                 span_hash=span_hash,
                 file_path=str(file_path),
@@ -686,28 +696,10 @@ class EnrichmentPipeline:
                 meta=meta,
                 chain=chain_name,
                 attempts=len(attempts),
+                backend_name=backend_name,
+                server=server,
+                provider=provider,
             )
-
-        # 2. Console output (only if interactive TTY)
-        if not sys.stdout.isatty():
-            return
-
-        # Build model note
-        model_note = f" ({model})" if model and model != "unknown" else ""
-
-        # Build backend/chain note
-        config_parts = []
-        if chain_name and chain_name != "default":
-            config_parts.append(f"chain={chain_name}")
-        if backend and backend != "unknown":
-            config_parts.append(f"backend={backend}")
-
-        # Add host/URL if available
-        host = meta.get("host") or meta.get("host_url") or meta.get("base_url")
-        if host:
-            config_parts.append(f"url={host}")
-
-        config_note = f" [{', '.join(config_parts)}]" if config_parts else ""
 
         # Build attempts note
         attempt_count = len(attempts)
@@ -719,14 +711,20 @@ class EnrichmentPipeline:
 
         # Build T/s note (tokens per second)
         tps = meta.get("tokens_per_second", 0)
-        tps_note = f" {tps:.1f} T/s" if tps and tps > 0 else ""
+        tps_note = f" {tps:.1f}T/s" if tps and tps > 0 else ""
 
-        # Print detailed log line
-        print(
-            f"✓ Enriched span {span_number}: {file_path}:{start_line}-{end_line} "
-            f"({duration:.2f}s){tps_note}{model_note}{config_note}{attempts_note}",
-            flush=True,
-        )
+        # Extract server from successful attempt
+        successful_attempt = next((a for a in attempts if a.success), None)
+        server_info = ""
+        if successful_attempt:
+            host = getattr(successful_attempt, "host", None)
+            if host:
+                server_info = f" @{host}"
+
+        # Log to stdout (print) - always visible in daemon/systemd output
+        fname = file_path.name if hasattr(file_path, "name") else str(file_path)[-30:]
+        chain_note = f" chain={chain_name}" if chain_name and chain_name != "default" else ""
+        print(f"✓ [{span_number}] {fname} L{start_line}-{end_line} | {model}{server_info}{attempts_note} | {duration:.1f}s{tps_note}{chain_note}")
 
     def _log_enrichment_failure(
         self,
@@ -749,6 +747,18 @@ class EnrichmentPipeline:
 
         # 1. Log to JSONL (structured, always)
         if self.enrichment_logger:
+            # Extract backend info from last attempt (for failure context)
+            last_attempt = attempts[-1] if attempts else None
+            backend_name = None
+            server = None
+            provider = None
+            failure_type = None
+            if last_attempt:
+                backend_name = getattr(last_attempt, "backend_name", None)
+                server = getattr(last_attempt, "host", None)
+                provider = getattr(last_attempt, "provider", None)
+                failure_type = getattr(last_attempt, "failure_type", None)
+
             self.enrichment_logger.log_failure(
                 span_hash=span_hash,
                 file_path=str(file_path),
@@ -757,12 +767,13 @@ class EnrichmentPipeline:
                 duration_sec=duration,
                 error=error,
                 attempts=attempt_count,
+                failure_type=failure_type,
+                backend_name=backend_name,
+                server=server,
+                provider=provider,
             )
 
-        # 2. Console output (only if interactive TTY)
-        if not sys.stderr.isatty():
-            return
-
+        # Build attempts note
         attempts_note = (
             f" [{attempt_count} attempt{'s' if attempt_count != 1 else ''}]"
             if attempts
@@ -770,11 +781,10 @@ class EnrichmentPipeline:
         )
 
         # Truncate error message if too long
-        error_msg = error[:100] + "..." if len(error) > 100 else error
+        error_msg = error[:80] + "..." if len(error) > 80 else error
 
-        print(
-            f"✗ Failed span {span_number}: {file_path}:{start_line}-{end_line} "
-            f"({duration:.2f}s){attempts_note} - {error_msg}",
-            file=sys.stderr,
-            flush=True,
-        )
+        # Log to stdout (print) - always visible in daemon/systemd output
+        fname = file_path.name if hasattr(file_path, "name") else str(file_path)[-30:]
+        fail_type = failure_type or "error"
+        srv = f" @{server}" if server else ""
+        print(f"✗ [{span_number}] {fname} L{start_line}-{end_line} | {fail_type}{srv}{attempts_note} | {duration:.1f}s | {error_msg}")

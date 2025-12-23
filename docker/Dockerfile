@@ -14,20 +14,15 @@ ENV LLMC_TE_MODEL=unknown
 
 # System deps (git for editable installs; rg optional but handy for TE)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl ca-certificates ripgrep && \
+    git curl ca-certificates ripgrep build-essential && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy minimal build context first for layer caching
-COPY pyproject.toml* requirements.txt* /app/
-RUN bash -lc 'if [ -f "pyproject.toml" ]; then pip install -e .; fi; \
-              if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi'
-
-# Copy the rest of the repo (kept late for cache efficiency)
+# Copy repo first
 COPY . /app
 
-# Install again in case new modules were introduced
+# Install dependencies
 RUN bash -lc 'if [ -f "pyproject.toml" ]; then pip install -e .; fi; \
               if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi'
 

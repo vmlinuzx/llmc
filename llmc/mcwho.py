@@ -29,9 +29,20 @@ import typer
 
 from llmc.core import find_repo_root
 from llmc.rag.schema import SchemaGraph
-from llmc.symbol_resolver import resolve_symbol
+from llmc.symbol_resolver import resolve_symbol, resolve_symbol_in_nodes
 
 console = Console()
+
+def _get_graph_db(repo_root: Path) -> Any | None:
+    """Return GraphDatabase instance if the .db file exists."""
+    db_path = repo_root / ".llmc" / "rag_graph.db"
+    if not db_path.exists():
+        return None
+    try:
+        from llmc.rag.graph_db import GraphDatabase
+        return GraphDatabase(db_path)
+    except ImportError:
+        return None
 
 app = typer.Typer(
     name="mcwho",
@@ -166,73 +177,73 @@ def _run_who(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        console.print("Run: mcgrep init")
+        console.print("Run: mcwho graph")
         raise typer.Exit(1)
     
+    graph_db = _get_graph_db(repo_root)
+    
+    if graph_db:
+        # DB Path: O(1) lookups
+        with graph_db:
+            # Try exact match first
+            nodes = graph_db.get_nodes_by_name(symbol)
+            if not nodes:
+                # Try fuzzy search in DB
+                nodes = graph_db.search_nodes(symbol, limit=5)
+            
+            if not nodes:
+                console.print(f"[yellow]Symbol not found in database:[/yellow] {symbol}")
+                raise typer.Exit(1)
+            
+            # Use the best match
+            entity_node = nodes[0]
+            entity_id = entity_node.id
+            entity_dict = entity_node._asdict()
+            
+            # Header
+            console.print(f"\n[bold cyan]{_get_entity_display(entity_dict)}[/bold cyan]")
+            kind = entity_node.kind or "symbol"
+            console.print(f"[dim]Kind: {kind}[/dim]\n")
+            
+            show_all = not (show_callers or show_callees or show_imports)
+            
+            def _print_db_edges(title: str, edge_type: str, direction: str):
+                if direction == "incoming":
+                    edges = graph_db.get_edges_to(entity_id, edge_type)
+                else:
+                    edges = graph_db.get_edges_from(entity_id, edge_type)
+                
+                console.print(f"[bold]{title}[/bold] ({len(edges)})")
+                if not edges:
+                    console.print("  [dim](none)[/dim]")
+                else:
+                    for edge in edges[:limit]:
+                        other_id = edge.source if direction == "incoming" else edge.target
+                        other_node = graph_db.get_node(other_id)
+                        if other_node:
+                            console.print(f"  {_get_entity_display(other_node._asdict())}")
+                        else:
+                            console.print(f"  {other_id} [dim](unresolved)[/dim]")
+                    if len(edges) > limit:
+                        console.print(f"  [dim]... and {len(edges) - limit} more[/dim]")
+                console.print()
+
+            if show_all or show_callers:
+                _print_db_edges("CALLED BY", "CALLS", "incoming")
+            if show_all or show_callees:
+                _print_db_edges("CALLS", "CALLS", "outgoing")
+            if show_all or show_imports:
+                _print_db_edges("IMPORTED BY", "IMPORTS", "incoming")
+                _print_db_edges("IMPORTS", "IMPORTS", "outgoing")
+            
+            total_edges = graph_db.edge_count() # Simplified for DB path
+            console.print(f"[dim]Graph: {graph_db.node_count()} entities, {total_edges} edges | Source: SQLite[/dim]")
+            return
+
+    # Legacy JSON Path: slow linear scans
     graph_data = _load_graph(repo_root)
     nodes = graph_data["entities"]
     edges = graph_data["relations"]
-
-    if not nodes:
-        console.print("[yellow]No graph found.[/yellow]")
-        console.print("Run: llmc analytics graph")
-        raise typer.Exit(1)
-
-    # Reconstruct a SchemaGraph object for the resolver
-    graph = SchemaGraph.from_dict(graph_data)
-    matches = resolve_symbol(symbol, graph, max_results=5)
-
-    if not matches:
-        console.print(f"[yellow]Symbol not found:[/yellow] {symbol}")
-        console.print(f"[dim]Searched {len(nodes)} entities in graph[/dim]")
-        raise typer.Exit(1)
-
-    entity = matches[0].entity.to_dict()
-    entity_id = _get_entity_id(entity)
-    
-    # Header
-    console.print(f"\n[bold cyan]{_get_entity_display(entity)}[/bold cyan]")
-    kind = entity.get("kind") or entity.get("type") or "symbol"
-    console.print(f"[dim]Kind: {kind}[/dim]\n")
-    
-    # Default: show all if no specific flag
-    show_all = not (show_callers or show_callees or show_imports)
-    
-    # CALLED BY (incoming CALLS edges)
-    if show_all or show_callers:
-        callers = _get_edges_by_type(edges, entity_id, "CALLS", "incoming")
-        console.print(f"[bold green]CALLED BY[/bold green] ({len(callers)})")
-        _print_edge_list(nodes, callers, "CALLED BY", limit)
-        console.print()
-    
-    # CALLS (outgoing CALLS edges)
-    if show_all or show_callees:
-        callees = _get_edges_by_type(edges, entity_id, "CALLS", "outgoing")
-        console.print(f"[bold yellow]CALLS[/bold yellow] ({len(callees)})")
-        _print_edge_list(nodes, callees, "CALLS", limit)
-        console.print()
-    
-    # IMPORTS (incoming/outgoing IMPORTS edges)
-    if show_all or show_imports:
-        imports_in = _get_edges_by_type(edges, entity_id, "IMPORTS", "incoming")
-        imports_out = _get_edges_by_type(edges, entity_id, "IMPORTS", "outgoing")
-        
-        if imports_in:
-            console.print(f"[bold blue]IMPORTED BY[/bold blue] ({len(imports_in)})")
-            _print_edge_list(nodes, imports_in, "IMPORTED BY", limit)
-            console.print()
-        
-        if imports_out:
-            console.print(f"[bold blue]IMPORTS[/bold blue] ({len(imports_out)})")
-            _print_edge_list(nodes, imports_out, "IMPORTS", limit)
-            console.print()
-    
-    # Summary footer
-    total_edges = len([e for e in edges if entity_id.lower() in (
-        (e.get("source") or e.get("src") or "").lower(),
-        (e.get("target") or e.get("dst") or "").lower()
-    )])
-    console.print(f"[dim]Total relationships: {total_edges} | Graph: {len(nodes)} entities, {len(edges)} edges[/dim]")
 
 
 @app.command()
@@ -285,7 +296,9 @@ def stats():
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         raise typer.Exit(1)
     
-    nodes, edges = _load_graph(repo_root)
+    graph_data = _load_graph(repo_root)
+    nodes = graph_data["entities"]
+    edges = graph_data["relations"]
     
     if not nodes:
         console.print("[yellow]No graph found.[/yellow] Run: mcwho graph")

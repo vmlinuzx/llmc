@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 import sqlite3
 from typing import Any
 
 from llmc.rag.config import index_path_for_read, rag_dir
 from llmc.rag.database import Database
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -128,7 +131,7 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
         return enrichments_by_span
 
     except sqlite3.Error as e:
-        print(f"Error loading enrichment DB: {e}")
+        logger.error("Error loading enrichment DB: %s", e)
         return {}
 
 

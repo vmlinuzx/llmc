@@ -96,11 +96,20 @@ class GraphDatabase:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def _get_conn(self) -> sqlite3.Connection:
-        """Return shared connection if in context, else new one."""
+    @property
+    def conn(self) -> sqlite3.Connection:
+        """Return shared connection if in context, else a new one.
+        
+        If returning a new one, it is the caller's responsibility to close it,
+        or use it in a 'with' block.
+        """
         if self._shared_conn:
             return self._shared_conn
         return self._get_new_conn()
+
+    def _get_conn(self) -> sqlite3.Connection:
+        """Deprecated: Use self.conn instead."""
+        return self.conn
 
     def bulk_insert_nodes(self, nodes: Iterable[Node]):
         # Use a dedicated connection for bulk ops to ensure commit
@@ -150,175 +159,141 @@ class GraphDatabase:
             conn.execute("VACUUM")
 
     def node_count(self) -> int:
-        conn = self._get_conn()
-        # If shared, don't close. If new, close.
         if self._shared_conn:
+            return self._shared_conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
+        with self._get_new_conn() as conn:
             return conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
-        else:
-            with conn:
-                return conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
 
     def edge_count(self) -> int:
-        conn = self._get_conn()
         if self._shared_conn:
+            return self._shared_conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
+        with self._get_new_conn() as conn:
             return conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
-        else:
-            with conn:
-                return conn.execute("SELECT COUNT(*) FROM edges").fetchone()[0]
 
     def get_node(self, node_id: str) -> Node | None:
-        conn = self._get_conn()
-        cursor = conn.execute("SELECT * FROM nodes WHERE id = ?", (node_id,))
-        row = cursor.fetchone()
-        if not self._shared_conn:
-            conn.close()
-        return self._row_to_node(row) if row else None
+        if self._shared_conn:
+            row = self._shared_conn.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)).fetchone()
+            return self._row_to_node(row) if row else None
+        with self._get_new_conn() as conn:
+            row = conn.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)).fetchone()
+            return self._row_to_node(row) if row else None
 
     def get_nodes_by_name(self, name: str, case_insensitive: bool = True) -> list[Node]:
-        conn = self._get_conn()
-        try:
-            if case_insensitive:
-                rows = conn.execute(
-                    "SELECT * FROM nodes WHERE lower(name) = lower(?)", (name,)
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM nodes WHERE name = ?", (name,)
-                ).fetchall()
+        query = "SELECT * FROM nodes WHERE lower(name) = lower(?)" if case_insensitive else "SELECT * FROM nodes WHERE name = ?"
+        if self._shared_conn:
+            rows = self._shared_conn.execute(query, (name,)).fetchall()
             return [self._row_to_node(row) for row in rows]
-        finally:
-            if not self._shared_conn:
-                conn.close()
+        with self._get_new_conn() as conn:
+            rows = conn.execute(query, (name,)).fetchall()
+            return [self._row_to_node(row) for row in rows]
 
     def get_edges_from(self, source: str, edge_type: str | None = None) -> list[Edge]:
-        conn = self._get_conn()
-        try:
-            if edge_type:
-                rows = conn.execute(
-                    "SELECT * FROM edges WHERE source = ? AND type = ?", (source, edge_type)
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM edges WHERE source = ?", (source,)
-                ).fetchall()
+        query = "SELECT * FROM edges WHERE source = ?"
+        params = [source]
+        if edge_type:
+            query += " AND type = ?"
+            params.append(edge_type)
+            
+        if self._shared_conn:
+            rows = self._shared_conn.execute(query, params).fetchall()
             return [self._row_to_edge(row) for row in rows]
-        finally:
-            if not self._shared_conn:
-                conn.close()
+        with self._get_new_conn() as conn:
+            rows = conn.execute(query, params).fetchall()
+            return [self._row_to_edge(row) for row in rows]
 
     def get_edges_to(self, target: str, edge_type: str | None = None) -> list[Edge]:
-        conn = self._get_conn()
-        try:
-            if edge_type:
-                rows = conn.execute(
-                    "SELECT * FROM edges WHERE target = ? AND type = ?", (target, edge_type)
-                ).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM edges WHERE target = ?", (target,)
-                ).fetchall()
+        query = "SELECT * FROM edges WHERE target = ?"
+        params = [target]
+        if edge_type:
+            query += " AND type = ?"
+            params.append(edge_type)
+            
+        if self._shared_conn:
+            rows = self._shared_conn.execute(query, params).fetchall()
             return [self._row_to_edge(row) for row in rows]
-        finally:
-            if not self._shared_conn:
-                conn.close()
+        with self._get_new_conn() as conn:
+            rows = conn.execute(query, params).fetchall()
+            return [self._row_to_edge(row) for row in rows]
 
     def search_nodes(self, query: str, limit: int = 20) -> list[Node]:
         q = f"%{query}%"
-        conn = self._get_conn()
-        try:
-            rows = conn.execute(
-                """
-                SELECT * FROM nodes 
-                WHERE name LIKE ? OR path LIKE ? 
-                LIMIT ?
-                """,
-                (q, q, limit)
-            ).fetchall()
+        sql = "SELECT * FROM nodes WHERE name LIKE ? OR path LIKE ? LIMIT ?"
+        params = (q, q, limit)
+        if self._shared_conn:
+            rows = self._shared_conn.execute(sql, params).fetchall()
             return [self._row_to_node(row) for row in rows]
-        finally:
-            if not self._shared_conn:
-                conn.close()
+        with self._get_new_conn() as conn:
+            rows = conn.execute(sql, params).fetchall()
+            return [self._row_to_node(row) for row in rows]
 
     def get_incoming_neighbors(self, target_names: list[str], edge_types: Iterable[str] | None = None) -> list[str]:
         """
         Get file paths of nodes that have edges pointing TO any node with a name in `target_names`.
         Equivalent to: "Who calls/uses these symbols?" (Upstream / Where Used)
-        
-        Supports:
-        - Exact name matches on nodes
-        - Exact ID matches on nodes
-        - Suffix matches on node IDs (for qualified names like 'pkg.mod.func' -> 'func')
-        - Direct suffix matches on edge targets (for edges to undefined nodes)
         """
         if not target_names:
             return []
             
-        conn = self._get_conn()
-        try:
-            name_placeholders = ",".join("?" * len(target_names))
-            
-            type_clause = ""
-            type_params: list[str] = []
-            if edge_types:
-                types = list(edge_types)
-                type_placeholders = ",".join("?" * len(types))
-                type_clause = f"AND e.type IN ({type_placeholders})"
-                type_params = types
+        name_placeholders = ",".join("?" * len(target_names))
+        type_clause = ""
+        type_params: list[str] = []
+        if edge_types:
+            types = list(edge_types)
+            type_placeholders = ",".join("?" * len(types))
+            type_clause = f"AND e.type IN ({type_placeholders})"
+            type_params = types
 
-            # Build suffix patterns for LIKE matching (e.g., 'func' -> '%.func', ':func')
-            suffix_patterns = []
-            for name in target_names:
-                suffix_patterns.append(f"%.{name}")  # pkg.mod.func ends with .func
-                suffix_patterns.append(f"%:{name}")  # mod:func ends with :func
-            suffix_placeholders = " OR ".join(["n_target.id LIKE ?"] * len(suffix_patterns))
-            edge_suffix_placeholders = " OR ".join(["e.target LIKE ?"] * len(suffix_patterns))
+        # Build suffix patterns ONLY for the edge target fallback (when node doesn't exist)
+        # For the primary join, we rely on nodes.name and nodes.id indexes.
+        suffix_patterns = []
+        for name in target_names:
+            suffix_patterns.append(f"%.{name}")
+            suffix_patterns.append(f"%:{name}")
+        
+        edge_suffix_clause = " OR ".join(["e.target LIKE ?"] * len(suffix_patterns))
+        node_suffix_clause = " OR ".join(["n_target.id LIKE ?"] * len(suffix_patterns))
 
-            # Two-part query using UNION:
-            # 1. Match via node table (when target node exists)
-            # 2. Match directly on edge.target (when target node doesn't exist in nodes table)
-            query = f"""
-                SELECT DISTINCT path FROM (
-                    -- Match via node table
-                    SELECT n_src.path
-                    FROM nodes n_target
-                    JOIN edges e ON e.target = n_target.id
-                    JOIN nodes n_src ON e.source = n_src.id
-                    WHERE (
-                        n_target.name IN ({name_placeholders}) 
-                        OR n_target.id IN ({name_placeholders})
-                        OR ({suffix_placeholders})
-                    )
-                    {type_clause}
-                    
-                    UNION
-                    
-                    -- Match directly on edge target (for undefined target nodes)
-                    SELECT n_src.path
-                    FROM edges e
-                    JOIN nodes n_src ON e.source = n_src.id
-                    WHERE (
-                        e.target IN ({name_placeholders})
-                        OR ({edge_suffix_placeholders})
-                    )
-                    {type_clause}
+        query = f"""
+            SELECT DISTINCT path FROM (
+                -- Match via node table (uses nodes.name and nodes.id indexes)
+                SELECT n_src.path
+                FROM nodes n_target
+                JOIN edges e ON e.target = n_target.id
+                JOIN nodes n_src ON e.source = n_src.id
+                WHERE (
+                    n_target.name IN ({name_placeholders}) 
+                    OR n_target.id IN ({name_placeholders})
+                    OR ({node_suffix_clause})
                 )
-                WHERE path IS NOT NULL AND path != ''
-                LIMIT 100
-            """
-            
-            # Build params for both parts of UNION
-            # Part 1: names (name IN), names (id IN), suffix patterns, types
-            # Part 2: names (target IN), suffix patterns, types
-            query_params = (
-                list(target_names) + list(target_names) + suffix_patterns + type_params +
-                list(target_names) + suffix_patterns + type_params
-            )
+                {type_clause}
                 
+                UNION
+                
+                -- Match directly on edge target (fallback for undefined target nodes)
+                SELECT n_src.path
+                FROM edges e
+                JOIN nodes n_src ON e.source = n_src.id
+                WHERE (
+                    e.target IN ({name_placeholders})
+                    OR ({edge_suffix_clause})
+                )
+                {type_clause}
+            )
+            WHERE path IS NOT NULL AND path != ''
+            LIMIT 100
+        """
+        
+        query_params = (
+            list(target_names) + list(target_names) + suffix_patterns + type_params +
+            list(target_names) + suffix_patterns + type_params
+        )
+            
+        if self._shared_conn:
+            rows = self._shared_conn.execute(query, query_params).fetchall()
+            return [r["path"] for r in rows if r["path"]]
+        with self._get_new_conn() as conn:
             rows = conn.execute(query, query_params).fetchall()
             return [r["path"] for r in rows if r["path"]]
-        finally:
-            if not self._shared_conn:
-                conn.close()
 
     def get_outgoing_neighbors(self, source_names: list[str], edge_types: Iterable[str] | None = None) -> list[str]:
         """

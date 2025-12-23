@@ -62,7 +62,6 @@ langsmith==0.4.46
 license-expression==30.4.4
 linkify-it-py==2.0.3
 -e git+https://github.com/vmlinuzx/llmc.git@cced8dadd076da1e4fdc57ee925c967ddb1adac7#egg=llmc
--e git+https://github.com/vmlinuzx/llmc.git@cced8dadd076da1e4fdc57ee925c967ddb1adac7#egg=llmcwrapper
 markdown-it-py==4.0.0
 MarkupSafe==2.1.5
 mcp==1.24.0
@@ -153,7 +152,7 @@ toml==0.10.2
 tomli==2.3.0
 tomli_w==1.2.0
 tomlkit==0.13.3
-torch==2.9.1+cpu
+torch==2.9.1
 tqdm==4.67.1
 transformers==4.57.1
 tree-sitter-languages==1.9.1

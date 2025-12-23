@@ -6,9 +6,12 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import datetime
 import json
+import logging
 from pathlib import Path
 
 from .models import RepoState
+
+logger = logging.getLogger(__name__)
 
 
 class StateStore:
@@ -28,6 +31,7 @@ class StateStore:
                 state = self._load_path(path)
                 states[state.repo_id] = state
             except Exception:
+                logger.exception("Failed to load state for %s", path)
                 # Corrupt state for a single repo should not break the daemon.
                 continue
         return states

@@ -501,7 +501,7 @@ def build_enriched_schema_graph(repo_root: Path) -> Any:
                 enriched_count += 1
 
     print(
-        f"    📊 Enrichment integration: {enriched_count}/{len(base_graph.entities)} entities enriched."
+        f"    📊 {repo_root.name}: Enrichment integration: {enriched_count}/{len(base_graph.entities)} entities enriched."
     )
 
     # 4. Save the enriched graph

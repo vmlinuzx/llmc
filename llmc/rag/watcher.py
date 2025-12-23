@@ -14,12 +14,15 @@ Architecture:
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 from pathlib import Path
 import threading
 import time
 from typing import Any
 
 import pathspec
+
+logger = logging.getLogger(__name__)
 
 # inotify support (Linux only)
 try:
@@ -73,12 +76,14 @@ class FileFilter:
             try:
                 with open(gitignore_path) as f:
                     patterns = list(f)
-            except Exception:
+            except Exception as e:
+                logger.warning("Failed to load .gitignore: %s", e)
                 pass  # Ignore gitignore parse errors
 
         try:
             self.spec = pathspec.PathSpec.from_lines("gitwildmatch", patterns)
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to parse .gitignore patterns: %s", e)
             # Fallback to empty spec if something goes wrong
             self.spec = pathspec.PathSpec.from_lines("gitwildmatch", [])
 

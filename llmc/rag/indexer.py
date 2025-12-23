@@ -154,11 +154,7 @@ def generate_sidecar_if_enabled(
         return sidecar_path
     except Exception as e:
         # Silently fail sidecar generation - don't break indexing
-        import sys
-
-        print(
-            f"Warning: Failed to generate sidecar for {file_path}: {e}", file=sys.stderr
-        )
+        log.warning("Failed to generate sidecar for %s: %s", file_path, e)
         return None
 
 

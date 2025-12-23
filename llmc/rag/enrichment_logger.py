@@ -38,6 +38,7 @@ class EnrichmentEvent:
     """Structured enrichment event."""
 
     timestamp: str
+    event: str  # e.g., "enrich.span.success", "enrich.span.failure"
     span_hash: str
     file_path: str
     lines: tuple[int, int]
@@ -46,6 +47,10 @@ class EnrichmentEvent:
     model: str
     chain: str | None = None
     backend: str | None = None
+    backend_name: str | None = None
+    provider: str | None = None
+    server: str | None = None
+    failure_type: str | None = None
     attempts: int = 1
     tokens_in: int | None = None
     tokens_out: int | None = None
@@ -55,8 +60,9 @@ class EnrichmentEvent:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dict, excluding None values."""
-        d = {
+        d: dict[str, Any] = {
             "timestamp": self.timestamp,
+            "event": self.event,
             "span_hash": self.span_hash,
             "path": self.file_path,
             "lines": list(self.lines),
@@ -68,6 +74,14 @@ class EnrichmentEvent:
             d["chain"] = self.chain
         if self.backend:
             d["backend"] = self.backend
+        if self.backend_name:
+            d["backend_name"] = self.backend_name
+        if self.provider:
+            d["provider"] = self.provider
+        if self.server:
+            d["server"] = self.server
+        if self.failure_type:
+            d["failure_type"] = self.failure_type
         if self.attempts > 1:
             d["attempts"] = self.attempts
         if self.tokens_in is not None:
@@ -114,12 +128,17 @@ class EnrichmentLogger:
         chain: str | None = None,
         attempts: int = 1,
         correlation_id: str | None = None,
+        *,
+        backend_name: str | None = None,
+        server: str | None = None,
+        provider: str | None = None,
     ) -> None:
         """Log a successful enrichment."""
         meta = meta or {}
 
         event = EnrichmentEvent(
             timestamp=datetime.now(UTC).isoformat(),
+            event="enrich.span.success",
             span_hash=span_hash,
             file_path=file_path,
             lines=(start_line, end_line),
@@ -128,6 +147,9 @@ class EnrichmentLogger:
             model=model,
             chain=chain,
             backend=meta.get("backend"),
+            backend_name=backend_name,
+            provider=provider,
+            server=server,
             attempts=attempts,
             tokens_in=meta.get("tokens_in") or meta.get("prompt_eval_count"),
             tokens_out=meta.get("tokens_out") or meta.get("eval_count"),
@@ -148,16 +170,26 @@ class EnrichmentLogger:
         model: str | None = None,
         attempts: int = 1,
         correlation_id: str | None = None,
+        *,
+        failure_type: str | None = None,
+        backend_name: str | None = None,
+        server: str | None = None,
+        provider: str | None = None,
     ) -> None:
         """Log a failed enrichment."""
         event = EnrichmentEvent(
             timestamp=datetime.now(UTC).isoformat(),
+            event="enrich.span.failure",
             span_hash=span_hash,
             file_path=file_path,
             lines=(start_line, end_line),
             success=False,
             duration_sec=duration_sec,
             model=model or "unknown",
+            backend_name=backend_name,
+            provider=provider,
+            server=server,
+            failure_type=failure_type,
             attempts=attempts,
             error=error,
             correlation_id=correlation_id,

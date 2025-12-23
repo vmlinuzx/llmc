@@ -803,6 +803,9 @@ class RAGService:
             self.process_repo(repo)
         logger.info("Initial sync complete")
 
+        # Run idle enrichment immediately at startup (don't wait for housekeeping)
+        self._run_idle_enrichment()
+
         last_housekeeping = time.time()
 
         while self.running:
@@ -871,9 +874,11 @@ class RAGService:
     def _run_idle_enrichment(self):
         """Run batch enrichment during idle periods if configured."""
         idle_cfg = self._daemon_cfg.get("idle_enrichment", {})
+        print(f"🔍 idle_enrichment called: enabled={idle_cfg.get('enabled', False)}")  # TRACE
 
         # Check if enabled
         if not idle_cfg.get("enabled", False):
+            logger.info("Idle enrichment: disabled in config")
             return
 
         # Check interval
@@ -881,6 +886,7 @@ class RAGService:
         now = time.time()
         last_run = getattr(self, "_last_idle_enrichment", 0)
         if now - last_run < interval:
+            logger.info("Idle enrichment: waiting (%.0fs until next run)", interval - (now - last_run))
             return
 
         # Check dry-run mode
@@ -900,7 +906,8 @@ class RAGService:
         if self._enrichment_daily_cost >= max_daily_cost:
             return  # Cost limit reached for today
 
-        logger.info("Idle enrichment: Processing up to %d spans...", batch_size)
+        # Use print() since logger output doesn't appear in daemon/systemd
+        print(f"🔄 Idle enrichment: Processing up to {batch_size} spans...")
 
         # Run enrichment for each registered repo
         total_enriched = 0

@@ -21,19 +21,44 @@ def get_logger(name: str, config: DaemonConfig) -> logging.Logger:
         fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    # Console handler
+    # Console handler (Text)
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
     ch.setLevel(level)
     logger.addHandler(ch)
 
-    # File handler
+    # File handler (JSONL)
     log_file = Path(config.log_path) / "rag-daemon.log"
     log_file.parent.mkdir(parents=True, exist_ok=True)
     fh = logging.FileHandler(log_file, encoding="utf-8")
-    fh.setFormatter(formatter)
+    fh.setFormatter(JSONFormatter())
     fh.setLevel(level)
     logger.addHandler(fh)
 
     logger.propagate = False
     return logger
+
+
+class JSONFormatter(logging.Formatter):
+    """Simple JSON formatter for structured logging."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        import json
+        from datetime import datetime, timezone
+
+        # format message first to handle args
+        message = record.getMessage()
+
+        entry = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": message,
+            "path": record.pathname,
+            "line": record.lineno,
+        }
+
+        if record.exc_info:
+            entry["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(entry)

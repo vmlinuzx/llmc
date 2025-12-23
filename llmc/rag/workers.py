@@ -4,6 +4,7 @@ from collections.abc import Callable
 import logging
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 from jsonschema import Draft7Validator, ValidationError
@@ -516,8 +517,13 @@ def execute_enrichment(
     successes = 0
     errors: list[str] = []
 
+    # Initialize logger
+    from llmc.rag.enrichment_logger import EnrichmentLogger
+    logger = EnrichmentLogger(repo_root / "logs")
+
     with db.transaction():
         for item in scheduled_items:
+            start_time = time.monotonic()
             code = item.read_source(repo_root)
 
             # Add content type header
@@ -538,15 +544,43 @@ def execute_enrichment(
             try:
                 response = llm_call(prompt)
             except Exception as exc:  # pragma: no cover - depends on user llm callable
-                errors.append(f"{item.span_hash}: LLM call failed - {exc}")
+                duration = time.monotonic() - start_time
+                err_msg = f"{item.span_hash}: LLM call failed - {exc}"
+                errors.append(err_msg)
+                logger.log_failure(
+                    span_hash=item.span_hash,
+                    file_path=str(item.file_path),
+                    start_line=item.start_line,
+                    end_line=item.end_line,
+                    duration_sec=duration,
+                    error=str(exc),
+                    model=model,
+                )
+                log.warning(
+                    "✗ %s L%d-%d | %s | %.1fs | LLM call failed: %s",
+                    str(item.file_path)[-30:] if len(str(item.file_path)) > 30 else str(item.file_path),
+                    item.start_line,
+                    item.end_line,
+                    model,
+                    duration,
+                    str(exc)[:60],
+                )
                 continue
 
             ok, validation_errors = validate_enrichment(
                 response, item.start_line, item.end_line, enforce_latin1=enforce_latin1
             )
             if not ok:
-                errors.append(
-                    f"{item.span_hash}: validation failed - {', '.join(validation_errors) or 'unknown error'}"
+                err_msg = f"{item.span_hash}: validation failed - {', '.join(validation_errors) or 'unknown error'}"
+                errors.append(err_msg)
+                logger.log_failure(
+                    span_hash=item.span_hash,
+                    file_path=str(item.file_path),
+                    start_line=item.start_line,
+                    end_line=item.end_line,
+                    duration_sec=time.monotonic() - start_time,
+                    error=err_msg,
+                    model=model,
                 )
                 continue
 
@@ -561,6 +595,29 @@ def execute_enrichment(
             }
             db.store_enrichment(item.span_hash, payload)
             successes += 1
+            duration = time.monotonic() - start_time
+            logger.log_success(
+                span_hash=item.span_hash,
+                file_path=str(item.file_path),
+                start_line=item.start_line,
+                end_line=item.end_line,
+                duration_sec=duration,
+                model=model,
+                meta=response,
+                attempts=1,
+            )
+            log.info(
+                "✓ %s L%d-%d | %s | %.1fs",
+                str(item.file_path)[-30:] if len(str(item.file_path)) > 30 else str(item.file_path),
+                item.start_line,
+                item.end_line,
+                model,
+                duration,
+            )
+            # Also print to stdout for visibility in CLIs with suppressed logging
+            print(
+                f"✓ {item.file_path} L{item.start_line}-{item.end_line} | {model} | {duration:.1f}s"
+            )
 
     return successes, errors
 
