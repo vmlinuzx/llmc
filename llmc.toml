@@ -167,11 +167,58 @@ idle_backoff_base = 1.5            # Gradual ramp: 30s → 45s → 60s cap
 [daemon.idle_enrichment]
 enabled = true                     # Enable/disable idle enrichment
 batch_size = 20                    # Spans to enrich per idle cycle
-interval_seconds = 30             # Minimum seconds between enrichment runs
+interval_seconds = 5              # Run enrichment every loop cycle (5s timeout)
 preferred_chain = "code_enrichment_models"  # Which chain to use (matches [enrichment.routes])
 code_first = true                  # Prioritize code spans over docs
 max_daily_cost_usd = 1.00          # Stop enrichment if daily cost exceeds this (cloud backends)
 dry_run = false                    # If true, log what would be enriched but don't call LLM
+
+# ==============================================================================
+# ENRICHMENT POOL (Multi-Server Fan-Out)
+# ==============================================================================
+# Pool manager launches and manages multiple workers that pull from a central
+# queue. Each worker is bound to one Ollama backend. This enables true parallel
+# processing across multiple servers (~200+ T/s with 3 servers).
+
+[enrichment.pool]
+enabled = true
+strategy = "work-stealing"         # Fast servers naturally get more work
+health_check_interval = 30
+max_retries = 3
+stale_claim_timeout = 600
+
+# Athena - PRIMARY (Strix Halo, fastest GPU)
+[[enrichment.pool.workers]]
+id = "athena"
+type = "remote"
+host = "athena"
+port = 11434
+model = "qwen3:4b-instruct"
+tier = 0
+enabled = true
+options = { temperature = 0.2, num_ctx = 8192 }
+
+# Desktop - SECONDARY (via Tailscale)
+[[enrichment.pool.workers]]
+id = "desktop"
+type = "remote"
+host = "100.64.0.6"
+port = 11434
+model = "qwen3:4b-instruct"
+tier = 0
+enabled = true
+options = { temperature = 0.2, num_ctx = 8192 }
+
+# Localhost - FALLBACK (laptop iGPU)
+[[enrichment.pool.workers]]
+id = "localhost"
+type = "local"
+host = "localhost"
+port = 11434
+model = "qwen3:4b-instruct"
+tier = 0
+enabled = true
+options = { temperature = 0.2, num_ctx = 8192 }
 
 
 # ==============================================================================
@@ -271,17 +318,29 @@ code = "code_enrichment_models"        # Route code to your local models
 # enabled = true
 # options = { num_ctx = 8192, temperature = 0.2 }
 
-# DESKTOP-NBHNN60 (Tailscale) - PRIMARY enrichment server (offloads from laptop!)
+# ATHENA (Strix Halo) - PRIMARY enrichment server (fastest GPU!)
 [[enrichment.chain]]
-name = "desktop qwen3 4b"
+name = "athena qwen3 4b"
 chain = "code_enrichment_models"
 provider = "ollama"
 model = "qwen3:4b-instruct"
-url = "http://100.64.0.6:11434"
+url = "http://athena:11434"
 routing_tier = "4b"
 timeout_seconds = 90
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
+
+# DESKTOP-NBHNN60 (Tailscale) - KoboldCpp via OpenAI-compatible API
+[[enrichment.chain]]
+name = "desktop kobold qwen3 4b"
+chain = "code_enrichment_models"
+provider = "openai"
+model = "koboldcpp/Qwen3-4B-Instruct-2507-Q4_K_M"
+url = "http://100.64.0.6:5001/v1"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { temperature = 0.2 }
 
 # LOCAL FALLBACK: Qwen3 4b Instruct - instruction-tuned for structured output!
 [[enrichment.chain]]
@@ -355,17 +414,29 @@ options = { num_ctx = 12288, temperature = 0.2 }
 # enabled = true
 # options = { num_ctx = 8192, temperature = 0.2 }
 
-# DESKTOP-NBHNN60 (Tailscale) - PRIMARY for docs
+# ATHENA (Strix Halo) - PRIMARY for docs
 [[enrichment.chain]]
-name = "desktop qwen3 4b docs"
+name = "athena qwen3 4b docs"
 chain = "document_routes"
 provider = "ollama"
 model = "qwen3:4b-instruct"
-url = "http://100.64.0.6:11434"
+url = "http://athena:11434"
 routing_tier = "4b"
 timeout_seconds = 90
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
+
+# DESKTOP-NBHNN60 (Tailscale) - KoboldCpp for docs
+[[enrichment.chain]]
+name = "desktop kobold qwen3 4b docs"
+chain = "document_routes"
+provider = "openai"
+model = "koboldcpp/Qwen3-4B-Instruct-2507-Q4_K_M"
+url = "http://100.64.0.6:5001/v1"
+routing_tier = "4b"
+timeout_seconds = 90
+enabled = true
+options = { temperature = 0.2 }
 
 # LOCAL FALLBACK: Qwen3 4b Instruct for docs (instruction-tuned)
 [[enrichment.chain]]

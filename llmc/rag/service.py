@@ -828,11 +828,15 @@ class RAGService:
                     self.process_repo(repo)
                 self.state.update_cycle()
 
-            # Periodic housekeeping
+            # Periodic housekeeping (log rotation, vacuum - NOT enrichment)
             now = time.time()
             if now - last_housekeeping >= housekeeping_interval:
                 self._periodic_housekeeping()
                 last_housekeeping = now
+
+            # Idle enrichment - runs on its own interval (interval_seconds, typically 30s)
+            # Separate from housekeeping so it runs continuously even when idle
+            self._run_idle_enrichment()
 
         # Cleanup
         logger.info("Stopping file watchers...")
