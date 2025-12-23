@@ -1,7 +1,9 @@
 import sys
-import pytest
 from unittest.mock import patch
+
+import pytest
 from typer.testing import CliRunner
+
 from llmc.main import app
 
 runner = CliRunner()
@@ -77,3 +79,45 @@ def test_chat_sql_injection():
         prompt_passed = captured_argv[1]
         
         assert prompt_passed != malicious_prompt, "SQL injection prompt was not sanitized"
+
+def test_chat_new_option():
+    """Verify that --new option is passed as -n."""
+    with patch("llmc_agent.cli.main") as mock_agent_main:
+        captured_argv = []
+        def side_effect(*args, **kwargs):
+            captured_argv.extend(sys.argv)
+        mock_agent_main.side_effect = side_effect
+        
+        result = runner.invoke(app, ["chat", "--new"])
+        
+        assert result.exit_code == 0
+        mock_agent_main.assert_called_once()
+        assert "-n" in captured_argv
+
+def test_chat_recall_option():
+    """Verify that --recall option is passed as -r."""
+    with patch("llmc_agent.cli.main") as mock_agent_main:
+        captured_argv = []
+        def side_effect(*args, **kwargs):
+            captured_argv.extend(sys.argv)
+        mock_agent_main.side_effect = side_effect
+        
+        result = runner.invoke(app, ["chat", "--recall"])
+        
+        assert result.exit_code == 0
+        mock_agent_main.assert_called_once()
+        assert "-r" in captured_argv
+
+def test_chat_list_option():
+    """Verify that --list option is passed as -l."""
+    with patch("llmc_agent.cli.main") as mock_agent_main:
+        captured_argv = []
+        def side_effect(*args, **kwargs):
+            captured_argv.extend(sys.argv)
+        mock_agent_main.side_effect = side_effect
+        
+        result = runner.invoke(app, ["chat", "--list"])
+        
+        assert result.exit_code == 0
+        mock_agent_main.assert_called_once()
+        assert "-l" in captured_argv

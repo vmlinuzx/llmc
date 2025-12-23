@@ -30,7 +30,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import sys
 import time
-from typing import Any, Protocol
+from typing import Any, Protocol, TYPE_CHECKING
 
 from llmc.rag.config_enrichment import EnrichmentBackendSpec
 from llmc.rag.database import Database
@@ -46,6 +46,9 @@ from llmc.rag.enrichment_router import (
     EnrichmentRouter,
     EnrichmentSliceView,
 )
+
+if TYPE_CHECKING:
+    from llmc.rag.enrichment_logger import EnrichmentLogger
 
 
 class BackendFactory(Protocol):
@@ -183,6 +186,7 @@ class EnrichmentPipeline:
         *,
         repo_root: Path | None = None,
         log_dir: Path | None = None,
+        enrichment_logger: EnrichmentLogger | None = None,
         max_failures_per_span: int = 3,
         cooldown_seconds: int = 0,
         code_first: bool = False,
@@ -200,6 +204,12 @@ class EnrichmentPipeline:
         self.code_first = code_first
         self.starvation_ratio_high = starvation_ratio_high
         self.starvation_ratio_low = starvation_ratio_low
+
+        # Initialize enrichment logger for structured JSONL output
+        self.enrichment_logger = enrichment_logger
+        if self.enrichment_logger is None and log_dir:
+            from llmc.rag.enrichment_logger import EnrichmentLogger as _EL
+            self.enrichment_logger = _EL(log_dir)
 
         self._failure_counts: dict[str, int] = {}
 
@@ -435,7 +445,7 @@ class EnrichmentPipeline:
 
             duration = time.monotonic() - start_time
 
-            # 6. Log detailed enrichment info (restored from qwen_enrich_batch.py)
+            # 6. Log detailed enrichment info
             self._log_enrichment_success(
                 span_number=span_number,
                 file_path=slice_view.file_path,
@@ -445,6 +455,7 @@ class EnrichmentPipeline:
                 meta=meta,
                 decision=decision,
                 attempts=attempts,
+                span_hash=slice_view.span_hash,
             )
 
             return EnrichmentResult(
@@ -469,6 +480,7 @@ class EnrichmentPipeline:
                 duration=duration,
                 error=str(e),
                 attempts=getattr(e, "attempts", []),
+                span_hash=slice_view.span_hash,
             )
 
             return EnrichmentResult(
@@ -647,12 +659,36 @@ class EnrichmentPipeline:
         meta: dict[str, Any],
         decision: EnrichmentRouteDecision,
         attempts: list[Any],
+        span_hash: str = "",
     ) -> None:
-        """Log detailed enrichment success info (restored from qwen_enrich_batch.py)."""
+        """Log detailed enrichment success info.
+        
+        Logs to:
+        1. JSONL (structured, persistent) - via EnrichmentLogger
+        2. Console (human-readable) - only if stdout is a TTY
+        """
         # Extract metadata
         model = meta.get("model", "unknown")
         backend = meta.get("backend", "unknown")
         chain_name = decision.chain_name or "default"
+
+        # 1. Log to JSONL (structured, always)
+        if self.enrichment_logger:
+            self.enrichment_logger.log_success(
+                span_hash=span_hash,
+                file_path=str(file_path),
+                start_line=start_line,
+                end_line=end_line,
+                duration_sec=duration,
+                model=model,
+                meta=meta,
+                chain=chain_name,
+                attempts=len(attempts),
+            )
+
+        # 2. Console output (only if interactive TTY)
+        if not sys.stdout.isatty():
+            return
 
         # Build model note
         model_note = f" ({model})" if model and model != "unknown" else ""
@@ -683,7 +719,7 @@ class EnrichmentPipeline:
         tps = meta.get("tokens_per_second", 0)
         tps_note = f" {tps:.1f} T/s" if tps and tps > 0 else ""
 
-        # Print detailed log line (matching old format)
+        # Print detailed log line
         print(
             f"✓ Enriched span {span_number}: {file_path}:{start_line}-{end_line} "
             f"({duration:.2f}s){tps_note}{model_note}{config_note}{attempts_note}",
@@ -699,9 +735,32 @@ class EnrichmentPipeline:
         duration: float,
         error: str,
         attempts: list[Any],
+        span_hash: str = "",
     ) -> None:
-        """Log detailed enrichment failure info."""
+        """Log detailed enrichment failure info.
+        
+        Logs to:
+        1. JSONL (structured, persistent) - via EnrichmentLogger
+        2. Console stderr (human-readable) - only if stderr is a TTY
+        """
         attempt_count = len(attempts)
+
+        # 1. Log to JSONL (structured, always)
+        if self.enrichment_logger:
+            self.enrichment_logger.log_failure(
+                span_hash=span_hash,
+                file_path=str(file_path),
+                start_line=start_line,
+                end_line=end_line,
+                duration_sec=duration,
+                error=error,
+                attempts=attempt_count,
+            )
+
+        # 2. Console output (only if interactive TTY)
+        if not sys.stderr.isatty():
+            return
+
         attempts_note = (
             f" [{attempt_count} attempt{'s' if attempt_count != 1 else ''}]"
             if attempts

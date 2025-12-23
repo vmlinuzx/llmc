@@ -35,6 +35,7 @@ from llmc.commands.rag import (
     nav_lineage,
     nav_where_used,
     plan,
+    repair_logs,
     search,
     stats,
     sync,
@@ -216,6 +217,7 @@ debug_app.command(name="inspect")(inspect)
 debug_app.command(name="export")(export)
 debug_app.command(name="enrich-status")(enrich_status)
 debug_app.command(name="file-descriptions")(file_descriptions)
+debug_app.command(name="repair-logs")(repair_logs)
 
 app.add_typer(debug_app, name="debug")
 

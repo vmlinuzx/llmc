@@ -1,5 +1,6 @@
 """Tests for code execution mode - the Anthropic 'Code Mode' pattern."""
 
+import pytest
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -124,6 +125,7 @@ print(f"Result: {result}")
             builtins, "_call_tool"
         ), "builtins._call_tool should be cleaned up"
 
+    @pytest.mark.allow_sleep
     def test_timeout_capture(self):
         """Test that stderr is captured on error."""
         result = execute_code(

@@ -1,69 +1,22 @@
-# SDD: Missing Test for 'route' CLI Command
+# SDD: Missing Tests for `route` Command
 
 ## 1. Gap Description
-The `llmc/cli.py` script includes a `route` command that is intended to test the domain resolution logic for a given file path. This is a critical function for the RAG (Retrieval-Augmented Generation) system, as it determines how files are processed. Currently, there are no dedicated tests to verify that this CLI command works as expected, including its ability to correctly parse arguments and display output.
+The `route` command in `llmc/cli.py` is a `typer` command that resolves the domain of a given file path. However, there are no tests to verify its behavior, especially for invalid or malicious file paths.
+
+This SDD describes the tests required to validate the `route` command.
 
 ## 2. Target Location
-`tests/test_cli_entry_error_codes.py` can be extended to include this test, as it is related to testing CLI entry points. Alternatively, a new file `tests/test_cli_commands.py` could be created. Let's add it to `tests/test_cli_entry_error_codes.py` to keep related CLI tests together.
+`tests/cli/test_cli.py`
 
 ## 3. Test Strategy
-The test will use `subprocess.run` to execute the `llmc/cli.py` script with the `route` command and a test file path. It will then capture the output and assert that the correct domain is printed. A separate test will verify the `--show-domain-decisions` flag.
+The tests will use `pytest` and `typer.testing.CliRunner` to invoke the `route` command and assert its output. The tests will cover the following scenarios:
+- **Valid File Path:** Pass a valid file path and verify that the command outputs the correct domain.
+- **Invalid File Path:** Pass an invalid file path and verify that the command handles the error gracefully.
+- **File Path with Traversal:** Pass a file path with traversal attempts (`../`) and verify that the command does not execute and reports an error.
 
 ## 4. Implementation Details
-Two new test functions will be added to `tests/test_cli_entry_error_codes.py`.
-
-```python
-import subprocess
-import sys
-import pytest
-
-# ... (existing code in the file)
-
-def test_cli_route_command(tmp_path):
-    """
-    Test the 'route' CLI command for a basic routing decision.
-    """
-    # Create a dummy file to test routing on
-    test_file = tmp_path / "pyproject.toml"
-    test_file.write_text("[tool.poetry]")
-
-    cli_script_path = "llmc/cli.py"
-
-    result = subprocess.run(
-        [sys.executable, cli_script_path, "route", "--test", str(test_file)],
-        capture_output=True,
-        text=True,
-        cwd=tmp_path, # Run from tmp_path to ensure relative paths work
-    )
-
-    assert result.returncode == 0
-    assert "Domain: [bold green]config[/bold green]" in result.stdout
-
-def test_cli_route_command_show_reason(tmp_path):
-    """
-    Test the 'route' CLI command with the --show-domain-decisions flag.
-    """
-    test_file = tmp_path / "README.md"
-    test_file.write_text("# My Project")
-
-    cli_script_path = "llmc/cli.py"
-
-    result = subprocess.run(
-        [
-            sys.executable,
-            cli_script_path,
-            "route",
-            "--test",
-            str(test_file),
-            "--show-domain-decisions",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=tmp_path,
-    )
-
-    assert result.returncode == 0
-    assert "Domain: [bold green]docs[/bold green]" in result.stdout
-    assert "Reason: " in result.stdout
-```
-These tests will ensure the `route` command is functioning correctly from the command line. I'm using `tmp_path` to create a controlled environment for the tests.
+The test implementation will require the following:
+- A new test file `tests/cli/test_cli.py` or extend the existing one.
+- `typer.testing.CliRunner` to invoke the `route` command.
+- Test cases for each of the scenarios described in the Test Strategy.
+- Assertions on the command's output and exit code.

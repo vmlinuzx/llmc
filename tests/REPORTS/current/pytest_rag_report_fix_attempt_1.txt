@@ -1,0 +1,61 @@
+.............ss.......................................F................. [ 58%]
+....................................................                     [100%]
+=================================== FAILURES ===================================
+________________________ test_index_repo_domain_logging ________________________
+
+args = ()
+keywargs = {'caplog': <_pytest.logging.LogCaptureFixture object at 0x7c3a15eb0590>, 'capsys': <_pytest.capture.CaptureFixture object at 0x7c3a15e50320>}
+
+    @wraps(func)
+    def patched(*args, **keywargs):
+>       with self.decoration_helper(patched,
+                                    args,
+                                    keywargs) as (newargs, newkeywargs):
+
+/usr/lib/python3.12/unittest/mock.py:1387: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/usr/lib/python3.12/contextlib.py:137: in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+/usr/lib/python3.12/unittest/mock.py:1369: in decoration_helper
+    arg = exit_stack.enter_context(patching)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/contextlib.py:526: in enter_context
+    result = _enter(cm)
+             ^^^^^^^^^^
+/usr/lib/python3.12/unittest/mock.py:1458: in __enter__
+    original, local = self.get_original()
+                      ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <unittest.mock._patch object at 0x7c3a15a28c20>
+
+    def get_original(self):
+        target = self.getter()
+        name = self.attribute
+    
+        original = DEFAULT
+        local = False
+    
+        try:
+            original = target.__dict__[name]
+        except (AttributeError, KeyError):
+            original = getattr(target, name, DEFAULT)
+        else:
+            local = True
+    
+        if name in _builtins and isinstance(target, ModuleType):
+            self.create = True
+    
+        if not self.create and original is DEFAULT:
+>           raise AttributeError(
+                "%s does not have the attribute %r" % (target, name)
+            )
+E           AttributeError: <module 'llmc.rag.indexer' from '/home/vmlinux/src/llmc/llmc/rag/indexer.py'> does not have the attribute 'get_default_domain'
+
+/usr/lib/python3.12/unittest/mock.py:1431: AttributeError
+=========================== short test summary info ============================
+SKIPPED [1] tests/rag/ci/test_llmc_docs_validation.py:79: roadmap.md not found
+SKIPPED [1] tests/rag/ci/test_llmc_docs_validation.py:112: roadmap.md not found
+FAILED tests/rag/test_indexer_domain_logic.py::test_index_repo_domain_logging
+1 failed, 121 passed, 2 skipped in 7.88s

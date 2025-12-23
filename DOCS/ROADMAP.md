@@ -321,37 +321,36 @@ mcread docs/spec.pdf            # Reads sidecar markdown transparently
 
 ---
 
-### 2.9 Observability & Logging Hygiene (P2) 🔍
+### 2.9 Observability & Logging Hygiene (P1) 🔍
 
-**Status:** 🟡 Planned  
+**Status:** 🟢 SDD Complete - Ready for Implementation  
 **Added:** 2025-12-23  
-**Source:** Architect Audit #5
+**Source:** Architect Audit #5  
+**Audit Report:** `DOCS/operations/audits/05_OBSERVABILITY_LOGS.md`  
+**SDD:** `DOCS/planning/SDD_Observability_Logging_Hardening.md`
 
-**Problem:** 197 `print()` calls scattered across `llmc/rag/`. This is not a logging system - it's a teenager's diary scrawled on the bathroom wall.
+**Problem:** Enrichment CLI is an observability black hole. Logs don't update. Exceptions are silently swallowed. The ledger is corrupt.
 
-**The Evidence:**
-- `llmc/rag/database.py`: `print(f"Error loading enrichment DB: {e}")` → Lost when run as background service
-- `llmc/rag/schema.py`: `print(f"Parse error...")` → Should be `logger.error()`
-- `llmc/rag/service.py`: Carnival of prints: `print("🚀 RAG service started...")`
-- No separation between user-facing CLI output and system logs
+**Audit Findings (2025-12-23):**
+
+| Priority | Issue | Location | Fix |
+|----------|-------|----------|-----|
+| **P0** | Corrupt ledger (malformed JSON line 1) | `logs/run_ledger.log` | Atomic append + validate |
+| **P0** | Enrichment CLI → stdout, not logs | `enrichment_pipeline.py:687`, `workers.py:104` | Route to JSONL logger |
+| **P1** | Silent swallow exceptions | `watcher.py:73,95`, `state_store.py:24` | Log with stack trace |
+| **P1** | Daemon uses plain text logging | `logging_utils.py:11`, `main.py:118,185` | JSON logging |
+| **P2** | Planner metrics lack context | `planner.py:208,296` | Add timestamp, repo_root, correlation_id |
+| **P2** | Indexer/DB print() on errors | `indexer.py:155`, `enrichment_db_helpers.py:130` | Use logger |
 
 **The Prescription:**
-1. **Banish print():** Every `print()` in `llmc/rag/` (except CLI entry points) → `logger.info/warning/error()`
-2. **Centralize Configuration:** Use `logging.yaml` or `dictConfig` in `llmc/rag_daemon/logging_utils.py`
-3. **UI/Log Separation:**
-   - User-facing messages (CLI) → `rich.console.Console().print()`
-   - System events (service) → `logging` to file/syslog
-   - Never mix them
+1. **P0 - Ledger Fix:** Atomic write with lock, validate JSON before append
+2. **P0 - JSONL Logger:** Create `llmc/rag/enrichment_logger.py` for structured event emission
+3. **P1 - Swallow Fixes:** `logger.exception()` with context, or re-raise
+4. **P1 - JSON Daemon Logs:** Switch formatter in `logging_utils.py`
+5. **P2 - Planner Context:** Add `timestamp`, `repo_root`, `request_id` fields
+6. **P2 - Print Removal:** Migrate remaining `print()` calls to logger
 
-**Files to Audit:**
-| File | print() Count | Priority |
-|------|---------------|----------|
-| `llmc/rag/service.py` | ~40 | HIGH |
-| `llmc/rag/runner.py` | ~15 | MEDIUM |
-| `llmc/rag/database.py` | ~10 | MEDIUM |
-| `llmc/rag/schema.py` | ~8 | LOW |
-
-**Effort:** ~4-6 hours | **Difficulty:** 🟢 Easy (mechanical refactor)
+**Effort:** ~14 hours total | **Difficulty:** 🟡 Medium (touches many files)
 
 ---
 

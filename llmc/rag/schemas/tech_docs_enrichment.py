@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 
 # Field budgets (from SDD Phase 3)
 MAX_SUMMARY_WORDS = 60
@@ -144,8 +144,7 @@ class TechDocsEnrichment(BaseModel):
 
         return data
 
-    class Config:
-        extra = "forbid"  # Reject unexpected keys (injection guard)
+    model_config = ConfigDict(extra="forbid")  # Reject unexpected keys (injection guard)
 
     @classmethod
     def make_span_id(cls, file_path: str, section_path: str) -> str:

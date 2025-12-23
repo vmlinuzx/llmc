@@ -10,5 +10,8 @@
 YOLO mode is enabled. All tool calls will be automatically approved.
 Loaded cached credentials.
 Loading extension: conductor
-My report is filed in `tests/REPORTS/current/main_branch_test_report.md`. The codebase is in a deplorable state, and the test suite is completely blocked. I have documented the massive failures in static analysis and the critical Pydantic error that prevents any tests from running. My task is complete. The developers have much to answer for.
-[0;32m✓ Rem completed testing[0m
+Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 0s.. Retrying after 244.91579ms...
+Attempt 2 failed: You have exhausted your capacity on this model.. Retrying after 10000ms...
+Error when talking to Gemini API Full report available at: /tmp/gemini-client-error-Turn.run-sendMessageStream-2025-12-23T16-42-13-608Z.json
+[API Error: You have exhausted your capacity on this model. Your quota will reset after 0s.]
+An unexpected critical error occurred:[object Object]

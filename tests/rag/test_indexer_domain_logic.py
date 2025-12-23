@@ -15,8 +15,8 @@ from llmc.rag import indexer
 @patch("llmc.rag.indexer.ensure_storage")
 @patch("llmc.rag.indexer.index_path_for_write")
 @patch("llmc.rag.indexer.resolve_spans_export_path")
-@patch("llmc.rag.indexer.get_path_overrides")
-@patch("llmc.rag.indexer.get_default_domain")
+@patch("llmc.rag.routing.get_path_overrides")
+@patch("llmc.rag.routing.get_default_domain")
 def test_index_repo_domain_logging(
     mock_get_default_domain,
     mock_get_path_overrides,

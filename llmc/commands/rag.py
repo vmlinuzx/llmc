@@ -959,3 +959,115 @@ def nav_lineage(
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         raise typer.Exit(code=1) from e
+
+
+def repair_logs(
+    ledger_path: Annotated[
+        Path | None, typer.Option("--ledger", help="Path to run_ledger.log (default: logs/run_ledger.log)")
+    ] = None,
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Show what would be done without making changes")
+    ] = False,
+    json_output: Annotated[
+        bool, typer.Option("--json", help="Output results as JSON")
+    ] = False,
+):
+    """Repair corrupt JSONL ledger files.
+    
+    This command:
+    1. Scans the ledger for malformed JSON lines
+    2. Backs up the original file to .bak
+    3. Writes a clean ledger with only valid lines
+    
+    Example:
+        llmc debug repair-logs
+        llmc debug repair-logs --dry-run
+        llmc debug repair-logs --ledger /path/to/logs/run_ledger.log
+    """
+    from llmc.rag.enrichment_logger import repair_ledger
+    
+    repo_root = find_repo_root()
+    
+    # Default ledger path
+    if ledger_path is None:
+        ledger_path = repo_root / "logs" / "run_ledger.log"
+    
+    if not ledger_path.exists():
+        typer.echo(f"Ledger file not found: {ledger_path}", err=True)
+        raise typer.Exit(code=1)
+    
+    # Count lines and find corrupt ones first
+    total_lines = 0
+    corrupt_lines = 0
+    corrupt_preview: list[dict] = []
+    
+    with open(ledger_path) as f:
+        for i, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            total_lines += 1
+            try:
+                import json
+                json.loads(line)
+            except json.JSONDecodeError as e:
+                corrupt_lines += 1
+                if len(corrupt_preview) < 5:  # Show first 5 corrupt lines
+                    corrupt_preview.append({
+                        "line": i,
+                        "error": str(e),
+                        "content": line[:100] + "..." if len(line) > 100 else line,
+                    })
+    
+    result = {
+        "ledger_path": str(ledger_path),
+        "total_lines": total_lines,
+        "corrupt_lines": corrupt_lines,
+        "valid_lines": total_lines - corrupt_lines,
+        "dry_run": dry_run,
+        "corrupt_preview": corrupt_preview,
+    }
+    
+    if dry_run:
+        if json_output:
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            typer.echo(f"📋 Ledger Analysis: {ledger_path}")
+            typer.echo(f"   Total lines: {total_lines}")
+            typer.echo(f"   Valid lines: {total_lines - corrupt_lines}")
+            typer.echo(f"   Corrupt lines: {corrupt_lines}")
+            
+            if corrupt_preview:
+                typer.echo("\n🔴 Corrupt lines (first 5):")
+                for item in corrupt_preview:
+                    typer.echo(f"   Line {item['line']}: {item['error']}")
+                    typer.echo(f"      Content: {item['content']}")
+            
+            typer.echo("\n(Dry run - no changes made. Remove --dry-run to repair.)")
+        return
+    
+    if corrupt_lines == 0:
+        if json_output:
+            result["action"] = "none"
+            typer.echo(json.dumps(result, indent=2))
+        else:
+            typer.echo(f"✅ Ledger is clean: {ledger_path}")
+            typer.echo(f"   {total_lines} valid lines, no corrupt entries found.")
+        return
+    
+    # Perform repair
+    valid_count, discarded_count = repair_ledger(ledger_path)
+    
+    result["action"] = "repaired"
+    result["valid_after_repair"] = valid_count
+    result["discarded"] = discarded_count
+    result["backup_path"] = str(ledger_path.with_suffix(".log.bak"))
+    
+    if json_output:
+        typer.echo(json.dumps(result, indent=2))
+    else:
+        typer.echo(f"✅ Ledger repaired: {ledger_path}")
+        typer.echo(f"   Valid lines preserved: {valid_count}")
+        typer.echo(f"   Corrupt lines discarded: {discarded_count}")
+        typer.echo(f"   Original backed up to: {result['backup_path']}")
+

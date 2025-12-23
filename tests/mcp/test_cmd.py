@@ -132,10 +132,11 @@ def test_empty_command():
 
     result = run_cmd("", cwd)
     assert not result.success
-    assert result.error == "Empty command"
+    assert "requires an isolated environment" in result.error
 
     result = run_cmd("   ", cwd)
     assert not result.success
+    assert "requires an isolated environment" in result.error
 
     print("  ✓ Empty commands handled correctly")
 

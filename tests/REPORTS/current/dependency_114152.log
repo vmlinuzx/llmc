@@ -1,14 +1,14 @@
 [0;35m
 ╔══════════════════════════════════════════════════════════════╗
-║ Rem - Performance Demon                                      ║
+║ Rem - Dependency Demon                                       ║
 ╚══════════════════════════════════════════════════════════════╝
 [0m
 [0;36mℹ Target: /home/vmlinux/src/llmc[0m
 YOLO mode is enabled. All tool calls will be automatically approved.
 Loaded cached credentials.
 Loading extension: conductor
-Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 0s.. Retrying after 318.896185ms...
+Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 0s.. Retrying after 385.794038ms...
 Attempt 2 failed: You have exhausted your capacity on this model.. Retrying after 10000ms...
-Error when talking to Gemini API Full report available at: /tmp/gemini-client-error-Turn.run-sendMessageStream-2025-12-23T15-59-55-596Z.json
+Error when talking to Gemini API Full report available at: /tmp/gemini-client-error-Turn.run-sendMessageStream-2025-12-23T16-42-13-613Z.json
 [API Error: You have exhausted your capacity on this model. Your quota will reset after 0s.]
 An unexpected critical error occurred:[object Object]

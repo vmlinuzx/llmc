@@ -1,0 +1,72 @@
+[
+  {
+    "name": "Valid command (ls -l)",
+    "status": "PASSED",
+    "result": {
+      "success": true,
+      "stdout": "total 145284\ndrwxrwxrwx 23 vmlinux vmlinux     4096 Nov 21 12:39 aegis_webgui_mvp\ndrwxrwxr-x 10 vmlinux vmlinux     4096 Dec 14 14:35 aider\ndrwxrwxr-x  3 vmlinux vmlinux     4096 Dec  9 19:47 athena\ndrwxrwxr-x 13 vmlinux vmlinux     4096 Dec  9 01:44 bx\ndrwxrwxr-x  3 vmlinux vmlinux     4096 Nov  7 11:08 dungeoncampaign\ndrwxrwxr-x  8 vmlinux vmlinux     4096 Dec 16 22:23 elm\ndrwxrwxr-x  2 vmlinux vmlinux     4096 Nov 25 14:29 geminituitoapi\ndrwxr-xr-x 37 vmlinux vmlinux     4096 Dec  5 17:33 glideclubs\ndrwxrwxr-x 12 vmlinux vmlinux     4096 Nov 13 13:13 livecaptions\ndrwxrwxr-x 12 vmlinux vmlinux     4096 Nov 11 13:28 LiveCaptions\ndrwxrwxr-x 13 vmlinux vmlinux     4096 Nov 19 18:22 livecaptions_advanced\ndrwxrwxr-x  3 vmlinux vmlinux     4096 Nov 11 16:24 LiveCaptionsIcon\ndrwxrwxr-x 28 vmlinux vmlinux     4096 Dec 23 11:20 llmc\ndrwxrwxr-x 17 vmlinux vmlinux     4096 Dec 12 18:45 llmc-20251203-155906\ndrwxrwxr-x 15 vmlinux vmlinux     4096 Dec 12 18:58 llmc-20251212-184435\ndrwxrwxr-x 15 vmlinux vmlinux     4096 Dec 13 11:56 llmc-20251213-113701\ndrwxrwxr-x 16 vmlinux vmlinux     4096 Dec 15 19:17 llmc-20251215-191132\n-rw-rw-r--  1 vmlinux vmlinux 18116256 Dec 15 19:11 llmc-20251215-191132.zp\ndrwxrwxr-x 16 vmlinux vmlinux     4096 Dec 16 00:47 llmc-20251216-004515\n-rw-rw-r--  1 vmlinux vmlinux 18150071 Dec 16 00:45 llmc-20251216-004515.zip\ndrwxrwxr-x 16 vmlinux vmlinux     4096 Dec 16 01:03 llmc-20251216-010323\n-rw-rw-r--  1 vmlinux vmlinux  6386417 Dec 16 01:03 llmc-20251216-010323.xlsx\ndrwxrwxr-x 11 vmlinux vmlinux     4096 Dec 18 19:33 llmc-20251218-193308\n-rw-rw-r--  1 vmlinux vmlinux 18631042 Dec 18 19:33 llmc-20251218-193308.docx\ndrwxrwxr-x 12 vmlinux vmlinux     4096 Dec 19 19:08 llmc-20251219-190707\n-rw-rw-r--  1 vmlinux vmlinux 18920328 Dec 19 19:07 llmc-20251219-190707.zp\n-rw-rw-r--  1 vmlinux vmlinux 19700953 Dec 20 17:25 llmc-20251220-172543.zp\n-rw-rw-r--  1 vmlinux vmlinux 20301465 Dec 22 22:05 llmc-20251222-220523.zip\n-rw-rw-r--  1 vmlinux vmlinux 19784004 Dec 23 11:08 llmc-20251223-110806.zip\ndrwxrwxr-x 16 vmlinux vmlinux     4096 Dec  8 22:55 opencode\ndrwxr-xr-x  4 vmlinux vmlinux     4096 Sep 20 00:06 python3.12\ndrwxrwxr-x 14 vmlinux vmlinux     4096 Nov  5 17:53 rag_bookmarks\n-rw-rw-r--  1 vmlinux vmlinux       46 Dec 23 11:19 rem_dummy_file.txt\ndrwxrwxr-x 13 vmlinux vmlinux     4096 Dec  8 16:20 screamingfrog\ndrwxrwxr-x  2 vmlinux vmlinux     4096 Nov  7 23:21 SECRETS\n-rw-rw-r--  1 vmlinux vmlinux      275 Nov  2 21:49 SECRETS.md\ndrwxrwxr-x  4 vmlinux vmlinux     4096 Dec 18 18:04 strix-halo-ollama\n-rw-rw-r--  1 vmlinux vmlinux    33124 Dec 18 18:31 strix-halo-ollama.zip\ndrwxrwxr-x  3 vmlinux vmlinux     4096 Dec  1 11:39 temp\ndrwxrwxr-x  9 vmlinux vmlinux     4096 Oct 22 19:08 template\ndrwxrwxr-x 16 vmlinux vmlinux     4096 Dec 21 20:56 thunderdome\n-rw-rw-r--  1 vmlinux vmlinux  8291349 Dec 16 16:23 thunderdome_121625.zip\ndrwxrwxr-x 15 vmlinux vmlinux     4096 Dec 17 20:50 thunderdome2\ndrwxrwxr-x 15 vmlinux vmlinux     4096 Dec 22 17:51 training-aligned-tools-research\n-rw-rw-r--  1 vmlinux vmlinux   176985 Dec 21 01:25 training-aligned-tools-research-20251221-012550.zip\n-rw-rw-r--  1 vmlinux vmlinux   102356 Dec 20 17:26 training-aligned-tools-research.zp\ndrwxrwxr-x 12 vmlinux vmlinux     4096 Dec 21 22:59 vigil\ndrwxr-x--- 47 vmlinux vmlinux     4096 Nov  6 20:15 vmlinux\n",
+      "stderr": "",
+      "exit_code": 0
+    }
+  },
+  {
+    "name": "Failing command (ls /non_existent_dir)",
+    "status": "PASSED",
+    "result": {
+      "success": false,
+      "stdout": "",
+      "stderr": "ls: cannot access '/non_existent_dir': No such file or directory\n",
+      "exit_code": 2
+    }
+  },
+  {
+    "name": "Empty command",
+    "status": "PASSED",
+    "result": {
+      "error": "command is required"
+    }
+  },
+  {
+    "name": "Command that times out (sleep 2)",
+    "status": "PASSED",
+    "result": {
+      "success": false,
+      "stdout": "",
+      "stderr": "",
+      "exit_code": -1,
+      "error": "Command timed out after 1s"
+    }
+  },
+  {
+    "name": "Injection attempt (ls; id)",
+    "status": "PASSED",
+    "result": {
+      "success": false,
+      "stdout": "",
+      "stderr": "",
+      "exit_code": -1,
+      "error": "Execution error: [Errno 2] No such file or directory: 'ls;'"
+    }
+  },
+  {
+    "name": "Blacklisted command (secret_command)",
+    "status": "PASSED",
+    "result": {
+      "success": false,
+      "stdout": "",
+      "stderr": "",
+      "exit_code": -1,
+      "error": "Binary 'secret_command' is blacklisted. Blocked: ['secret_command']"
+    }
+  },
+  {
+    "name": "Grep command (testing smart interceptor fallback)",
+    "status": "PASSED",
+    "result": {
+      "success": true,
+      "stdout": "This file contains the magic word for testing.\n",
+      "stderr": "",
+      "exit_code": 0
+    }
+  }
+]
