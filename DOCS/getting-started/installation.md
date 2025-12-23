@@ -95,14 +95,14 @@ Once installed, verify that the CLI is accessible and working correctly.
 
 Check the version:
 ```bash
-llmc --version
+llmc-cli --version
 ```
 
 You should see output indicating the installed version (e.g., `llmc version 0.7.0`).
 
 You can also view the help menu to see available commands:
 ```bash
-llmc --help
+llmc-cli --help
 ```
 
 ---

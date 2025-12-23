@@ -69,11 +69,11 @@ Guides for developers working on the LLMC codebase.
 
 ---
 
-## 📋 [Planning](planning/index.md)
+## 📋 Planning
 
 Roadmaps, design documents (SDDs), and project management.
 - [Roadmap](ROADMAP.md)
-- [Active SDDs](planning/sdd/index.md)
+- [Active SDDs](planning/sdd/)
 - [Completed Work](planning/completed.md)
 
 ---

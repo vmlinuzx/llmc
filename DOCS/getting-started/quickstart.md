@@ -7,7 +7,7 @@ This guide will get you from zero to your first semantic search in under 5 minut
 Ensure you have installed LLMC.
 
 ```bash
-llmc --version
+llmc-cli --version
 ```
 
 If you haven't installed it yet, check the [Installation Guide](installation.md).
@@ -20,8 +20,8 @@ Navigate to your project's root directory and run the initialization wizard.
 
 ```bash
 cd /path/to/your/project
-llmc init
-llmc config wizard
+llmc-cli init
+llmc-cli config wizard
 ```
 
 ## Step 2: Register Repository
@@ -29,8 +29,8 @@ llmc config wizard
 Start the RAG service and register your repository.
 
 ```bash
-llmc service start
-llmc repo register
+llmc-cli service start
+llmc-cli repo register
 ```
 
 ## Step 3: Search
@@ -38,13 +38,13 @@ llmc repo register
 You are ready to search. Unlike `grep`, you can use natural language queries.
 
 ```bash
-llmc analytics search "how is the database configured?"
+llmc-cli analytics search "how is the database configured?"
 ```
 
 Or ask the AI assistant:
 
 ```bash
-llmc chat "how is the database configured?"
+llmc-cli chat "how is the database configured?"
 ```
 
 ---

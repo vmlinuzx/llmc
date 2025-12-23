@@ -413,5 +413,5 @@ Native tool scripts do not require configuration. They:
 ## See Also
 
 - [MCP Integration](../operations/mcp-integration.md)
-- [RAG Search](./rag-search.md)
+- [RAG Search](search/index.md)
 - [Tool Envelope](./tool-envelope.md)
