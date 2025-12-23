@@ -286,6 +286,13 @@ class Database:
                 except sqlite3.OperationalError:
                     pass
 
+        # Version 7: Added spans.imports for dependency tracking
+        if from_version < 7:
+            try:
+                conn.execute("ALTER TABLE spans ADD COLUMN imports TEXT")
+            except sqlite3.OperationalError:
+                pass  # Column already exists
+
         # Table migrations (for existing databases that predate certain tables)
         # file_descriptions: Added 2025-12 for stable file-level summaries
         conn.execute("""
