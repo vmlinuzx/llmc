@@ -1061,3 +1061,36 @@ class Database:
         except Exception:
             self.conn.rollback()
             raise
+
+
+def check_and_migrate_all_repos(repos: list[str]) -> dict[str, int]:
+    """Check and migrate all registered repo databases.
+
+    Args:
+        repos: List of repo paths from service state
+
+    Returns:
+        Dict mapping repo_path -> user_version after migration
+        Value is -1 if migration failed
+    """
+    results = {}
+    for repo_path in repos:
+        repo = Path(repo_path)
+        # Construct db path: {repo}/.llmc/rag/index_v2.db
+        db_path = repo / ".llmc" / "rag" / "index_v2.db"
+
+        if not db_path.exists():
+            continue
+
+        try:
+            # Open Database (triggers migration automatically via _open_and_prepare())
+            db = Database(db_path)
+            # Read final PRAGMA user_version
+            version = db.conn.execute("PRAGMA user_version").fetchone()[0]
+            db.close()
+            results[str(repo)] = version
+        except Exception as e:
+            logger.error("Failed to migrate database for %s: %s", repo, e)
+            results[str(repo)] = -1
+
+    return results

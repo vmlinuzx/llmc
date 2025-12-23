@@ -32,7 +32,7 @@ import time
 from typing import Any
 
 from llmc.rag.config import get_vacuum_interval_hours, index_path_for_write, load_config
-from llmc.rag.database import Database
+from llmc.rag.database import DB_SCHEMA_VERSION, Database, check_and_migrate_all_repos
 from llmc.rag.doctor import format_rag_doctor_summary, run_rag_doctor
 from llmc.rag.enrichment_factory import create_backend_from_spec
 from llmc.rag.enrichment_pipeline import EnrichmentPipeline, build_enrichment_prompt
@@ -48,7 +48,6 @@ try:
         FileFilter,
         RepoWatcher,
         get_inotify_watch_limit,
-        is_inotify_available,
     )
 
     WATCHER_AVAILABLE = True
@@ -725,6 +724,19 @@ class RAGService:
 
     def run_loop(self, interval: int, mode: str = "poll"):
         """Main service loop - dispatches to event or poll mode."""
+        logger.info("Checking schema versions for all registered repos...")
+        versions = check_and_migrate_all_repos(self.state.state["repos"])
+        for repo, version in versions.items():
+            repo_name = Path(repo).name
+            if version == DB_SCHEMA_VERSION:
+                logger.info("  %s: v%d ✓", repo_name, version)
+            elif version == -1:
+                logger.error("  %s: MIGRATION FAILED", repo_name)
+            else:
+                logger.warning(
+                    "  %s: v%d (expected v%d)", repo_name, version, DB_SCHEMA_VERSION
+                )
+
         if mode == "event" and WATCHER_AVAILABLE:
             return self.run_loop_event(interval)
         elif mode == "event" and not WATCHER_AVAILABLE:
@@ -1350,7 +1362,7 @@ def cmd_failures(args, state: ServiceState, tracker: FailureTracker) -> int:
         for repo_path, repo_failures in by_repo.items():
             repo_name = Path(repo_path).name
             print(f"\n📁 {repo_name} ({len(repo_failures)} failures)")
-            for span_hash, fail_count, last_attempted, reason in repo_failures[
+            for span_hash, fail_count, _last_attempted, reason in repo_failures[
                 :5
             ]:  # Show first 5
                 # Extract filename from span_hash if it's a repo-level failure
