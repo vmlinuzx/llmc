@@ -17,7 +17,30 @@ class MockTool:
 # Alias for compatibility
 Tool = MockTool
 
-from llmc_mcp.tools.code_exec import execute_code, generate_stubs
+from llmc_mcp.tools.code_exec import execute_code, generate_stubs, _sanitize_identifier
+
+
+class TestSanitizeIdentifier:
+    """Test identifier sanitization for Python-safe names."""
+
+    def test_digit_prefix(self):
+        """Tool names starting with digits get underscore prefix."""
+        assert _sanitize_identifier("00_INIT") == "_00_INIT"
+        assert _sanitize_identifier("1foo") == "_1foo"
+
+    def test_valid_names_unchanged(self):
+        """Valid Python identifiers are unchanged."""
+        assert _sanitize_identifier("rag_search") == "rag_search"
+        assert _sanitize_identifier("my_tool") == "my_tool"
+        assert _sanitize_identifier("_private") == "_private"
+
+    def test_special_chars_replaced(self):
+        """Special characters are replaced with underscores."""
+        assert _sanitize_identifier("my-tool") == "my_tool"
+        assert _sanitize_identifier("tool.name") == "tool_name"
+        assert _sanitize_identifier("foo@bar!baz") == "foo_bar_baz"
+
+
 
 
 def make_mock_tool_caller(results: dict):

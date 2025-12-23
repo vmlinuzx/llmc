@@ -32,6 +32,31 @@ class CodeExecResult:
     error: str | None = None
 
 
+def _sanitize_identifier(name: str) -> str:
+    """
+    Convert a tool name to a valid Python identifier.
+
+    - Prefix with underscore if starts with digit
+    - Replace invalid characters with underscore
+
+    Args:
+        name: Original tool name (e.g., "00_INIT")
+
+    Returns:
+        Valid Python identifier (e.g., "_00_INIT")
+    """
+    import re
+
+    # Replace non-alphanumeric chars (except underscore) with underscore
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+
+    # Prefix with underscore if starts with digit
+    if sanitized and sanitized[0].isdigit():
+        sanitized = "_" + sanitized
+
+    return sanitized
+
+
 def generate_stubs(tools: list[Tool], stubs_dir: Path, llmc_root: Path) -> dict[str, str]:
     """
     Generate Python stub files from MCP tool definitions.
@@ -66,7 +91,8 @@ def generate_stubs(tools: list[Tool], stubs_dir: Path, llmc_root: Path) -> dict[
     ]
 
     for tool in tools:
-        name = tool.name
+        name = tool.name  # Original MCP tool name (for _call_tool)
+        py_name = _sanitize_identifier(name)  # Valid Python identifier
         desc = tool.description or f"Execute {name} tool"
         schema = tool.inputSchema
 
@@ -108,7 +134,7 @@ from typing import Any
 # Do NOT import it - that gets the NotImplementedError placeholder.
 
 
-def {name}({params_str}) -> dict[str, Any]:
+def {py_name}({params_str}) -> dict[str, Any]:
     """
     {desc}
 
@@ -122,12 +148,12 @@ def {name}({params_str}) -> dict[str, Any]:
 '''
 
         # Write stub file
-        stub_path = full_stubs_dir / f"{name}.py"
+        stub_path = full_stubs_dir / f"{py_name}.py"
         stub_path.write_text(stub_content)
-        generated[name] = str(stub_path)
+        generated[name] = str(stub_path)  # Map original name -> path
 
         # Add to __init__.py
-        init_lines.append(f"from .{name} import {name}")
+        init_lines.append(f"from .{py_name} import {py_name}")
 
     # Write __init__.py
     init_path = full_stubs_dir / "__init__.py"

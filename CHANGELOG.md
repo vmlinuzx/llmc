@@ -2,6 +2,27 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.8.1] - "Hotdog Water" 🌭 - 2025-12-23
+
+### Purple Flavor: **Hotdog Water**
+
+Sometimes you just have to ship it. This release adds automatic schema migration health checks so your databases don't crash on startup.
+
+### Added
+
+- **Schema Migration Health Check (P1):**
+  - `check_and_migrate_all_repos()` in `database.py` — validates and migrates all registered repos at service startup
+  - Service logs schema versions on startup: `llmc: v7 ✓` or `llmc: v6 → v7 (migrated)`
+  - New CLI: `llmc debug schema-check [--migrate] [--json]` for manual schema validation
+  - Eliminates "no column named X" crashes from outdated databases
+  - **SDD:** `DOCS/planning/SDD_Schema_Migration_Health_Check.md`
+
+### Fixed
+
+- **Version Sync:** `core.py` now matches `pyproject.toml` (was 0.6.4, now 0.8.1)
+
+---
+
 ## [0.8.0] - "Burned Popcorn" 🍿 - 2025-12-23
 
 ### Purple Flavor: **Burned Popcorn**
