@@ -21,11 +21,11 @@ Usage:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 import fcntl
 import json
 import logging
-from dataclasses import dataclass
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -92,14 +92,14 @@ class EnrichmentLogger:
     - Separate log files for different event types
 
     Log Files:
-    - run_ledger.log: All enrichment events (success + failure)
+    - run_ledger.jsonl: All enrichment events (success + failure)
     - enrichment_metrics.jsonl: Detailed performance metrics
     """
 
     def __init__(self, log_dir: Path):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
-        self._ledger_path = self.log_dir / "run_ledger.log"
+        self._ledger_path = self.log_dir / "run_ledger.jsonl"
         self._metrics_path = self.log_dir / "enrichment_metrics.jsonl"
 
     def log_success(
@@ -119,7 +119,7 @@ class EnrichmentLogger:
         meta = meta or {}
 
         event = EnrichmentEvent(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             span_hash=span_hash,
             file_path=file_path,
             lines=(start_line, end_line),
@@ -151,7 +151,7 @@ class EnrichmentLogger:
     ) -> None:
         """Log a failed enrichment."""
         event = EnrichmentEvent(
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             span_hash=span_hash,
             file_path=file_path,
             lines=(start_line, end_line),
@@ -176,7 +176,7 @@ class EnrichmentLogger:
     ) -> None:
         """Log a batch enrichment summary."""
         event = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "event_type": "batch_summary",
             "total": total,
             "succeeded": succeeded,
@@ -242,13 +242,13 @@ def repair_ledger(log_path: Path) -> tuple[int, int]:
     discarded = 0
 
     with open(log_path) as f:
-        for line_num, line in enumerate(f, 1):
-            line = line.strip()
-            if not line:
+        for line_num, raw_line in enumerate(f, 1):
+            stripped_line = raw_line.strip()
+            if not stripped_line:
                 continue
             try:
-                json.loads(line)
-                valid_lines.append(line)
+                json.loads(stripped_line)
+                valid_lines.append(stripped_line)
             except json.JSONDecodeError as e:
                 _logger.warning("Discarding corrupt line %d: %s", line_num, e)
                 discarded += 1
