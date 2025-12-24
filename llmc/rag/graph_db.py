@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS graph_meta (
     key TEXT PRIMARY KEY,
@@ -91,9 +92,10 @@ class GraphDatabase:
             conn.executescript(SCHEMA)
 
     def _get_new_conn(self) -> sqlite3.Connection:
-        """Open a new connection."""
+        """Open a new connection with FK enforcement."""
         conn = sqlite3.connect(self.path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")  # Enforce FK on every connection
         return conn
 
     @property
@@ -397,9 +399,33 @@ class GraphDatabase:
                 conn.close()
 
     def is_stale(self, index_db: "Database") -> bool:
-        """Return True if graph was built from older index data."""
+        """Return True if graph was built from older index data.
+        
+        Uses generation-based detection (preferred) with mtime+file_count fallback.
+        This catches:
+        - New/modified files (mtime increases)
+        - Deleted files (file_count decreases)
+        - Re-indexes (generation increments)
+        """
+        # Preferred: generation-based staleness (if present)
+        stored_gen = self.get_meta("index_generation")
+        if stored_gen is not None:
+            try:
+                current_gen = index_db.conn.execute(
+                    "SELECT value FROM llmc_meta WHERE key = 'index_generation'"
+                ).fetchone()
+                if current_gen and int(current_gen[0]) != int(stored_gen):
+                    return True
+                # Generation matches, graph is fresh
+                if current_gen:
+                    return False
+            except Exception:
+                pass  # Fall through to mtime check
+        
+        # Fallback: mtime + file_count (catches deletes that mtime misses)
         stored_mtime = self.get_meta("index_db_mtime")
-        # Ensure we're comparing floats
+        stored_file_count = self.get_meta("index_file_count")
+        
         if not stored_mtime:
             return True
             
@@ -412,7 +438,22 @@ class GraphDatabase:
             "SELECT MAX(mtime) FROM files"
         ).fetchone()[0]
         
-        return stored_ts < (current_mtime or 0)
+        # Check if mtime is stale
+        if stored_ts < (current_mtime or 0):
+            return True
+        
+        # Check if file count changed (catches deletes)
+        if stored_file_count:
+            try:
+                current_count = index_db.conn.execute(
+                    "SELECT COUNT(*) FROM files"
+                ).fetchone()[0]
+                if int(stored_file_count) != current_count:
+                    return True
+            except Exception:
+                pass
+        
+        return False
 
     def _row_to_node(self, row: sqlite3.Row) -> Node:
         return Node(
@@ -530,17 +571,36 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
     if db_path.exists():
         db_path.unlink()
 
-    # Get max mtime from index to detect staleness
+    # Get metadata from index for staleness detection
     index_path = repo_root / ".llmc" / "rag" / "index_v2.db"
     max_mtime = 0.0
+    file_count = 0
+    index_generation = None
+    
     if index_path.exists():
         try:
             with sqlite3.connect(index_path) as idx_conn:
+                # Get max mtime
                 row = idx_conn.execute("SELECT MAX(mtime) FROM files").fetchone()
                 if row and row[0]:
                     max_mtime = float(row[0])
+                
+                # Get file count (to detect deletes)
+                count_row = idx_conn.execute("SELECT COUNT(*) FROM files").fetchone()
+                if count_row:
+                    file_count = count_row[0]
+                
+                # Try to get generation (if llmc_meta table exists)
+                try:
+                    gen_row = idx_conn.execute(
+                        "SELECT value FROM llmc_meta WHERE key = 'index_generation'"
+                    ).fetchone()
+                    if gen_row:
+                        index_generation = gen_row[0]
+                except sqlite3.OperationalError:
+                    pass  # llmc_meta table doesn't exist yet
         except Exception:
-            pass  # If index is busy or broken, use 0.0 (will be stale)
+            pass  # If index is busy or broken, use defaults (will be stale)
 
     db = GraphDatabase(db_path)
     db.bulk_insert_nodes(nodes)
@@ -552,6 +612,15 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
             "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
             ("index_db_mtime", str(max_mtime))
         )
+        conn.execute(
+            "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
+            ("index_file_count", str(file_count))
+        )
+        if index_generation is not None:
+            conn.execute(
+                "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
+                ("index_generation", str(index_generation))
+            )
         conn.execute(
             "INSERT OR REPLACE INTO graph_meta (key, value) VALUES (?, ?)",
             ("built_at", datetime.now(UTC).isoformat())

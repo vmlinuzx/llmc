@@ -6,7 +6,7 @@ from llmc.rag.database import DB_SCHEMA_VERSION, Database
 
 def test_constant_exists():
     """AC-0.1: DB_SCHEMA_VERSION constant exists and equals 7."""
-    assert DB_SCHEMA_VERSION == 7
+    assert DB_SCHEMA_VERSION == 8
 
 def test_get_existing_columns_returns_correct_set(tmp_path):
     """AC-0.2: _get_existing_columns returns correct set of columns."""
@@ -116,6 +116,19 @@ def test_version_inference_from_columns(tmp_path):
     """)
     assert runner._infer_schema_version(conn) == 7
     conn.close()
+
+    # v8: llmc_meta table exists
+    conn = create_legacy_db("""
+        ALTER TABLE enrichments ADD COLUMN inputs TEXT;
+        ALTER TABLE spans ADD COLUMN slice_type TEXT;
+        ALTER TABLE embeddings ADD COLUMN route_name TEXT;
+        ALTER TABLE enrichments ADD COLUMN content_type TEXT;
+        ALTER TABLE enrichments ADD COLUMN tokens_per_second REAL;
+        ALTER TABLE spans ADD COLUMN imports TEXT;
+        CREATE TABLE llmc_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    """)
+    assert runner._infer_schema_version(conn) == 8
+    conn.close()
     runner.close()
 
 def test_fresh_db_creates_latest_schema(tmp_path):
@@ -127,7 +140,7 @@ def test_fresh_db_creates_latest_schema(tmp_path):
     ver = conn.execute("PRAGMA user_version").fetchone()[0]
     conn.close()
     
-    assert ver == 7
+    assert ver == 8
     # Verify a column from latest schema exists
     # imports is v7 (Wait, AC-0.1 says DB_SCHEMA_VERSION = 7, and AC-0.3 says v7 added spans.imports)
     # But AC-0.5 says "Phase 1: ... Do NOT add spans.imports column yet". 
@@ -188,7 +201,7 @@ def test_pragma_user_version_tracking(tmp_path):
     
     conn = sqlite3.connect(str(db_path))
     ver = conn.execute("PRAGMA user_version").fetchone()[0]
-    assert ver == 7
+    assert ver == 8
     conn.close()
 
 def test_migration_idempotency(tmp_path):
@@ -203,5 +216,5 @@ def test_migration_idempotency(tmp_path):
     
     # Re-open, should run migrations again without error
     db2 = Database(db_path)
-    assert db2.conn.execute("PRAGMA user_version").fetchone()[0] == 7
+    assert db2.conn.execute("PRAGMA user_version").fetchone()[0] == 8
     db2.close()

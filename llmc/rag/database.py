@@ -113,9 +113,14 @@ CREATE TABLE IF NOT EXISTS file_descriptions (
 
 CREATE INDEX IF NOT EXISTS idx_file_descriptions_file_path ON file_descriptions(file_path);
 CREATE INDEX IF NOT EXISTS idx_file_descriptions_input_hash ON file_descriptions(input_hash);
+
+CREATE TABLE IF NOT EXISTS llmc_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 """
 
-DB_SCHEMA_VERSION = 7
+DB_SCHEMA_VERSION = 8
 
 
 class Database:
@@ -197,7 +202,16 @@ class Database:
             rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
             return any(r[1] == column for r in rows)
 
+        def has_table(table: str) -> bool:
+            row = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (table,)
+            ).fetchone()
+            return row is not None
+
         # Work backwards from latest to find highest matching version
+        if has_table("llmc_meta"):
+            return 8  # v8 added llmc_meta table
         if has_column("spans", "imports"):
             return 7  # v7 added spans.imports
         if has_column("enrichments", "tokens_per_second"):
@@ -321,6 +335,15 @@ class Database:
             "CREATE INDEX IF NOT EXISTS idx_file_descriptions_input_hash "
             "ON file_descriptions(input_hash)"
         )
+
+        # Version 8: Added llmc_meta table for generation-based staleness tracking
+        if from_version < 8:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS llmc_meta (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
 
     def close(self) -> None:
         self._conn.close()
@@ -533,6 +556,31 @@ class Database:
             "embeddings": embeddings,
             "enrichments": enrichments,
         }
+
+    def get_meta(self, key: str) -> str | None:
+        """Get a value from the llmc_meta table."""
+        row = self.conn.execute(
+            "SELECT value FROM llmc_meta WHERE key = ?", (key,)
+        ).fetchone()
+        return row[0] if row else None
+
+    def set_meta(self, key: str, value: str) -> None:
+        """Set a value in the llmc_meta table."""
+        self.conn.execute(
+            "INSERT OR REPLACE INTO llmc_meta (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+
+    def increment_generation(self) -> int:
+        """Increment and return the index_generation counter.
+        
+        Call this after a successful full index build to mark a new generation.
+        Graph DB can compare its stored generation to detect staleness.
+        """
+        current = self.get_meta("index_generation")
+        new_gen = int(current) + 1 if current else 1
+        self.set_meta("index_generation", str(new_gen))
+        return new_gen
 
     def pending_enrichments(self, limit: int = 32, cooldown_seconds: int = 0) -> list[SpanWorkItem]:
         """Fetch spans pending enrichment with O(1) random sampling.
