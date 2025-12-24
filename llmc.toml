@@ -181,7 +181,8 @@ dry_run = false                    # If true, log what would be enriched but don
 # processing across multiple servers (~200+ T/s with 3 servers).
 
 [enrichment.pool]
-enabled = true
+enabled = false  # KISS: Use simple EnrichmentPipeline, not worker queue
+spawn_workers = false  # Workers disabled
 strategy = "work-stealing"         # Fast servers naturally get more work
 health_check_interval = 30
 max_retries = 3

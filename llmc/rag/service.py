@@ -1016,35 +1016,44 @@ class RAGService:
         """Run pool-based enrichment with multiple workers.
         
         This method:
-        1. Spawns pool workers if not already running
+        1. Spawns pool workers if not already running (unless spawn_workers=false)
         2. Feeds the central work queue from registered repos
         3. Workers pull from queue and process in parallel
-        """
-        # Lazy init pool manager
-        if not hasattr(self, "_pool_manager"):
-            try:
-                from llmc.rag.pool_config import load_pool_config
-                from llmc.rag.pool_manager import PoolManager
-                
-                pool_cfg = load_pool_config(self._toml_cfg)
-                self._pool_manager = PoolManager(pool_cfg, self._repo_root)
-                
-                # Start workers
-                print(f"🚀 Starting pool workers ({len(pool_cfg.workers)} configured)...")
-                self._pool_manager.start_all()
-            except Exception as e:
-                logger.error("Failed to initialize pool manager", exc_info=e)
-                return
         
-        # Feed the queue
+        Config options (in [enrichment.pool]):
+            spawn_workers = false  # Daemon only feeds queue, workers run externally
+        """
+        pool_cfg = self._toml_cfg.get("enrichment", {}).get("pool", {})
+        spawn_workers = pool_cfg.get("spawn_workers", True)
+        
+        # Only spawn workers if configured to do so
+        if spawn_workers:
+            # Lazy init pool manager
+            if not hasattr(self, "_pool_manager"):
+                try:
+                    from llmc.rag.pool_config import load_pool_config
+                    from llmc.rag.pool_manager import PoolManager
+                    
+                    pool_cfg_obj = load_pool_config(self._toml_cfg)
+                    self._pool_manager = PoolManager(pool_cfg_obj, self._repo_root)
+                    
+                    # Start workers
+                    print(f"🚀 Starting pool workers ({len(pool_cfg_obj.workers)} configured)...")
+                    self._pool_manager.start_all()
+                except Exception as e:
+                    logger.error("Failed to initialize pool manager", exc_info=e)
+                    return
+        
+        # Feed the queue (always do this)
         from llmc.rag.work_queue import feed_queue_from_repos
         repos = self.state.state["repos"]
         added = feed_queue_from_repos(repos, limit_per_repo=100)
         if added > 0:
             print(f"📥 Fed {added} items to work queue")
         
-        # Monitor workers (restart crashed ones)
-        self._pool_manager.monitor_workers()
+        # Monitor workers (only if we spawned them)
+        if spawn_workers and hasattr(self, "_pool_manager"):
+            self._pool_manager.monitor_workers()
 
     def run_loop_poll(self, interval: int):
         """Legacy polling service loop with idle throttling."""

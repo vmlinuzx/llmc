@@ -149,6 +149,9 @@ class PoolWorker:
         self.tier = int(os.environ.get("LLMC_WORKER_TIER", "0"))
         self.max_tier = int(os.environ.get("LLMC_MAX_TIER", "2"))
         
+        # Backend type: "ollama" (default) or "openai" (for llama.cpp/KoboldCpp)
+        self.backend_type = os.environ.get("LLMC_WORKER_BACKEND", "ollama").lower()
+        
         # Apply sensible defaults if not specified
         if "temperature" not in self.ollama_options:
             self.ollama_options["temperature"] = 0.1  # Low for consistent output
@@ -344,8 +347,11 @@ class PoolWorker:
             prompt_item = self._slice_to_item(slice_view, span, repo_path)
             prompt = build_enrichment_prompt(prompt_item, repo_path)
 
-            # Call Ollama directly (bypass router)
-            result, meta = self._call_ollama(prompt)
+            # Call backend directly (bypass router)
+            if self.backend_type == "openai":
+                result, meta = self._call_openai(prompt)
+            else:
+                result, meta = self._call_ollama(prompt)
 
             # Store enrichment result
             self._store_enrichment(db, item.span_hash, result, meta)
@@ -414,6 +420,54 @@ class PoolWorker:
             eval_duration_ns=data.get("eval_duration", 0),
             prompt_eval_count=data.get("prompt_eval_count", 0),
             prompt_eval_duration_ns=data.get("prompt_eval_duration", 0),
+        )
+
+        return result, meta
+
+    def _call_openai(self, prompt: str) -> tuple[dict[str, Any], EnrichmentMeta]:
+        """
+        Call OpenAI-compatible backend (llama.cpp, KoboldCpp, etc).
+
+        Returns:
+            Tuple of (parsed_result, metadata)
+        """
+        response = requests.post(
+            f"{self.ollama_url}/v1/completions",
+            json={
+                "model": self.model,
+                "prompt": prompt,
+                "max_tokens": self.ollama_options.get("num_predict", 1024),
+                "temperature": self.ollama_options.get("temperature", 0.1),
+                "stream": False,
+            },
+            timeout=self.request_timeout,
+        )
+        response.raise_for_status()
+
+        data = response.json()
+
+        # Extract response text from OpenAI format
+        choices = data.get("choices", [])
+        response_text = choices[0].get("text", "") if choices else ""
+
+        # Parse JSON from response (may have markdown fences)
+        result = self._parse_json_response(response_text)
+
+        # Build metadata (OpenAI format has different field names)
+        usage = data.get("usage", {})
+        tokens_generated = usage.get("completion_tokens", 0)
+        # Estimate duration from tokens (no timing info in OpenAI API)
+        est_tps = 70.0  # Rough estimate
+        est_duration_ns = int((tokens_generated / est_tps) * 1e9) if tokens_generated else 0
+        
+        meta = EnrichmentMeta(
+            model=self.model,
+            backend="openai",
+            host_url=self.ollama_url,
+            eval_count=tokens_generated,
+            eval_duration_ns=est_duration_ns,
+            prompt_eval_count=usage.get("prompt_tokens", 0),
+            prompt_eval_duration_ns=0,
         )
 
         return result, meta

@@ -744,26 +744,28 @@ def feed_queue_from_repos(repo_paths: list[str], limit_per_repo: int = 100) -> i
     queue = WorkQueue()
     total_added = 0
     
-    for repo_path in repo_paths:
-        repo = Path(repo_path)
-        if not repo.exists():
-            continue
-            
-        try:
-            db = Database(index_path_for_write(repo))
-            pending = db.pending_enrichments(limit=limit_per_repo)
-            
-            for span in pending:
-                file_path = str(span.file_path) if hasattr(span, 'file_path') else str(span.get('file_path', ''))
-                span_hash = span.span_hash if hasattr(span, 'span_hash') else str(span.get('span_hash', ''))
-                priority = calculate_priority(file_path)
-                if queue.push_work(str(repo), span_hash, file_path, priority):
-                    total_added += 1
-            
-            db.close()
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Failed to feed queue from {repo_path}: {e}")
+    try:
+        for repo_path in repo_paths:
+            repo = Path(repo_path)
+            if not repo.exists():
+                continue
+                
+            try:
+                db = Database(index_path_for_write(repo))
+                pending = db.pending_enrichments(limit=limit_per_repo)
+                
+                for span in pending:
+                    file_path = str(span.file_path) if hasattr(span, 'file_path') else str(span.get('file_path', ''))
+                    span_hash = span.span_hash if hasattr(span, 'span_hash') else str(span.get('span_hash', ''))
+                    priority = calculate_priority(file_path)
+                    if queue.push_work(str(repo), span_hash, file_path, priority):
+                        total_added += 1
+                
+                db.close()
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to feed queue from {repo_path}: {e}")
+    finally:
+        queue.close()
     
     return total_added
-
