@@ -200,6 +200,14 @@ def read_file(
                 error=f"File not found: {resolved}",
             )
 
+        if resolved.is_fifo():
+            return FsResult(
+                success=False,
+                data=None,
+                meta={"path": str(resolved)},
+                error=f"Cannot read from a FIFO: {resolved}",
+            )
+
         if not resolved.is_file():
             return FsResult(
                 success=False,
@@ -494,6 +502,25 @@ def write_file(
                     meta={"path": str(resolved), "actual_sha256": existing_hash},
                     error="SHA256 mismatch",
                 )
+
+        # Prevent writing to special files
+        if resolved.exists():
+            if resolved.is_fifo():
+                return FsResult(
+                    success=False,
+                    data=None,
+                    meta={"path": str(resolved)},
+                    error=f"Cannot write to a FIFO: {resolved}",
+                )
+            # is_file() is False for FIFOs, so this is safe
+            if not resolved.is_file():
+                return FsResult(
+                    success=False,
+                    data=None,
+                    meta={"path": str(resolved)},
+                    error=f"Path is not a regular file: {resolved}",
+                )
+
 
         # Write atomically for rewrite, direct for append
         if mode == "rewrite":
