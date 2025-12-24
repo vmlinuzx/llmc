@@ -3,7 +3,7 @@ node_modules
 .env*
 supabase/.temp
 dist
-DOCS/RESEARCH/
+DOCS/[Rr]esearch/
 DOCS/legacy/
 .backup*/
 *.trash*
@@ -28,6 +28,21 @@ __pycache__/
 **/__pycache__/
 *.pyc
 *.pyo
+
+# Pytest and Ruff caches
+.pytest_cache/
+.ruff_cache/
+
+# Python profiler outputs
+*.prof
+*.pstats
+
+# Runtime/debug logs
+turn_log.jsonl
+
+# Accidental binary garbage (PostScript dumps from some editors/libs)
+/os
+/test
 
 # Coverage and lint reports
 .coverage
