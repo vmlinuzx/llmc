@@ -7,7 +7,59 @@ the codebase to prevent path traversal attacks and other security issues.
 
 from __future__ import annotations
 
+import ipaddress
+import socket
 from pathlib import Path
+from urllib.parse import urlparse
+
+
+def validate_ollama_url(url: str) -> None:
+    """
+    Validates that the provided URL for Ollama is safe to connect to.
+
+    This function checks for:
+    - A valid URL format (http or https).
+    - The hostname resolves to a public IP address (localhost is allowed).
+    - The IP address is not a loopback (other than localhost), private, or reserved IP.
+
+    Args:
+        url: The URL string to validate.
+
+    Raises:
+        ValueError: If the URL is malformed, the hostname cannot be resolved,
+                    or the IP address is not a public IP.
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("Invalid URL scheme. Only http and https are allowed.")
+
+        hostname = parsed.hostname
+        if not hostname:
+            raise ValueError("URL is missing a hostname.")
+
+        # Allow localhost explicitly as it's a common use case for local dev
+        if hostname == "localhost":
+            return
+
+        ip_str = socket.gethostbyname(hostname)
+        ip = ipaddress.ip_address(ip_str)
+
+        if ip.is_loopback or ip.is_private or ip.is_reserved:
+            raise ValueError(
+                f"Hostname '{hostname}' resolves to the non-public IP address {ip}. "
+                "For security reasons, only connections to public IPs or "
+                "'localhost' are permitted."
+            )
+
+    except socket.gaierror:
+        raise ValueError(f"Could not resolve hostname: {hostname}") from None
+    except ValueError:
+        # Re-raise our own ValueErrors
+        raise
+    except Exception as e:
+        # Catch any other parsing/validation errors
+        raise ValueError(f"URL validation failed: {e}") from e
 
 
 class PathSecurityError(ValueError):
