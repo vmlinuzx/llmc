@@ -110,7 +110,7 @@ If you need to access the raw log files:
 To perform a comprehensive health check of the system (including LLM connectivity, RAG index integrity, and service status):
 
 ```bash
-llmc debug doctor
+llmc-cli debug doctor
 ```
 
 To check the service status and see a summary of tracked repositories:

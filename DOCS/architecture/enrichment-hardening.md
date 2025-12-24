@@ -75,13 +75,13 @@ Set it to `false` if you are documenting code with non-Latin comments (Chinese, 
 
 ### 1. "Enrichment is stuck / 0% progress"
 *   **Check connections**: Can you `curl` your Ollama instance?
-*   **Check daemon status**: Run `llmc-rag-service status` (or `llmc service status` if `llmc` has a top-level service command) to ensure the daemon is running and healthy.
+*   **Check daemon status**: Run `llmc-cli service status` to ensure the daemon is running and healthy.
 *   **Check `batch_size`**: If set too high (e.g., 100+) on a small GPU, the model might be timing out processing the batch prompt. Lower it to 10 or 5.
 *   **Check logs**: Look for `ReadTimeout` or `ConnectionRefusedError`.
 
 ### 2. "My database is full of partial enrichments"
 *   This usually means the process was killed mid-batch.
-*   **Fix**: Run `llmc-rag-daemon` (or the enrichment script) again. The system is idempotent and will pick up where it left off, re-processing incomplete spans.
+*   **Fix**: Run `llmc-cli service start` (or trigger enrichment via `llmc-cli debug enrich`) again. The system is idempotent and will pick up where it left off.
 
 ### 3. "Backend Flapping" (Success then Failure)
 *   **Thermal Throttling**: Your local GPU might be overheating and slowing down, causing timeouts. Increase `timeout_seconds` in `llmc.toml`.

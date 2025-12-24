@@ -14,7 +14,7 @@ Navigate to the root directory of your project.
 
 ```bash
 cd /path/to/your/project
-llmc init
+llmc-cli init
 ```
 
 This command will:
@@ -36,14 +36,14 @@ Follow the interactive prompts to set your API keys.
 Once initialized, start the service and register your repository. The service will automatically index your codebase.
 
 ```bash
-llmc service start
-llmc repo register
+llmc-cli service start
+llmc-cli repo register
 ```
 
 You can monitor the indexing progress with:
 
 ```bash
-llmc monitor
+llmc-cli monitor
 ```
 
 *Note: For large repositories (100k+ lines), this might take a few minutes.*
@@ -53,7 +53,7 @@ llmc monitor
 Let's make sure everything worked.
 
 ```bash
-llmc service status
+llmc-cli service status
 ```
 
 You should see output indicating the number of files indexed and the status of your repository.
@@ -63,7 +63,7 @@ You should see output indicating the number of files indexed and the status of y
 Now for the fun part. Ask a question about your codebase.
 
 ```bash
-llmc chat "How does the authentication middleware work?"
+llmc-cli chat "How does the authentication middleware work?"
 ```
 
 LLMC will retrieve the relevant files and generate an answer based *only* on your code.
