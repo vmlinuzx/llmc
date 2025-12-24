@@ -38,10 +38,11 @@ from llmc.commands.rag import (
     plan,
     repair_logs,
     schema_check,
-    search,
+    search as analytics_search,  # Renamed to avoid conflict
     stats,
     sync,
 )
+from llmc.commands.search import search as unified_search
 from llmc.commands.tui import tui
 from llmc.core import LLMC_VERSION, find_repo_root, load_config
 
@@ -58,6 +59,8 @@ app = typer.Typer(
 app.add_typer(config_commands.app, name="config")
 app.command(name="tui")(tui)
 app.command(name="init")(repo_commands.init)
+app.command(name="search")(unified_search)  # Top-level search!
+
 
 
 @app.command()
@@ -186,7 +189,7 @@ analytics_app = typer.Typer(
     help="Analytics, search, and graph navigation",
     no_args_is_help=True,
 )
-analytics_app.command(name="search")(search)
+analytics_app.command(name="search")(analytics_search)
 analytics_app.command(name="stats")(stats)
 analytics_app.command(name="benchmark")(benchmark)
 analytics_app.command(name="where-used")(nav_where_used)

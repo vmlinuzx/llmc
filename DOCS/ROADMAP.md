@@ -137,21 +137,22 @@ Things that make LLMC nicer to live with.
 
 ### 2.1 Integrated Graph-Enriched Search
 
-**Status:** 🟡 Planned  
+**Status:** ✅ **COMPLETE** (2025-12-23)  
 **Added:** 2025-12-19
 
-**Goal:** Elevate rich schema-backed search from `llmc-rag-nav` into `llmc analytics search`.
+**What was built:**
+- `llmc search` as top-level entry point (most discoverable)
+- Uses FTS + reranker + 1-hop graph stitch when available
+- Falls back to embedding search, then grep
+- `--rich` / `--plain` / `--json` output modes
+- Shows source info (`RAG_GRAPH` vs `LOCAL_FALLBACK`)
+- Graph context (callers/callees) in rich output
 
-**Current State:**
-- `llmc analytics search` (vector-only) returns paths and snippets without context
-- `llmc-rag-nav search` (hidden gem) provides AI summaries, usage examples, type metadata
+**Files:**
+- `llmc/commands/search.py` — Unified search module
+- Updated `llmc/main.py` — Added `llmc search` command
 
-**The Plan:**
-1. Unify search to use `nav_search` logic when graph is available
-2. Schema 3.0: Normalize edge semantics, add evidence (file:line), importance ranking
-3. UX: `--rich/--plain` toggle
-
-**Effort:** 6-8 hours | **Difficulty:** 🟢 Easy
+**Effort:** ~2 hours (less than estimated) | **Difficulty:** 🟢 Easy
 
 ---
 
