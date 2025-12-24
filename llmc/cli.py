@@ -318,8 +318,8 @@ def route(
     """Test routing logic for a file path."""
     repo_root = Path(".").resolve()  # Assume CWD
 
-    # Security Check: Path Traversal
-    if ".." in test or ".." in Path(test).parts:
+    # Security Check: Path Traversal (reject .. and absolute paths)
+    if ".." in test or ".." in Path(test).parts or Path(test).is_absolute():
         console.print("[bold red]Security Error: Path traversal detected[/bold red]")
         raise typer.Exit(code=1)
 
