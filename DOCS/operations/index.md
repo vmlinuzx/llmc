@@ -27,7 +27,7 @@ llmc-cli service status
 llmc-cli service logs -f
 
 # Health check
-llmc-cli doctor
+llmc-cli debug doctor
 ```
 
 ---
