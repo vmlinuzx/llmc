@@ -432,34 +432,35 @@ All 4 phases implemented and merged via Dialectical Autocoding:
 
 ### 3.2 Event-Driven Enrichment Queue (P1) 🔥
 
-**Status:** 🟡 SDD Complete  
+**Status:** 🟡 Phases 0-4 Complete, Phase 5 Remaining  
 **Added:** 2025-12-21  
+**Updated:** 2025-12-23  
 **SDD:** `DOCS/planning/SDD_Event_Driven_Enrichment_Queue.md`  
 **Prerequisite for:** 3.3 Distributed Parallel Enrichment
 
-**Problem:** Enrichment daemon polls ALL registered repos every 60s, even when 19/20 have zero pending work. Massive waste of CPU, prevents multi-worker scaling.
-
-**Solution:** Central work queue with event-driven wake-up:
-- Indexer pushes to queue when spans created
-- Workers block on notification pipe (zero CPU when idle)
-- Multiple workers pull from same queue (trivial parallelism)
+**What was built:**
+- `llmc/rag/work_queue.py` — Central queue (772 lines): push/pull/complete/fail/heartbeat/orphan recovery
+- `llmc/rag/pool_worker.py` — Backend-bound worker (582 lines): pulls from queue, calls Ollama directly
+- `llmc/rag/pool_manager.py` — Spawns/monitors multiple workers (381 lines): scheduling, health checks
+- Named pipe notification with `wait_for_work()` using select()
+- `feed_queue_from_repos()` for indexer integration
 
 **Phases:**
-| Phase | Description | Difficulty | Effort |
-|-------|-------------|------------|--------|
-| 0 | Central Work Queue (SQLite) | 🟢 Easy | 4-6h |
-| 1 | Indexer Integration (push on create) | 🟢 Easy | 2-3h |
-| 2 | Event Notification (pipe/signal) | 🟡 Medium | 3-4h |
-| 3 | Worker Refactor (queue consumers) | 🟡 Medium | 4-6h |
-| 4 | Multi-Worker Support | 🟢 Easy | 2-3h |
-| 5 | Remote Workers (HTTP API) | 🟡 Medium | 6-8h |
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | Central Work Queue (SQLite) | ✅ Complete |
+| 1 | Indexer Integration (push on create) | ✅ Complete |
+| 2 | Event Notification (pipe/signal) | ✅ Complete |
+| 3 | Worker Refactor (queue consumers) | ✅ Complete |
+| 4 | Multi-Worker Support | ✅ Complete |
+| 5 | Remote Workers (HTTP API) | 🔴 Not Started |
 
-**Success Metrics:**
-- Idle CPU: 15% → <1%
-- Work discovery: 60s → <2s  
-- Throughput: 1x → Nx (N workers)
+**Known Issues (2025-12-23):**
+- SQLite locking with multiple workers hitting `work_queue.db`
+- FIFO pipe creation unreliable across daemon restarts
+- **Workaround:** KISS mode (single-process async) as stable baseline
 
-**Total Effort:** 22-30 hours | **Difficulty:** 🟡 Medium
+**Remaining:** Phase 5 (HTTP API) would eliminate SQLite locking for distributed workers
 
 ---
 

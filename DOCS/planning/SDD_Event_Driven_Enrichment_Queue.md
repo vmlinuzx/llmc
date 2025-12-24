@@ -1,11 +1,34 @@
 # SDD: Event-Driven Enrichment Queue
 
-**Status:** Draft  
+**Status:** 🟡 Phases 0-4 Complete, Phase 5 Remaining  
 **Author:** Dave + Antigravity  
 **Created:** 2025-12-21  
+**Updated:** 2025-12-23  
 **Priority:** P1 (prerequisite for distributed enrichment)
 
----
+## Implementation Status
+
+| Phase | Description | Status | Files |
+|-------|-------------|--------|-------|
+| **Phase 0** | Central Work Queue | ✅ Complete | `llmc/rag/work_queue.py` (772 lines) |
+| **Phase 1** | Indexer Integration | ✅ Complete | `feed_queue_from_repos()` in work_queue.py |
+| **Phase 2** | Event Notification | ✅ Complete | Named pipe + `wait_for_work()` with select() |
+| **Phase 3** | Worker Refactor | ✅ Complete | `llmc/rag/pool_worker.py` (582 lines) |
+| **Phase 4** | Multi-Worker Support | ✅ Complete | `llmc/rag/pool_manager.py` (381 lines) |
+| **Phase 5** | Remote Workers (HTTP API) | 🔴 Not Started | — |
+
+### Known Issues (2025-12-23)
+
+- **SQLite locking:** Multiple workers hitting `work_queue.db` simultaneously causes `database is locked` errors
+- **FIFO pipe issues:** Named pipe creation/connection unreliable across daemon restarts
+- **Workaround:** Currently using KISS mode (single-process async) as stable baseline
+
+### Key Files
+
+- `llmc/rag/work_queue.py` — Central queue: push/pull/complete/fail/heartbeat/orphan recovery
+- `llmc/rag/pool_worker.py` — Backend-bound worker: pulls from queue, calls Ollama directly
+- `llmc/rag/pool_manager.py` — Spawns/monitors multiple workers, scheduling, health checks
+- `llmc/rag/pool_config.py` — Configuration for worker pool
 
 ## 1. Problem Statement
 
