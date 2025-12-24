@@ -37,6 +37,9 @@ def main():
     tool_args_str = sys.argv[2] if len(sys.argv) > 2 else '{}'
     tool_args = json.loads(tool_args_str)
 
+    env = os.environ.copy()
+    env["LLMC_ISOLATED"] = "1"
+
     stderr_log_path = "/home/vmlinux/.gemini/tmp/374224a11efb3b264acdde863d43231b170786efcc9917b056946c0602063280/mcp_server_stderr.log"
     with open(stderr_log_path, 'w') as stderr_log:
         server_process = subprocess.Popen(
@@ -46,7 +49,8 @@ def main():
             stderr=stderr_log,
             text=True,
             bufsize=1,
-            preexec_fn=os.setsid
+            preexec_fn=os.setsid,
+            env=env
         )
         
         print("Waiting for server to start...", file=sys.stderr)

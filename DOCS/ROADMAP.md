@@ -323,34 +323,20 @@ mcread docs/spec.pdf            # Reads sidecar markdown transparently
 
 ### 2.9 Observability & Logging Hygiene (P1) 🔍
 
-**Status:** 🟢 SDD Complete - Ready for Implementation  
+**Status:** ✅ **COMPLETE** (2025-12-23)  
 **Added:** 2025-12-23  
 **Source:** Architect Audit #5  
 **Audit Report:** `DOCS/operations/audits/05_OBSERVABILITY_LOGS.md`  
 **SDD:** `DOCS/planning/SDD_Observability_Logging_Hardening.md`
 
-**Problem:** Enrichment CLI is an observability black hole. Logs don't update. Exceptions are silently swallowed. The ledger is corrupt.
-
-**Audit Findings (2025-12-23):**
-
-| Priority | Issue | Location | Fix |
-|----------|-------|----------|-----|
-| **P0** | Corrupt ledger (malformed JSON line 1) | `logs/run_ledger.log` | Atomic append + validate |
-| **P0** | Enrichment CLI → stdout, not logs | `enrichment_pipeline.py:687`, `workers.py:104` | Route to JSONL logger |
-| **P1** | Silent swallow exceptions | `watcher.py:73,95`, `state_store.py:24` | Log with stack trace |
-| **P1** | Daemon uses plain text logging | `logging_utils.py:11`, `main.py:118,185` | JSON logging |
-| **P2** | Planner metrics lack context | `planner.py:208,296` | Add timestamp, repo_root, correlation_id |
-| **P2** | Indexer/DB print() on errors | `indexer.py:155`, `enrichment_db_helpers.py:130` | Use logger |
-
-**The Prescription:**
-1. **P0 - Ledger Fix:** Atomic write with lock, validate JSON before append
-2. **P0 - JSONL Logger:** Create `llmc/rag/enrichment_logger.py` for structured event emission
-3. **P1 - Swallow Fixes:** `logger.exception()` with context, or re-raise
-4. **P1 - JSON Daemon Logs:** Switch formatter in `logging_utils.py`
-5. **P2 - Planner Context:** Add `timestamp`, `repo_root`, `request_id` fields
-6. **P2 - Print Removal:** Migrate remaining `print()` calls to logger
-
-**Effort:** ~14 hours total | **Difficulty:** 🟡 Medium (touches many files)
+**What was built:**
+- `llmc/rag/enrichment_logger.py` — Thread-safe, atomic JSONL logger
+- `EnrichmentLogger` class with `log_success()`, `log_failure()`, `log_batch_summary()`
+- `repair_ledger()` function for corrupt ledger recovery
+- `llmc debug repair-logs` CLI command
+- `run_ledger.jsonl` as new atomic format
+- Replaced print() with structured logging in daemon/enrichment
+- `fcntl` locking for multi-process safety
 
 ---
 
