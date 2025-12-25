@@ -379,6 +379,11 @@ provider = "openai"
 ```
 
 **Remaining (Phase 2+):**
+- [ ] **KoboldCpp/llama.cpp compatibility** (2025-12-24)
+  - Issue: `OpenAICompatBackend` parses wrong JSON from KoboldCpp responses
+  - KoboldCpp returns valid responses but JSON extraction grabs schema, not output
+  - Debug: compare raw response format between Ollama vs KoboldCpp
+  - Fix: improve `_parse_enrichment_json()` or add KoboldCpp-specific adapter
 - [ ] Per-profile provider selection (different profiles → different backends)
 - [ ] Enrichment chain support for OpenAI-compatible backends
 - [ ] Health check that tests ALL configured backends
