@@ -878,21 +878,15 @@ class RAGService:
     def _run_idle_enrichment(self):
         """Run batch enrichment during idle periods if configured.
         
-        If [enrichment.pool] is enabled, uses pool workers for parallel processing.
-        Otherwise, falls back to sequential pipeline enrichment.
+        Mode priority:
+        1. Async parallel (TaskGroup + Semaphore) - default when enabled
+        2. Pool Workers (deprecated) - [enrichment.pool]
+        3. Sequential Pipeline - fallback
         """
-        # Check if pool mode is enabled - if so, use that instead
-        pool_cfg = self._toml_cfg.get("enrichment", {}).get("pool", {})
-        if pool_cfg.get("enabled", False):
-            self._run_pool_enrichment()
-            return
-        
         idle_cfg = self._daemon_cfg.get("idle_enrichment", {})
-        print(f"🔍 idle_enrichment called: enabled={idle_cfg.get('enabled', False)}")  # TRACE
 
         # Check if enabled
         if not idle_cfg.get("enabled", False):
-            logger.info("Idle enrichment: disabled in config")
             return
 
         # Check interval
@@ -900,117 +894,39 @@ class RAGService:
         now = time.time()
         last_run = getattr(self, "_last_idle_enrichment", 0)
         if now - last_run < interval:
-            logger.info("Idle enrichment: waiting (%.0fs until next run)", interval - (now - last_run))
+            return
+        
+        # Check if deprecated pool mode is enabled
+        pool_cfg = self._toml_cfg.get("enrichment", {}).get("pool", {})
+        if pool_cfg.get("enabled", False):
+            self._run_pool_enrichment()
+            self._last_idle_enrichment = now
             return
 
-        # Check dry-run mode
-        dry_run = idle_cfg.get("dry_run", False)
-
-        # Get configuration
-        batch_size = int(idle_cfg.get("batch_size", 10))
-        code_first = idle_cfg.get("code_first", True)
-        max_daily_cost = float(idle_cfg.get("max_daily_cost_usd", 1.00))
-
-        # Track daily cost (reset at midnight)
-        today = time.strftime("%Y-%m-%d")
-        if getattr(self, "_enrichment_cost_date", "") != today:
-            self._enrichment_cost_date = today
-            self._enrichment_daily_cost = 0.0
-
-        if self._enrichment_daily_cost >= max_daily_cost:
-            return  # Cost limit reached for today
-
-        # Use print() since logger output doesn't appear in daemon/systemd
-        print(f"🔄 Idle enrichment: Processing up to {batch_size} spans...")
-
-        # Run enrichment for each registered repo
-        total_enriched = 0
-        total_cost = 0.0
-
-        for repo_path in self.state.state["repos"]:
-            if not self.running:
-                break
-
-            repo = Path(repo_path)
-            if not repo.exists():
-                continue
-
-            try:
-                # Get database
-                index_path = index_path_for_write(repo)
-                db = Database(index_path)
-
-                try:
-                    # Check if there's work to do
-                    pending = db.pending_enrichments(limit=1)
-                    if not pending:
-                        continue
-
-                    if dry_run:
-                        pending_count = len(db.pending_enrichments(limit=batch_size))
-                        logger.info(
-                            "[DRY-RUN] %s: Would enrich %d spans",
-                            repo.name,
-                            pending_count,
-                        )
-                        continue
-
-                    # Build router and pipeline
-                    router = build_router_from_toml(repo)
-                    log_dir = repo / "logs"
-
-                    pipeline = EnrichmentPipeline(
-                        db=db,
-                        router=router,
-                        backend_factory=create_backend_from_spec,
-                        prompt_builder=build_enrichment_prompt,
-                        repo_root=repo,
-                        log_dir=log_dir,
-                        max_failures_per_span=self.tracker.max_failures,
-                        cooldown_seconds=0,
-                        code_first=code_first,
-                    )
-
-                    result = pipeline.process_batch(
-                        limit=batch_size,
-                        stop_check=lambda: not self.running,
-                    )
-
-                    if result.attempted > 0:
-                        total_enriched += result.succeeded
-                        # Estimate cost (rough: $0.15/1M tokens, ~500 tokens/span)
-                        estimated_cost = result.succeeded * 0.000075
-                        total_cost += estimated_cost
-                        logger.info(
-                            "%s: Enriched %d/%d spans (~$%.4f)",
-                            repo.name,
-                            result.succeeded,
-                            result.attempted,
-                            estimated_cost,
-                        )
-
-                finally:
-                    db.close()
-
-            except Exception as e:
-                logger.error("%s: Idle enrichment failed", repo.name, exc_info=e)
-
-        # Update tracking
-        self._last_idle_enrichment = now
-        self._enrichment_daily_cost = (
-            getattr(self, "_enrichment_daily_cost", 0.0) + total_cost
-        )
-
-        if total_enriched > 0:
-            logger.info(
-                "Idle enrichment complete: %d spans, ~$%.4f (daily: $%.4f/$%.2f)",
-                total_enriched,
-                total_cost,
-                self._enrichment_daily_cost,
-                max_daily_cost,
+        # Use new async parallel enrichment (TaskGroup + Semaphore)
+        from llmc.rag.async_enrichment import run_async_enrichment_sync
+        
+        batch_size = int(idle_cfg.get("batch_size", 50))
+        concurrency = int(idle_cfg.get("concurrency", 6))
+        timeout = float(idle_cfg.get("timeout_seconds", 120.0))
+        
+        repos = self.state.state["repos"]
+        
+        try:
+            result = run_async_enrichment_sync(
+                repos=repos,
+                batch_size=batch_size,
+                concurrency=concurrency,
+                timeout=timeout,
             )
-        else:
-            logger.info("No spans pending enrichment during idle cycle")
+            
+            # Update tracking
+            self._last_idle_enrichment = now
+            
+        except Exception as e:
+            print(f"❌ Async enrichment failed: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
 
     def _run_pool_enrichment(self):
         """Run pool-based enrichment with multiple workers.

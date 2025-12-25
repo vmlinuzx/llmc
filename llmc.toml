@@ -166,8 +166,10 @@ idle_backoff_base = 1.5            # Gradual ramp: 30s → 45s → 60s cap
 
 [daemon.idle_enrichment]
 enabled = true                     # Enable/disable idle enrichment
-batch_size = 20                    # Spans to enrich per idle cycle
-interval_seconds = 5              # Run enrichment every loop cycle (5s timeout)
+batch_size = 50                    # Spans to enrich per idle cycle (async can handle more)
+interval_seconds = 10              # Run enrichment every 10s 
+concurrency = 6                    # Parallel LLM requests (new async mode)
+timeout_seconds = 120.0            # Max time per batch
 preferred_chain = "code_enrichment_models"  # Which chain to use (matches [enrichment.routes])
 code_first = true                  # Prioritize code spans over docs
 max_daily_cost_usd = 1.00          # Stop enrichment if daily cost exceeds this (cloud backends)
@@ -332,6 +334,7 @@ enabled = true
 options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
 
 # DESKTOP-NBHNN60 (Tailscale) - KoboldCpp via OpenAI-compatible API
+# DISABLED: Returns malformed JSON in enrichment responses - needs prompt format investigation
 [[enrichment.chain]]
 name = "desktop kobold qwen3 4b"
 chain = "code_enrichment_models"
@@ -340,7 +343,7 @@ model = "koboldcpp/Qwen3-4B-Instruct-2507-Q4_K_M"
 url = "http://100.64.0.6:5001/v1"
 routing_tier = "4b"
 timeout_seconds = 90
-enabled = true
+enabled = false
 options = { temperature = 0.2 }
 
 # LOCAL FALLBACK: Qwen3 4b Instruct - instruction-tuned for structured output!
@@ -357,6 +360,7 @@ options = { num_ctx = 8192, temperature = 0.2 }
 
 
 # NEW: Qwen3 8b - fallback if 4b struggles
+# DISABLED: Model not loaded on localhost (404 errors)
 [[enrichment.chain]]
 name = "qwen3 8b"
 chain = "code_enrichment_models"
@@ -365,7 +369,7 @@ model = "qwen3:8b"
 url = "http://localhost:11434"
 routing_tier = "8b"
 timeout_seconds = 120
-enabled = true
+enabled = false
 options = { num_ctx = 8192, temperature = 0.2 }
 
 # Final fallback - 14B Qwen2.5 for hard cases (known good)
@@ -428,6 +432,7 @@ enabled = true
 options = { num_ctx = 8192, temperature = 0.2, connect_timeout = 5 }
 
 # DESKTOP-NBHNN60 (Tailscale) - KoboldCpp for docs
+# DISABLED: Returns malformed JSON - same issue as code backend
 [[enrichment.chain]]
 name = "desktop kobold qwen3 4b docs"
 chain = "document_routes"
@@ -436,7 +441,7 @@ model = "koboldcpp/Qwen3-4B-Instruct-2507-Q4_K_M"
 url = "http://100.64.0.6:5001/v1"
 routing_tier = "4b"
 timeout_seconds = 90
-enabled = true
+enabled = false
 options = { temperature = 0.2 }
 
 # LOCAL FALLBACK: Qwen3 4b Instruct for docs (instruction-tuned)
@@ -451,8 +456,8 @@ timeout_seconds = 90
 enabled = true
 options = { num_ctx = 8192, temperature = 0.2 }
 
-
 # NEW: Qwen3 8b fallback
+# DISABLED: Model not loaded on localhost (404 errors)
 [[enrichment.chain]]
 name = "qwen3 8b"
 chain = "document_routes"
@@ -461,7 +466,7 @@ model = "qwen3:8b"
 url = "http://localhost:11434"
 routing_tier = "8b"
 timeout_seconds = 120
-enabled = true
+enabled = false
 options = { num_ctx = 8192, temperature = 0.2 }
 
 # Final fallback: Local Qwen2.5 14B (known good)
