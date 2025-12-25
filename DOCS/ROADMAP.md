@@ -394,6 +394,117 @@ provider = "openai"
 
 ---
 
+### 2.11 Adopt litellm for Provider Abstraction (P1) 🔌
+
+**Status:** 🔴 Not Started  
+**Added:** 2025-12-24  
+**Source:** Architecture review - stop yak-shaving on provider adapters
+
+**The Problem:**
+- Every LLM provider has slightly different API, auth, error handling
+- Currently writing custom adapters for Ollama, OpenAI, llama.cpp, KoboldCpp
+- Each adapter is a maintenance burden and source of bugs
+- Provider-agnostic routing is on roadmap but painful to implement manually
+
+**The Solution:**
+[litellm](https://github.com/BerriAI/litellm) provides ONE interface to 100+ LLM providers.
+
+```python
+from litellm import completion
+
+# Same API for everything
+response = completion(model="ollama/qwen3-next-80b", messages=[...])
+response = completion(model="openai/gpt-4", messages=[...])
+response = completion(model="openai/gpt-oss-120b", api_base="http://athena:8080/v1", messages=[...])
+```
+
+**What to build:**
+1. Add `litellm` to dependencies
+2. Create `llmc/backends/litellm_backend.py` wrapper
+3. Migrate enrichment pipeline to use litellm
+4. Migrate bx agent to use litellm
+5. Remove custom Ollama/OpenAI adapters
+
+**Benefits:**
+- Tool calling normalization across providers
+- Built-in retry/fallback logic
+- Streaming support
+- Less code to maintain
+- Community-maintained edge case handling
+
+**Effort:** 8-12 hours | **Difficulty:** 🟢 Easy (just wiring)
+
+---
+
+### 2.12 Dependency Audit: Remove Dead Weight (P2) 🧹
+
+**Status:** 🔴 Not Started  
+**Added:** 2025-12-24  
+**Source:** Architecture review - deps listed but not imported
+
+**The Problem:**
+These dependencies are in `pyproject.toml` but have zero imports in codebase:
+- `langchain` / `langgraph` — RAG framework, never used
+- `chromadb` — vector store, never wired in
+- `watchdog` / `watchfiles` — file watchers, not referenced
+
+**Verification Commands:**
+```bash
+grep -r "import langchain\|from langchain" llmc/ llmc_mcp/ llmc_agent/
+grep -r "import chromadb\|from chromadb" llmc/ llmc_mcp/ llmc_agent/
+grep -r "import watchdog\|from watchdog" llmc/ llmc_mcp/ llmc_agent/
+```
+
+**Action:**
+1. Run verification commands
+2. If zero matches, remove from `pyproject.toml`
+3. Document any that ARE used but just not visible in grep
+
+**Effort:** 30 minutes | **Difficulty:** 🟢 Easy
+
+---
+
+### 2.13 Migrate to watchfiles for File Watching (P2) 👁️
+
+**Status:** 🔴 Not Started  
+**Added:** 2025-12-24  
+**Source:** Architecture review - pyinotify is old and unmaintained
+
+**Current State:**
+- Using `pyinotify` in `llmc/rag/watcher.py`
+- pyinotify is Linux-only, unmaintained since 2018
+- Manual ThreadedNotifier setup, edge-case bugs
+
+**The Solution:**
+[watchfiles](https://github.com/samuelcolvin/watchfiles) (by Pydantic author):
+- **Rust core** - 10-100x faster than Python-based watchers
+- **Cross-platform** - Linux (inotify), macOS (FSEvents), Windows
+- **Simple API** - no manual notifier setup
+- **Already in deps** - just not wired in
+
+```python
+from watchfiles import watch
+
+for changes in watch('/path/to/repo'):
+    for change_type, path in changes:
+        handle_change(change_type, path)
+```
+
+**What to build:**
+1. Replace `RepoWatcher` internals with `watchfiles.watch()`
+2. Remove pyinotify dependency
+3. Update tests
+
+**Benefits:**
+- Faster file change detection
+- Cross-platform (works on macOS for dev)
+- Less code to maintain
+- Active maintenance
+
+**Effort:** 4-6 hours | **Difficulty:** 🟢 Easy
+
+---
+
 ### 1.5 Schema Compliance & Integrity (P0) 🚨
 
 **Status:** ✅ **COMPLETE** (2025-12-23)  

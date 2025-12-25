@@ -296,16 +296,15 @@ def schema(
     terse: bool = typer.Option(False, "--terse", "-t", help="Compact output, no descriptions"),
 ):
     """
-    Generate a compact codebase schema.
+    Generate a compact codebase schema (original format).
     
     Shows entry points, module breakdown, and hotspot files (most connected)
-    with their purposes. Perfect for LLM bootstrap context.
+    with their purposes. Use 'mcschema graph' for pure call graph.
     
     Examples:
-        mcschema                  # Default output
-        mcschema --json           # Machine-readable
-        mcschema --hotspots 30    # More hotspots
-        mcschema --terse          # Paths only
+        mcschema schema             # Default output
+        mcschema schema --json      # Machine-readable
+        mcschema schema --hotspots 30
     """
     try:
         repo_root = find_repo_root()
@@ -333,12 +332,129 @@ def schema(
         _print_schema(result, terse=terse)
 
 
+@app.command()
+def graph(
+    limit: int = typer.Option(50, "-n", "--limit", help="Max files to show (sorted by connectivity)"),
+    full: bool = typer.Option(False, "--full", "-f", help="Show ALL files (no limit)"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+):
+    """
+    Pure file-level call graph - minimum tokens, maximum structure.
+
+    Files are sorted by connectivity (most connected first).
+    ALL outbound calls are shown for each file.
+
+    Format:
+        file.py: "Description from enrichment"
+          → dep1.py
+          → dep2.py
+
+    Examples:
+        mcschema                    # Top 50 files by connectivity
+        mcschema -n 100             # Top 100 files
+        mcschema --full             # ALL files, no limit
+    """
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]")
+        raise typer.Exit(1)
+    
+    # Load NetworkX graph for call relationships
+    try:
+        from llmc.rag.graph_nx import load_graph_nx
+        G = load_graph_nx(repo_root)
+    except FileNotFoundError:
+        console.print("[red]Graph not found.[/red] Run: mcwho graph")
+        raise typer.Exit(1)
+    
+    # Load file descriptions from database
+    db_path = index_path_for_read(repo_root)
+    file_descriptions = {}
+    if db_path.exists():
+        try:
+            db = Database(db_path)
+            file_descriptions = _get_file_descriptions(db)
+            db.close()
+        except Exception:
+            pass
+    
+    # Build file→file call graph
+    file_calls: dict[str, set[str]] = defaultdict(set)
+    file_connectivity: dict[str, int] = defaultdict(int)
+    
+    for u, v, data in G.edges(data=True):
+        if data.get("type") != "CALLS":
+            continue
+        
+        u_meta = dict(G.nodes.get(u, {}))
+        v_meta = dict(G.nodes.get(v, {}))
+        
+        u_file = u_meta.get("file_path", "")
+        v_file = v_meta.get("file_path", "")
+        
+        # Only local-to-local calls (both have file paths)
+        if u_file and v_file and u_file != v_file:
+            file_calls[u_file].add(v_file)
+            file_connectivity[u_file] += 1
+            file_connectivity[v_file] += 1
+    
+    # Sort by connectivity (most connected files first)
+    sorted_files = sorted(
+        file_calls.keys(),
+        key=lambda f: file_connectivity.get(f, 0),
+        reverse=True
+    )
+    
+    # Apply limit unless --full
+    if not full:
+        sorted_files = sorted_files[:limit]
+    
+    if json_output:
+        result = {
+            "repo": repo_root.name,
+            "files": len(sorted_files),
+            "total_files": len(file_calls),
+            "edges": G.number_of_edges(),
+            "graph": {}
+        }
+        for f in sorted_files:
+            entry = {"calls": sorted(file_calls[f])}
+            if f in file_descriptions:
+                desc = file_descriptions[f].split(".")[0].strip()
+                entry["desc"] = desc[:80] if len(desc) > 80 else desc
+            result["graph"][f] = entry
+        
+        print(json.dumps(result, indent=2))
+    else:
+        console.print(f"[bold cyan]# {repo_root.name}[/bold cyan] call graph")
+        console.print(f"[dim]{len(sorted_files)} files (sorted by connectivity), {G.number_of_edges()} edges[/dim]\n")
+        
+        for f in sorted_files:
+            targets = sorted(file_calls[f])
+            desc = file_descriptions.get(f, "")
+            if desc:
+                desc = desc.split(".")[0].strip()
+                if len(desc) > 60:
+                    desc = desc[:57] + "..."
+                console.print(f"[yellow]{f}[/yellow]: [dim]\"{desc}\"[/dim]")
+            else:
+                console.print(f"[yellow]{f}[/yellow]")
+            
+            # Always show ALL calls - no stupid truncation
+            for t in targets:
+                console.print(f"  → {t}")
+            console.print()
+
+
 def main():
     """Entry point."""
-    # Handle bare invocation as default command
-    if len(sys.argv) == 1 or (len(sys.argv) > 1 and sys.argv[1].startswith("-")):
-        # No subcommand, run schema directly
-        pass
+    # Handle bare invocation - default to graph (pure call graph)
+    if len(sys.argv) == 1:
+        sys.argv.append("graph")
+    elif len(sys.argv) > 1 and sys.argv[1].startswith("-"):
+        # Flags but no subcommand - assume graph
+        sys.argv.insert(1, "graph")
     app()
 
 

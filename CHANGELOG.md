@@ -2,6 +2,64 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.9.0] - "Lowered Expectations" 🎄 - 2025-12-24
+
+### Purple Flavor: **Lowered Expectations**
+
+Christmas Eve reality check. After 1500 hours of building custom RAG, we realized LlamaIndex exists. After planning 4 months of dialectical autocoding, we found LangGraph. The system works great for personal use - time to stop polishing for imaginary users.
+
+### Added
+
+- **`mchot` - PageRank Hotspot Analysis:**
+  - New CLI tool for finding important symbols via PageRank centrality
+  - Table output with Edges, Kind, Location, Summary columns
+  - Local code only by default (`--all` for stdlib/external)
+  - Config-based path exclusions via `[schema] exclude` in llmc.toml
+  - Enriched descriptions from RAG database
+  - Sorted by edge count (descending) for intuitive reading
+
+- **`mcschema graph` - Pure File-Level Call Graph:**
+  - New subcommand showing file-to-file dependencies
+  - Each file listed once with outbound calls and 1-line description
+  - `--full` flag shows ALL files (no truncation)
+  - Sorted by connectivity (sum of in + out edges)
+  - ~1600 tokens for 50 files, ~6500 tokens for full graph
+
+- **NetworkX Graph Adapter (`llmc/rag/graph_nx.py`):**
+  - Loads `rag_graph.json` into `networkx.DiGraph`
+  - PageRank, shortest path, upstream/downstream traversals
+  - O(1) neighbor lookups vs O(N) JSON scanning
+
+- **Conveyor Belt Pipeline (`llmc/rag/conveyor_pipeline.py`):**
+  - Async parallel enrichment with structured concurrency
+  - Multi-backend fan-out with per-backend semaphores
+  - Serialized SQLite writes via internal queue
+  - 339 T/s peak throughput across homelab cluster
+
+- **Config: `[schema] exclude` Section:**
+  - Filter paths from mchot/mcschema output
+  - Default excludes: `tests/`, `scripts/`, `docs/`, `DOCS/`, `.trash/`, `examples/`
+
+### Changed
+
+- **Roadmap Updates:**
+  - Added 2.11: Adopt litellm for provider abstraction (P1)
+  - Added 2.12: Dependency audit - remove langchain, chromadb, watchdog if unused (P2)
+  - Added 2.13: Migrate to watchfiles for file watching (P2)
+
+### Fixed
+
+- **mchot `-a` flag conflict:** Was used for both `--algorithm` and `--all`, now `--all` has no shortcut
+
+### Philosophy
+
+- Accepted that custom RAG stack is "good enough" for personal use
+- Stopped optimizing for external users who don't exist
+- Will adopt frameworks (litellm, n8n, LangGraph) instead of NIH everything
+
+---
+
+
 ## [0.8.2] - "Hotdog Water Pt. II" 🌭 - 2025-12-23
 
 ### Fixed

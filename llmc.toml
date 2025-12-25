@@ -910,3 +910,18 @@ Code:
 {snippet}
 
 JSON:"""
+# ==============================================================================
+# Schema/Hotspot Configuration (mchot, mcschema)
+# ==============================================================================
+
+[schema]
+# Exclude these path prefixes from hotspot analysis
+exclude = [
+    "tests/",
+    "scripts/",
+    "docs/",
+    "DOCS/",
+    ".trash/",
+    "examples/",
+]
+
