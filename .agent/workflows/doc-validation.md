@@ -139,11 +139,17 @@ Create or update `DOCS/.validation-report.md` with:
 
 ---
 
-## Phase 5: Commit (If Changes Made)
+## Phase 5: Create Pull Request (MANDATORY)
+
+**NEVER commit directly to main.** Always create a PR for review.
 
 If changes were made:
 
 ```bash
+# 1. Create a feature branch
+git checkout -b doc-validation-$(date +%Y%m%d)
+
+# 2. Stage and commit changes
 git add DOCS/
 git commit -m "docs: validation pass - update stale links and CLI examples
 
@@ -152,9 +158,21 @@ git commit -m "docs: validation pass - update stale links and CLI examples
 - Flagged Z items for human review
 
 See DOCS/.validation-report.md for details"
+
+# 3. Push and create PR
+git push -u origin doc-validation-$(date +%Y%m%d)
+gh pr create --title "docs: validation pass $(date +%Y-%m-%d)" \
+  --body "Automated documentation validation run.
+
+## Changes
+- See commit message for summary
+- See \`DOCS/.validation-report.md\` for full report
+
+## Review Notes
+Review the changes and merge if acceptable."
 ```
 
-**DO NOT** push without human approval. Leave the commit local or as a PR.
+**This is not optional.** Jules must create a PR. Dave will review and merge.
 
 ---
 

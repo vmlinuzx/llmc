@@ -146,6 +146,33 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 | `mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
 | `mcrun` | Execute command with logging | `python3 -m llmc.mcrun pytest tests/` |
 
+### 5.1 Mechanical Context Tools (LSP / Tree-Sitter)
+
+These commands provide **surgical precision** for code navigation using the Tree-Sitter graph index.
+
+| Command | Purpose | Example |
+|---------|---------|--------|
+| `skeleton` | Generate repo "header file" (signatures + docstrings, no bodies) | `python3 -m llmc.rag.cli skeleton --limit 100` |
+| `nav read` | Fetch implementation code for a specific symbol | `python3 -m llmc.rag.cli nav read GraphDatabase.bulk_insert_nodes` |
+| `nav where-used` | Find usage sites of a symbol | `python3 -m llmc.rag.cli nav where-used Skeletonizer` |
+| `nav lineage` | Get call graph (callers/callees) | `python3 -m llmc.rag.cli nav lineage process_repo` |
+
+**The "Instant Omniscience" Pattern:**
+
+1. Run `skeleton --limit 100` at session start → You now know **what** exists and **where**
+2. When you need to see **how** something works → `nav read <symbol>`
+3. This is ~10x more token-efficient than reading entire files
+
+**Example workflow:**
+```bash
+# See the whole repo structure (signatures only)
+python3 -m llmc.rag.cli skeleton --limit 100
+
+# Now you see "GraphDatabase.bulk_insert_nodes" in the skeleton...
+# Fetch just that implementation (20 lines vs 400 line file)
+python3 -m llmc.rag.cli nav read GraphDatabase.bulk_insert_nodes
+```
+
 ### Training Data Generation
 
 All `mc*` tools support `--emit-training` to generate OpenAI-format tool calling examples:
@@ -158,6 +185,7 @@ This outputs JSON showing the tool schema + invocation + response, suitable for 
 
 ### Quick Heuristics
 
+- **`skeleton` + `nav read`:** Best for code modification tasks. Start with the map, snipe what you need.
 - **`mcinspect` vs `read_file`:** Always prefer `mcinspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly.
 - **`mcgrep`:** If results are weird, try more literal queries or fallback to `rg`.
 - **`llmc debug doctor`:** Your first step if the RAG system seems broken.
@@ -289,6 +317,42 @@ This returns a ~400 token manifest with:
 - Hotspot files (most connected) with descriptions
 
 **Use this before any other search.** It tells you where to look.
+
+### Flow 0.5 – Mechanical Context (For Code Modification)
+
+When your task involves **modifying code**, use the Skeleton + Sniper pattern:
+
+1. **Get the Skeleton (Global Map):**
+
+   ```bash
+   python3 -m llmc.rag.cli skeleton --limit 100
+   ```
+
+   This returns **signatures + docstrings only** (no implementation bodies).
+   You now know what exists and where it's defined.
+
+2. **Snipe the Implementation (Surgical Read):**
+
+   When you see a symbol you need to modify or understand:
+
+   ```bash
+   python3 -m llmc.rag.cli nav read Skeletonizer._handle_class
+   ```
+
+   This returns **only the 20-50 lines** of that specific method.
+
+3. **Check Impact Before Editing:**
+
+   ```bash
+   python3 -m llmc.rag.cli nav where-used bulk_insert_nodes
+   ```
+
+   This tells you what will break if you change the signature.
+
+**Why this flow:**
+- Skeleton is ~2,000 tokens for 100 files (vs 200,000+ for full source)
+- Each `nav read` is ~50-100 tokens (vs 2,000+ for full file reads)
+- You get "Instant Omniscience" without context window bloat
 
 ### Flow A – LLM-Optimized Search (Primary)
 

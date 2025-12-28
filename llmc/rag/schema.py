@@ -446,6 +446,186 @@ class TreeSitterSchemaExtractor:
         )
 
 
+class PythonTreeSitterSchemaExtractor(TreeSitterSchemaExtractor):
+    """Extract entities and relations from Python code using Tree-Sitter (Robust)."""
+
+    def __init__(self, file_path: Path, source: bytes, lang: str = "python"):
+        super().__init__(file_path, source, lang)
+        self.import_map: dict[str, str] = {}
+        # Track current class context for methods
+        self._class_stack: list[str] = []
+
+    def extract(self) -> tuple[list[Entity], list[Relation]]:
+        # Two-pass extraction roughly:
+        # 1. Imports (to build import_map)
+        # 2. Definitions and calls
+        self._walk(self.tree)
+        return self.entities, self.relations
+
+    def _walk(self, node: Node, parent_scope: str = ""):
+        # Determine current scope name (for recursion)
+        current_scope = parent_scope
+
+        if node.type == "import_statement":
+            self._process_import(node)
+        elif node.type == "import_from_statement":
+            self._process_from_import(node)
+        elif node.type in ("function_definition", "async_function_definition"):
+            current_scope = self._process_function(node, parent_scope)
+        elif node.type == "class_definition":
+            current_scope = self._process_class(node, parent_scope)
+        elif node.type == "call":
+            self._process_call(node, parent_scope)
+
+        # Recurse
+        for child in node.children:
+            self._walk(child, current_scope)
+
+    def _process_import(self, node: Node):
+        # import foo, bar as b
+        for child in node.children:
+            if child.type == "aliased_import":
+                # import bar as b
+                name_node = child.child_by_field_name("name")
+                alias_node = child.child_by_field_name("alias")
+                if name_node and alias_node:
+                    self.import_map[self._node_text(alias_node)] = self._node_text(
+                        name_node
+                    )
+            elif child.type == "dotted_name":
+                # import foo.bar
+                # Fallback mapping
+                pass
+
+    def _process_from_import(self, node: Node):
+        # from module import foo as f
+        module_node = node.child_by_field_name("module_name")
+        if not module_node:
+            return
+
+        module_name = self._node_text(module_node)
+
+        # Scan children for import symbols
+        for child in node.children:
+            if child.type == "aliased_import":
+                name_node = child.child_by_field_name("name")
+                alias_node = child.child_by_field_name("alias")
+                if name_node and alias_node:
+                    imported_sym = self._node_text(name_node)
+                    alias = self._node_text(alias_node)
+                    self.import_map[alias] = f"{module_name}.{imported_sym}"
+
+            elif child.type == "identifier" and child != module_node:
+                imported_sym = self._node_text(child)
+                self.import_map[imported_sym] = f"{module_name}.{imported_sym}"
+
+    def _process_function(self, node: Node, parent_scope: str) -> str:
+        name_node = node.child_by_field_name("name")
+        if not name_node:
+            return parent_scope
+
+        func_name = self._node_text(name_node)
+        if parent_scope:
+            symbol = f"{parent_scope}.{func_name}"
+        else:
+            symbol = f"{self.module_name}.{func_name}"
+
+        kind = "method" if "." in parent_scope else "function"
+
+        # Parameters
+        params = []
+        params_node = node.child_by_field_name("parameters")
+        if params_node:
+            for child in params_node.children:
+                if child.type in ("identifier", "typed_parameter", "default_parameter"):
+                    text = self._node_text(child)
+                    if ":" in text:
+                        text = text.split(":")[0]
+                    elif "=" in text:
+                        text = text.split("=")[0]
+                    params.append(text.strip())
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind=kind,
+            node=node,
+            metadata={"params": params},
+        )
+        self.entities.append(entity)
+        return symbol
+
+    def _process_class(self, node: Node, parent_scope: str) -> str:
+        name_node = node.child_by_field_name("name")
+        if not name_node:
+            return parent_scope
+
+        class_name = self._node_text(name_node)
+        if parent_scope:
+            symbol = f"{parent_scope}.{class_name}"
+        else:
+            symbol = f"{self.module_name}.{class_name}"
+
+        bases = []
+        superclasses = node.child_by_field_name("superclasses")
+        if superclasses:
+            for child in superclasses.children:
+                if child.type in ("identifier", "attribute", "call"):
+                    base_name = self._node_text(child)
+                    bases.append(base_name)
+                    # Add extends relation (simple resolution)
+                    resolved = self._resolve_symbol(base_name)
+                    self.relations.append(
+                        Relation(
+                            src=f"type:{symbol}",
+                            edge="extends",
+                            dst=f"type:{resolved}",
+                        )
+                    )
+
+        entity = self._make_entity(
+            symbol=symbol,
+            kind="class",
+            node=node,
+            metadata={"bases": bases},
+        )
+        self.entities.append(entity)
+        return symbol
+
+    def _process_call(self, node: Node, current_scope: str):
+        if not current_scope:
+            return
+
+        func_node = node.child_by_field_name("function")
+        if not func_node:
+            return
+
+        callee_text = self._node_text(func_node)
+        
+        # Simple resolution attempt
+        resolved = self._resolve_symbol(callee_text)
+        
+        # Avoid self-loops for recursion if needed, but useful for graph
+        
+        self.relations.append(
+            Relation(
+                src=f"sym:{current_scope}",
+                edge="calls",
+                dst=f"sym:{resolved}",
+            )
+        )
+
+    def _resolve_symbol(self, name: str) -> str:
+        if name in self.import_map:
+            return self.import_map[name]
+        
+        if "." in name:
+            head, tail = name.split(".", 1)
+            if head in self.import_map:
+                return f"{self.import_map[head]}.{tail}"
+        
+        return f"{self.module_name}.{name}"
+
+
 class TypeScriptSchemaExtractor(TreeSitterSchemaExtractor):
     """Extract entities and relations from TypeScript/JavaScript code.
 
@@ -767,15 +947,19 @@ def extract_schema_from_file(file_path: Path) -> tuple[list[Entity], list[Relati
         logger.error("Failed to read %s", file_path, exc_info=e)
         return [], []
 
-    # Use Python AST parser for .py files
+    # Use Tree-sitter AST parser for .py files (New in v0.9.1)
     if lang == "python":
         try:
-            source_str = content.decode("utf-8")
-            extractor = PythonSchemaExtractor(file_path, source_str)
+            extractor = PythonTreeSitterSchemaExtractor(file_path, content)
             return extractor.extract()
-        except UnicodeDecodeError:
-            logger.warning("Failed to decode %s as UTF-8", file_path, exc_info=True)
-            return [], []
+        except Exception as e:
+            logger.warning("Tree-sitter extraction failed for %s, falling back to AST", file_path, exc_info=e)
+            try:
+                 source_str = content.decode("utf-8")
+                 extractor_legacy = PythonSchemaExtractor(file_path, source_str)
+                 return extractor_legacy.extract()
+            except Exception:
+                 return [], []
 
     # Use tree-sitter parser for TypeScript/JavaScript
     if lang in ("typescript", "javascript", "tsx", "jsx"):

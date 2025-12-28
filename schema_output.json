@@ -1,0 +1,63 @@
+{
+  "name": "llmc.rag_nav",
+  "version": "1.0.0",
+  "commands": [
+    {
+      "cmd": "nav search",
+      "json": {
+        "schema": "llmc://schemas/rag_nav/search_result.schema.json"
+      },
+      "jsonl": {
+        "schema": "llmc://schemas/rag_nav/jsonl_event.schema.json"
+      }
+    },
+    {
+      "cmd": "nav where-used",
+      "json": {
+        "schema": "llmc://schemas/rag_nav/where_used_result.schema.json"
+      },
+      "jsonl": {
+        "schema": "llmc://schemas/rag_nav/jsonl_event.schema.json"
+      }
+    },
+    {
+      "cmd": "nav lineage",
+      "json": {
+        "schema": "llmc://schemas/rag_nav/lineage_result.schema.json"
+      },
+      "jsonl": {
+        "schema": "llmc://schemas/rag_nav/jsonl_event.schema.json"
+      }
+    }
+  ],
+  "schemas": {
+    "route": "llmc://schemas/rag_nav/route.schema.json",
+    "location": "llmc://schemas/rag_nav/location.schema.json",
+    "snippet": "llmc://schemas/rag_nav/snippet.schema.json",
+    "item": "llmc://schemas/rag_nav/item.schema.json",
+    "search": "llmc://schemas/rag_nav/search_result.schema.json",
+    "where_used": "llmc://schemas/rag_nav/where_used_result.schema.json",
+    "lineage": "llmc://schemas/rag_nav/lineage_result.schema.json",
+    "jsonl_event": "llmc://schemas/rag_nav/jsonl_event.schema.json"
+  },
+  "schemas_inline": {
+    "route": null,
+    "location": null,
+    "snippet": null,
+    "item": null,
+    "search": null,
+    "where_used": null,
+    "lineage": null,
+    "jsonl_event": null
+  },
+  "docs_paths": {
+    "route": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/route.schema.json",
+    "location": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/location.schema.json",
+    "snippet": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/snippet.schema.json",
+    "item": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/item.schema.json",
+    "search": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/search_result.schema.json",
+    "where_used": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/where_used_result.schema.json",
+    "lineage": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/lineage_result.schema.json",
+    "jsonl_event": "/home/vmlinux/src/llmc/DOCS/RAG_NAV/SCHEMAS/schemas/jsonl_event.schema.json"
+  }
+}

@@ -754,6 +754,33 @@ def inspect(
         click.echo(result.snippet)
 
 
+@cli.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Output file path (default: stdout).",
+)
+@click.option(
+    "--limit",
+    default=500,
+    show_default=True,
+    help="Maximum files to include.",
+)
+def skeleton(output: Path | None, limit: int) -> None:
+    """Generate a minimalist repository skeleton for LLM context."""
+    from .skeleton import generate_repo_skeleton
+    
+    repo_root = _find_repo_root()
+    skeleton_text = generate_repo_skeleton(repo_root, max_files=limit)
+    
+    if output:
+        output.write_text(skeleton_text, encoding="utf-8")
+        click.echo(f"Wrote skeleton to {output}")
+    else:
+        click.echo(skeleton_text)
+
+
 @cli.group(
     help="Navigation tools over graph/fallback with freshness metadata.",
     invoke_without_command=True,
@@ -773,6 +800,27 @@ def nav(ctx: click.Context, print_schema: bool) -> None:
         return
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
+
+
+@nav.command()
+@click.argument("symbol")
+def read(symbol: str) -> None:
+    """Read the implementation code for a specific symbol."""
+    from .reader import read_implementation
+    
+    repo_root = _find_repo_root()
+    span = read_implementation(repo_root, symbol)
+    
+    if span:
+        click.echo(f"## Impl: {span.symbol}")
+        click.echo(f"# Location: {span.file_path}:{span.start_line}-{span.end_line}")
+        click.echo("```python")
+        click.echo(span.content)
+        click.echo("```")
+    else:
+        click.echo(f"Symbol '{symbol}' not found in graph.", err=True)
+
+
 
 
 def _route_to_dict(repo_root: Path) -> dict:
