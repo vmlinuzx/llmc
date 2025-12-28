@@ -485,9 +485,9 @@ If you are reading this and wondering "what do I do right now?", here is the sho
 1. Install LLMC and add `scripts/` to your `PATH`.
 2. Pick one repo you care about.
 3. Run:
-   - `llmc-rag-repo add /path/to/repo`
-   - `llmc-rag-service register /path/to/repo`
-   - `llmc-rag-service start --interval 300 --daemon`
+   - `llmc-cli repo register /path/to/repo`
+   - `llmc-cli service repo add /path/to/repo`
+   - `llmc-cli service start --interval 300`
 4. Let it run for a while.
 5. Use the TUI or RAG search CLI to ask questions about that repo.
 
