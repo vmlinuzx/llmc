@@ -1,0 +1,33 @@
+DOCS/getting-started/concepts.md: OK
+DOCS/getting-started/first-project.md: OK
+DOCS/getting-started/index.md: OK
+DOCS/getting-started/quickstart.md: OK
+DOCS/getting-started/installation.md: OK
+DOCS/user-guide/enrichment/providers.md: OK
+DOCS/user-guide/enrichment/index.md: OK
+DOCS/user-guide/configuration.md: ISSUE: index_path default
+DOCS/user-guide/domains/index.md: OK
+DOCS/user-guide/native-tool-scripts.md: OK
+DOCS/user-guide/index.md: OK
+DOCS/user-guide/tool-envelope.md: ISSUE: llmc-cli te not found
+DOCS/user-guide/tui/index.md: OK
+DOCS/user-guide/tui/dashboard.md: OK
+DOCS/user-guide/ruta.md: ISSUE: llmc-cli test ruta not found
+DOCS/user-guide/overview.md: OK
+DOCS/user-guide/docgen.md: OK
+DOCS/user-guide/cli-reference.md: OK
+DOCS/user-guide/search/index.md: OK
+DOCS/operations/daemon.md: OK
+DOCS/operations/performance_audit_protocol.md: OK
+DOCS/operations/troubleshooting.md: OK
+DOCS/operations/monitoring.md: OK
+DOCS/operations/index.md: OK
+DOCS/operations/backup-recovery.md: OK
+DOCS/operations/mcp-integration.md: ISSUE: llmc-cli run-mcp check
+DOCS/operations/mcp-integration.md: ISSUE: llmc-cli run-mcp does not exist. It is a separate entry point llmc-mcp.
+DOCS/reference/cli/llmc-cli.md: OK
+DOCS/reference/cli/llmc-rag-repo.md: OK (Deprecated)
+DOCS/reference/cli/llmc-rag-cli.md: OK (Deprecated)
+DOCS/reference/cli/llmc-rag-daemon.md: OK (Deprecated)
+DOCS/reference/cli/te.md: NEEDS UPDATE (Clarify invocation)
+DOCS/reference/cli/llmc-mcp.md: OK
