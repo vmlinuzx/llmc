@@ -43,6 +43,5 @@ llmc/
 ├── llmc_mcp/       # MCP server package
 ├── llmc_agent/     # Agent/chat package
 ├── tests/          # Test suite
-├── scripts/        # Utility scripts
-└── thunderdome/    # Testing infrastructure
+└── scripts/        # Utility scripts
 ```
