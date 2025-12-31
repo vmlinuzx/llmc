@@ -7,7 +7,7 @@ Chat agent CLI (also: bx)
 ## Usage
 
 ```text
-Usage: llmc-chat [OPTIONS] [PROMPT_WORDS]...
+Usage: python -m llmc_agent.cli [OPTIONS] [PROMPT_WORDS]...
 
   bx - AI coding assistant with RAG and tools.
 
@@ -19,13 +19,8 @@ Usage: llmc-chat [OPTIONS] [PROMPT_WORDS]...
   Sessions:
       bx -n start fresh topic             New session (forgets context)
       bx -r                               Recall last exchange
-      bx -l                               List recent sessions  
+      bx -l                               List recent sessions
       bx -s abc123 continue here          Resume specific session
-
-  Tools are enabled by default. Tier auto-detected from intent:
-    • Crawl: search/find code
-    • Walk: read files, list dirs
-    • Run: edit/write files (coming soon)
 
 Options:
   -n, --new           Start a new session
@@ -40,6 +35,7 @@ Options:
   --no-session        Disable session (stateless mode)
   --model TEXT        Override model
   --no-tools          Disable tools (Crawl-only mode)
+  -v, --verbose       Show model thinking
   --version           Show version
   --help              Show this message and exit.
 ```
