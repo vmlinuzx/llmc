@@ -3,6 +3,7 @@
 from datetime import datetime
 import os
 import subprocess
+import sys
 
 # CLI entry points from pyproject.toml [project.scripts]
 CLI_COMMANDS = [
@@ -16,8 +17,9 @@ CLI_COMMANDS = [
 OUTPUT_DIR = "DOCS/reference/cli"
 
 
-def run_help(command_name):
+def run_help(command_name, module):
     """Run command --help and capture output."""
+    # Try running directly first
     try:
         result = subprocess.run(
             [command_name, "--help"],
@@ -28,13 +30,31 @@ def run_help(command_name):
         )
         if result.returncode == 0:
             return result.stdout
-        return f"Command exited with code {result.returncode}\n{result.stderr}"
     except FileNotFoundError:
-        return f"Command '{command_name}' not found in PATH"
-    except subprocess.TimeoutExpired:
-        return "Command timed out"
+        pass  # Fallback to python -m
+    except Exception:
+        pass
+
+    # Fallback to python -m module
+    try:
+        # Special case for te which is not a module
+        # te is llmc.te.cli, but needs to be run as python -m llmc.te.cli
+        cmd = [sys.executable, "-m", module, "--help"]
+        result = subprocess.run(
+            cmd,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0:
+            return result.stdout
+
+        # Raise error if both methods fail
+        raise RuntimeError(f"Command '{command_name}' (python -m {module}) failed with code {result.returncode}:\n{result.stderr}")
+
     except Exception as e:
-        return f"Error: {e}"
+        raise RuntimeError(f"Failed to generate help for {command_name}: {e}")
 
 
 def main():
@@ -58,7 +78,11 @@ def main():
 
     for cmd_name, module, description in CLI_COMMANDS:
         print(f"Generating docs for {cmd_name}...")
-        help_text = run_help(cmd_name)
+        try:
+            help_text = run_help(cmd_name, module)
+        except RuntimeError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
 
         filename = f"{cmd_name}.md"
         filepath = os.path.join(OUTPUT_DIR, filename)
@@ -71,6 +95,18 @@ def main():
             f.write("```text\n")
             f.write(help_text)
             f.write("```\n")
+
+            # Special case: Restore examples for mcgrep which are not in the top-level help
+            if cmd_name == "mcgrep":
+                f.write("\n## Search Examples\n\n")
+                f.write("```bash\n")
+                f.write('mcgrep "where is auth handled?"\n')
+                f.write('mcgrep "database connection" src/\n')
+                f.write('mcgrep -n 20 "error handling"\n')
+                f.write('mcgrep "router" --extract 10 --context 3\n')
+                f.write("mcgrep watch                    # Start background indexer\n")
+                f.write("mcgrep status                   # Check index health\n")
+                f.write("```\n")
 
         print(f"  Wrote {filepath}")
 

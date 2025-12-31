@@ -1,6 +1,6 @@
 # CLI Reference
 
-_Generated: 2025-12-16 16:14_
+_Generated: 2025-12-31 11:15_
 
 ## Available Commands
 
