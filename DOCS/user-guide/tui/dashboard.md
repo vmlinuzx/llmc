@@ -6,7 +6,7 @@
 
 ```bash
 # Launch the TUI
-llmc config
+llmc-cli config edit
 ```
 
 ## Features
@@ -144,7 +144,7 @@ This avoids cascading reference updates and makes operations atomic.
 
 **With TUI:**
 1. Press `s` for simulator (Phase 3)
-2. Enter file path: `src/llmc/tools/rag/pipeline.py`
+2. Enter file path: `llmc/rag/enrichment_pipeline.py`
 3. See full routing decision:
    - Extension: `.py`
    - Slice Type: `code`
@@ -245,14 +245,14 @@ pip install -e ".[tui]"
 
 Run from repo root or specify path:
 ```bash
-llmc config --config-path /path/to/llmc.toml
+llmc-cli config edit --config-path /path/to/llmc.toml
 ```
 
 ### Changes not reflected in daemon
 
 After editing config, restart the RAG daemon:
 ```bash
-llmc service restart
+llmc-cli service restart
 ```
 
 ### Want to revert changes

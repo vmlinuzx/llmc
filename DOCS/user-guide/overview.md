@@ -89,14 +89,9 @@ source .venv/bin/activate
 pip install -e ".[rag]"
 ```
 
-To make the CLIs feel like real commands, add `scripts/` to your `PATH`:
+To make the CLIs feel like real commands, ensure your installation method exposes `llmc-cli` or add the local binary path to your shell.
 
-```bash
-echo 'export PATH="$HOME/src/llmc/scripts:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-After that, commands like `llmc-rag-service`, `llmc-rag-repo`, and `llmc-rag-daemon` should be available from any shell.
+After that, commands like `llmc-cli` should be available from any shell.
 
 ### 3.2. First-time Configuration
 
@@ -130,14 +125,14 @@ This is the simplest "I want this working in one repo" flow.
 Tell LLMC that a repo exists and should have a workspace.
 
 ```bash
-llmc-rag-repo add /home/you/src/your-repo
+llmc-cli repo register /home/you/src/your-repo
 ```
 
 You can list and inspect registered repos:
 
 ```bash
-llmc-rag-repo list --json
-llmc-rag-repo inspect /home/you/src/your-repo
+llmc-cli service repo list
+llmc-cli debug inspect /home/you/src/your-repo
 ```
 
 This sets up `.llmc/rag` under your repo and writes to the global registry.
@@ -147,17 +142,17 @@ This sets up `.llmc/rag` under your repo and writes to the global registry.
 Use the high-level service wrapper to kick off background refresh cycles:
 
 ```bash
-llmc-rag-service register /home/you/src/your-repo
-llmc-rag-service start --interval 300 --daemon
+llmc-cli service repo add /home/you/src/your-repo
+llmc-cli service start --interval 300 --daemon
 ```
 
-- `register` tells the service which repos to manage.
+- `repo add` tells the service which repos to manage.
 - `start` launches the refresh loop (foreground by default; add `--daemon` to background it).
 
 Check status:
 
 ```bash
-llmc-rag-service status
+llmc-cli service status
 ```
 
 You should see whether the service is running and which repos are managed.
@@ -184,24 +179,22 @@ Once the index is built, you can:
 
 ## 5. Main Command-line Surfaces
 
-There are three primary "front door" commands:
+There are two primary "front door" command groups:
 
-- `llmc repo` - manage which repos are registered for RAG.
-- `llmc service` - high-level service wrapper and daemon.
+- `llmc-cli repo` - manage which repos are registered for RAG.
+- `llmc-cli service` - high-level service wrapper and daemon.
 
-The new unified `llmc` CLI provides subcommands that replace the older, separate scripts.
+The new unified `llmc-cli` CLI provides subcommands that replace the older, separate scripts (like `llmc-rag-repo` and `llmc-rag-service`).
 
-### 5.1. `llmc repo` - Repo Registry
+### 5.1. `llmc-cli repo` - Repo Registry
 
-The `llmc repo` command group manages the global repo registry (`~/.llmc/repos.yml`) and per-repo `.llmc` workspaces.
+The `llmc-cli repo` command group manages the global repo registry (`~/.llmc/repos.yml`) and per-repo `.llmc` workspaces.
 
 Common commands:
 
 ```bash
-llmc repo --help               # See all repo commands
-llmc repo add /home/you/src/llmc
-llmc repo list --json
-llmc repo validate /home/you/src/llmc
+llmc-cli repo --help               # See all repo commands
+llmc-cli repo register /home/you/src/llmc
 ```
 
 Key behaviors:
@@ -210,19 +203,19 @@ Key behaviors:
 - Writes and reads `~/.llmc/repos.yml`.
 - Prints short, friendly errors on bad input instead of dumping tracebacks.
 
-### 5.2. `llmc service` - Daemon and Service Management
+### 5.2. `llmc-cli service` - Daemon and Service Management
 
-The `llmc service` command group runs the scheduler loop that keeps registered repos fresh, replacing the legacy `llmc-rag-daemon` and `llmc-rag-service` scripts.
+The `llmc-cli service` command group runs the scheduler loop that keeps registered repos fresh, replacing the legacy `llmc-rag-daemon` and `llmc-rag-service` scripts.
 
 Common commands:
 
 ```bash
-llmc service --help              # See all service commands
-llmc service start               # Run in foreground
-llmc service start --daemon      # Run in background
-llmc service status              # Check health and status
-llmc service logs -f             # Tail logs
-llmc service stop                # Stop the background service
+llmc-cli service --help              # See all service commands
+llmc-cli service start               # Run in foreground
+llmc-cli service start --daemon      # Run in background
+llmc-cli service status              # Check health and status
+llmc-cli service logs -f             # Tail logs
+llmc-cli service stop                # Stop the background service
 ```
 
 This unified command handles:
@@ -230,7 +223,7 @@ This unified command handles:
 - Orchestrating per-repo refresh cycles using the `llmc.rag` modules.
 - Recording failures in `~/.llmc/rag-failures.db`.
 
-Configuration is managed in `llmc.toml`, and `llmc debug doctor` provides comprehensive health checks.
+Configuration is managed in `llmc.toml`, and `llmc-cli debug doctor` provides comprehensive health checks.
 
 Error handling and UX:
 
@@ -242,27 +235,27 @@ Error handling and UX:
 
 ## 6. Path Safety and Workspace Helpers
 
-LLMC includes diagnostic and recovery tools under the `llmc debug` and `llmc repo` command groups.
+LLMC includes diagnostic and recovery tools under the `llmc-cli debug` and `llmc-cli repo` command groups.
 
 ### 6.1. `doctor`, `export`, and `repo clean`
 
 Quick examples:
 
 ```bash
-llmc debug doctor --json
-llmc debug export --output /tmp/backup.tar.gz
-llmc repo clean --force --json
+llmc-cli debug doctor --json
+llmc-cli debug export --output /tmp/backup.tar.gz
+llmc-cli repo clean --force --json
 ```
 
-- `llmc debug doctor`: Checks workspace safety, configuration, and index health.
-- `llmc debug export`: Creates a snapshot of a workspace for backup or debugging.
-- `llmc repo clean`: Wipes workspace contents to rebuild indexes from scratch. Destructive operations require `--force`.
+- `llmc-cli debug doctor`: Checks workspace safety, configuration, and index health.
+- `llmc-cli debug export`: Creates a snapshot of a workspace for backup or debugging.
+- `llmc-cli repo clean`: Wipes workspace contents to rebuild indexes from scratch. Destructive operations require `--force`.
 
 ---
 
 ## 7. Core RAG Operations
 
-Most of the heavy lifting lives under the `llmc.rag` package. You will usually access it via the `llmc` CLI. The important concepts are:
+Most of the heavy lifting lives under the `llmc.rag` package. You will usually access it via the `llmc-cli` CLI. The important concepts are:
 
 - **Index**: Scans a repo, slices files into spans, and stores them.
 - **Sync**: Applies incremental changes from git or explicit file lists.
@@ -272,23 +265,13 @@ Most of the heavy lifting lives under the `llmc.rag` package. You will usually a
 
 A typical manual workflow uses the `debug` and `analytics` commands:
 
-```bash
-# Initial index
-llmc debug index
+- **Initial index**: `llmc-cli debug index`
+- **Sync after local changes**: `llmc-cli debug sync --since HEAD~1`
+- **Embed spans**: `llmc-cli debug embed`
+- **Enrich spans**: `llmc-cli debug enrich`
+- **Run a query**: `llmc-cli analytics search "how does X call Y"`
 
-# Sync after local changes
-llmc debug sync --since HEAD~1
-
-# Embed spans
-llmc debug embed
-
-# Enrich spans
-llmc debug enrich
-
-# Run a query
-llmc analytics search "how does X call Y"
-```
-The pattern is always: index, sync, embed, enrich, then search. The `llmc service` command automates this loop.
+The pattern is always: index, sync, embed, enrich, then search. The `llmc-cli service` command automates this loop.
 
 ### 7.1. Normalized Scoring
 
@@ -312,11 +295,10 @@ RAG Nav is the layer that sits on top of core RAG and graph data and answers que
 
 Typical commands (names may vary by version, but conceptually):
 
-- `llmc-rag-nav status` - report index and graph freshness for a repo.
-- `llmc-rag-nav build-graph` - rebuild the schema graph and mark it fresh.
-- `llmc-rag-nav search` - metadata-driven search over files and entities.
-- `llmc-rag-nav where-used` - show symbol usages.
-- `llmc-rag-nav lineage` - show upstream/downstream relationships.
+- `llmc-cli analytics graph` - rebuild the schema graph and mark it fresh.
+- `llmc-cli analytics search` - metadata-driven search over files and entities.
+- `llmc-cli analytics where-used` - show symbol usages.
+- `llmc-cli analytics lineage` - show upstream/downstream relationships.
 
 The **freshness envelope** behavior is important:
 
@@ -332,19 +314,19 @@ This is what keeps the system from silently lying to your LLM with old data.
 
 If you like dashboards and second monitors, this is your section.
 
-### 9.1. Textual TUI (`llmc-tui`)
+### 9.1. Textual TUI (`llmc-cli tui`)
 
 The Textual-based TUI gives you:
 
 - A monitor screen for repo / daemon / index health.
 - A search screen for interactive RAG queries.
-- An inspector screen for viewing symbols and their enriched context.
+- A inspector screen for viewing symbols and their enriched context.
 - A config screen that shows key settings from `llmc.toml` and RAG config.
 
 Start it with something like:
 
 ```bash
-llmc-tui
+llmc-cli tui
 ```
 
 You can then:
@@ -355,7 +337,7 @@ You can then:
 
 ### 9.2. Rich Console Dashboard
 
-For lighter-weight usage, there is a console CLI (usually just `llmc` with flags) that:
+For lighter-weight usage, there is a console CLI (usually just `llmc-cli` with flags) that:
 
 - Renders a multi-panel dashboard using Rich.
 - Shows core metrics and status without the full TUI machinery.
@@ -417,7 +399,7 @@ Expected behavior:
 If something feels off with a workspace, run the comprehensive health check:
 
 ```bash
-llmc debug doctor --json
+llmc-cli debug doctor --json
 ```
 
 This will tell you:
@@ -431,22 +413,22 @@ This will tell you:
 If the index is badly out of date or corrupted, you can clean it and rebuild.
 
 ```bash
-llmc repo clean --force --json
+llmc-cli repo clean --force --json
 ```
 
 Then re-run the normal workflows:
 
-- `llmc service start` for automated refresh.
-- Or manual `llmc debug index`, `embed`, `enrich` commands.
+- `llmc-cli service start` for automated refresh.
+- Or manual `llmc-cli debug index`, `embed`, `enrich` commands.
 
 ### 12.3. Checking daemon and service health
 
-Use the `llmc service` and `llmc debug` commands:
+Use the `llmc-cli service` and `llmc-cli debug` commands:
 
 ```bash
-llmc service status
-llmc debug doctor
-llmc service logs -f
+llmc-cli service status
+llmc-cli debug doctor
+llmc-cli service logs -f
 ```
 
 Look for:
@@ -485,9 +467,9 @@ If you are reading this and wondering "what do I do right now?", here is the sho
 1. Install LLMC and add `scripts/` to your `PATH`.
 2. Pick one repo you care about.
 3. Run:
-   - `llmc-rag-repo add /path/to/repo`
-   - `llmc-rag-service register /path/to/repo`
-   - `llmc-rag-service start --interval 300 --daemon`
+   - `llmc-cli repo register /path/to/repo`
+   - `llmc-cli service repo add /path/to/repo`
+   - `llmc-cli service start --interval 300 --daemon`
 4. Let it run for a while.
 5. Use the TUI or RAG search CLI to ask questions about that repo.
 
