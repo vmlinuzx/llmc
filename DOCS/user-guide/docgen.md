@@ -39,30 +39,30 @@ timeout_seconds = 60
 Docgen requires RAG indexing first:
 
 ```bash
-llmc index
+llmc-cli debug index
 ```
 
 ### 3. Generate Documentation
 
 For all files:
 ```bash
-llmc docs generate --all
+llmc-cli docs generate --all
 ```
 
 For a specific file:
 ```bash
-llmc docs generate path/to/file.py
+llmc-cli docs generate path/to/file.py
 ```
 
 Force regeneration (ignore SHA cache):
 ```bash
-llmc docs generate --all --force
+llmc-cli docs generate --all --force
 ```
 
 ### 4. Check Status
 
 ```bash
-llmc docs status
+llmc-cli docs status
 ```
 
 Output:
@@ -182,13 +182,13 @@ daemon_batch_size = 10            # Files per batch
 
 ## CLI Reference
 
-### `llmc docs generate`
+### `llmc-cli docs generate`
 
 Generate documentation for files.
 
 **Usage:**
 ```bash
-llmc docs generate [OPTIONS] [PATH]
+llmc-cli docs generate [OPTIONS] [PATH]
 ```
 
 **Options:**
@@ -198,22 +198,22 @@ llmc docs generate [OPTIONS] [PATH]
 **Examples:**
 ```bash
 # Generate for all files
-llmc docs generate --all
+llmc-cli docs generate --all
 
 # Generate for specific file
-llmc docs generate src/main.py
+llmc-cli docs generate src/main.py
 
 # Force regeneration
-llmc docs generate --all --force
+llmc-cli docs generate --all --force
 ```
 
-### `llmc docs status`
+### `llmc-cli docs status`
 
 Show documentation generation status.
 
 **Usage:**
 ```bash
-llmc docs status
+llmc-cli docs status
 ```
 
 Shows:
@@ -284,7 +284,7 @@ enabled = true
 
 Index your repository first:
 ```bash
-llmc index
+llmc-cli debug index
 ```
 
 ### "Script not found"
@@ -306,14 +306,14 @@ rm .llmc/docgen.lock
 
 File not in RAG database. Run:
 ```bash
-llmc index
+llmc-cli debug index
 ```
 
 ### "SKIP_STALE_INDEX"
 
 File changed since indexing. Re-index:
 ```bash
-llmc index
+llmc-cli debug index
 ```
 
 ---
@@ -325,8 +325,8 @@ llmc index
 Keep RAG index fresh:
 ```bash
 # After major changes
-llmc index
-llmc docs generate --all
+llmc-cli debug index
+llmc-cli docs generate --all
 ```
 
 ### 2. Incremental Generation
