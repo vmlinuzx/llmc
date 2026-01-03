@@ -4,7 +4,7 @@ Now that you have LLMC installed and understand the basics, let's walk through s
 
 ## Prerequisites
 
-- [x] LLMC installed (`pip install llmc`)
+- [x] LLMC installed (see [Installation Guide](installation.md))
 - [x] A Git repository you want to chat with (or use our example repo)
 - [x] An OpenAI API Key (or a local Ollama setup)
 

@@ -109,7 +109,7 @@ llmc-cli --help
 
 ## Troubleshooting
 
-### "Command not found: llmc"
+### "Command not found: llmc-cli"
 
 If you see this error after installation, your installation directory is likely not in your system's `PATH`.
 
