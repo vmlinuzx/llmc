@@ -32,6 +32,13 @@ llmc-cli
 │   ├── enable/disable
 │   └── repo (add/remove/list)
 │
+├── repo              # Repository management
+│   ├── register      # Full setup (init+index+daemon)
+│   ├── rm            # Unregister
+│   ├── clean         # Wipe artifacts
+│   ├── nukerag       # Clear enrichment
+│   └── validate      # Check config
+│
 ├── analytics         # Search, stats & insights
 │   ├── search        # Semantic search
 │   ├── stats         # Index statistics
@@ -102,6 +109,58 @@ Creates:
 - `llmc.toml` configuration file
 - Empty database schema
 - Log directory
+
+---
+
+## Repository Management
+
+### `llmc-cli repo register`
+Register a repository with LLMC. This is the primary setup command.
+
+```bash
+# Register current directory
+llmc-cli repo register .
+
+# Register specific path with interactive wizard
+llmc-cli repo register /path/to/repo --interactive
+```
+
+This command:
+1. Creates `.llmc/` workspace
+2. Initializes the database
+3. Indexes all source files
+4. Registers with the daemon for enrichment
+
+---
+
+### `llmc-cli repo rm`
+Unregister a repository from the daemon (keeps local `.llmc/` data).
+
+```bash
+llmc-cli repo rm /path/to/repo
+```
+
+---
+
+### `llmc-cli repo clean`
+Completely remove LLMC from a repository (wipes `.llmc/` and `.rag/`).
+
+```bash
+# Dry run
+llmc-cli repo clean .
+
+# Force delete
+llmc-cli repo clean . --force
+```
+
+---
+
+### `llmc-cli repo validate`
+Validate repository configuration and connectivity.
+
+```bash
+llmc-cli repo validate .
+```
 
 ---
 
