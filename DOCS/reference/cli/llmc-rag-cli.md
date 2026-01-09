@@ -1,8 +1,29 @@
+---
+description: Deprecated. Use llmc-cli instead.
+---
+
 # DEPRECATED: llmc-rag-cli
 
-This command has been deprecated and replaced by the unified `llmc` CLI.
+> **⚠️ DEPRECATION NOTICE**
+>
+> This command is deprecated. Please use [`llmc-cli`](llmc-cli.md) instead.
+>
+> - `llmc-rag-cli search` → `llmc analytics search`
+> - `llmc-rag-cli` → `llmc-cli` (or `llmc`)
 
-Please refer to the main [CLI Reference](../../user-guide/cli-reference.md) for updated commands and usage.
+This documentation is preserved for legacy reference.
 
-- `llmc analytics` for search and stats commands.
-- `llmc debug` for indexing, enrichment, and diagnostics.
+## Original Documentation
+
+`llmc-rag-cli` was the original interface for interacting with the RAG index.
+
+### Usage
+
+```bash
+llmc-rag-cli [OPTIONS] COMMAND [ARGS]...
+```
+
+### Commands
+
+- **search**: Search the index.
+- **ask**: Ask a question (replaced by `llmc chat`).

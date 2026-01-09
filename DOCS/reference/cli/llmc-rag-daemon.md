@@ -1,5 +1,30 @@
+---
+description: Deprecated. Use llmc service instead.
+---
+
 # DEPRECATED: llmc-rag-daemon
 
-This command has been deprecated and replaced by the unified `llmc service` command.
+> **⚠️ DEPRECATION NOTICE**
+>
+> This command is deprecated. Please use [`llmc service`](llmc-cli.md#service-management) instead.
+>
+> - `llmc-rag-daemon` → `llmc service start --daemon`
+> - `llmc-rag-service` → `llmc service`
 
-Please refer to the main [CLI Reference](../../user-guide/cli-reference.md) for updated commands and usage.
+This documentation is preserved for legacy reference.
+
+## Original Documentation
+
+`llmc-rag-daemon` is the background process that keeps repositories indexed and enriched.
+
+### Usage
+
+```bash
+llmc-rag-daemon [OPTIONS]
+```
+
+### Options
+
+- `--interval INTEGER`: Sync interval in seconds (default: 300).
+- `--single-run`: Run once and exit (good for debugging).
+- `--verbose / --no-verbose`: Enable verbose logging.
