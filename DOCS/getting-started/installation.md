@@ -98,7 +98,7 @@ Check the version:
 llmc-cli --version
 ```
 
-You should see output indicating the installed version (e.g., `llmc version 0.7.0`).
+You should see output indicating the installed version (e.g., `llmc version 0.9.0`).
 
 You can also view the help menu to see available commands:
 ```bash
