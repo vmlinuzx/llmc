@@ -10,10 +10,6 @@ Guides for contributing to LLMC.
 
 ## Guides
 
-| Guide | Description |
-|-------|-------------|
-| [TUI Style Guide](tui-style.md) | TUI component styling |
-
 ---
 
 ## Quick Commands
