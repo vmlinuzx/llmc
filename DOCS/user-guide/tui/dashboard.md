@@ -144,7 +144,7 @@ This avoids cascading reference updates and makes operations atomic.
 
 **With TUI:**
 1. Press `s` for simulator (Phase 3)
-2. Enter file path: `src/llmc/tools/rag/pipeline.py`
+2. Enter file path: `llmc/rag/pipeline.py`
 3. See full routing decision:
    - Extension: `.py`
    - Slice Type: `code`

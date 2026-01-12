@@ -21,7 +21,7 @@ The following performance targets have been established for the medical RAG syst
 
 1. **Index Medical Documents**: Ensure the RAG database contains medical documents
    ```bash
-   python -m tools.rag.index --repo-root /path/to/repo --medical
+   llmc debug index --repo-root /path/to/repo --medical
    ```
 
 2. **Install Test Dependencies**:
