@@ -8,6 +8,22 @@ from .common import RouteSignal
 FENCE_OPEN_RE = re.compile(r"(^|[\s:,\(\)\{\}\[\]])```[\w-]*\s*\n", re.MULTILINE)
 
 
+def _is_inside_double_quotes(text: str) -> bool:
+    """Check if the end of the text is inside unclosed double quotes."""
+    in_double = False
+    escaped = False
+    for char in text:
+        if escaped:
+            escaped = False
+            continue
+        if char == '\\':
+            escaped = True
+            continue
+        if char == '"':
+            in_double = not in_double
+    return in_double
+
+
 def count_fenced_code_blocks(text: str) -> int:
     count = 0
     pos = 0
@@ -15,6 +31,16 @@ def count_fenced_code_blocks(text: str) -> int:
         m = FENCE_OPEN_RE.search(text, pos)
         if not m:
             break
+
+        # Check if inside double quotes (heuristic to avoid matching strings)
+        # We look at the text on the same line before the match
+        start_of_line = text.rfind('\n', 0, m.start()) + 1
+        line_prefix = text[start_of_line:m.start()]
+
+        if _is_inside_double_quotes(line_prefix):
+             pos = m.end()
+             continue
+
         open_idx = m.end()
         close_idx = text.find("```", open_idx)
         if close_idx != -1:
