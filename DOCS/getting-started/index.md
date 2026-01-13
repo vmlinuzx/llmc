@@ -16,7 +16,7 @@ This section will guide you from zero to a fully indexed, searchable codebase.
     Understand how LLMC slices code, builds graphs, and manages freshness.
 
 4.  **[Your First Project](first-project.md)**
-    (Coming Soon) A deeper dive into setting up a complex multi-repo project.
+    A deeper dive into setting up a complex multi-repo project.
 
 ---
 
