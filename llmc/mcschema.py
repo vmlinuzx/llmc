@@ -1082,6 +1082,66 @@ def manifest(
         _print_manifest(data)
 
 
+
+@app.command()
+def startup(
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+    include_tests: bool = typer.Option(False, "--tests", "-t", help="Include test files in manifest"),
+):
+    """
+    Complete codebase context for LLM system prompts.
+    
+    Combines rich schema + file manifest into one output.
+    Designed to be injected into AGENTS.md or system prompts
+    to give LLMs instant codebase understanding without tool calls.
+    
+    ~5600 tokens total (~560 effective with 90% cache hit rate)
+    
+    Examples:
+        mcschema startup              # Full context for system prompt
+        mcschema startup --json       # Machine-readable
+    """
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]")
+        raise typer.Exit(1)
+    
+    try:
+        # Generate both schema (rich) and manifest
+        schema_data = generate_schema(
+            repo_root,
+            max_hotspots=20,
+            include_descriptions=True,
+            include_rich=True,
+        )
+        manifest_data = generate_manifest(repo_root, include_tests=include_tests)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error generating startup context:[/red] {e}")
+        raise typer.Exit(1)
+    
+    if json_output:
+        combined = {
+            "schema": schema_data,
+            "manifest": manifest_data,
+        }
+        console.print(json.dumps(combined, indent=2))
+    else:
+        # Print schema first
+        _print_schema(schema_data, terse=False, rich=True)
+        
+        # Separator
+        console.print()
+        console.print("[bold]" + "=" * 60 + "[/bold]")
+        console.print()
+        
+        # Print manifest
+        _print_manifest(manifest_data)
+
+
 def main():
     """Entry point."""
     # Handle bare invocation - default to schema subcommand
