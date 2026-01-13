@@ -926,20 +926,6 @@ def graph(
             console.print()
 
 
-def main():
-    """Entry point."""
-    # Handle bare invocation - default to schema (pure call graph)
-    if len(sys.argv) == 1:
-        sys.argv.append("schema")
-    elif len(sys.argv) > 1 and sys.argv[1].startswith("-"):
-        # Flags but no subcommand - assume schema
-        sys.argv.insert(1, "schema")
-    app()
-
-
-if __name__ == "__main__":
-    main()
-
 
 # =============================================================================
 # Manifest: Complete file listing with descriptions
@@ -1089,3 +1075,27 @@ def manifest(
         console.print(json.dumps(data, indent=2))
     else:
         _print_manifest(data)
+
+
+def main():
+    """Entry point."""
+    # Handle bare invocation - default to schema subcommand
+    # But allow explicit subcommands like 'manifest', 'graph'
+    known_subcommands = {"schema", "graph", "manifest"}
+    
+    if len(sys.argv) == 1:
+        # Bare invocation -> default to schema
+        sys.argv.append("schema")
+    elif len(sys.argv) > 1:
+        first_arg = sys.argv[1]
+        # If first arg is a flag (not a subcommand), insert schema
+        if first_arg.startswith("-") and first_arg not in ("--help", "-h"):
+            sys.argv.insert(1, "schema")
+        # If --help with no subcommand, show full app help
+        elif first_arg in ("--help", "-h"):
+            pass  # Let typer handle it
+    app()
+
+
+if __name__ == "__main__":
+    main()
