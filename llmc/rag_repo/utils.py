@@ -41,7 +41,7 @@ def safe_subpath(base: Path, user_path: str | Path) -> Path:
 def generate_repo_id(repo_path: Path) -> str:
     """Generate a stable repo id based on canonical path."""
     canonical = str(canonical_repo_path(repo_path))
-    digest = hashlib.sha1(canonical.encode("utf-8")).hexdigest()
+    digest = hashlib.sha1(canonical.encode("utf-8"), usedforsecurity=False).hexdigest()
     return f"repo-{digest[:12]}"
 
 

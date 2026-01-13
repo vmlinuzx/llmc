@@ -30,7 +30,7 @@ class DateShifter:
         self.base_offset_days = base_offset_days
 
         # Generate a deterministic offset from the patient_id
-        hash_obj = hashlib.md5(patient_id.encode())
+        hash_obj = hashlib.md5(patient_id.encode(), usedforsecurity=False)
         hash_int = int(hash_obj.hexdigest(), 16)
         # Offset between -base_offset_days and +base_offset_days
         self.offset_days = (hash_int % (2 * base_offset_days)) - base_offset_days

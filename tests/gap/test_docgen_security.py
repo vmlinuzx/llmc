@@ -22,7 +22,7 @@ def test_docgen_out_of_bounds_access():
 
         # Create a file OUTSIDE the repo root
         secret_file = base / "secret.txt"
-        secret_file.write_text("SUPER_SECRET_PASSWORD")
+        secret_file.write_text("TEST_FIXTURE_SECRET_DO_NOT_LEAK")
 
         # 2. Initialize Coordinator
         maasl_mock = MagicMock()

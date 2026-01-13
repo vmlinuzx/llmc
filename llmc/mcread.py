@@ -46,7 +46,13 @@ def read_file_command(
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         raise typer.Exit(1)
 
-    full_path = repo_root / file_path
+    # Security: Validate path stays within repo root (prevent path traversal)
+    full_path = (repo_root / file_path).resolve()
+    try:
+        full_path.relative_to(repo_root.resolve())
+    except ValueError:
+        console.print(f"[red]Security error:[/red] Path escapes repository root: {file_path}")
+        raise typer.Exit(1)
     
     # Check if this is a sidecar-eligible file (PDF, DOCX, etc.)
     sidecar_content = None

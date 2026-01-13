@@ -133,20 +133,64 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 
 ---
 
-## 5. RAG Tooling Reference
+## 5. Startup Context (FIRST THING TO RUN)
+
+**Before diving into any task**, run `mcschema` to get instant codebase orientation:
+
+```bash
+python3 -m llmc.mcschema
+```
+
+This gives you (~600 tokens):
+- **Entry points:** All CLI commands and their targets
+- **Modules:** Top directories by file count with purpose summaries
+- **Hotspots:** Most connected files (where changes ripple)
+- **Recent commits:** Last 5 commits to see what's been worked on
+- **Active files:** Files modified in last 7 days (current focus areas)
+- **Patterns:** Class/function/method counts, most referenced symbols
+
+**Example output:**
+```
+# llmc
+1021 files, 10178 spans, 5858 entities, 23541 edges
+
+entry_points:
+  - llmc-cli → llmc.main:app
+  - mcgrep → llmc.mcgrep:main
+  ...
+
+hotspots: (most connected files)
+  llmc/rag/service.py (433 edges)
+  llmc/rag/cli.py (344 edges)
+  ...
+
+recent_commits:
+  9362dbf fix(graph): create stub nodes for external refs...
+  ...
+
+patterns: method: 2968, function: 2168, class: 714
+```
+
+**Why this matters:** You now know WHERE to look before you start searching. The hotspots tell you which files are "load-bearing" (touch with care). The recent commits tell you what Dave's been working on.
+
+---
+
+## 6. RAG Tooling Reference
+
+
 
 **Primary Interface:** The `mc*` CLI tools. These are thin, graph-enriched wrappers around the RAG system.
 
 | Command | Purpose | Example |
 |---------|---------|--------|
-| `mcschema` | Codebase overview (~400 tokens) | `python3 -m llmc.mcschema` |
+| `mcschema` | Codebase overview + recent activity (~600 tokens) | `python3 -m llmc.mcschema` |
 | `mcgrep` | Semantic search + file descriptions | `python3 -m llmc.mcgrep "router"` |
 | `mcwho` | Who uses/calls this symbol? | `python3 -m llmc.mcwho Database` |
 | `mcinspect` | Deep symbol inspection + graph | `python3 -m llmc.mcinspect Foo` |
 | `mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
 | `mcrun` | Execute command with logging | `python3 -m llmc.mcrun pytest tests/` |
 
-### 5.1 Mechanical Context Tools (LSP / Tree-Sitter)
+### 6.1 Mechanical Context Tools (LSP / Tree-Sitter)
 
 These commands provide **surgical precision** for code navigation using the Tree-Sitter graph index.
 
@@ -417,7 +461,7 @@ When you already know roughly where to look:
 
 ### mc* CLI Quick Reference
 
-See **Section 5** for the authoritative `mc*` CLI table. All commands:
+See **Section 6** for the authoritative `mc*` CLI table. All commands:
 
 ```bash
 python3 -m llmc.mcschema              # Codebase orientation

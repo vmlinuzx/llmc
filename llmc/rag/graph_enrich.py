@@ -60,8 +60,8 @@ def compute_span_hash(
     if algo == "blake2":
         return hashlib.blake2b(key, digest_size=20).hexdigest()
     if algo == "md5":
-        return hashlib.md5(key).hexdigest()
-    return hashlib.sha1(key).hexdigest()
+        return hashlib.md5(key, usedforsecurity=False).hexdigest()
+    return hashlib.sha1(key, usedforsecurity=False).hexdigest()
 
 
 class GraphEnrichmentDB:

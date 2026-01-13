@@ -309,7 +309,7 @@ class PythonSchemaExtractor:
         # Hash input: "file_path:start_line:end_line" (relative to repo root conceptually)
         # Ideally we use the same utility, but for now we implement a stable hash here
         span_id = f"{self.file_path}:{node.lineno}:{node.end_lineno}"
-        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+        span_hash = hashlib.md5(span_id.encode(), usedforsecurity=False).hexdigest()[:16]
 
         # Create entity (Phase 2: include location fields)
         entity = Entity(
@@ -340,7 +340,7 @@ class PythonSchemaExtractor:
         entity_id = f"type:{class_name}"
 
         span_id = f"{self.file_path}:{node.lineno}:{node.end_lineno}"
-        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+        span_hash = hashlib.md5(span_id.encode(), usedforsecurity=False).hexdigest()[:16]
 
         # Create class entity (Phase 2: include location fields)
         entity = Entity(
@@ -432,7 +432,7 @@ class TreeSitterSchemaExtractor:
     ) -> Entity:
         """Create an entity with consistent hashing and location tracking."""
         span_id = f"{self.file_path}:{node.start_point[0] + 1}:{node.end_point[0] + 1}"
-        span_hash = hashlib.md5(span_id.encode()).hexdigest()[:16]
+        span_hash = hashlib.md5(span_id.encode(), usedforsecurity=False).hexdigest()[:16]
 
         return Entity(
             id=f"sym:{symbol}" if kind in ("function", "method") else f"type:{symbol}",

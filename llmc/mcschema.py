@@ -62,6 +62,116 @@ def _get_file_descriptions(db: Database) -> dict[str, str]:
     except Exception:
         return {}
 
+def _get_enrichment_summaries(db: Database, file_paths: list[str]) -> dict[str, str]:
+    """Get enrichment summaries for files by aggregating span summaries."""
+    summaries = {}
+    try:
+        for file_path in file_paths:
+            # Get the first enrichment summary for this file
+            row = db.conn.execute(
+                """SELECT e.summary FROM enrichments e
+                   JOIN spans s ON s.span_hash = e.span_hash
+                   WHERE s.path = ? AND e.summary IS NOT NULL
+                   LIMIT 1""",
+                (file_path,)
+            ).fetchone()
+            if row and row[0]:
+                # First sentence only
+                summary = row[0].split(".")[0].strip()
+                if len(summary) > 100:
+                    summary = summary[:97] + "..."
+                summaries[file_path] = summary
+    except Exception:
+        pass
+    return summaries
+
+
+def _get_recent_activity(repo_root: Path, limit: int = 5) -> dict:
+    """Get recent git activity."""
+    import subprocess
+    
+    result = {
+        "commits": [],
+        "active_files": [],
+    }
+    
+    try:
+        # Recent commits
+        proc = subprocess.run(
+            ["git", "log", f"-{limit}", "--oneline", "--no-decorate"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if proc.returncode == 0:
+            for line in proc.stdout.strip().split("\n"):
+                if line:
+                    parts = line.split(" ", 1)
+                    if len(parts) == 2:
+                        result["commits"].append({
+                            "hash": parts[0],
+                            "message": parts[1][:60] + ("..." if len(parts[1]) > 60 else ""),
+                        })
+        
+        # Active files (modified in last 7 days)
+        proc = subprocess.run(
+            ["git", "log", "--since=7 days ago", "--name-only", "--pretty=format:"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if proc.returncode == 0:
+            seen = set()
+            for line in proc.stdout.strip().split("\n"):
+                line = line.strip()
+                if line and line.endswith(".py") and line not in seen:
+                    seen.add(line)
+                    if len(result["active_files"]) < 10:
+                        result["active_files"].append(line)
+    except Exception:
+        pass
+    
+    return result
+
+
+def _get_patterns(graph: "SchemaGraph") -> dict:
+    """Get structural patterns from the graph."""
+    patterns = {
+        "kinds": {},
+        "top_symbols": [],
+    }
+    
+    if not graph:
+        return patterns
+    
+    # Count entity kinds
+    for entity in graph.entities:
+        kind = getattr(entity, "kind", None) or "unknown"
+        patterns["kinds"][kind] = patterns["kinds"].get(kind, 0) + 1
+    
+    # Find most connected symbols (by counting relation mentions)
+    # Aggregate by short name to avoid duplicates like main() from different files
+    symbol_refs = {}
+    for rel in graph.relations:
+        for sym_id in [rel.src, rel.dst]:
+            if sym_id.startswith("sym:"):
+                # Use qualified name without "sym:" prefix
+                name = sym_id.removeprefix("sym:")
+                # Get short name for aggregation
+                short = name.split(".")[-1] if "." in name else name
+                symbol_refs[short] = symbol_refs.get(short, 0) + 1
+    
+    # Top 5 most referenced symbols (deduplicated by short name)
+    sorted_syms = sorted(symbol_refs.items(), key=lambda x: -x[1])[:5]
+    for name, count in sorted_syms:
+        patterns["top_symbols"].append({"name": name, "refs": count})
+    
+    return patterns
+
+
+
 
 def _detect_entry_points(repo_root: Path) -> list[str]:
     """Detect entry points from pyproject.toml."""
@@ -183,9 +293,8 @@ def generate_schema(
 
     file_descriptions = _get_file_descriptions(db) if include_descriptions else {}
     
-    # Get all file paths
+    # Get all file paths (keep db open for enrichment query later)
     all_files = [row[0] for row in db.conn.execute("SELECT path FROM files").fetchall()]
-    db.close()
     
     # Load graph for connectivity analysis
     graph = _load_graph(repo_root)
@@ -238,6 +347,22 @@ def generate_schema(
             entry["purpose"] = desc
         hotspot_list.append(entry)
     
+    # Get enrichment summaries for hotspot files
+    hotspot_paths = [h["file"] for h in hotspot_list]
+    enrichment_summaries = _get_enrichment_summaries(db, hotspot_paths) if include_descriptions else {}
+    db.close()  # Done with database
+    
+    # Attach enrichment summaries to hotspots (prefer over file_descriptions)
+    for hs in hotspot_list:
+        if hs["file"] in enrichment_summaries and not hs.get("purpose"):
+            hs["purpose"] = enrichment_summaries[hs["file"]]
+    
+    # Get recent git activity
+    recent_activity = _get_recent_activity(repo_root)
+    
+    # Get structural patterns
+    patterns = _get_patterns(graph)
+    
     return {
         "name": repo_root.name,
         "stats": {
@@ -249,6 +374,8 @@ def generate_schema(
         "entry_points": entry_points,
         "modules": module_info,
         "hotspots": hotspot_list,
+        "recent_activity": recent_activity,
+        "patterns": patterns,
     }
 
 
@@ -297,6 +424,34 @@ def _print_schema(schema: dict, terse: bool = False) -> None:
             console.print(f"  [yellow]{file_path}[/yellow] ({edges} edges)")
             if not terse and purpose:
                 console.print(f"    [dim]{purpose}[/dim]")
+    
+    # Recent activity (new section)
+    if not terse and schema.get("recent_activity"):
+        activity = schema["recent_activity"]
+        if activity.get("commits"):
+            console.print()
+            console.print("[bold]recent_commits:[/bold]")
+            for c in activity["commits"][:5]:
+                console.print(f"  [magenta]{c['hash']}[/magenta] {c['message']}")
+        
+        if activity.get("active_files"):
+            console.print()
+            console.print("[bold]active_files:[/bold] [dim](modified in last 7 days)[/dim]")
+            for f in activity["active_files"][:8]:
+                console.print(f"  [green]{f}[/green]")
+    
+    # Patterns (new section)
+    if not terse and schema.get("patterns"):
+        patterns = schema["patterns"]
+        if patterns.get("kinds"):
+            console.print()
+            kinds_str = ", ".join(f"{k}: {v}" for k, v in sorted(patterns["kinds"].items(), key=lambda x: -x[1])[:5])
+            console.print(f"[bold]patterns:[/bold] {kinds_str}")
+        
+        if patterns.get("top_symbols"):
+            console.print("[bold]top_symbols:[/bold] [dim](most referenced)[/dim]")
+            for sym in patterns["top_symbols"][:5]:
+                console.print(f"  [blue]{sym['name']}[/blue] ({sym['refs']} refs)")
 
 
 @app.command()
