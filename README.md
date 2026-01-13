@@ -137,4 +137,4 @@ We welcome PRs! Please check `CONTRIBUTING.md` before starting.
 
 ---
 
-_Current Release: v0.7.0 "Trust Issues"_
+_Current Release: v0.9.1 "Back From Vacation"_

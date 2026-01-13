@@ -160,16 +160,26 @@ def generate_schema(
     db = Database(db_path)
     stats = db.stats()
 
-    # Check for graph staleness
+    # Check for graph staleness and auto-rebuild if needed
+    # Uses JSON graph mtime vs index DB mtime (simpler, more reliable)
     try:
-        from llmc.rag.graph_db import GraphDatabase
-        graph_db_path = repo_root / ".llmc" / "rag_graph.db"
-        if graph_db_path.exists():
-            with GraphDatabase(graph_db_path) as graph_db:
-                if graph_db.is_stale(db):
-                    console.print("[yellow]Warning: Graph is stale. Run 'llmc-cli service restart' to update.[/yellow]")
-    except Exception:
-        pass
+        graph_json_path = repo_root / ".llmc" / "rag_graph.json"
+        needs_rebuild = not graph_json_path.exists()
+        
+        if graph_json_path.exists():
+            # Compare graph file mtime to latest index file mtime
+            graph_mtime = graph_json_path.stat().st_mtime
+            index_max_mtime = db.conn.execute("SELECT MAX(mtime) FROM files").fetchone()[0] or 0
+            if graph_mtime < index_max_mtime:
+                needs_rebuild = True
+        
+        if needs_rebuild:
+            console.print("[yellow]Graph is stale or missing. Rebuilding...[/yellow]")
+            from llmc.rag_nav.tool_handlers import build_graph_for_repo
+            build_graph_for_repo(repo_root)
+            console.print("[green]✓[/green] Graph rebuilt.\n")
+    except Exception as e:
+        console.print(f"[dim]Graph rebuild skipped: {e}[/dim]")
 
     file_descriptions = _get_file_descriptions(db) if include_descriptions else {}
     
@@ -449,12 +459,12 @@ def graph(
 
 def main():
     """Entry point."""
-    # Handle bare invocation - default to graph (pure call graph)
+    # Handle bare invocation - default to schema (pure call graph)
     if len(sys.argv) == 1:
-        sys.argv.append("graph")
+        sys.argv.append("schema")
     elif len(sys.argv) > 1 and sys.argv[1].startswith("-"):
-        # Flags but no subcommand - assume graph
-        sys.argv.insert(1, "graph")
+        # Flags but no subcommand - assume schema
+        sys.argv.insert(1, "schema")
     app()
 
 

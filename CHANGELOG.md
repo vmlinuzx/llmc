@@ -2,6 +2,33 @@
 
 All notable changes to LLMC will be documented in this file.
 
+## [0.9.1] - "Back From Vacation" 🏖️ - 2026-01-13
+
+### Purple Flavor: **Back From Vacation**
+
+Coming back to your own codebase after a long break is humbling. "What does this do?" "Why did I write it this way?" This release fixes the bugs that were waiting patiently for my return.
+
+### Fixed
+
+- **SQLite Graph FK Constraint Failure:**
+  - `build_from_json()` failed with "FOREIGN KEY constraint failed" because edges referenced external/stdlib symbols (like `json.dumps`, `print`) that had no corresponding entity nodes
+  - **Fix:** Generate stub nodes for all missing edge endpoints with `kind="external"`, `path="<external>"` before inserting edges
+  - Graph now preserves all 23,000+ edges instead of failing silently
+  - 12,997 external stub nodes created for stdlib/external references
+
+- **`mcschema` Usability Improvements:**
+  - Default command changed from `graph` (minimal) to `schema` (full overview with entry points, modules, hotspots)
+  - Auto-rebuilds stale graph instead of just warning "Graph is stale"
+  - Uses JSON graph mtime for staleness detection (simpler and more reliable than broken SQLite metadata)
+
+### Technical Details
+
+- `llmc/rag/graph_db.py`: Added stub node generation loop before `bulk_insert_edges()`
+- `llmc/mcschema.py`: Swapped default subcommand, added auto-rebuild logic with JSON mtime comparison
+- All existing graph tests still pass
+
+---
+
 ## [0.9.0] - "Lowered Expectations" 🎄 - 2025-12-24
 
 ### Purple Flavor: **Lowered Expectations**

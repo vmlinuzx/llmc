@@ -567,6 +567,40 @@ def build_from_json(repo_root: Path) -> GraphDatabase:
         
         edges.append(Edge(source=src, target=dst, type=etype))
     
+    # Generate stub nodes for external references (fixes FK constraint failures)
+    # Edges may reference stdlib/external symbols that don't have entity nodes
+    node_ids = {n.id for n in nodes}
+    missing_ids = set()
+    for e in edges:
+        if e.source not in node_ids:
+            missing_ids.add(e.source)
+        if e.target not in node_ids:
+            missing_ids.add(e.target)
+    
+    if missing_ids:
+        logger.info(
+            "Creating %d stub nodes for external references",
+            len(missing_ids)
+        )
+        for mid in missing_ids:
+            # Extract leaf name from qualified ID like "sym:mod.func" or "sym:mod:Class.method"
+            leaf = mid
+            if ":" in leaf:
+                leaf = leaf.split(":")[-1]
+            if "." in leaf:
+                leaf = leaf.split(".")[-1]
+            
+            nodes.append(Node(
+                id=mid,
+                name=leaf,
+                path="<external>",
+                kind="external",
+                start_line=None,
+                end_line=None,
+                span_hash=None,
+                metadata={"stub": True, "original_id": mid},
+            ))
+    
     # Remove existing database and create fresh
     if db_path.exists():
         db_path.unlink()
