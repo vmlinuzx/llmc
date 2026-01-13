@@ -1634,6 +1634,7 @@ class LlmcMcpServer:
             command=command,
             cwd=cwd,
             blacklist=self.config.tools.run_cmd_blacklist,
+            allowlist=self.config.tools.run_cmd_allowlist,
             timeout=min(timeout, self.config.tools.exec_timeout),
         )
 

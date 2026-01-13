@@ -4,13 +4,10 @@ from llmc_mcp.config import load_config
 from llmc_mcp.tools.cmd import run_cmd
 
 
-@pytest.mark.skip(reason="Known security gap - allowlist is not yet implemented")
 def test_cmd_allowlist_config_mismatch(tmp_path):
     """
-    Test that the 'run_cmd_allowlist' in llmc.toml is currently ignored,
-    leading to a security fail-open state where commands not in the allowlist are executed.
-
-    See: tests/gap/SDDs/SDD-Security-CmdAllowlist.md
+    Test that the 'run_cmd_allowlist' in llmc.toml is correctly enforced,
+    preventing commands not in the allowlist from executing.
     """
 
     # 1. Create a temporary llmc.toml with an explicit allowlist
@@ -31,31 +28,44 @@ run_cmd_allowlist = ["ls", "echo"]
         config.tools.run_cmd_blacklist == []
     ), "Blacklist should be empty as it wasn't specified"
 
-    # Check that the config object doesn't even have the allowlist field (confirming the gap)
-    assert not hasattr(
+    # Check that the config object has the allowlist field
+    assert hasattr(
         config.tools, "run_cmd_allowlist"
     ), "Config model is missing 'run_cmd_allowlist'"
+    assert config.tools.run_cmd_allowlist == ["ls", "echo"]
 
     # 4. Execution Test
     # We try to run a command that is NOT in the allowlist (e.g., 'whoami').
     # Desired behavior: It should be blocked.
-    # Current behavior (Bug): It runs because the blacklist is empty and allowlist is ignored.
 
     # Mock isolation to allow command execution logic to proceed
     with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
         mock_iso.return_value = None
 
         # Execute 'whoami' (not in allowlist)
-        # We pass the blacklist from the loaded config
+        # We pass the allowlist from the loaded config
         result = run_cmd(
-            "whoami", cwd=tmp_path, blacklist=config.tools.run_cmd_blacklist
+            "whoami",
+            cwd=tmp_path,
+            blacklist=config.tools.run_cmd_blacklist,
+            allowlist=config.tools.run_cmd_allowlist
         )
 
         # The Test: Assert that the security control worked (i.e., blocked the command).
-        # THIS ASSERTION IS EXPECTED TO FAIL until the bug is fixed.
         assert (
             result.success is False
         ), f"Security Breach: 'whoami' was allowed despite not being in allowlist! Stdout: {result.stdout.strip()}"
         assert (
-            result.error and "Security" in result.error
-        ), f"Error should be security related, got: {result.error}"
+            result.error and "not in allowlist" in result.error
+        ), f"Error should mention allowlist, got: {result.error}"
+
+        # 5. Success Test
+        # We try to run a command that IS in the allowlist (e.g., 'echo')
+        result_allowed = run_cmd(
+            "echo hello",
+            cwd=tmp_path,
+            blacklist=config.tools.run_cmd_blacklist,
+            allowlist=config.tools.run_cmd_allowlist
+        )
+        assert result_allowed.success is True
+        assert result_allowed.stdout.strip() == "hello"
