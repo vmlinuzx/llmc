@@ -44,9 +44,10 @@ DEFAULT_BLACKLIST: list[str] = []
 def validate_command(
     cmd_parts: list[str],
     blacklist: list[str] | None = None,
+    allowlist: list[str] | None = None,
 ) -> str:
     """
-    Validate command against blacklist.
+    Validate command against blacklist and allowlist.
 
     The blacklist is just asking nicely - not real security.
     Real security is:
@@ -58,12 +59,13 @@ def validate_command(
     Args:
         cmd_parts: Parsed command parts (first element is binary)
         blacklist: Soft block list (empty by default)
+        allowlist: Explicit allow list (if set, binary MUST be in it)
 
     Returns:
         The binary name if allowed
 
     Raises:
-        CommandSecurityError: If binary is blacklisted
+        CommandSecurityError: If binary is blacklisted or not in allowlist
     """
     if not cmd_parts:
         raise CommandSecurityError("Empty command")
@@ -76,6 +78,11 @@ def validate_command(
             f"Binary '{binary_name}' is blacklisted. Blocked: {blacklist}"
         )
 
+    if allowlist is not None and binary_name not in allowlist:
+        raise CommandSecurityError(
+            f"Binary '{binary_name}' is not in allowlist. Allowed: {allowlist}"
+        )
+
     return binary_name
 
 
@@ -85,6 +92,7 @@ def run_cmd(
     blacklist: list[str] | None = None,
     timeout: int = 30,
     env: dict[str, str] | None = None,
+    allowlist: list[str] | None = None,
 ) -> ExecResult:
     """
     Execute a shell command with security constraints.
@@ -142,7 +150,7 @@ def run_cmd(
 
     # Validate command (blacklist is soft nudge only)
     try:
-        binary_name = validate_command(cmd_parts, blacklist=blacklist)
+        binary_name = validate_command(cmd_parts, blacklist=blacklist, allowlist=allowlist)
         logger.debug(f"Running command: {binary_name}")
     except CommandSecurityError as e:
         return ExecResult(
