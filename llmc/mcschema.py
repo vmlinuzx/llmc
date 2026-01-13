@@ -933,15 +933,20 @@ def graph(
 
 
 def _get_file_manifest(db: Database, include_tests: bool = False) -> dict[str, list[dict]]:
-    """Get all files grouped by directory with descriptions.
+    """Get all CODE files grouped by directory with descriptions.
+    
+    Filters to actual code files (.py, .ts, .js, etc.) - excludes docs (.md).
     
     Returns:
         Dict mapping directory path to list of {file, description} dicts
     """
-    # Query all file descriptions
+    # Query file descriptions joined with files to get language
+    # Only include code files, not markdown/docs
     query = """
         SELECT fd.file_path, fd.description
         FROM file_descriptions fd
+        JOIN files f ON fd.file_path = f.path
+        WHERE f.lang IN ('python', 'typescript', 'javascript', 'tsx', 'jsx', 'go', 'rust', 'java', 'c', 'cpp', 'bash', 'shell')
         ORDER BY fd.file_path
     """
     rows = db.conn.execute(query).fetchall()
