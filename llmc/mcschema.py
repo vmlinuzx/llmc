@@ -10,11 +10,15 @@ Usage:
     mcschema --json           # Machine-readable
     mcschema --hotspots 30    # More hotspots
     mcschema --terse          # Paths only, no descriptions
+    mcschema --rich           # Include architecture signals + centrality
 
 Output includes:
 - Entry points (from pyproject.toml)
 - Module breakdown with purposes
 - Hotspot files (most connected) with descriptions
+- Language distribution (--rich)
+- Architecture signals (--rich)
+- Central symbols via PageRank (--rich)
 """
 
 from __future__ import annotations
@@ -171,6 +175,236 @@ def _get_patterns(graph: "SchemaGraph") -> dict:
     return patterns
 
 
+# =============================================================================
+# NEW: Rich context helpers for LLM understanding
+# =============================================================================
+
+
+def _get_language_distribution(db: "Database") -> dict[str, int]:
+    """Get file count by language - tells LLM the tech stack."""
+    try:
+        rows = db.conn.execute(
+            "SELECT lang, COUNT(*) as cnt FROM files GROUP BY lang ORDER BY cnt DESC"
+        ).fetchall()
+        return {row[0]: row[1] for row in rows}
+    except Exception:
+        return {}
+
+
+def _get_architecture_signals(graph: "SchemaGraph") -> dict:
+    """Extract architecture signals from graph structure.
+    
+    Helps LLM understand:
+    - Composition vs inheritance style
+    - Coupling level (avg connectivity)
+    - Relation type distribution
+    """
+    if not graph:
+        return {}
+    
+    signals = {}
+    
+    # Relation type distribution
+    relation_types: dict[str, int] = {}
+    for rel in graph.relations:
+        edge = rel.edge.lower()
+        relation_types[edge] = relation_types.get(edge, 0) + 1
+    signals["relation_types"] = relation_types
+    
+    # Calculate average file connectivity
+    file_edges: dict[str, int] = defaultdict(int)
+    for entity in graph.entities:
+        if entity.file_path:
+            file_edges[entity.file_path] = 0  # Initialize
+    
+    for rel in graph.relations:
+        # Count edges per file by finding which files the src/dst belong to
+        for entity in graph.entities:
+            if entity.id in (rel.src, rel.dst) and entity.file_path:
+                file_edges[entity.file_path] += 1
+    
+    if file_edges:
+        total_edges = sum(file_edges.values())
+        avg_connectivity = total_edges / len(file_edges)
+        signals["avg_file_connectivity"] = round(avg_connectivity, 1)
+        signals["max_file_connectivity"] = max(file_edges.values())
+    
+    # Inheritance ratio: extends / calls
+    # High = OOP heavy, Low = composition/functional
+    extends_count = relation_types.get("extends", 0)
+    calls_count = relation_types.get("calls", 0)
+    if calls_count > 0:
+        ratio = extends_count / calls_count
+        if ratio > 0.1:
+            signals["style_hint"] = "inheritance-heavy (OOP)"
+        elif ratio > 0.01:
+            signals["style_hint"] = "mixed (some inheritance)"
+        else:
+            signals["style_hint"] = "composition/functional"
+    
+    return signals
+
+
+def _get_code_structure(graph: "SchemaGraph") -> dict:
+    """Get code structure breakdown with ratios.
+    
+    Helps LLM understand:
+    - OOP vs functional style
+    - Codebase complexity
+    """
+    if not graph:
+        return {}
+    
+    kinds: dict[str, int] = {}
+    for entity in graph.entities:
+        kind = getattr(entity, "kind", None) or "unknown"
+        kinds[kind] = kinds.get(kind, 0) + 1
+    
+    structure = {"breakdown": kinds}
+    
+    # Calculate style ratio
+    functions = kinds.get("function", 0)
+    methods = kinds.get("method", 0)
+    classes = kinds.get("class", 0)
+    
+    if classes > 0:
+        # High ratio = more functional, low ratio = more OOP
+        structure["functions_per_class"] = round((functions + methods) / classes, 1)
+    
+    if functions + methods > 0:
+        # Method-heavy = OOP style, function-heavy = functional style
+        method_ratio = methods / (functions + methods)
+        structure["method_ratio"] = round(method_ratio, 2)
+        if method_ratio > 0.7:
+            structure["paradigm"] = "OOP-dominant"
+        elif method_ratio > 0.4:
+            structure["paradigm"] = "mixed"
+        else:
+            structure["paradigm"] = "functional-dominant"
+    
+    return structure
+
+
+def _get_central_symbols(repo_root: Path, top_k: int = 10) -> list[dict]:
+    """Get most important symbols using PageRank centrality.
+    
+    These are the "load-bearing" symbols - touch with care.
+    Filters out test files to focus on production code.
+    """
+    try:
+        from llmc.rag.graph_nx import load_graph_nx
+        import networkx as nx
+        
+        G = load_graph_nx(repo_root)
+        
+        # PageRank for importance
+        scores = nx.pagerank(G, alpha=0.85)
+        
+        # Sort and get top k
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        
+        results = []
+        seen_files = set()  # Limit to one symbol per file for diversity
+        
+        for node_id, score in sorted_scores:
+            # Get node metadata
+            node_data = dict(G.nodes.get(node_id, {}))
+            
+            # Skip external/stdlib symbols (no file_path)
+            file_path = node_data.get("file_path", "")
+            if not file_path:
+                continue
+            
+            # Skip test files - we want production code centrality
+            if "test" in file_path.lower() or file_path.startswith("tests/"):
+                continue
+            
+            # Diversify: one symbol per file
+            if file_path in seen_files:
+                continue
+            seen_files.add(file_path)
+            
+            # Clean up the symbol name
+            name = node_id
+            if name.startswith("sym:"):
+                name = name[4:]
+            elif name.startswith("type:"):
+                name = name[5:]
+            
+            results.append({
+                "symbol": name,
+                "score": round(score, 6),
+                "file": file_path,
+            })
+            
+            if len(results) >= top_k:
+                break
+        
+        return results
+    except Exception:
+        return []
+
+
+def _get_external_dependencies(graph: "SchemaGraph", top_k: int = 10) -> list[dict]:
+    """Identify most-used external symbols (not defined in repo).
+    
+    Tells LLM which stdlib/library APIs are heavily used.
+    Filters to focus on production code patterns.
+    """
+    if not graph:
+        return []
+    
+    # Build set of locally defined symbols
+    local_symbols = set()
+    for entity in graph.entities:
+        local_symbols.add(entity.id)
+    
+    # Build mapping of entity_id -> file_path for filtering
+    entity_files: dict[str, str] = {}
+    for entity in graph.entities:
+        if entity.file_path:
+            entity_files[entity.id] = entity.file_path
+    
+    # Count references to external symbols (excluding test files)
+    external_refs: dict[str, int] = {}
+    for rel in graph.relations:
+        # Skip if source is from a test file
+        src_file = entity_files.get(rel.src, "")
+        if "test" in src_file.lower():
+            continue
+        
+        for sym_id in [rel.dst]:  # Only count destinations as external deps
+            if sym_id not in local_symbols:
+                # Extract short name
+                name = sym_id
+                if name.startswith("sym:"):
+                    name = name[4:]
+                
+                # Skip test-prefixed symbols
+                if name.startswith("test_"):
+                    continue
+                
+                # Get the meaningful part (module.symbol format)
+                parts = name.split(".")
+                if len(parts) >= 2:
+                    # Keep last two parts for context (e.g., "json.loads", "Path.exists")
+                    name = ".".join(parts[-2:])
+                
+                # Skip common builtins that aren't informative
+                short = parts[-1] if parts else name
+                if short in ("str", "int", "list", "dict", "len", "print", "None", "True", "False", "get", "set", "open"):
+                    continue
+                
+                external_refs[name] = external_refs.get(name, 0) + 1
+    
+    # Sort by frequency
+    sorted_refs = sorted(external_refs.items(), key=lambda x: -x[1])[:top_k]
+    return [{"symbol": name, "refs": count} for name, count in sorted_refs]
+
+
+# =============================================================================
+# End of new helpers
+# =============================================================================
 
 
 def _detect_entry_points(repo_root: Path) -> list[str]:
@@ -259,8 +493,16 @@ def generate_schema(
     repo_root: Path,
     max_hotspots: int = 20,
     include_descriptions: bool = True,
+    include_rich: bool = False,
 ) -> dict:
-    """Generate compact codebase schema from RAG data."""
+    """Generate compact codebase schema from RAG data.
+    
+    Args:
+        repo_root: Repository root path
+        max_hotspots: Maximum hotspot files to include
+        include_descriptions: Include file/module descriptions
+        include_rich: Include rich context (languages, architecture, centrality)
+    """
     
     # Load data sources
     db_path = index_path_for_read(repo_root)
@@ -292,6 +534,9 @@ def generate_schema(
         console.print(f"[dim]Graph rebuild skipped: {e}[/dim]")
 
     file_descriptions = _get_file_descriptions(db) if include_descriptions else {}
+    
+    # Get language distribution (for rich mode)
+    languages = _get_language_distribution(db) if include_rich else {}
     
     # Get all file paths (keep db open for enrichment query later)
     all_files = [row[0] for row in db.conn.execute("SELECT path FROM files").fetchall()]
@@ -363,7 +608,8 @@ def generate_schema(
     # Get structural patterns
     patterns = _get_patterns(graph)
     
-    return {
+    # Build result
+    result = {
         "name": repo_root.name,
         "stats": {
             "files": stats["files"],
@@ -377,9 +623,19 @@ def generate_schema(
         "recent_activity": recent_activity,
         "patterns": patterns,
     }
+    
+    # Add rich context if requested
+    if include_rich:
+        result["languages"] = languages
+        result["architecture"] = _get_architecture_signals(graph)
+        result["code_structure"] = _get_code_structure(graph)
+        result["central_symbols"] = _get_central_symbols(repo_root, top_k=10)
+        result["external_deps"] = _get_external_dependencies(graph, top_k=10)
+    
+    return result
 
 
-def _print_schema(schema: dict, terse: bool = False) -> None:
+def _print_schema(schema: dict, terse: bool = False, rich: bool = False) -> None:
     """Pretty-print schema to console."""
     name = schema["name"]
     stats = schema["stats"]
@@ -390,11 +646,44 @@ def _print_schema(schema: dict, terse: bool = False) -> None:
         f"{stats['entities']} entities, {stats['edges']} edges[/dim]\n"
     )
     
+    # Languages (rich mode)
+    if rich and schema.get("languages"):
+        langs = schema["languages"]
+        lang_str = ", ".join(f"{k}: {v}" for k, v in list(langs.items())[:5])
+        console.print(f"[bold]languages:[/bold] {lang_str}")
+        console.print()
+    
     # Entry points
     if schema["entry_points"]:
         console.print("[bold]entry_points:[/bold]")
         for ep in schema["entry_points"]:
             console.print(f"  - {ep}")
+        console.print()
+    
+    # Architecture signals (rich mode)
+    if rich and schema.get("architecture"):
+        arch = schema["architecture"]
+        console.print("[bold]architecture:[/bold]")
+        if arch.get("relation_types"):
+            rel_str = ", ".join(f"{k}: {v}" for k, v in arch["relation_types"].items())
+            console.print(f"  relations: {rel_str}")
+        if arch.get("avg_file_connectivity"):
+            console.print(f"  avg_connectivity: {arch['avg_file_connectivity']} edges/file")
+        if arch.get("style_hint"):
+            console.print(f"  style: {arch['style_hint']}")
+        console.print()
+    
+    # Code structure (rich mode)
+    if rich and schema.get("code_structure"):
+        cs = schema["code_structure"]
+        console.print("[bold]code_structure:[/bold]")
+        if cs.get("breakdown"):
+            breakdown_str = ", ".join(f"{k}: {v}" for k, v in cs["breakdown"].items())
+            console.print(f"  {breakdown_str}")
+        if cs.get("paradigm"):
+            console.print(f"  paradigm: {cs['paradigm']}")
+        if cs.get("functions_per_class"):
+            console.print(f"  functions_per_class: {cs['functions_per_class']}")
         console.print()
     
     # Modules (top 10 by file count)
@@ -425,6 +714,28 @@ def _print_schema(schema: dict, terse: bool = False) -> None:
             if not terse and purpose:
                 console.print(f"    [dim]{purpose}[/dim]")
     
+    # Central symbols (rich mode) - THE LOAD-BEARING CODE
+    if rich and schema.get("central_symbols"):
+        console.print()
+        console.print("[bold]central_symbols:[/bold] [dim](load-bearing, touch with care)[/dim]")
+        for sym in schema["central_symbols"][:10]:
+            score = sym.get("score", 0)
+            symbol = sym.get("symbol", "")
+            file_path = sym.get("file", "")
+            # Truncate long symbols
+            if len(symbol) > 50:
+                symbol = symbol[:47] + "..."
+            console.print(f"  [red]{symbol}[/red] [dim]({file_path})[/dim]")
+    
+    # External dependencies (rich mode)
+    if rich and schema.get("external_deps"):
+        console.print()
+        console.print("[bold]external_deps:[/bold] [dim](stdlib/library APIs used)[/dim]")
+        for dep in schema["external_deps"][:8]:
+            symbol = dep.get("symbol", "")
+            refs = dep.get("refs", 0)
+            console.print(f"  [magenta]{symbol}[/magenta] ({refs} refs)")
+    
     # Recent activity (new section)
     if not terse and schema.get("recent_activity"):
         activity = schema["recent_activity"]
@@ -440,8 +751,8 @@ def _print_schema(schema: dict, terse: bool = False) -> None:
             for f in activity["active_files"][:8]:
                 console.print(f"  [green]{f}[/green]")
     
-    # Patterns (new section)
-    if not terse and schema.get("patterns"):
+    # Patterns (existing section - keep for backward compat but de-emphasize in rich mode)
+    if not terse and not rich and schema.get("patterns"):
         patterns = schema["patterns"]
         if patterns.get("kinds"):
             console.print()
@@ -459,6 +770,7 @@ def schema(
     json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
     hotspots: int = typer.Option(20, "--hotspots", "-n", help="Max hotspot files to show"),
     terse: bool = typer.Option(False, "--terse", "-t", help="Compact output, no descriptions"),
+    rich: bool = typer.Option(False, "--rich", "-r", help="Include rich context (languages, architecture, centrality)"),
 ):
     """
     Generate a compact codebase schema (original format).
@@ -470,6 +782,7 @@ def schema(
         mcschema schema             # Default output
         mcschema schema --json      # Machine-readable
         mcschema schema --hotspots 30
+        mcschema schema --rich      # Full context for LLMs
     """
     try:
         repo_root = find_repo_root()
@@ -483,6 +796,7 @@ def schema(
             repo_root,
             max_hotspots=hotspots,
             include_descriptions=not terse,
+            include_rich=rich,
         )
     except FileNotFoundError as e:
         console.print(f"[red]{e}[/red]")
@@ -494,7 +808,7 @@ def schema(
     if json_output:
         console.print(json.dumps(result, indent=2))
     else:
-        _print_schema(result, terse=terse)
+        _print_schema(result, terse=terse, rich=rich)
 
 
 @app.command()
