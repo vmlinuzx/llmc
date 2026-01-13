@@ -939,3 +939,153 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# =============================================================================
+# Manifest: Complete file listing with descriptions
+# =============================================================================
+
+
+def _get_file_manifest(db: Database, include_tests: bool = False) -> dict[str, list[dict]]:
+    """Get all files grouped by directory with descriptions.
+    
+    Returns:
+        Dict mapping directory path to list of {file, description} dicts
+    """
+    # Query all file descriptions
+    query = """
+        SELECT fd.file_path, fd.description
+        FROM file_descriptions fd
+        ORDER BY fd.file_path
+    """
+    rows = db.conn.execute(query).fetchall()
+    
+    # Group by directory
+    manifest: dict[str, list[dict]] = {}
+    
+    for file_path, description in rows:
+        # Skip tests if not requested
+        if not include_tests and ("test" in file_path.lower() or file_path.startswith("tests/")):
+            continue
+        
+        # Get directory
+        parts = Path(file_path).parts
+        if len(parts) > 1:
+            directory = "/".join(parts[:-1]) + "/"
+        else:
+            directory = "(root)"
+        
+        filename = parts[-1] if parts else file_path
+        
+        if directory not in manifest:
+            manifest[directory] = []
+        
+        # Truncate description to first sentence, max 60 chars
+        if description:
+            desc = description.split(".")[0].strip()
+            if len(desc) > 60:
+                desc = desc[:57] + "..."
+        else:
+            desc = ""
+        
+        manifest[directory].append({
+            "file": filename,
+            "desc": desc,
+        })
+    
+    return manifest
+
+
+def generate_manifest(
+    repo_root: Path,
+    include_tests: bool = False,
+) -> dict:
+    """Generate complete file manifest with descriptions."""
+    
+    db_path = index_path_for_read(repo_root)
+    if not db_path.exists():
+        raise FileNotFoundError("No RAG index found. Run: mcgrep init")
+    
+    db = Database(db_path)
+    
+    try:
+        manifest = _get_file_manifest(db, include_tests=include_tests)
+        
+        # Get language distribution
+        languages = _get_language_distribution(db)
+        
+        # Count files
+        total_files = sum(len(files) for files in manifest.values())
+        
+    finally:
+        db.close()
+    
+    return {
+        "name": repo_root.name,
+        "total_files": total_files,
+        "directories": len(manifest),
+        "languages": languages,
+        "manifest": manifest,
+    }
+
+
+def _print_manifest(data: dict) -> None:
+    """Pretty-print file manifest to console."""
+    
+    console.print(f"[bold cyan]# {data['name']}[/bold cyan] file manifest")
+    console.print(f"[dim]{data['total_files']} files in {data['directories']} directories[/dim]")
+    
+    if data.get("languages"):
+        lang_str = ", ".join(f"{k}: {v}" for k, v in list(data["languages"].items())[:5])
+        console.print(f"[dim]languages: {lang_str}[/dim]\n")
+    
+    # Sort directories for consistent output
+    for directory in sorted(data["manifest"].keys()):
+        files = data["manifest"][directory]
+        console.print(f"[bold yellow]{directory}[/bold yellow]")
+        
+        for f in files:
+            filename = f["file"]
+            desc = f.get("desc", "")
+            if desc:
+                console.print(f"  [cyan]{filename}[/cyan] - [dim]{desc}[/dim]")
+            else:
+                console.print(f"  [cyan]{filename}[/cyan]")
+        console.print()
+
+
+@app.command()
+def manifest(
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output as JSON"),
+    include_tests: bool = typer.Option(False, "--tests", "-t", help="Include test files"),
+):
+    """
+    Complete file manifest with descriptions - the full codebase map.
+    
+    Lists every code file with its purpose, grouped by directory.
+    Ideal for giving LLMs complete codebase understanding on startup.
+    
+    Examples:
+        mcschema manifest              # Production files only
+        mcschema manifest --tests      # Include test files
+        mcschema manifest --json       # Machine-readable
+    """
+    try:
+        repo_root = find_repo_root()
+    except Exception:
+        console.print("[red]Not in an LLMC-indexed repository.[/red]")
+        raise typer.Exit(1)
+    
+    try:
+        data = generate_manifest(repo_root, include_tests=include_tests)
+    except FileNotFoundError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[red]Error generating manifest:[/red] {e}")
+        raise typer.Exit(1)
+    
+    if json_output:
+        console.print(json.dumps(data, indent=2))
+    else:
+        _print_manifest(data)

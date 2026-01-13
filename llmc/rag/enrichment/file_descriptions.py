@@ -13,13 +13,32 @@ Staleness tracking via input_hash prevents unnecessary recomputation.
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 from typing import Any
 
 from llmc.rag.database import Database
 
 # Algorithm version - bump this to force regeneration of all descriptions
-ALGO_VERSION = "v1.0"
+ALGO_VERSION = "v1.1"
+
+def _extract_first_sentence(text: str) -> str:
+    """Extract first sentence, handling file extensions like .py, .toml, .git.
+    
+    Uses '. [A-Z]' pattern to find sentence boundaries, avoiding splits
+    on file extensions which are followed by lowercase or space.
+    """
+    if not text:
+        return ""
+    
+    # Pattern: ". " followed by capital letter indicates new sentence
+    match = re.search(r'\.\s+[A-Z]', text)
+    if match:
+        return text[:match.start() + 1].strip()
+    
+    # No sentence break found, return whole text
+    return text.strip()
+
 
 
 def compute_input_hash(file_hash: str, span_hashes: list[str], algo_version: str = ALGO_VERSION) -> str:
@@ -117,7 +136,7 @@ def generate_cheap_description(db: Database, file_path: str, max_words: int = 50
             continue
             
         # Take first sentence only
-        first_sentence = summary.split('.')[0].strip()
+        first_sentence = _extract_first_sentence(summary)
         if not first_sentence:
             continue
             
@@ -139,7 +158,7 @@ def generate_cheap_description(db: Database, file_path: str, max_words: int = 50
         return None, []
     
     # Join with periods
-    description = ". ".join(summaries)
+    description = ". ".join(s.rstrip(".") for s in summaries)
     if not description.endswith("."):
         description += "."
         
