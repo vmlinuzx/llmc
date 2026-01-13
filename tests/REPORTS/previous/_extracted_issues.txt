@@ -1,6 +1,0 @@
-[P1] [rem_security_2025-12-23.md] ### VULN-001: Outdated and Vulnerable Dependencies
-[P1] [rem_security_2025-12-23.md] - **Severity:** High
-[P1] [rem_security_2025-12-23.md] ### VULN-002: Potential SQL Injection via F-String Formatting
-[P1] [rem_security_2025-12-23.md] - **Severity:** High
-[P1] [rem_security_2025-12-23.md] ### VULN-003: Server-Side Request Forgery (SSRF) / Local File Inclusion (LFI)
-[P1] [rem_security_2025-12-23.md] ### VULN-004: Supply Chain Risk from Unpinned Hugging Face Downloads

@@ -1,6 +1,0 @@
-.............ss......................................................... [ 58%]
-....................................................                     [100%]
-=========================== short test summary info ============================
-SKIPPED [1] tests/rag/ci/test_llmc_docs_validation.py:79: roadmap.md not found
-SKIPPED [1] tests/rag/ci/test_llmc_docs_validation.py:112: roadmap.md not found
-122 passed, 2 skipped in 6.22s

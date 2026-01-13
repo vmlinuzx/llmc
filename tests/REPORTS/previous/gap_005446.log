@@ -1,10 +1,13 @@
 [0;35m
 ╔══════════════════════════════════════════════════════════════╗
-║ Rem - Documentation Demon                                    ║
+║ Rem - Gap Analysis Demon                                     ║
 ╚══════════════════════════════════════════════════════════════╝
 [0m
 [0;36mℹ Target: /home/vmlinux/src/llmc[0m
+[0;36mℹ Model: gemini-2.5-pro[0m
+[0;36mℹ Summoning Rem (Gap Analysis Mode)...[0m
+
 YOLO mode is enabled. All tool calls will be automatically approved.
 Loaded cached credentials.
 Loading extension: conductor
-I have completed the documentation analysis and saved the report as requested. My work is done.
+Attempt 1 failed: You have exhausted your capacity on this model. Your quota will reset after 0s.. Retrying after 408.811502ms...
