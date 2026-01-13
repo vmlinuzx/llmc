@@ -6,7 +6,11 @@ from typing import Any
 
 from llmc_agent.format.types import ToolFormat
 from llmc_agent.format.parsers import CompositeParser, OpenAINativeParser, XMLToolParser
-from llmc_agent.format.adapters import OpenAIDefinitionAdapter, OpenAIResultAdapter
+from llmc_agent.format.adapters import (
+    AnthropicResultAdapter,
+    OpenAIDefinitionAdapter,
+    OpenAIResultAdapter,
+)
 
 
 class FormatNegotiator:
@@ -124,6 +128,9 @@ class FormatNegotiator:
         format = format or ToolFormat.OPENAI
         
         if format not in self._result_adapter_cache:
-            self._result_adapter_cache[format] = OpenAIResultAdapter()
+            if format == ToolFormat.ANTHROPIC:
+                self._result_adapter_cache[format] = AnthropicResultAdapter()
+            else:
+                self._result_adapter_cache[format] = OpenAIResultAdapter()
         
         return self._result_adapter_cache[format]
