@@ -396,44 +396,63 @@ provider = "openai"
 
 ### 2.11 Adopt litellm for Provider Abstraction (P1) 🔌
 
-**Status:** 🔴 Not Started  
+**Status:** 🟡 **PHASE 1-3 COMPLETE** (2026-01-13)  
 **Added:** 2025-12-24  
+**HLD:** `DOCS/design/HLD-litellm-migration-FINAL.md`  
 **Source:** Architecture review - stop yak-shaving on provider adapters
 
 **The Problem:**
 - Every LLM provider has slightly different API, auth, error handling
 - Currently writing custom adapters for Ollama, OpenAI, llama.cpp, KoboldCpp
 - Each adapter is a maintenance burden and source of bugs
-- Provider-agnostic routing is on roadmap but painful to implement manually
+- ~1,700 lines of duplicated provider-specific code across 8 files
 
-**The Solution:**
-[litellm](https://github.com/BerriAI/litellm) provides ONE interface to 100+ LLM providers.
+**Approved Architecture (from HLD-FINAL):**
+- `LiteLLMAgentBackend` (async) — implements `Backend` ABC
+- `LiteLLMEnrichmentAdapter` (sync) — implements `BackendAdapter` Protocol  
+- `LiteLLMCore` — shared logic (config, exception mapping, JSON parsing)
+- Feature-flag rollout with instant rollback capability
 
-```python
-from litellm import completion
+**Flagged Decisions (deferred to implementation):**
+1. Add `generate_with_tools()` to Backend ABC? → Recommend YES
+2. Streaming + tool calls test coverage level? → TBD
+3. Health check optimization? → Keep simple for v1
 
-# Same API for everything
-response = completion(model="ollama/qwen3-next-80b", messages=[...])
-response = completion(model="openai/gpt-4", messages=[...])
-response = completion(model="openai/gpt-oss-120b", api_base="http://athena:8080/v1", messages=[...])
-```
+**Migration Phases:**
 
-**What to build:**
-1. Add `litellm` to dependencies
-2. Create `llmc/backends/litellm_backend.py` wrapper
-3. Migrate enrichment pipeline to use litellm
-4. Migrate bx agent to use litellm
-5. Remove custom Ollama/OpenAI adapters
+| Phase | Tasks | Effort | Status |
+|-------|-------|--------|--------|
+| 1 | Foundation: split backends, core logic, tests | 6-8 hours | ✅ Complete |
+| 2 | Feature Flag: wire into Agent + Factory | 3-4 hours | ✅ Complete |
+| 3 | Validation: test all providers, streaming, tools | 4-6 hours | ✅ Complete |
+| 4 | Cutover: flip flag, monitor | 1 hour | 🔴 Not Started |
+| 5 | Cleanup: remove old code, docs | 3-4 hours | 🔴 Not Started |
+| **Total** | | **18-25 hours** | |
+
+**Implementation Progress (2026-01-13):**
+- `llmc/backends/litellm_core.py` — Shared logic (LiteLLMConfig, LiteLLMCore)
+- `llmc/backends/litellm_agent.py` — Async LiteLLMAgentBackend  
+- `llmc/backends/litellm_enrichment.py` — Sync LiteLLMEnrichmentAdapter
+- `llmc_agent/config.py` — Added LiteLLMConfig with feature flag
+- `llmc_agent/agent.py` — Factory integration with `litellm.enabled` check
+- `tests/agent/test_litellm_backends.py` — 29 unit tests
+- `tests/agent/test_litellm_validation.py` — 31 validation tests (Phase 3)
+- **Total: 66 tests passing** covering:
+  - Ollama provider (tool_choice skip, model translation)
+  - OpenAI provider (api_key, api_base, tool_choice=auto)
+  - Streaming (chunks, empty handling, num_retries removal)
+  - Tool calling (parsing, multiple calls, finish_reason)
+  - Enrichment adapter (JSON parsing, circuit breaker, rate limiter)
+  - Exception mapping (RateLimitError, Timeout, AuthenticationError)
 
 **Benefits:**
 - Tool calling normalization across providers
 - Built-in retry/fallback logic
 - Streaming support
-- Less code to maintain
+- ~1,700 lines of provider code removed
 - Community-maintained edge case handling
 
-**Effort:** 8-12 hours | **Difficulty:** 🟢 Easy (just wiring)
-
+**Effort:** 18-25 hours | **Difficulty:** 🟡 Medium
 ---
 
 ### 2.12 Dependency Audit: Remove Dead Weight (P2) 🧹

@@ -20,6 +20,8 @@ from llmc_agent.backends.base import Backend, GenerateRequest
 from llmc_agent.backends.llmc import LLMCBackend, RAGResult
 from llmc_agent.backends.ollama import OllamaBackend
 from llmc_agent.backends.openai_compat import OpenAICompatBackend
+
+# LiteLLM backend import is deferred to avoid import cost when not used
 from llmc_agent.config import Config
 from llmc_agent.format import FormatNegotiator
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
@@ -54,28 +56,57 @@ class Agent:
         self.config = config
 
         # Initialize LLM backend based on provider
-        self.backend: Backend
+        self.backend: Backend = self._create_backend(config)
+        # For compatibility, also expose as .ollama (legacy code paths)
+        self.ollama = self.backend
+
+        # Initialize other components
+        self._init_components(config)
+
+    def _create_backend(self, config: Config) -> Backend:
+        """Create the appropriate backend based on configuration.
+        
+        Priority:
+        1. LiteLLM (if enabled) - unified provider abstraction
+        2. OpenAI-compatible (if provider="openai")
+        3. Ollama (default)
+        """
+        # Check if LiteLLM is enabled (feature flag)
+        if config.litellm.enabled:
+            from llmc.backends import LiteLLMConfig, LiteLLMAgentBackend
+            
+            litellm_config = LiteLLMConfig(
+                model=config.litellm.model,
+                api_key=config.litellm.api_key,
+                api_base=config.litellm.api_base,
+                temperature=config.litellm.temperature,
+                max_tokens=config.litellm.max_tokens,
+                timeout=config.litellm.timeout,
+                num_retries=config.litellm.num_retries,
+            )
+            return LiteLLMAgentBackend(litellm_config)
+        
+        # Legacy backends
         if config.agent.provider == "openai":
             # Use OpenAI-compatible backend (llama-server, vLLM, etc.)
-            self.backend = OpenAICompatBackend(
+            return OpenAICompatBackend(
                 base_url=config.openai.url,
                 api_key=config.openai.api_key,
                 timeout=config.openai.timeout,
                 temperature=config.openai.temperature,
                 model=config.openai.model,
             )
-            # For compatibility, also expose as .ollama (legacy code paths)
-            self.ollama = self.backend
-        else:
-            # Default: Ollama backend
-            self.backend = OllamaBackend(
-                base_url=config.ollama.url,
-                timeout=config.ollama.timeout,
-                temperature=config.ollama.temperature,
-                num_ctx=config.ollama.num_ctx,
-            )
-            self.ollama = self.backend
+        
+        # Default: Ollama backend
+        return OllamaBackend(
+            base_url=config.ollama.url,
+            timeout=config.ollama.timeout,
+            temperature=config.ollama.temperature,
+            num_ctx=config.ollama.num_ctx,
+        )
 
+    def _init_components(self, config: Config) -> None:
+        """Initialize RAG, tools, and format negotiator."""
         self.rag: LLMCBackend | None = None
         if config.rag.enabled:
             self.rag = LLMCBackend()

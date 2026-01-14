@@ -62,6 +62,27 @@ class OpenAIConfig:
 
 
 @dataclass
+class LiteLLMConfig:
+    """LiteLLM backend configuration.
+    
+    LiteLLM provides a unified interface to 100+ LLM providers.
+    Use this for simplified multi-provider support.
+    
+    Model format: "provider/model" (e.g., "ollama_chat/qwen3", "openai/gpt-4o")
+    """
+
+    enabled: bool = False  # Feature flag - set True to use LiteLLM
+    model: str = "ollama_chat/qwen3-next-80b"  # LiteLLM format
+    api_key: str | None = None
+    api_base: str | None = None
+    temperature: float = 0.7
+    max_tokens: int = 4096
+    timeout: float = 120.0
+    num_retries: int = 3
+
+
+
+@dataclass
 class AgentConfig:
     """Agent configuration."""
 
@@ -123,6 +144,7 @@ class Config:
     session: SessionConfig = field(default_factory=SessionConfig)
     ui: UIConfig = field(default_factory=UIConfig)
     tools: ToolsConfig = field(default_factory=ToolsConfig)
+    litellm: LiteLLMConfig = field(default_factory=LiteLLMConfig)
 
     @classmethod
     def load(cls, config_path: str | None = None) -> Config:
@@ -262,6 +284,25 @@ def _merge_config(config: Config, data: dict[str, Any]) -> Config:
         if "result_format" in tools_data:
             config.tools.result_format = tools_data["result_format"]
 
+    if "litellm" in data:
+        litellm_data = data["litellm"]
+        if "enabled" in litellm_data:
+            config.litellm.enabled = litellm_data["enabled"]
+        if "model" in litellm_data:
+            config.litellm.model = litellm_data["model"]
+        if "api_key" in litellm_data:
+            config.litellm.api_key = litellm_data["api_key"]
+        if "api_base" in litellm_data:
+            config.litellm.api_base = litellm_data["api_base"]
+        if "temperature" in litellm_data:
+            config.litellm.temperature = litellm_data["temperature"]
+        if "max_tokens" in litellm_data:
+            config.litellm.max_tokens = litellm_data["max_tokens"]
+        if "timeout" in litellm_data:
+            config.litellm.timeout = litellm_data["timeout"]
+        if "num_retries" in litellm_data:
+            config.litellm.num_retries = litellm_data["num_retries"]
+
     return config
 
 
@@ -286,6 +327,12 @@ def _apply_env_overrides(config: Config) -> Config:
             "enabled",
             lambda x: x.lower() in ("true", "1", "yes"),
         ),
+        "LLMC_LITELLM_ENABLED": (
+            "litellm",
+            "enabled",
+            lambda x: x.lower() in ("true", "1", "yes"),
+        ),
+        "LLMC_LITELLM_MODEL": ("litellm", "model"),
         # Legacy BX_* style (for backwards compat)
         "BX_PROVIDER": ("agent", "provider"),
         "BX_MODEL": ("agent", "model"),

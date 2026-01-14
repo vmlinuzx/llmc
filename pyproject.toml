@@ -15,7 +15,7 @@ dependencies = ["requests", "tomli; python_version<'3.11'", "typer", "rich", "to
 rag = ["setuptools", "tree_sitter", "tree_sitter_languages", "click", "jsonschema", "sentence-transformers", "chromadb", "langchain", "watchdog", "gitpython", "pathspec", "pyyaml", "tqdm", "mcp", "psutil", "humanize", "mistune"]
 tui = ["typer", "rich", "textual"]
 daemon = ["uvicorn", "httpx"]
-agent = ["httpx", "click"]
+agent = ["httpx", "click", "litellm>=1.50.0,<2.0.0"]
 dev = ["pytest", "pytest-cov", "mypy", "types-toml", "types-requests", "ruff"]
 # Document sidecar conversion (PDF, DOCX, etc.)
 sidecar = ["pymupdf>=1.23.0"]
@@ -25,7 +25,7 @@ sidecar-full = ["pymupdf>=1.23.0", "python-docx>=1.0.0", "python-pptx>=0.6.21", 
 # Explicitly declare which top-level packages are part of the install.
 # This avoids setuptools' flat-layout safety check on unrelated dirs
 # like DOCS/, logs/, and legacy/.
-packages = ["llmc_mcp", "llmc", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
+packages = ["llmc_mcp", "llmc", "llmc.backends", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
 
 [project.scripts]
 llmc-cli = "llmc.main:app"
