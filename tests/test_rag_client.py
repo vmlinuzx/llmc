@@ -25,3 +25,30 @@ class TestRAGClient(unittest.TestCase):
         self.assertEqual(args[0], repo_root)
         self.assertEqual(args[1], 'foo')
         self.assertEqual(args[2], 'sideways')
+
+    @patch('llmc.client.tool_rag_search')
+    def test_search_calls_underlying_tool(self, mock_tool_search):
+        # Setup
+        repo_root = Path('/fake/repo')
+        client = RAGClient(repo_root)
+        query = "test query"
+        limit = 10
+        
+        # Action
+        client.search(query, limit=limit)
+        
+        # Assert
+        mock_tool_search.assert_called_once_with(repo_root, query, limit)
+
+    @patch('llmc.client.tool_rag_search')
+    def test_search_handles_no_limit(self, mock_tool_search):
+        # Setup
+        repo_root = Path('/fake/repo')
+        client = RAGClient(repo_root)
+        query = "test query"
+        
+        # Action
+        client.search(query)
+        
+        # Assert
+        mock_tool_search.assert_called_once_with(repo_root, query, None)
