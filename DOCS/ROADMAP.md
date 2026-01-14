@@ -396,7 +396,7 @@ provider = "openai"
 
 ### 2.11 Adopt litellm for Provider Abstraction (P1) 🔌
 
-**Status:** 🟡 **PHASE 1-3 COMPLETE** (2026-01-13)  
+**Status:** 🟢 **PHASE 1-4 COMPLETE** (2026-01-13)  
 **Added:** 2025-12-24  
 **HLD:** `DOCS/design/HLD-litellm-migration-FINAL.md`  
 **Source:** Architecture review - stop yak-shaving on provider adapters
@@ -425,7 +425,7 @@ provider = "openai"
 | 1 | Foundation: split backends, core logic, tests | 6-8 hours | ✅ Complete |
 | 2 | Feature Flag: wire into Agent + Factory | 3-4 hours | ✅ Complete |
 | 3 | Validation: test all providers, streaming, tools | 4-6 hours | ✅ Complete |
-| 4 | Cutover: flip flag, monitor | 1 hour | 🔴 Not Started |
+| 4 | Cutover: flip flag, monitor | 1 hour | ✅ Complete |
 | 5 | Cleanup: remove old code, docs | 3-4 hours | 🔴 Not Started |
 | **Total** | | **18-25 hours** | |
 
@@ -444,6 +444,12 @@ provider = "openai"
   - Tool calling (parsing, multiple calls, finish_reason)
   - Enrichment adapter (JSON parsing, circuit breaker, rate limiter)
   - Exception mapping (RateLimitError, Timeout, AuthenticationError)
+- **Phase 4 Live Validation (2026-01-13):**
+  - Health check: ✓ PASS
+  - Basic generate: ✓ PASS (qwen3-next-80b-tools)
+  - Streaming: ✓ PASS (9 chunks received)
+  - Tool calling: ✓ PASS (search_code tool invoked)
+  - Config: `llmc.toml` [litellm] section added
 
 **Benefits:**
 - Tool calling normalization across providers
