@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from llmc_mcp.transport.auth import APIKeyMiddleware
+from llmc_mcp.transport.rest.app import create_rest_api
 
 try:
     from mcp.server.sse import SseServerTransport
@@ -73,11 +74,20 @@ class MCPHttpServer:
 
     def _create_app(self) -> Starlette:
         """Create the Starlette ASGI application."""
-        routes = [
-            Route("/health", endpoint=self._health, methods=["GET"]),
-            Route("/sse", endpoint=self._handle_sse, methods=["GET"]),
-            Mount("/messages", app=self.sse_transport.handle_post_message),
-        ]
+        routes = []
+
+        if self.config.rest_api.enabled:
+            rest_app = create_rest_api(self.config)
+            routes.append(Mount("/api/v1", app=rest_app))
+            logger.info("REST API mounted at /api/v1")
+
+        routes.extend(
+            [
+                Route("/health", endpoint=self._health, methods=["GET"]),
+                Route("/sse", endpoint=self._handle_sse, methods=["GET"]),
+                Mount("/messages", app=self.sse_transport.handle_post_message),
+            ]
+        )
 
         app = Starlette(
             routes=routes,

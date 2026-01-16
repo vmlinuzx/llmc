@@ -155,6 +155,41 @@ class McpObservabilityConfig:
 
 
 @dataclass
+class RestApiConfig:
+    """REST API transport settings."""
+
+    enabled: bool = True
+    auth_mode: str = "auto"  # "auto" | "token" | "none"
+    rate_limit_rpm: int = 60
+    rate_limit_burst: int = 10
+    trust_proxy: bool = False
+    max_results: int = 100
+
+    def validate(self) -> None:
+        if self.auth_mode not in ("auto", "token", "none"):
+            raise ValueError(f"Invalid auth_mode: {self.auth_mode}")
+        if self.rate_limit_rpm <= 0:
+            raise ValueError("rate_limit_rpm must be positive")
+        if self.max_results <= 0 or self.max_results > 1000:
+            raise ValueError("max_results must be between 1 and 1000")
+
+
+@dataclass
+class WorkspacesConfig:
+    """Workspace mappings for multi-repo support."""
+
+    default: str | None = None
+    repos: dict[str, str] = field(default_factory=dict)
+
+    def validate(self) -> None:
+        if self.default and self.default not in self.repos:
+            raise ValueError(f"Default workspace '{self.default}' not in repos")
+        for name, path in self.repos.items():
+            if not Path(path).is_absolute():
+                raise ValueError(f"Workspace '{name}' path must be absolute: {path}")
+
+
+@dataclass
 class McpConfig:
     """Root MCP configuration."""
 
@@ -174,6 +209,8 @@ class McpConfig:
     )
     hybrid: HybridConfig = field(default_factory=HybridConfig)
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
+    rest_api: RestApiConfig = field(default_factory=RestApiConfig)
+    workspaces: WorkspacesConfig = field(default_factory=WorkspacesConfig)
 
     def validate(self) -> None:
         if self.mode not in ("classic", "hybrid", "code_execution"):
@@ -186,6 +223,8 @@ class McpConfig:
         self.observability.validate()
         self.code_execution.validate()
         self.hybrid.validate()
+        self.rest_api.validate()
+        self.workspaces.validate()
 
 
 def _get_nested(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -386,6 +425,24 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.hybrid.bootstrap_budget_warning = hybrid.get(
             "bootstrap_budget_warning", cfg.hybrid.bootstrap_budget_warning
         )
+
+        # REST API config
+        rest_api = mcp_data.get("rest_api", {})
+        cfg.rest_api.enabled = rest_api.get("enabled", cfg.rest_api.enabled)
+        cfg.rest_api.auth_mode = rest_api.get("auth_mode", cfg.rest_api.auth_mode)
+        cfg.rest_api.rate_limit_rpm = rest_api.get(
+            "rate_limit_rpm", cfg.rest_api.rate_limit_rpm
+        )
+        cfg.rest_api.rate_limit_burst = rest_api.get(
+            "rate_limit_burst", cfg.rest_api.rate_limit_burst
+        )
+        cfg.rest_api.trust_proxy = rest_api.get("trust_proxy", cfg.rest_api.trust_proxy)
+        cfg.rest_api.max_results = rest_api.get("max_results", cfg.rest_api.max_results)
+
+        # Workspaces config
+        workspaces = mcp_data.get("workspaces", {})
+        cfg.workspaces.default = workspaces.get("default", cfg.workspaces.default)
+        cfg.workspaces.repos = workspaces.get("repos", cfg.workspaces.repos)
 
     # Apply ENV overrides (highest precedence)
     cfg = _apply_env_overrides(cfg)
