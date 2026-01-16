@@ -477,7 +477,8 @@ class Database:
         if to_delete:
             placeholders = ",".join("?" * len(to_delete))
             self.conn.execute(
-                f"DELETE FROM spans WHERE span_hash IN ({placeholders})", list(to_delete)
+                f"DELETE FROM spans WHERE span_hash IN ({placeholders})",  # nosec B608
+                list(to_delete)
             )
 
         # Only insert truly new or modified spans
@@ -542,7 +543,7 @@ class Database:
         placeholders = ",".join("?" for _ in valid_span_hashes)
         if not placeholders:
             return
-        query = f"DELETE FROM spans WHERE span_hash NOT IN ({placeholders})"
+        query = f"DELETE FROM spans WHERE span_hash NOT IN ({placeholders})"  # nosec B608
         self.conn.execute(query, list(valid_span_hashes))
 
     def stats(self) -> dict:
@@ -811,7 +812,7 @@ class Database:
         if table_name not in ("embeddings", "emb_code"):
             raise ValueError(f"Invalid table_name: {table_name}")
 
-        cursor = self.conn.execute(
+        cursor = self.conn.execute(  # nosec B608
             f"""
             SELECT
                 spans.span_hash,
