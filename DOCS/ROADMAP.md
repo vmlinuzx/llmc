@@ -10,7 +10,35 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ## 1. Now (P0 / P1)
 
-### 1.0 Case-Insensitive Symbol Resolution (P1) 🔥
+### 1.0 Eliminate Hardcoded Model Defaults (P0) 🚨
+
+**Status:** 🔴 NOT STARTED  
+**Added:** 2026-01-15  
+**Source:** RAG search failure due to wrong model being used; hardcoded `qwen2.5:7b` when config says `qwen3:4b-instruct`
+
+**The Problem:**
+Multiple files have hardcoded model names that override `llmc.toml` configuration:
+- `llmc/rag/service_health.py` — `os.getenv("ENRICH_MODEL", "qwen3:4b-instruct")`
+- `llmc/rag/enrichment/file_descriptions.py` — `model: str = "qwen3:4b-instruct"`
+- `llmc/rag/enrichment_adapters/ollama.py` — docstring example
+
+**Immediate band-aid (2026-01-15):** Updated hardcoded defaults from qwen2.5 to qwen3. But this is wrong — they should read from config.
+
+**Proper fix:**
+1. Create `llmc/rag/config_models.py` with `get_default_enrichment_model(repo_root)` that reads from `llmc.toml`
+2. Replace all hardcoded model strings with calls to this function
+3. Add unit tests to ensure config is respected
+
+**Files to audit:**
+```bash
+grep -r "qwen2.5\|qwen3" llmc/ --include="*.py" | grep -v test | grep -v __pycache__
+```
+
+**Effort:** 2-3 hours | **Difficulty:** 🟢 Easy
+
+---
+
+### 1.0.1 Case-Insensitive Symbol Resolution (P1) 🔥
 
 **Status:** ✅ **COMPLETE** (2025-12-21)  
 **Added:** 2025-12-21  
@@ -396,7 +424,7 @@ provider = "openai"
 
 ### 2.11 Adopt litellm for Provider Abstraction (P1) 🔌
 
-**Status:** 🟢 **PHASE 1-4 COMPLETE** (2026-01-13)  
+**Status:** ✅ **COMPLETE** (2026-01-13)  
 **Added:** 2025-12-24  
 **HLD:** `DOCS/design/HLD-litellm-migration-FINAL.md`  
 **Source:** Architecture review - stop yak-shaving on provider adapters
@@ -426,7 +454,7 @@ provider = "openai"
 | 2 | Feature Flag: wire into Agent + Factory | 3-4 hours | ✅ Complete |
 | 3 | Validation: test all providers, streaming, tools | 4-6 hours | ✅ Complete |
 | 4 | Cutover: flip flag, monitor | 1 hour | ✅ Complete |
-| 5 | Cleanup: remove old code, docs | 3-4 hours | 🔴 Not Started |
+| 5 | Cleanup: remove old code, docs | 3-4 hours | ✅ Complete |
 | **Total** | | **18-25 hours** | |
 
 **Implementation Progress (2026-01-13):**
@@ -450,6 +478,11 @@ provider = "openai"
   - Streaming: ✓ PASS (9 chunks received)
   - Tool calling: ✓ PASS (search_code tool invoked)
   - Config: `llmc.toml` [litellm] section added
+- **Phase 5 Cleanup (2026-01-13):**
+  - LiteLLM enabled by default in config
+  - `create_litellm_backend()` factory added to enrichment_factory.py
+  - Old backends marked deprecated (kept for fallback)
+  - 72 tests passing (66 agent + 6 enrichment)
 
 **Benefits:**
 - Tool calling normalization across providers
