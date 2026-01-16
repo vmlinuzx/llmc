@@ -12,27 +12,26 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ### 1.0 Eliminate Hardcoded Model Defaults (P0) 🚨
 
-**Status:** 🔴 NOT STARTED  
+**Status:** ✅ **COMPLETE** (2026-01-16)  
 **Added:** 2026-01-15  
 **Source:** RAG search failure due to wrong model being used; hardcoded `qwen2.5:7b` when config says `qwen3:4b-instruct`
 
 **The Problem:**
-Multiple files have hardcoded model names that override `llmc.toml` configuration:
-- `llmc/rag/service_health.py` — `os.getenv("ENRICH_MODEL", "qwen3:4b-instruct")`
-- `llmc/rag/enrichment/file_descriptions.py` — `model: str = "qwen3:4b-instruct"`
-- `llmc/rag/enrichment_adapters/ollama.py` — docstring example
+Multiple files had hardcoded model names that override `llmc.toml` configuration.
 
-**Immediate band-aid (2026-01-15):** Updated hardcoded defaults from qwen2.5 to qwen3. But this is wrong — they should read from config.
+**What was built:**
+1. Created `llmc/rag/config_models.py` with `get_default_enrichment_model(repo_root)`:
+   - Reads from `ENRICH_MODEL` env var (highest priority)
+   - Falls back to `llmc.toml [enrichment].default_model`
+   - Falls back to first enabled chain's model field
+   - Final fallback constant only when no config available
 
-**Proper fix:**
-1. Create `llmc/rag/config_models.py` with `get_default_enrichment_model(repo_root)` that reads from `llmc.toml`
-2. Replace all hardcoded model strings with calls to this function
-3. Add unit tests to ensure config is respected
-
-**Files to audit:**
-```bash
-grep -r "qwen2.5\|qwen3" llmc/ --include="*.py" | grep -v test | grep -v __pycache__
-```
+2. Migrated all callers:
+   - `service_health.py` → uses `get_default_enrichment_model()`
+   - `file_descriptions.py` → uses `get_default_enrichment_model()`
+   - `workers.py` → uses `get_default_enrichment_model()`
+   - `cli.py` → uses `get_default_enrichment_model()`
+   - `pool_config.py` → uses `get_default_enrichment_model()`
 
 **Effort:** 2-3 hours | **Difficulty:** 🟢 Easy
 
