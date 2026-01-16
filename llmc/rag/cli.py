@@ -16,6 +16,7 @@ from .config import (
     rag_dir,
     spans_export_path as resolve_spans_export_path,
 )
+from llmc.rag.config_models import get_default_enrichment_model
 from .database import Database
 from .planner import generate_plan, plan_as_dict
 from .schema import build_graph_for_repo as schema_build_graph_for_repo
@@ -124,6 +125,7 @@ def sync(
     from .utils import git_changed_paths
 
     repo_root = _find_repo_root()
+
     path_list: list[Path]
     if since:
         path_list = git_changed_paths(repo_root, since)
@@ -257,9 +259,9 @@ def graph(require_enrichment: bool, output_path: Path | None) -> None:
 )
 @click.option(
     "--model",
-    default="local-qwen",
-    show_default=True,
-    help="Model identifier to record with enrichment results.",
+    default=None,
+    show_default="(from config)",
+    help="Model identifier to record with enrichment results (defaults from llmc.toml).",
 )
 @click.option(
     "--cooldown",
@@ -301,6 +303,7 @@ def enrich(
         raise SystemExit(1)
 
     repo_root = _find_repo_root()
+    resolved_model = model or get_default_enrichment_model(repo_root)
 
     if code_first and no_code_first:
         click.echo(
@@ -348,13 +351,13 @@ def enrich(
             )
             return
 
-        llm = default_enrichment_callable(model)
+        llm = default_enrichment_callable(resolved_model)
         successes, errors = execute_enrichment(
             db,
             repo_root,
             llm,
             limit=limit,
-            model=model,
+            model=resolved_model,
             cooldown_seconds=cooldown,
             code_first=code_first_override,
             starvation_ratio_high=sr_high,
@@ -364,7 +367,7 @@ def enrich(
         db.close()
 
     if successes:
-        click.echo(f"Stored enrichment metadata for {successes} spans using {model}.")
+        click.echo(f"Stored enrichment metadata for {successes} spans using {resolved_model}.")
     else:
         click.echo("No spans enriched.")
     if errors:

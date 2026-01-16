@@ -27,7 +27,7 @@ class OllamaBackend:
         spec = EnrichmentBackendSpec(
             name="athena",
             provider="ollama",
-            model="qwen3:4b-instruct",
+            model="qwen3:4b-instruct",  # example; actual model comes from llmc.toml
             url="http://192.168.5.20:11434",
             timeout_seconds=120,
         )

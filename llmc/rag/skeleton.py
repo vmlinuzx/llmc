@@ -11,18 +11,19 @@ from pathlib import Path
 from tree_sitter import Node
 from .lang import parse_source, _node_text
 
+
 class Skeletonizer:
     def __init__(self, source: bytes, lang: str = "python"):
         self.source = source
         self.lang = lang
         self.root = parse_source(lang, source)
         self.lines: list[str] = []
-        self._indent_unit = "    " # Default, will detect if possible
+        self._indent_unit = "    "  # Default, will detect if possible
 
     def skeletonize(self) -> str:
         if self.lang == "python":
             return self._skeletonize_python()
-        # Fallback for others: return full source? or simple truncation? 
+        # Fallback for others: return full source? or simple truncation?
         # For now, just return source to be safe, or implement JS later.
         return self.source.decode("utf-8", errors="replace")
 
@@ -44,7 +45,7 @@ class Skeletonizer:
 
     def _process_python_node(self, node: Node, indent_level: int):
         # Helper to add line with current indentation
-        indent = " " * (indent_level * 4) # Assuming 4 spaces for now
+        indent = " " * (indent_level * 4)  # Assuming 4 spaces for now
 
         if node.type in ("import_statement", "import_from_statement"):
             # Keep imports fully
@@ -55,7 +56,7 @@ class Skeletonizer:
 
         elif node.type == "class_definition":
             self._handle_class(node, indent, indent_level)
-            
+
         elif node.type == "decorated_definition":
             # Recurse to handle the decorated function/class
             # We want to print the decorator
@@ -69,7 +70,10 @@ class Skeletonizer:
                         self.lines.append(indent + self._get_text(child))
                     else:
                         # The definition itself
-                        if child.type in ("function_definition", "async_function_definition"):
+                        if child.type in (
+                            "function_definition",
+                            "async_function_definition",
+                        ):
                             self._handle_function(child, indent)
                         elif child.type == "class_definition":
                             self._handle_class(child, indent, indent_level)
@@ -83,7 +87,7 @@ class Skeletonizer:
         # Extract signature
         # A function definition has: name, parameters, return_type (opt), body
         # We want everything *except* the body implementation.
-        
+
         # Easy way: get text from start of node to start of body
         body = node.child_by_field_name("body")
         if not body:
@@ -93,7 +97,11 @@ class Skeletonizer:
 
         # Get signature text
         # This includes 'def', name, params, return annotation, colon
-        sig_text = self.source[node.start_byte : body.start_byte].decode("utf-8", errors="replace").strip()
+        sig_text = (
+            self.source[node.start_byte : body.start_byte]
+            .decode("utf-8", errors="replace")
+            .strip()
+        )
         self.lines.append(indent + sig_text)
 
         # Handle Docstring
@@ -115,13 +123,17 @@ class Skeletonizer:
             return
 
         # Signature
-        sig_text = self.source[node.start_byte : body.start_byte].decode("utf-8", errors="replace").strip()
+        sig_text = (
+            self.source[node.start_byte : body.start_byte]
+            .decode("utf-8", errors="replace")
+            .strip()
+        )
         self.lines.append(indent + sig_text)
 
         # Process Body
         # We need to manually iterate body children to handle docstrings and methods
         found_content = False
-        
+
         # Check for docstring first
         docstring_node = self._get_docstring_node(body)
         if docstring_node:
@@ -133,32 +145,35 @@ class Skeletonizer:
         if cursor.goto_first_child():
             while True:
                 child = cursor.node
-                
+
                 # Check for methods or nested classes
-                if child.type in ("function_definition", "async_function_definition", 
-                                  "decorated_definition", "class_definition"):
+                if child.type in (
+                    "function_definition",
+                    "async_function_definition",
+                    "decorated_definition",
+                    "class_definition",
+                ):
                     self._process_python_node(child, indent_level + 1)
                     found_content = True
-                
+
                 # What about fields? x: int = 1
                 # type: expression_statement -> assignment
                 # If it's a typed assignment, maybe keep it?
                 # For now, simplistic approach: only methods/classes.
-                
+
                 if not cursor.goto_next_sibling():
                     break
-        
+
         if not found_content:
             self.lines.append(indent + "    ...")
-        
-        self.lines.append("")
 
+        self.lines.append("")
 
     def _get_docstring_node(self, body_node: Node) -> Node | None:
         # Python docstring is the first expression statement in body that is a string
         if body_node.child_count == 0:
             return None
-        
+
         # Access children via list is not supported by tree-sitter-python properties directly usually,
         # but the Node object is iterable or has .children
         # The PyPI tree_sitter Binding uses .children list
@@ -175,15 +190,17 @@ class Skeletonizer:
         return None
 
     def _get_text(self, node: Node) -> str:
-        return self.source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
+        return self.source[node.start_byte : node.end_byte].decode(
+            "utf-8", errors="replace"
+        )
 
 
 def generate_repo_skeleton(repo_root: Path, max_files: int = 500) -> str:
     from .schema import _discover_source_files
-    
+
     files = _discover_source_files(repo_root, max_files)
     output = []
-    
+
     output.append(f"# Repo Skeleton for: {repo_root.name}")
     output.append("# Generated by LLMC RAG Skeletonizer")
     output.append(f"# File Count: {len(files)}\n")
@@ -192,13 +209,13 @@ def generate_repo_skeleton(repo_root: Path, max_files: int = 500) -> str:
         try:
             rel_path = file_path.relative_to(repo_root)
             lang = "python" if file_path.suffix == ".py" else "text"
-            
+
             if lang != "python":
-                continue # Skip non-python for now to reduce noise
-                
+                continue  # Skip non-python for now to reduce noise
+
             source = file_path.read_bytes()
             skel = Skeletonizer(source, lang).skeletonize()
-            
+
             if not skel.strip():
                 continue
 
@@ -206,7 +223,7 @@ def generate_repo_skeleton(repo_root: Path, max_files: int = 500) -> str:
             output.append(f"```{lang}")
             output.append(skel)
             output.append("```\n")
-            
+
         except Exception as e:
             output.append(f"# Error processing {file_path.name}: {e}\n")
 

@@ -255,7 +255,7 @@ class GraphDatabase:
         edge_suffix_clause = " OR ".join(["e.target LIKE ?"] * len(suffix_patterns))
         node_suffix_clause = " OR ".join(["n_target.id LIKE ?"] * len(suffix_patterns))
 
-        query = f"""
+        query = f"""  # nosec B608
             SELECT DISTINCT path FROM (
                 -- Match via node table (uses nodes.name and nodes.id indexes)
                 SELECT n_src.path

@@ -3,11 +3,12 @@ from __future__ import annotations
 from collections.abc import Callable
 import logging
 from pathlib import Path
-import sys
 import time
 from typing import Any
 
 from jsonschema import Draft7Validator, ValidationError
+
+from llmc.rag.config_models import get_default_enrichment_model
 
 from .config import (
     ConfigError,
@@ -378,7 +379,7 @@ def execute_enrichment(
     repo_root: Path,
     llm_call: Callable[[dict[str, Any]], dict[str, Any]],
     limit: int = 10,
-    model: str = "local-qwen",
+    model: str | None = None,
     cooldown_seconds: int = 0,
     enforce_latin1: bool = False,
     *,
@@ -401,6 +402,9 @@ def execute_enrichment(
         (success_count, error_messages)
     """
 
+
+    # Resolve model from config if not explicitly provided
+    resolved_model = model or get_default_enrichment_model(repo_root)
     items = db.pending_enrichments(limit=limit, cooldown_seconds=cooldown_seconds)
     if not items:
         return 0, []
@@ -554,14 +558,14 @@ def execute_enrichment(
                     end_line=item.end_line,
                     duration_sec=duration,
                     error=str(exc),
-                    model=model,
+                    model=resolved_model,
                 )
                 log.warning(
                     "✗ %s L%d-%d | %s | %.1fs | LLM call failed: %s",
                     str(item.file_path)[-30:] if len(str(item.file_path)) > 30 else str(item.file_path),
                     item.start_line,
                     item.end_line,
-                    model,
+                    resolved_model,
                     duration,
                     str(exc)[:60],
                 )
@@ -580,13 +584,13 @@ def execute_enrichment(
                     end_line=item.end_line,
                     duration_sec=time.monotonic() - start_time,
                     error=err_msg,
-                    model=model,
+                    model=resolved_model,
                 )
                 continue
 
             payload = {
                 **response,
-                "model": model,
+                "model": resolved_model,
                 "schema_version": response.get("schema_version", "enrichment.v1"),
                 "content_type": item.slice_type,
                 "content_language": item.slice_language or item.lang,
@@ -602,7 +606,7 @@ def execute_enrichment(
                 start_line=item.start_line,
                 end_line=item.end_line,
                 duration_sec=duration,
-                model=model,
+                model=resolved_model,
                 meta=response,
                 attempts=1,
             )
@@ -611,12 +615,12 @@ def execute_enrichment(
                 str(item.file_path)[-30:] if len(str(item.file_path)) > 30 else str(item.file_path),
                 item.start_line,
                 item.end_line,
-                model,
+                resolved_model,
                 duration,
             )
             # Also print to stdout for visibility in CLIs with suppressed logging
             print(
-                f"✓ {item.file_path} L{item.start_line}-{item.end_line} | {model} | {duration:.1f}s"
+                f"✓ {item.file_path} L{item.start_line}-{item.end_line} | {resolved_model} | {duration:.1f}s"
             )
 
     return successes, errors

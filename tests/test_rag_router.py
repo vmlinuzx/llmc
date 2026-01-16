@@ -10,7 +10,7 @@ mid-tier (MiniMax), and premium (Claude) models. These tests ensure:
 """
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, MagicMock, patch, PropertyMock
 
 import pytest
 
@@ -324,7 +324,7 @@ class TestRAGRouterReasoningAndValidation:
 class TestRAGRouterTierDecision:
     """Test tier decision logic."""
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_validation_required(self, mock_generate_plan):
         """Test validation requirements route to premium."""
         mock_generate_plan.return_value = {
@@ -350,7 +350,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "premium"
         assert "Validation required" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_complex_reasoning(self, mock_generate_plan):
         """Test complex reasoning routes to premium."""
         mock_generate_plan.return_value = {
@@ -378,7 +378,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "premium"
         assert "Complex reasoning required" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_large_context(self, mock_generate_plan):
         """Test large context routes to premium."""
         mock_generate_plan.return_value = {
@@ -404,7 +404,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "premium"
         assert "Large context needed" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_simple_high_confidence(self, mock_generate_plan):
         """Test simple task with high confidence routes to local."""
         mock_generate_plan.return_value = {
@@ -430,7 +430,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "local"
         assert "high confidence" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_simple_no_codebase(self, mock_generate_plan):
         """Test simple task without codebase context routes to local."""
         mock_generate_plan.return_value = {
@@ -458,7 +458,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "local"
         assert "without codebase context" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_testing_routes_to_mid(self, mock_generate_plan):
         """Test testing tasks route to mid tier."""
         mock_generate_plan.return_value = {
@@ -486,7 +486,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "mid"
         assert "Testing/bug hunting" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_bug_hunting_routes_to_mid(self, mock_generate_plan):
         """Test bug hunting routes to mid tier."""
         mock_generate_plan.return_value = {
@@ -512,7 +512,7 @@ class TestRAGRouterTierDecision:
         assert decision.tier == "mid"
         assert "Testing/bug hunting" in decision.rationale[0]
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_default_to_mid(self, mock_generate_plan):
         """Test default routing to mid tier."""
         mock_generate_plan.return_value = {
@@ -542,7 +542,7 @@ class TestRAGRouterTierDecision:
 class TestRAGRouterCostEstimation:
     """Test cost estimation functionality."""
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_cost_estimation_local_is_free(self, mock_generate_plan):
         """Test local tier has zero cost."""
         mock_generate_plan.return_value = {
@@ -568,7 +568,7 @@ class TestRAGRouterCostEstimation:
         assert decision.tier == "local"
         assert decision.cost_estimate == 0.0
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_cost_estimation_mid_tier(self, mock_generate_plan):
         """Test mid tier cost calculation."""
         mock_generate_plan.return_value = {
@@ -595,7 +595,7 @@ class TestRAGRouterCostEstimation:
         assert decision.cost_estimate > 0
         assert decision.cost_estimate < 0.1  # Reasonable estimate
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_cost_estimation_premium_tier(self, mock_generate_plan):
         """Test premium tier cost calculation."""
         mock_generate_plan.return_value = {
@@ -623,7 +623,7 @@ class TestRAGRouterCostEstimation:
         # Premium should be more expensive than mid
         assert decision.cost_estimate > 0.1
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_cost_estimate_includes_input_and_output(self, mock_generate_plan):
         """Test cost includes both input and output tokens."""
         mock_generate_plan.return_value = {
@@ -656,7 +656,7 @@ class TestRAGRouterCostEstimation:
 class TestRAGRouterRAGIntegration:
     """Test RAG integration functionality."""
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_analyze_query_with_rag(self, mock_generate_plan):
         """Test query analysis uses RAG planner."""
         mock_generate_plan.return_value = {
@@ -677,7 +677,7 @@ class TestRAGRouterRAGIntegration:
             "refactor this code", limit=5, min_score=0.4
         )
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_analyze_query_fallback_on_error(self, mock_generate_plan):
         """Test fallback analysis when RAG fails."""
         mock_generate_plan.side_effect = Exception("RAG service unavailable")
@@ -695,7 +695,7 @@ class TestRAGRouterRAGIntegration:
         assert analysis.estimated_context_tokens == 5000
         assert analysis.confidence == 0.3  # Conservative
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_gets_rag_results(self, mock_generate_plan):
         """Test that routing decision includes RAG results when needed."""
         mock_generate_plan.return_value = {
@@ -724,7 +724,7 @@ class TestRAGRouterRAGIntegration:
         assert decision.rag_results is not None
         assert decision.rag_results["intent"] == "refactor"
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_no_rag_for_local(self, mock_generate_plan):
         """Test that local tier doesn't include RAG results."""
         mock_generate_plan.return_value = {
@@ -758,7 +758,7 @@ class TestRAGRouterRAGIntegration:
 class TestRAGRouterRouteMethod:
     """Test the main route() method."""
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_route_with_forced_routing(self, mock_generate_plan):
         """Test route respects forced routing patterns."""
         mock_generate_plan.return_value = {
@@ -779,7 +779,7 @@ class TestRAGRouterRouteMethod:
         # generate_plan should not be called for forced routing
         # (It will be called once in _decide_tier for RAG context, but not for analysis)
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_route_with_rag_analysis(self, mock_generate_plan):
         """Test route uses RAG for analysis when no forced routing."""
         mock_generate_plan.return_value = {
@@ -837,14 +837,14 @@ class TestRAGRouterRouteMethod:
 class TestRouteQueryConvenienceFunction:
     """Test the route_query convenience function."""
 
-    @patch("tools.rag_router.RAGRouter")
+    @patch("llmc.rag_router.RAGRouter")
     def test_route_query_creates_router(self, mock_router_class):
         """Test route_query creates router with detected repo root."""
         mock_router = Mock()
         mock_router.route.return_value = Mock(spec=RoutingDecision)
         mock_router_class.return_value = mock_router
 
-        with patch("tools.rag_router.Path.cwd") as mock_cwd:
+        with patch("llmc.rag_router.Path.cwd") as mock_cwd:
             mock_cwd.return_value = Path("/tmp/repo")
 
             route_query("test query", Path("/tmp/custom"))
@@ -852,7 +852,7 @@ class TestRouteQueryConvenienceFunction:
             mock_router_class.assert_called_once_with(Path("/tmp/custom"))
             mock_router.route.assert_called_once_with("test query", Path("/tmp/custom"))
 
-    @patch("tools.rag_router.RAGRouter")
+    @patch("llmc.rag_router.RAGRouter")
     def test_route_query_auto_detects_repo_root(self, mock_router_class):
         """Test route_query auto-detects git repository root."""
         mock_router = Mock()
@@ -860,7 +860,7 @@ class TestRouteQueryConvenienceFunction:
         mock_router_class.return_value = mock_router
 
         # Mock Path.cwd to return a non-git directory, then parent with .git
-        with patch("tools.rag_router.Path") as mock_path:
+        with patch("llmc.rag_router.Path") as mock_path:
             # First call for cwd
             cwd_instance = Mock()
             cwd_instance.__truediv__ = lambda self, x: Path(f"/tmp/repo/{x}")
@@ -889,7 +889,7 @@ class TestRouteQueryConvenienceFunction:
                     call_args = mock_router_class.call_args
                     assert call_args[0][0] == Path("/tmp")
 
-    @patch("tools.rag_router.RAGRouter")
+    @patch("llmc.rag_router.RAGRouter")
     def test_route_query_calls_route(self, mock_router_class):
         """Test route_query calls route method."""
         mock_router = Mock()
@@ -910,11 +910,37 @@ class TestRouteQueryConvenienceFunction:
         assert decision == expected_decision
         mock_router.route.assert_called_once_with("test query", Path("/tmp/repo"))
 
+    @patch("llmc.rag_router.Path")
+    def test_route_query_auto_detects_repo_root_permission_error(self, mock_path):
+        """Test route_query handles PermissionError during repo detection."""
+        # Mock cwd to return a path that will raise PermissionError on .parent access
+        mock_cwd = MagicMock()
+        mock_path.cwd.return_value = mock_cwd
+
+        # Ensure .git check fails so loop continues to parent check
+        mock_git = Mock()
+        mock_git.exists.return_value = False
+        mock_cwd.__truediv__.return_value = mock_git
+
+        # Configure .parent to raise PermissionError
+        type(mock_cwd).parent = PropertyMock(side_effect=PermissionError("Access denied"))
+
+        # Mock RAGRouter to verify initialization
+        with patch("llmc.rag_router.RAGRouter") as mock_router_class:
+            mock_router_instance = Mock()
+            mock_router_class.return_value = mock_router_instance
+
+            # Call route_query without repo_root
+            route_query("test query")
+
+            # Should fall back to cwd (which is mock_cwd here)
+            mock_router_class.assert_called_once_with(mock_cwd)
+
 
 class TestRAGRouterErrorHandling:
     """Test error handling in RAGRouter."""
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_analyze_query_handles_empty_plan(self, mock_generate_plan):
         """Test analysis handles empty/None values from RAG."""
         mock_generate_plan.return_value = {
@@ -933,7 +959,7 @@ class TestRAGRouterErrorHandling:
         assert hasattr(analysis, "intent")
         assert hasattr(analysis, "confidence")
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_analyze_query_handles_malformed_spans(self, mock_generate_plan):
         """Test analysis handles spans with missing lines."""
         mock_generate_plan.return_value = {
@@ -954,7 +980,7 @@ class TestRAGRouterErrorHandling:
 
         assert analysis.estimated_context_tokens >= 0
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_decide_tier_handles_missing_rag_results(self, mock_generate_plan):
         """Test decision handling when RAG context fetch fails."""
         mock_generate_plan.side_effect = [
@@ -1037,7 +1063,7 @@ class TestRAGRouterEdgeCases:
                         special_query, Path("/tmp/test")
                     )
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_multiple_forced_routing_matches(self, mock_generate_plan):
         """Test when query matches multiple forced routing patterns."""
         router = RAGRouter(Path("/tmp/test"))
@@ -1081,7 +1107,7 @@ class TestRAGRouterEdgeCases:
 
                     assert 0.0 <= decision.confidence <= 1.0
 
-    @patch("tools.rag_router.generate_plan")
+    @patch("llmc.rag_router.generate_plan")
     def test_context_token_calculation(self, mock_generate_plan):
         """Test context token calculation accuracy."""
         mock_generate_plan.return_value = {

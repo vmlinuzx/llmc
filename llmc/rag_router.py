@@ -381,28 +381,31 @@ def route_query(query: str, repo_root: Path | None = None) -> RoutingDecision:
     """
     if repo_root is None:
         # Try to detect repo root
-        current = Path.cwd()
-        detected_root: Path | None = None
-        current_path: Path | None = None
-        visited = set()
-        while True:
-            marker = current / ".git"
-            marker_parent = getattr(marker, "parent", None)
-            if isinstance(marker_parent, pathlib.Path):
-                current_path = marker_parent
-            try:
-                exists = marker.exists()
-            except Exception:
-                exists = False
-            if exists:
-                detected_root = marker_parent or current_path or pathlib.Path.cwd()
-                break
-            parent = getattr(current, "parent", None)
-            if parent is None or parent == current or id(parent) in visited:
-                break
-            visited.add(id(parent))
-            current = parent
-        repo_root = detected_root or current_path or pathlib.Path.cwd()
+        try:
+            current = Path.cwd()
+            detected_root: Path | None = None
+            current_path: Path | None = None
+            visited = set()
+            while True:
+                marker = current / ".git"
+                marker_parent = getattr(marker, "parent", None)
+                if isinstance(marker_parent, pathlib.Path):
+                    current_path = marker_parent
+                try:
+                    exists = marker.exists()
+                except Exception:
+                    exists = False
+                if exists:
+                    detected_root = marker_parent or current_path or pathlib.Path.cwd()
+                    break
+                parent = getattr(current, "parent", None)
+                if parent is None or parent == current or id(parent) in visited:
+                    break
+                visited.add(id(parent))
+                current = parent
+            repo_root = detected_root or current_path or pathlib.Path.cwd()
+        except PermissionError:
+            repo_root = Path.cwd()
 
     router = RAGRouter(repo_root)
     return router.route(query, repo_root)

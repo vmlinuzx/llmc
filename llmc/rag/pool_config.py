@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from llmc.rag.config_models import get_default_enrichment_model
 import logging
 import re
 from typing import Any, Literal
@@ -13,7 +14,7 @@ class WorkerConfig:
     port: int = 11434
     concurrency: int = 1
     gpu: int | None = None
-    model: str = "qwen3:4b"
+    model: str | None = None
     timeout_seconds: int = 120  # Request timeout for Ollama calls
     options: dict[str, Any] = field(default_factory=dict)  # Ollama options (temperature, num_predict, etc.)
     enabled: bool = True
@@ -71,7 +72,7 @@ def load_pool_config(config_dict: dict[str, Any]) -> PoolConfig:
             port=w_data.get("port", 11434),
             concurrency=w_data.get("concurrency", 1),
             gpu=w_data.get("gpu"),
-            model=w_data.get("model", "qwen3:4b"),
+            model=w_data.get("model") or get_default_enrichment_model(),
             timeout_seconds=w_data.get("timeout_seconds", 120),
             options=dict(w_data.get("options", {})),
             enabled=w_data.get("enabled", True),

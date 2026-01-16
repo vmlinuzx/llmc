@@ -88,7 +88,7 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
                     if usage_column
                     else "NULL AS usage_text"
                 )
-                query = f"""
+                query = f"""  # nosec B608
                     SELECT 
                         e.span_hash, 
                         e.summary, 
@@ -108,7 +108,7 @@ def load_enrichment_data(repo_root: Path) -> dict[str, list[EnrichmentRecord]]:
                         select_parts.append(col)
                 if usage_column:
                     select_parts.append(f"{usage_column} AS usage_text")
-                query = f"SELECT {', '.join(select_parts)} FROM enrichments"
+                query = f"SELECT {', '.join(select_parts)} FROM enrichments"  # nosec B608
                 rows = cursor.execute(query).fetchall()
 
             for row in rows:

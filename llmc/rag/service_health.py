@@ -12,6 +12,8 @@ import time
 import urllib.parse
 import urllib.request
 
+from llmc.rag.config_models import get_default_enrichment_model
+
 logger = logging.getLogger(__name__)
 
 
@@ -148,7 +150,7 @@ def parse_ollama_hosts_from_env() -> list[OllamaEndpoint]:
         return []
 
     endpoints: list[OllamaEndpoint] = []
-    model = os.getenv("ENRICH_MODEL", "qwen3:4b-instruct")
+    model = os.getenv("ENRICH_MODEL") or get_default_enrichment_model()
 
     for chunk in raw.split(","):
         part = chunk.strip()

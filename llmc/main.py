@@ -17,6 +17,7 @@ import re
 import typer
 
 from llmc.commands import (
+    run as run_commands,
     config as config_commands,
     repo as repo_commands,
     service as service_commands,
@@ -238,6 +239,12 @@ test_app = typer.Typer(
 test_app.add_typer(test_mcp_commands.app, name="mcp")
 
 app.add_typer(test_app, name="test")
+
+
+# ============================================================================
+# RUN GROUP - mc* developer tools (mcschema, mcgrep, mcwho, etc.)
+# ============================================================================
+app.add_typer(run_commands.app, name="run")
 
 
 # ============================================================================

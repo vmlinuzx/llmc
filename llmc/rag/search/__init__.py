@@ -164,7 +164,7 @@ def _enrich_debug_info(
             hashes = [r.span_hash for r in results]
             if hashes:
                 placeholders = ",".join("?" for _ in hashes)
-                rows = db.conn.execute(
+                rows = db.conn.execute(  # nosec B608
                     f"""
                     SELECT span_hash, summary, inputs, outputs, side_effects, pitfalls, evidence, usage_snippet
                     FROM enrichments

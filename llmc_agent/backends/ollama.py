@@ -3,6 +3,9 @@
 Handles communication with local Ollama server for LLM inference.
 """
 
+# DEPRECATED - See llmc.backends.LiteLLMAgentBackend
+
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator

@@ -138,7 +138,7 @@ When you need to understand **file dependencies** (parents/children) and RAG is 
 **Before diving into any task**, run `mcschema` to get instant codebase orientation:
 
 ```bash
-python3 -m llmc.mcschema
+llmc-cli run mcschema schema
 ```
 
 This gives you (~600 tokens):
@@ -183,12 +183,12 @@ patterns: method: 2968, function: 2168, class: 714
 
 | Command | Purpose | Example |
 |---------|---------|--------|
-| `mcschema` | Codebase overview + recent activity (~600 tokens) | `python3 -m llmc.mcschema` |
-| `mcgrep` | Semantic search + file descriptions | `python3 -m llmc.mcgrep "router"` |
-| `mcwho` | Who uses/calls this symbol? | `python3 -m llmc.mcwho Database` |
-| `mcinspect` | Deep symbol inspection + graph | `python3 -m llmc.mcinspect Foo` |
-| `mcread` | Read file with graph context | `python3 -m llmc.mcread llmc/rag/database.py` |
-| `mcrun` | Execute command with logging | `python3 -m llmc.mcrun pytest tests/` |
+| `mcschema` | Codebase overview + recent activity (~600 tokens) | `llmc-cli run mcschema schema` |
+| `mcgrep` | Semantic search + file descriptions | `llmc-cli run mcgrep search "router"` |
+| `mcwho` | Who uses/calls this symbol? | `llmc-cli run mcwho who Database` |
+| `mcinspect` | Deep symbol inspection + graph | `llmc-cli run mcinspect Foo` |
+| `mcread` | Read file with graph context | `llmc-cli run mcread llmc/rag/database.py` |
+| `mcrun` | Execute command with logging | `llmc-cli run mcrun pytest tests/` |
 
 ### 6.1 Mechanical Context Tools (LSP / Tree-Sitter)
 
@@ -196,25 +196,25 @@ These commands provide **surgical precision** for code navigation using the Tree
 
 | Command | Purpose | Example |
 |---------|---------|--------|
-| `skeleton` | Generate repo "header file" (signatures + docstrings, no bodies) | `python3 -m llmc.rag.cli skeleton --limit 100` |
-| `nav read` | Fetch implementation code for a specific symbol | `python3 -m llmc.rag.cli nav read GraphDatabase.bulk_insert_nodes` |
-| `nav where-used` | Find usage sites of a symbol | `python3 -m llmc.rag.cli nav where-used Skeletonizer` |
-| `nav lineage` | Get call graph (callers/callees) | `python3 -m llmc.rag.cli nav lineage process_repo` |
+| `skeleton` | Generate repo "header file" (signatures + docstrings, no bodies) | `llmc-cli run skeleton --limit 100` |
+| `debug inspect` | Fetch implementation code for a specific symbol | `llmc-cli debug inspect --symbol GraphDatabase.bulk_insert_nodes` |
+| `analytics where-used` | Find usage sites of a symbol | `llmc-cli analytics where-used Skeletonizer` |
+| `analytics lineage` | Get call graph (callers/callees) | `llmc-cli analytics lineage process_repo` |
 
 **The "Instant Omniscience" Pattern:**
 
 1. Run `skeleton --limit 100` at session start → You now know **what** exists and **where**
-2. When you need to see **how** something works → `nav read <symbol>`
+2. When you need to see **how** something works → `llmc-cli debug inspect --symbol <symbol>`
 3. This is ~10x more token-efficient than reading entire files
 
 **Example workflow:**
 ```bash
 # See the whole repo structure (signatures only)
-python3 -m llmc.rag.cli skeleton --limit 100
+llmc-cli run skeleton --limit 100
 
 # Now you see "GraphDatabase.bulk_insert_nodes" in the skeleton...
 # Fetch just that implementation (20 lines vs 400 line file)
-python3 -m llmc.rag.cli nav read GraphDatabase.bulk_insert_nodes
+llmc-cli debug inspect --symbol GraphDatabase.bulk_insert_nodes
 ```
 
 ### Training Data Generation
@@ -222,14 +222,14 @@ python3 -m llmc.rag.cli nav read GraphDatabase.bulk_insert_nodes
 All `mc*` tools support `--emit-training` to generate OpenAI-format tool calling examples:
 
 ```bash
-python3 -m llmc.mcgrep "authentication" --emit-training
+llmc-cli run mcgrep search "authentication" --emit-training
 ```
 
 This outputs JSON showing the tool schema + invocation + response, suitable for fine-tuning.
 
 ### Quick Heuristics
 
-- **`skeleton` + `nav read`:** Best for code modification tasks. Start with the map, snipe what you need.
+- **`skeleton` + `debug inspect`:** Best for code modification tasks. Start with the map, snipe what you need.
 - **`mcinspect` vs `read_file`:** Always prefer `mcinspect` for code. It gives you the **graph** (callers/deps) and **summary** instantly.
 - **`mcgrep`:** If results are weird, try more literal queries or fallback to `rg`.
 - **`llmc debug doctor`:** Your first step if the RAG system seems broken.
@@ -352,7 +352,7 @@ Heuristic:
 Before diving into code, get the 30-second mental model:
 
 ```bash
-python3 -m llmc.mcschema
+llmc-cli run mcschema schema
 ```
 
 This returns a ~400 token manifest with:
@@ -369,7 +369,7 @@ When your task involves **modifying code**, use the Skeleton + Sniper pattern:
 1. **Get the Skeleton (Global Map):**
 
    ```bash
-   python3 -m llmc.rag.cli skeleton --limit 100
+   llmc-cli run skeleton --limit 100
    ```
 
    This returns **signatures + docstrings only** (no implementation bodies).
@@ -380,7 +380,7 @@ When your task involves **modifying code**, use the Skeleton + Sniper pattern:
    When you see a symbol you need to modify or understand:
 
    ```bash
-   python3 -m llmc.rag.cli nav read Skeletonizer._handle_class
+   llmc-cli debug inspect --symbol Skeletonizer._handle_class
    ```
 
    This returns **only the 20-50 lines** of that specific method.
@@ -388,14 +388,14 @@ When your task involves **modifying code**, use the Skeleton + Sniper pattern:
 3. **Check Impact Before Editing:**
 
    ```bash
-   python3 -m llmc.rag.cli nav where-used bulk_insert_nodes
+   llmc-cli analytics where-used bulk_insert_nodes
    ```
 
    This tells you what will break if you change the signature.
 
 **Why this flow:**
 - Skeleton is ~2,000 tokens for 100 files (vs 200,000+ for full source)
-- Each `nav read` is ~50-100 tokens (vs 2,000+ for full file reads)
+- Each `debug inspect` is ~50-100 tokens (vs 2,000+ for full file reads)
 - You get "Instant Omniscience" without context window bloat
 
 ### Flow A – LLM-Optimized Search (Primary)
@@ -405,7 +405,7 @@ LLMs need **full file context**, not just snippets. Use mcgrep with `--expand` f
 1. **Find files semantically with full content:**
 
    ```bash
-   python3 -m llmc.mcgrep "authentication logic" --expand 3
+   llmc-cli run mcgrep search "authentication logic" --expand 3
    ```
 
    This returns full file content for the top 3 semantically-matched files,
@@ -414,7 +414,7 @@ LLMs need **full file context**, not just snippets. Use mcgrep with `--expand` f
 2. **If you need ALL spans for a specific file:**
 
    ```bash
-   python3 -m llmc.rag.cli search "auth" --path src/auth.py --limit 100
+   llmc-cli analytics search "auth" --path src/auth.py --limit 100
    ```
 
    Use high `--limit` to get all spans, not just 10-20.
@@ -422,8 +422,8 @@ LLMs need **full file context**, not just snippets. Use mcgrep with `--expand` f
 3. **For symbol details + graph relationships:**
 
    ```bash
-   python3 -m llmc.mcwho EnrichmentPipeline    # Quick: who calls/uses this?
-   python3 -m llmc.mcinspect EnrichmentPipeline # Deep: full symbol context
+   llmc-cli run mcwho who EnrichmentPipeline    # Quick: who calls/uses this?
+   llmc-cli run mcinspect EnrichmentPipeline # Deep: full symbol context
    ```
 
 ### Flow B – Quick Span Search (Narrow Queries)
@@ -433,7 +433,7 @@ When you already know roughly where to look:
 1. Run mcgrep:
 
    ```bash
-   python3 -m llmc.mcgrep "database connection pool"
+   llmc-cli run mcgrep search "database connection pool"
    ```
 
    Shows top 20 files with descriptions + top 10 spans with context.
@@ -443,14 +443,14 @@ When you already know roughly where to look:
    - Refine the query (more literal, include identifiers).
    - Or fall back to `rg` / AST tools.
 
-4. Once you know where the logic lives, use `python3 -m llmc.mcgrep --expand 3` to get full context.
+4. Once you know where the logic lives, use `llmc-cli run mcgrep search --expand 3` to get full context.
 
 ### Flow C – Plan Edits
 
 1. Run `plan`:
 
    ```bash
-   python3 -m llmc.rag.cli plan "short description of change" --limit 50 --min-confidence 0.5
+   llmc-cli debug plan "short description of change" --limit 50 --min-confidence 0.5
    ```
 
 2. Inspect planned targets:
@@ -464,12 +464,12 @@ When you already know roughly where to look:
 See **Section 6** for the authoritative `mc*` CLI table. All commands:
 
 ```bash
-python3 -m llmc.mcschema              # Codebase orientation
-python3 -m llmc.mcgrep "query"        # Semantic search
-python3 -m llmc.mcwho Symbol          # Who calls/uses this?
-python3 -m llmc.mcinspect Symbol      # Deep inspection + graph
-python3 -m llmc.mcread path/to/file   # Read with context
-python3 -m llmc.mcrun "command"       # Execute with logging
+llmc-cli run mcschema schema              # Codebase orientation
+llmc-cli run mcgrep search "query"        # Semantic search
+llmc-cli run mcwho who Symbol          # Who calls/uses this?
+llmc-cli run mcinspect Symbol      # Deep inspection + graph
+llmc-cli run mcread path/to/file   # Read with context
+llmc-cli run mcrun "command"       # Execute with logging
 ```
 
 ---

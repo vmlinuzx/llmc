@@ -70,7 +70,7 @@ llmc-cli tui
 | **🔒 Security First** | **New in v0.7.0:** "Hybrid Mode" for trusted clients (host access) vs. Container Isolation for untrusted LLMs. |
 | **🧠 Polyglot RAG** | Smart parsing (TreeSitter) for Python, TS, JS, Go, Java, and technical docs. |
 | **🕸️ GraphRAG** | Understands your code structure (imports, calls, inheritance) to find related files automatically. |
-| **🖥️ TUI Dashboard** | A beautiful terminal UI to monitor indexing, search results, and costs in real-time. |
+| **🖥️ TUI Dashboard** | Terminal UI to monitor indexing, search results, and costs. ⚠️ *Work in progress — expect rough edges.* |
 | **🔌 MCP Support** | Full Model Context Protocol server to integrate seamlessly with Claude Desktop. |
 
 ---

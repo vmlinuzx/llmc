@@ -6,6 +6,9 @@ OpenAI-compatible API (including OpenAI itself).
 This enables tool calling with GPT-OSS-120B via llama.cpp server.
 """
 
+# DEPRECATED - See llmc.backends.LiteLLMAgentBackend
+
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator

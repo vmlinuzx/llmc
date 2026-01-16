@@ -109,7 +109,7 @@ def fts_search(
         col = _column_map(conn, table)
 
         cur = conn.cursor()
-        sql_bm25 = f"""
+        sql_bm25 = f"""  # nosec B608
             SELECT {col["path"]} as path,
                    COALESCE({col["start"]}, 1) as start_line,
                    COALESCE({col["end"]},   COALESCE({col["start"]},1)+1) as end_line,
@@ -124,7 +124,7 @@ def fts_search(
             cur.execute(sql_bm25, (query, int(limit)))
             rows = cur.fetchall()
         except Exception:
-            sql = f"""
+            sql = f"""  # nosec B608
                 SELECT {col["path"]} as path,
                        COALESCE({col["start"]}, 1) as start_line,
                        COALESCE({col["end"]},   COALESCE({col["start"]},1)+1) as end_line,

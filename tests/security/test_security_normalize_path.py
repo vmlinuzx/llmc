@@ -148,3 +148,39 @@ def test_fuzzy_match_resolves_alphabetically_on_same_length(tmp_path):
     
     # Expect 'x/ambiguous.txt' (alphabetical winner between x and z)
     assert result == Path("x/ambiguous.txt")
+
+def test_fuzzy_match_ignores_hidden_and_artifact_directories(tmp_path):
+    """
+    Test that fuzzy matching ignores files in hidden directories (starting with .)
+    and specific artifact directories (venv, __pycache__, node_modules).
+    """
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    # 1. Create a legitimate file in a standard directory
+    src_dir = repo_root / "src"
+    src_dir.mkdir()
+    target_file = src_dir / "config.txt"
+    target_file.touch()
+
+    # 2. Create decoy files in ignored directories
+    ignored_dirs = [
+        ".git",
+        ".vscode",
+        "venv",
+        "__pycache__",
+        "node_modules"
+    ]
+
+    for d in ignored_dirs:
+        hidden_dir = repo_root / d
+        hidden_dir.mkdir()
+        # Create a file with the same name
+        (hidden_dir / "config.txt").touch()
+
+    # 3. Call normalize_path with the ambiguous filename
+    result = normalize_path(repo_root, "config.txt")
+
+    # 4. Assert it resolved to the legitimate file
+    # Note: normalize_path returns a path relative to repo_root (as per other tests)
+    assert result == Path("src/config.txt")

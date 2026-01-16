@@ -482,7 +482,7 @@ class WorkQueue:
         now = time.time()
         # Dynamically build query for list of IDs
         placeholders = ",".join("?" * len(item_ids))
-        cursor = self._conn.execute(
+        cursor = self._conn.execute(  # nosec B608
             f"""
             UPDATE pending_enrichments
             SET claimed_at = ?

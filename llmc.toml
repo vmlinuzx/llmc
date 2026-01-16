@@ -636,8 +636,10 @@ bootstrap_tools = ["list_dir", "read_file", "execute_code"]
 # bootstrap_tools = ["list_dir", "read_file", "execute_code", "linux_fs_write", "linux_fs_edit", "run_cmd"]
 
 [mcp.server]
-# stdio transport - no host/port needed for Claude Desktop
-transport = "stdio"
+# http transport
+transport = "http"
+host = "127.0.0.1"
+port = 8080
 log_level = "info"
 
 [mcp.auth]
@@ -936,7 +938,7 @@ exclude = [
 # See: llmc/backends/README.md for full documentation
 
 [litellm]
-enabled = false  # Set to true to use LiteLLM (Phase 4 testing)
+enabled = true  # LiteLLM is now the default backend
 model = "ollama_chat/qwen3-next-80b-tools"
 temperature = 0.7
 max_tokens = 4096

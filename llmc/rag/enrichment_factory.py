@@ -21,6 +21,9 @@ from llmc.rag.enrichment_adapters import (
     OllamaBackend,
     OpenAICompatBackend,
 )
+
+# LiteLLM unified backend (preferred for new code)
+from llmc.backends import LiteLLMConfig, LiteLLMEnrichmentAdapter, to_litellm_model
 from llmc.rag.enrichment_backends import BackendAdapter
 from llmc.rag.enrichment_config import (
     get_provider_metadata,
@@ -33,6 +36,56 @@ from llmc.rag.enrichment_reliability import (
     CostTrackerConfig,
     RateLimiter,
 )
+
+
+
+def create_litellm_backend(
+    provider: str,
+    model: str,
+    *,
+    api_key: str | None = None,
+    api_base: str | None = None,
+    timeout: float = 120.0,
+    cost_tracker: CostTracker | None = None,
+) -> BackendAdapter:
+    """Create LiteLLM-based enrichment backend.
+    
+    This is the preferred factory for new code. Uses LiteLLM for unified
+    provider abstraction instead of per-provider adapters.
+    
+    Args:
+        provider: Provider name (ollama, openai, anthropic, gemini, groq)
+        model: Model name (will be converted to LiteLLM format)
+        api_key: API key for cloud providers
+        api_base: Custom API base URL
+        timeout: Request timeout in seconds
+        cost_tracker: Optional cost tracker
+        
+    Returns:
+        LiteLLMEnrichmentAdapter instance
+    """
+    litellm_model = to_litellm_model(provider, model)
+    
+    config = LiteLLMConfig(
+        model=litellm_model,
+        api_key=api_key,
+        api_base=api_base,
+        timeout=timeout,
+    )
+    
+    # Create circuit breaker
+    circuit_breaker = CircuitBreaker(
+        CircuitBreakerConfig(
+            failure_threshold=5,
+            recovery_timeout_seconds=60.0,
+        )
+    )
+    
+    return LiteLLMEnrichmentAdapter(
+        config,
+        circuit_breaker=circuit_breaker,
+        cost_tracker=cost_tracker,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -169,5 +222,6 @@ def create_cost_tracker_from_config(
 
 __all__ = [
     "create_backend_from_spec",
+    "create_litellm_backend",
     "create_cost_tracker_from_config",
 ]

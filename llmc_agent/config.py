@@ -71,7 +71,7 @@ class LiteLLMConfig:
     Model format: "provider/model" (e.g., "ollama_chat/qwen3", "openai/gpt-4o")
     """
 
-    enabled: bool = False  # Feature flag - set True to use LiteLLM
+    enabled: bool = True  # LiteLLM is now the default backend
     model: str = "ollama_chat/qwen3-next-80b"  # LiteLLM format
     api_key: str | None = None
     api_base: str | None = None

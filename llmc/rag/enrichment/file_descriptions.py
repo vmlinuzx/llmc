@@ -17,6 +17,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from llmc.rag.config_models import get_default_enrichment_model
 from llmc.rag.database import Database
 
 # Algorithm version - bump this to force regeneration of all descriptions
@@ -169,7 +170,7 @@ def generate_rich_description(
     db: Database, 
     file_path: str, 
     repo_root: Path,
-    model: str = "qwen3:4b-instruct"
+    model: str | None = None
 ) -> tuple[str | None, list[str]]:
     """
     Generate a file description using an LLM to summarize the file's purpose.
@@ -205,6 +206,7 @@ def generate_rich_description(
         return None, span_hashes
     
     # Build prompt
+    resolved_model = model or get_default_enrichment_model(repo_root)
     span_symbols = [s["symbol"] for s in spans[:5]]
     prompt = f"""Summarize the purpose of this file in ~50 words.
 Focus on: what it does, key exports, and how it fits the codebase.
@@ -223,7 +225,7 @@ Summary (one paragraph, ~50 words):"""
         response = httpx.post(
             "http://localhost:11434/api/generate",
             json={
-                "model": model,
+                "model": resolved_model,
                 "prompt": prompt,
                 "stream": False,
                 "options": {"temperature": 0.3},

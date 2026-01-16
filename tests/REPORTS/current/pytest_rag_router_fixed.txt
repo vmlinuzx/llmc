@@ -1,0 +1,63 @@
+.............................................F.........                  [100%]
+=================================== FAILURES ===================================
+_ TestRouteQueryConvenienceFunction.test_route_query_auto_detects_repo_root_permission_error _
+
+self = <test_rag_router.TestRouteQueryConvenienceFunction object at 0x76dd99a12240>
+mock_path = <MagicMock name='Path' id='130694136633232'>
+
+    @patch("llmc.rag_router.Path")
+    def test_route_query_auto_detects_repo_root_permission_error(self, mock_path):
+        """Test route_query handles PermissionError during repo detection."""
+        # Mock cwd to return a path that will raise PermissionError on .parent access
+        mock_cwd = MagicMock()
+        mock_path.cwd.return_value = mock_cwd
+    
+        # Ensure .git check fails so loop continues to parent check
+        mock_git = Mock()
+        mock_git.exists.return_value = False
+        mock_cwd.__truediv__.return_value = mock_git
+    
+        # Configure .parent to raise PermissionError
+        type(mock_cwd).parent = PropertyMock(side_effect=PermissionError("Access denied"))
+    
+        # Mock RAGRouter to verify initialization
+        with patch("llmc.rag_router.RAGRouter") as mock_router_class:
+            mock_router_instance = Mock()
+            mock_router_class.return_value = mock_router_instance
+    
+            # Call route_query without repo_root
+>           route_query("test query")
+
+/home/vmlinux/src/llmc/tests/test_rag_router.py:934: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/vmlinux/src/llmc/llmc/rag_router.py:400: in route_query
+    parent = getattr(current, "parent", None)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/unittest/mock.py:2978: in __get__
+    return self()
+           ^^^^^^
+/usr/lib/python3.12/unittest/mock.py:1134: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.12/unittest/mock.py:1138: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <PropertyMock id='130694135751808'>, args = (), kwargs = {}
+effect = PermissionError('Access denied')
+
+    def _execute_mock_call(self, /, *args, **kwargs):
+        # separate from _increment_mock_call so that awaited functions are
+        # executed separately from their call, also AsyncMock overrides this method
+    
+        effect = self.side_effect
+        if effect is not None:
+            if _is_exception(effect):
+>               raise effect
+E               PermissionError: Access denied
+
+/usr/lib/python3.12/unittest/mock.py:1193: PermissionError
+=========================== short test summary info ============================
+FAILED tests/test_rag_router.py::TestRouteQueryConvenienceFunction::test_route_query_auto_detects_repo_root_permission_error
+1 failed, 54 passed in 0.94s

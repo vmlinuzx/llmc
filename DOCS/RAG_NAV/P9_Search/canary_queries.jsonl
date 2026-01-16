@@ -1,0 +1,5 @@
+{"q": "how does the router select models", "relevant": ["router", "routing", "tier", "model"], "gold_globs": ["llmc/routing/*.py", "scripts/router.py"]}
+{"q": "where is the embedding vector stored", "relevant": ["embedding", "vector", "database", "vec"], "gold_globs": ["llmc/rag/database.py", "llmc/rag/embeddings/*.py"]}
+{"q": "how does the MCP server handle tool calls", "relevant": ["mcp", "tool", "server", "handler"], "gold_globs": ["llmc_mcp/*.py", "llmc_mcp/tools/*.py"]}
+{"q": "path validation security", "relevant": ["validate", "path", "security", "traversal"], "gold_globs": ["llmc_mcp/tools/fs.py", "llmc/security.py"]}
+{"q": "how are spans indexed", "relevant": ["span", "index", "hash", "tree-sitter"], "gold_globs": ["llmc/rag/schema.py", "llmc/rag/spans.py"]}
