@@ -148,7 +148,7 @@ def parse_ollama_hosts_from_env() -> list[OllamaEndpoint]:
         return []
 
     endpoints: list[OllamaEndpoint] = []
-    model = os.getenv("ENRICH_MODEL", "qwen2.5:7b-instruct")
+    model = os.getenv("ENRICH_MODEL", "qwen3:4b-instruct")
 
     for chunk in raw.split(","):
         part = chunk.strip()

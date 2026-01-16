@@ -169,7 +169,7 @@ def generate_rich_description(
     db: Database, 
     file_path: str, 
     repo_root: Path,
-    model: str = "qwen2.5:7b"
+    model: str = "qwen3:4b-instruct"
 ) -> tuple[str | None, list[str]]:
     """
     Generate a file description using an LLM to summarize the file's purpose.

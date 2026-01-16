@@ -27,7 +27,7 @@ class OllamaBackend:
         spec = EnrichmentBackendSpec(
             name="athena",
             provider="ollama",
-            model="qwen2.5:7b-instruct",
+            model="qwen3:4b-instruct",
             url="http://192.168.5.20:11434",
             timeout_seconds=120,
         )
