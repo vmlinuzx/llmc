@@ -1,29 +1,40 @@
+import importlib
 import sys
 from unittest.mock import patch
 
 import pytest
 
 
-def test_watcher_import_no_pyinotify():
+def test_watcher_import_no_watchfiles():
     """
-    Verify tools.rag.watcher imports correctly even if pyinotify is missing.
-    This simulates the environment where pyinotify is not installed.
+    Verify llmc.rag.watcher imports correctly even if watchfiles is missing.
+    This simulates the environment where watchfiles is not installed.
     """
-    # Force pyinotify to be missing if it was somehow present
-    with patch.dict(sys.modules, {"pyinotify": None}):
-        # We need to reload or import checking logic
-        # Since we modified the code to handle ImportError, we can just try importing
-        try:
-            from llmc.rag import watcher
+    # Remove the cached module to force reimport
+    modules_to_remove = [k for k in sys.modules if k.startswith("llmc.rag.watcher")]
+    for mod in modules_to_remove:
+        del sys.modules[mod]
+    
+    # Also remove llmc.rag if it has watcher cached
+    if "llmc.rag" in sys.modules:
+        del sys.modules["llmc.rag"]
 
-            assert not watcher.INOTIFY_AVAILABLE
-            # Verify _InotifyHandler exists and is a class
-            assert isinstance(watcher._InotifyHandler, type)
-            # Verify it inherits from the dummy ProcessEvent (which is just object or the local class)
-            # If pyinotify is None, ProcessEvent should be the local dummy
-            assert watcher.ProcessEvent.__name__ == "ProcessEvent"
-            assert watcher.ProcessEvent.__module__ == "llmc.rag.watcher"
+    # Patch watchfiles to simulate it being missing
+    with patch.dict(sys.modules, {"watchfiles": None}):
+        try:
+            # Force fresh import
+            from llmc.rag import watcher
+            importlib.reload(watcher)
+
+            assert watcher.is_watchfiles_available() is False
+            assert watcher.WATCHFILES_AVAILABLE is False
         except ImportError:
             pytest.fail("llmc.rag.watcher raised ImportError")
         except AttributeError as e:
             pytest.fail(f"llmc.rag.watcher raised AttributeError: {e}")
+        finally:
+            # Clean up: remove the broken module so subsequent tests get fresh import
+            modules_to_remove = [k for k in sys.modules if k.startswith("llmc.rag.watcher")]
+            for mod in modules_to_remove:
+                if mod in sys.modules:
+                    del sys.modules[mod]

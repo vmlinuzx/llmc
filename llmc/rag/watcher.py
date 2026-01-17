@@ -1,12 +1,12 @@
 """
 Event-driven file watching for LLMC RAG Service.
 
-Uses inotify (Linux) to watch repos for file changes, triggering
+Uses watchfiles to watch repos for file changes, triggering
 processing only when files actually change. This eliminates the
 CPU-wasting polling loop.
 
 Architecture:
-- RepoWatcher: Watches a single repo directory via inotify
+- RepoWatcher: Watches a single repo directory via watchfiles
 - ChangeQueue: Debounced queue of repos with pending changes
 - FileFilter: Gitignore-aware path filtering
 """
@@ -18,27 +18,28 @@ import logging
 from pathlib import Path
 import threading
 import time
-from typing import Any
 
 import pathspec
 
-logger = logging.getLogger(__name__)
-
-# inotify support (Linux only)
+# Gracefully handle missing watchfiles dependency
 try:
-    import pyinotify
+    from watchfiles import Change, DefaultFilter, watch
 
-    INOTIFY_AVAILABLE = True
-    ProcessEvent = pyinotify.ProcessEvent
+    WATCHFILES_AVAILABLE = True
 except ImportError:
-    pyinotify = None  # type: ignore
-    INOTIFY_AVAILABLE = False
+    WATCHFILES_AVAILABLE = False
 
-    class ProcessEvent:  # type: ignore
-        """Dummy class for when pyinotify is missing"""
+    # Stub types to prevent NameError when watchfiles is not installed
+    class DefaultFilter:  # type: ignore[no-redef]
+        """Stub for watchfiles.DefaultFilter when watchfiles is not installed."""
 
         pass
 
+    Change = None  # type: ignore[misc,assignment]
+    watch = None  # type: ignore[assignment]
+
+
+logger = logging.getLogger(__name__)
 
 # Directories to always ignore (fast path before gitignore check)
 ALWAYS_IGNORE = frozenset(
@@ -125,12 +126,12 @@ class ChangeQueue:
     def add(self, repo_path: str) -> None:
         """Mark a repo as having pending changes."""
         with self._lock:
-            self._pending[repo_path] = time.time()
+            self._pending[repo_path] = time.monotonic()
             self._event.set()
 
     def get_ready(self) -> list[str]:
         """Return repos that have been stable for debounce_seconds."""
-        now = time.time()
+        now = time.monotonic()
         with self._lock:
             ready = [
                 path
@@ -162,8 +163,21 @@ class ChangeQueue:
             self._event.clear()
 
 
+class LLMCFilter(DefaultFilter):
+    """Combines watchfiles defaults with LLMC-specific ignores."""
+
+    def __init__(self, file_filter: FileFilter):
+        super().__init__()
+        self.file_filter = file_filter
+
+    def __call__(self, change: Change, path: str) -> bool:
+        if not super().__call__(change, path):
+            return False
+        return not self.file_filter.should_ignore(Path(path))
+
+
 class RepoWatcher:
-    """Watches a single repo for file changes via inotify.
+    """Watches a single repo for file changes via watchfiles.
 
     When a relevant file changes, calls the on_change callback.
     Filters out noise (.git, __pycache__, etc.).
@@ -175,18 +189,18 @@ class RepoWatcher:
         on_change: Callable[[Path], None],
         filter_: FileFilter | None = None,
     ):
-        if not INOTIFY_AVAILABLE:
+        if not WATCHFILES_AVAILABLE:
             raise RuntimeError(
-                "pyinotify not available - install with: pip install pyinotify"
+                "watchfiles is not installed. "
+                "Install it with: pip install watchfiles"
             )
 
         self.repo_path = repo_path.resolve()
         self.on_change = on_change
-        self.filter = filter_ or FileFilter(self.repo_path)
+        self.file_filter = filter_ or FileFilter(self.repo_path)
 
-        self._wm = pyinotify.WatchManager()
-        self._handler = _InotifyHandler(self)
-        self._notifier = pyinotify.ThreadedNotifier(self._wm, self._handler)
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
         self._running = False
 
     def start(self) -> None:
@@ -194,24 +208,13 @@ class RepoWatcher:
         if self._running:
             return
 
-        # Watch for modifications, creates, deletes, moves
-        mask = (
-            pyinotify.IN_MODIFY
-            | pyinotify.IN_CREATE
-            | pyinotify.IN_DELETE
-            | pyinotify.IN_MOVED_FROM
-            | pyinotify.IN_MOVED_TO
+        self._stop_event.clear()
+        self._thread = threading.Thread(
+            target=self._watch_loop,
+            daemon=True,
+            name=f"watcher-{self.repo_path.name}",
         )
-
-        # Add recursive watch
-        self._wm.add_watch(
-            str(self.repo_path),
-            mask,
-            rec=True,
-            auto_add=True,
-        )
-
-        self._notifier.start()
+        self._thread.start()
         self._running = True
 
     def stop(self) -> None:
@@ -219,38 +222,27 @@ class RepoWatcher:
         if not self._running:
             return
 
-        self._notifier.stop()
+        self._stop_event.set()
+        if self._thread:
+            self._thread.join(timeout=2.0)
         self._running = False
 
-    def _handle_event(self, path: Path) -> None:
-        """Handle a file change event (called by handler)."""
-        if not self.filter.should_ignore(path):
-            self.on_change(path)
+    def _watch_loop(self) -> None:
+        watch_filter = LLMCFilter(self.file_filter)
+
+        for changes in watch(
+            self.repo_path,
+            watch_filter=watch_filter,
+            stop_event=self._stop_event,
+            recursive=True,
+        ):
+            for _change_type, path in changes:
+                try:
+                    self.on_change(Path(path))
+                except Exception:
+                    logger.exception("Error handling file change: %s", path)
 
 
-class _InotifyHandler(ProcessEvent):
-    """Internal handler for inotify events."""
-
-    def __init__(self, watcher: RepoWatcher):
-        super().__init__()
-        self.watcher = watcher
-
-    def process_default(self, event: Any) -> None:
-        """Handle any inotify event."""
-        if event.pathname:
-            path = Path(event.pathname)
-            self.watcher._handle_event(path)
-
-
-def is_inotify_available() -> bool:
-    """Check if inotify is available on this system."""
-    return INOTIFY_AVAILABLE
-
-
-def get_inotify_watch_limit() -> int | None:
-    """Get the current inotify watch limit (Linux only)."""
-    try:
-        with open("/proc/sys/fs/inotify/max_user_watches") as f:
-            return int(f.read().strip())
-    except Exception:
-        return None
+def is_watchfiles_available() -> bool:
+    """Check if watchfiles is available on this system."""
+    return WATCHFILES_AVAILABLE
