@@ -495,7 +495,7 @@ provider = "openai"
 
 ### 2.12 Dependency Audit: Remove Dead Weight (P2) 🧹
 
-**Status:** 🔴 Not Started  
+**Status:** ✅ **COMPLETE** (2026-01-17)  
 **Added:** 2025-12-24  
 **Source:** Architecture review - deps listed but not imported
 
@@ -521,44 +521,27 @@ grep -r "import watchdog\|from watchdog" llmc/ llmc_mcp/ llmc_agent/
 
 ---
 
-### 2.13 Migrate to watchfiles for File Watching (P2) 👁️
+### 2.13 Migrate to watchfiles for File Watching (P2) ✅
 
-**Status:** 🔴 Not Started  
+**Status:** ✅ **COMPLETE** (2026-01-17)  
 **Added:** 2025-12-24  
-**Source:** Architecture review - pyinotify is old and unmaintained
+**Source:** Architecture review - pyinotify is old and unmaintained  
+**SDD:** `DOCS/planning/SDD_Watchfiles_Migration.md`
 
-**Current State:**
-- Using `pyinotify` in `llmc/rag/watcher.py`
-- pyinotify is Linux-only, unmaintained since 2018
-- Manual ThreadedNotifier setup, edge-case bugs
-
-**The Solution:**
-[watchfiles](https://github.com/samuelcolvin/watchfiles) (by Pydantic author):
-- **Rust core** - 10-100x faster than Python-based watchers
-- **Cross-platform** - Linux (inotify), macOS (FSEvents), Windows
-- **Simple API** - no manual notifier setup
-- **Already in deps** - just not wired in
-
-```python
-from watchfiles import watch
-
-for changes in watch('/path/to/repo'):
-    for change_type, path in changes:
-        handle_change(change_type, path)
-```
-
-**What to build:**
-1. Replace `RepoWatcher` internals with `watchfiles.watch()`
-2. Remove pyinotify dependency
-3. Update tests
+**What was built:**
+- Replaced pyinotify with watchfiles in `llmc/rag/watcher.py`
+- Added `LLMCFilter` extending `DefaultFilter` for gitignore-aware filtering
+- Graceful fallback when watchfiles not installed
+- Error handling in watcher thread to prevent silent death
+- `time.monotonic()` for clock-safe debouncing
 
 **Benefits:**
-- Faster file change detection
-- Cross-platform (works on macOS for dev)
-- Less code to maintain
-- Active maintenance
+- Cross-platform (Linux, macOS, Windows)
+- Rust core - 10-100x faster
+- Simpler API - iterator-based
+- Active maintenance (Pydantic author)
 
-**Effort:** 4-6 hours | **Difficulty:** 🟢 Easy
+**Effort:** ~4 hours | **Difficulty:** 🟢 Easy
 
 ---
 
