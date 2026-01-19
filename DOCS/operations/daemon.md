@@ -1,6 +1,6 @@
 # RAG Daemon Operations
 
-The LLMC RAG Daemon (`llmc-rag-service`) is a background process responsible for keeping your semantic index fresh. It monitors registered repositories for changes, enriches new code with LLM-generated summaries, and updates the vector database.
+The LLMC RAG Daemon is a background process responsible for keeping your semantic index fresh. It monitors registered repositories for changes, enriches new code with LLM-generated summaries, and updates the vector database.
 
 For most users, the daemon is managed via the unified `llmc-cli`.
 
