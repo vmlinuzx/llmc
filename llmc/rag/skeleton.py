@@ -156,10 +156,8 @@ class Skeletonizer:
                     self._process_python_node(child, indent_level + 1)
                     found_content = True
 
-                # What about fields? x: int = 1
-                # type: expression_statement -> assignment
-                # If it's a typed assignment, maybe keep it?
-                # For now, simplistic approach: only methods/classes.
+                # Future: consider processing typed assignments.
+                # For now, only methods/classes are included.
 
                 if not cursor.goto_next_sibling():
                     break
