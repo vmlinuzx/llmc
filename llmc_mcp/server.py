@@ -695,6 +695,15 @@ class LlmcMcpServer:
             # Bootstrap
             "00_INIT": self._handle_bootstrap,
         }
+        
+        # RLM Registration
+        if self.config.rlm.enabled:
+            from llmc_mcp.tools.rlm import RLMTool
+            rlm_tool = RLMTool(self.config.rlm)
+            self.tools.append(rlm_tool.to_mcp_tool())
+            self.tool_handlers["run_rlm"] = rlm_tool.run
+            logger.info("RLM tool registered")
+
         # Append bootstrap tool to the list
         self.tools.append(BOOTSTRAP_TOOL)
         logger.info("Classic mode: 24 tools registered")
