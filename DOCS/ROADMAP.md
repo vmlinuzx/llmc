@@ -836,3 +836,196 @@ The RLM Phase 1.1.1 SDD failed to specify proper configuration loading. The `loa
 - SDD_RLM_Integration_Phase1.1.1.md (needs config section addendum)
 
 ---
+
+### 1.Y RLM Phase 1.1.1 Bug Fixes (P0) 🐛
+
+**Status:** 📋 **PLANNED**  
+**Added:** 2026-01-24  
+**Source:** Implementation session - feature branch needs cleanup before merge  
+**Branch:** `feature/rlm-phase-1.1.1`  
+**Commits:** 4 commits, 16 files, 1,721 insertions
+
+**Current Status:**
+- ✅ 16/17 tests passing (94%)
+- ✅ Core infrastructure complete
+- ✅ CLI entry point registered
+- ✅ DeepSeek integration test written
+- 🔴 1 failing nav test (symbol extraction)
+- 🔴 venv/litellm installation conflict
+- 🔴 Session loop needs live API validation
+
+**Known Issues:**
+
+1. **TreeSitterNav Class Symbol Extraction (P0)**
+   - **File:** `llmc/rlm/nav/treesitter_nav.py`
+   - **Test:** `tests/rlm/test_nav.py::test_ls_filters_by_scope`
+   - **Issue:** `_index_python_symbols()` doesn't recurse into class bodies properly
+   - **Impact:** `ls("Calculator")` returns empty instead of showing methods
+   - **Fix:** Ensure `visit(body, prefix=full_name)` is called for class definitions
+   - **Effort:** 15 minutes
+
+2. **Venv litellm Installation Conflict (P1)**
+   - **Issue:** `pip install -e .` in venv causes urllib3 version conflict
+   - **Error:** `kubernetes 34.1.0 requires urllib3<2.4.0,>=1.24.2, but you have urllib3 2.6.3`
+   - **Impact:** Can't run integration tests in venv
+   - **Fix:** Update pyproject.toml dependencies or use `--break-system-packages`
+   - **Effort:** 30 minutes
+
+3. **Session Live API Validation (P0)**
+   - **File:** `llmc/rlm/session.py`
+   - **Issue:** Session loop hasn't been tested with real DeepSeek API yet
+   - **Tests Written:** `tests/rlm/test_integration_deepseek.py`
+   - **Blockers:** venv installation issue (item #2)
+   - **Steps:**
+     1. Fix venv installation
+     2. Run `DEEPSEEK_API_KEY=sk-xxx python tests/rlm/test_integration_deepseek.py`
+     3. Verify budget tracking works
+     4. Fix any litellm API issues
+   - **Effort:** 1-2 hours
+
+**Acceptance Criteria:**
+- ✅ All 17/17 tests passing
+- ✅ Live DeepSeek integration test passes
+- ✅ Budget tracking verified with real API
+- ✅ Session completes full loop with FINAL() answer
+- ✅ Ready to merge to main
+
+**Effort:** 2-3 hours | **Difficulty:** 🟢 Easy  
+**Reference:** Session summary in /tmp/session_summary.md
+
+---
+
+### 1.Z RLM Phase 1.2 - MCP Tool Integration (P1)
+
+**Status:** 📋 **PLANNED**  
+**Added:** 2026-01-24  
+**Source:** SDD_RLM_Integration_Phase1.1.1.md - Phase 1.2 entry points  
+**Depends On:** 1.Y (bug fixes)
+
+**What Needs To Be Built:**
+
+1. **MCP Tool Wrapper (`llmc_mcp/tools/rlm.py`)**
+   - Expose RLMSession via MCP protocol
+   - Tool signature:
+     ```python
+     async def rlm_query(
+         task: str,
+         file_path: str | None = None,
+         context: str | None = None,
+         budget_usd: float = 1.00,
+     ) -> dict
+     ```
+   - Returns structured response with answer + budget summary
+   - Error handling for budget exceeded, timeout, etc.
+
+2. **MCP Server Registration**
+   - Add to `llmc_mcp/server.py` tool registry
+   - Schema generation for Claude/other MCP clients
+   - Documentation in tool description
+
+3. **Integration Tests**
+   - `tests/mcp/test_rlm_tool.py`
+   - Mock LLM backend for deterministic tests
+   - Budget enforcement verification
+   - Error handling tests
+
+**Acceptance Criteria:**
+- ✅ `rlm_query` tool registered in MCP server
+- ✅ Works via `llmc-mcp` stdio protocol
+- ✅ Claude can invoke RLM analysis
+- ✅ Integration tests passing
+- ✅ Documented in MCP tool list
+
+**Effort:** 3-4 hours | **Difficulty:** 🟢 Easy  
+**Reference:** SDD Section 6.3 (MCP Integration)
+
+---
+
+### 1.AA RLM Phase 1.3 - Documentation & Examples (P2)
+
+**Status:** 📋 **PLANNED**  
+**Added:** 2026-01-24  
+**Source:** Implementation - needs user-facing docs  
+**Depends On:** 1.Y (bug fixes), 1.Z (MCP tool)
+
+**What Needs To Be Built:**
+
+1. **User Guide (`DOCS/guides/RLM_User_Guide.md`)**
+   - What is RLM? (Recursive Language Model for code analysis)
+   - When to use it vs regular RAG search
+   - CLI examples with real scenarios
+   - Budget management tips
+   - Troubleshooting common issues
+
+2. **Architecture Documentation (`DOCS/architecture/RLM_Architecture.md`)**
+   - Component overview (sandbox, budget, navigation, session)
+   - Flow diagrams (session loop, budget enforcement)
+   - Design decisions and trade-offs
+   - V1.1.0 → V1.1.1 fixes explained
+
+3. **API Reference (`DOCS/reference/RLM_API.md`)**
+   - CLI command reference
+   - MCP tool signature
+   - Configuration options (once 1.X config surface is done)
+   - Python API for programmatic use
+
+4. **Example Scenarios**
+   - "Analyze performance bottlenecks in this file"
+   - "Find all usages of this function and explain"
+   - "Generate test cases for this module"
+   - Budget-constrained analysis
+
+**Acceptance Criteria:**
+- ✅ User guide with 5+ real examples
+- ✅ Architecture doc with diagrams
+- ✅ API reference complete
+- ✅ Examples tested and working
+- ✅ Linked from main LLMC docs
+
+**Effort:** 4-6 hours | **Difficulty:** 🟢 Easy  
+**Reference:** SDD_RLM_Integration_Phase1.1.1.md
+
+---
+
+### 1.AB RLM Phase 2 - Advanced Features (P3 - Future)
+
+**Status:** 📋 **DEFERRED**  
+**Added:** 2026-01-24  
+**Source:** SDD_RLM_Integration_Phase1.1.1.md - Phase 2+ roadmap
+
+**Future Enhancements (Post-MVP):**
+
+1. **RestrictedPython Sandbox Backend (Tier -1)**
+   - More restrictive than process backend
+   - For untrusted contexts
+   - No subprocess spawning allowed
+
+2. **Multi-File Context Loading**
+   - Load entire directory as context
+   - Cross-file navigation
+   - Workspace-level analysis
+
+3. **Streaming Response Support**
+   - Stream intermediate findings back to user
+   - Real-time budget updates
+   - Cancellable long-running sessions
+
+4. **Sub-Call Result Caching**
+   - Cache llm_query() results by prompt hash
+   - Reduce redundant API calls
+   - TTL-based invalidation
+
+5. **Advanced Navigation Tools**
+   - AST-based queries (not just regex)
+   - Call graph traversal
+   - Data flow analysis
+
+6. **Multi-Modal Support**
+   - Analyze diagrams, screenshots alongside code
+   - PDF/document context integration
+   - Image-based debugging
+
+**Effort:** TBD | **Difficulty:** 🔴 Hard  
+**Reference:** SDD Section 9 (Future Work)
+
+---
