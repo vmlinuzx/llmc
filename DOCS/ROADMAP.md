@@ -684,3 +684,155 @@ tool_format = "anthropic"  # XML-based
 - Periodically reshape **Next** and **Later** based on what's exciting
 
 The goal is a **small, accurate map** of where LLMC is going from here.
+
+### 1.X RLM Configuration Surface Implementation (P0) 🚨
+
+**Status:** 📋 **PLANNED**  
+**Added:** 2026-01-24  
+**Source:** Oracle code review of RLM Phase 1.1.1 implementation
+
+**The Problem:**
+The RLM Phase 1.1.1 SDD failed to specify proper configuration loading. The `load_rlm_config()` function is currently a stub that returns hardcoded defaults. This means:
+
+- **80+ hardcoded values** scattered across the RLM implementation
+- Users cannot configure RLM without modifying Python code
+- Critical settings (model names, budget limits, sandbox policies) are inflexible
+- Security policies (allowed modules, blocked builtins) cannot be customized per environment
+
+**Critical Hardcoded Items (15 issues):**
+- Root/sub model names
+- Budget limits (USD, tokens, depth)
+- Sandbox security policies (BLOCKED_BUILTINS, ALLOWED_MODULES)
+- Default pricing tables
+- Timeout values (code execution, session wall-clock)
+
+**High Priority (23 issues):**
+- LLM parameters (temperature, max_tokens)
+- Token estimation heuristics (chars_per_token, safety_multiplier)
+- Session limits (max_turns)
+- Context size limits
+
+**Medium/Low (40+ issues):**
+- Truncation/preview limits throughout (stdout, stderr, traces)
+- Tool naming conventions
+- Prompt template formatting
+
+**What Needs To Be Built:**
+
+1. **Implement `llmc/rlm/config.py:load_rlm_config()`**
+   - Actually parse `llmc.toml` `[rlm]` section
+   - Validate types and ranges
+   - Preserve current defaults as fallbacks
+
+2. **Create Nested Config Structures:**
+   ```python
+   @dataclass
+   class BudgetConfig:
+       max_session_budget_usd: float
+       max_session_tokens: int
+       soft_limit_percentage: float
+       max_subcall_depth: int
+       pricing: dict
+   
+   @dataclass
+   class SandboxConfig:
+       backend: str
+       code_timeout_seconds: int
+       max_output_chars: int
+       blocked_builtins: set[str]
+       allowed_modules: set[str]
+       terminate_grace_seconds: int
+   
+   @dataclass
+   class LLMCallConfig:
+       root: ModelParams  # temperature, max_tokens
+       sub: ModelParams
+   
+   @dataclass
+   class NavConfig:
+       default_language: str
+       read_chunk_chars: int
+       search_max_results: int
+       signature_preview_chars: int
+   
+   @dataclass
+   class PromptConfig:
+       system_template: str
+       context_header: str
+       code_fence_language: str
+   
+   @dataclass
+   class RLMConfig:
+       root_model: str
+       sub_model: str
+       budget: BudgetConfig
+       sandbox: SandboxConfig
+       llm: LLMCallConfig
+       nav: NavConfig
+       prompts: PromptConfig
+       session: SessionConfig
+       trace: TraceConfig
+       token_estimate: TokenEstimateConfig
+   ```
+
+3. **Wire Config Through Constructors:**
+   - `TokenBudget(config.budget)`
+   - `ProcessSandboxBackend(config.sandbox)`
+   - `TreeSitterNav(..., config.nav)`
+   - `get_rlm_system_prompt(..., config.prompts)`
+
+4. **Create llmc.toml [rlm] Section Schema:**
+   ```toml
+   [rlm]
+   root_model = "ollama_chat/qwen3-next-80b"
+   sub_model = "ollama_chat/qwen3-next-80b"
+   
+   [rlm.budget]
+   max_session_budget_usd = 1.00
+   max_session_tokens = 500_000
+   soft_limit_percentage = 0.80
+   max_subcall_depth = 5
+   
+   [rlm.budget.pricing]
+   default = { input = 0.01, output = 0.03 }
+   "ollama_chat/qwen3-next-80b" = { input = 0.0, output = 0.0 }
+   
+   [rlm.sandbox]
+   backend = "process"
+   code_timeout_seconds = 30
+   max_output_chars = 10_000
+   blocked_builtins = ["open", "exec", "eval", ...]
+   allowed_modules = ["json", "re", "math", ...]
+   
+   [rlm.llm.root]
+   temperature = 0.1
+   max_tokens = 4096
+   
+   [rlm.llm.sub]
+   temperature = 0.1
+   max_tokens = 1024
+   
+   # ... etc for all 80+ values
+   ```
+
+5. **Documentation:**
+   - Complete config reference in DOCS/reference/rlm-config.md
+   - Migration guide from hardcoded defaults
+   - Examples for common scenarios (strict sandbox, budget limits, etc.)
+
+**Acceptance Criteria:**
+- ✅ `load_rlm_config()` reads from `llmc.toml`
+- ✅ All 80+ hardcoded values moved to config
+- ✅ Backward compatibility: missing config = current defaults
+- ✅ Type validation with helpful error messages
+- ✅ Full config reference documentation
+- ✅ Example llmc.toml snippet in DOCS/
+
+**Effort:** 1-2 days | **Difficulty:** 🟡 Medium  
+**Reference:** Oracle audit findings in session ses_40d6c9e3fffeXOOkzrYER1CYdK
+
+**Related:**
+- RLM Phase 1.1.1 implementation (commit 22dfefd)
+- SDD_RLM_Integration_Phase1.1.1.md (needs config section addendum)
+
+---
