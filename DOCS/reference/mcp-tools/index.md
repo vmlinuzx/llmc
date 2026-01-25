@@ -15,7 +15,7 @@ LLMC exposes **27 tools** via the Model Context Protocol.
 | rag | `rag_search`, `rag_query`, `rag_search_enriched`, `rag_where_used`, `rag_lineage`, `rag_stats`, `rag_plan` |
 | read | `read_file` |
 | repo | `repo_read` |
-| run | `run_cmd` |
+| run | `run_cmd`, `run_rlm` |
 | te | `te_run` |
 
 ---
@@ -371,3 +371,15 @@ Execute a shell command through the Tool Envelope (TE) wrapper. Returns structur
 | `timeout` | `number` |  | Execution timeout in seconds |
 
 ---
+
+## `run_rlm`
+
+Run a Recursive Loop Manager (RLM) session to solve a complex task using Python code and available tools.
+
+### Parameters
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `goal` | `string` | ✓ | The goal or task for the RLM to solve. |
+| `context` | `string` |  | Optional initial context (text or code) for the session. |
+| `max_turns` | `integer` |  | Maximum number of turns (loops) allowed. |

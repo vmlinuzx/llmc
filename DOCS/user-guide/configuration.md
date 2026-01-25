@@ -299,6 +299,17 @@ csv_path = "./artifacts/mcp_token_audit.csv"
 retention_days = 0                   # 0 = keep forever
 ```
 
+
+#### `[mcp.rlm]`
+
+Enable the Recursive Loop Manager (RLM) tool.
+
+```toml
+[mcp.rlm]
+enabled = false
+max_loops = 5
+timeout = 300
+```
 ---
 
 ### `[tool_envelope]`
