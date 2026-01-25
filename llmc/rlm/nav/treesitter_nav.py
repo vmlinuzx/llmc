@@ -45,19 +45,7 @@ class SearchMatch:
 
 
 class TreeSitterNav:
-    """Semantic navigation SDK built on LLMC's existing RAG infrastructure.
-    
-    Uses:
-    - llmc/rag/lang.py: parse_source() for parsing (FUNCTIONAL API)
-    - llmc/rag/skeleton.py: Skeletonizer for outline()
-    - llmc/rag/types.py: SpanRecord for symbol tracking
-    
-    API:
-    - outline(): Skeletal view via Skeletonizer (fast, existing code)
-    - ls(scope): List children of a scope
-    - read(symbol, chunk_index): Read source with pagination
-    - search(pattern): Regex search with line numbers
-    """
+    """Semantic navigation SDK built on LLMC's existing RAG infrastructure."""
     
     def __init__(
         self,
@@ -90,37 +78,19 @@ class TreeSitterNav:
     
     def _build_symbol_index(self, source_bytes: bytes) -> None:
         """Build symbol index using tree-sitter traversal."""
-        # For Phase 1, use simplified extraction
-        # Full implementation would use llmc.rag.lang._collect_python() etc.
-        
-        # Simple Python extraction for MVP
         if self.language == "python":
             self._index_python_symbols(self.tree)
     
     def _index_python_symbols(self, root_node) -> None:
         """Extract Python symbols from tree-sitter AST."""
         def visit(node, prefix=""):
+            # Process current node first
             if node.type in ("function_definition", "async_function_definition"):
                 name_node = node.child_by_field_name("name")
                 if name_node:
                     symbol_name = self.source[name_node.start_byte:name_node.end_byte]
                     full_name = f"{prefix}.{symbol_name}" if prefix else symbol_name
                     
-                    # Extract signature
-                    sig_end = node.child_by_field_name("body")
-                    sig_start = node.start_byte
-                    sig_bytes = sig_end.start_byte if sig_end else node.end_byte
-    def _index_python_symbols(self, root_node) -> None:
-        """Extract Python symbols from tree-sitter AST."""
-        def visit(node, prefix=""):
-            # Process current node
-            if node.type in ("function_definition", "async_function_definition"):
-                name_node = node.child_by_field_name("name")
-                if name_node:
-                    symbol_name = self.source[name_node.start_byte:name_node.end_byte]
-                    full_name = f"{prefix}.{symbol_name}" if prefix else symbol_name
-                    
-                    # Extract signature
                     body = node.child_by_field_name("body")
                     sig_end = body.start_byte if body else node.end_byte
                     signature = self.source[node.start_byte:sig_end].strip()
@@ -140,7 +110,6 @@ class TreeSitterNav:
                     class_name = self.source[name_node.start_byte:name_node.end_byte]
                     full_name = f"{prefix}.{class_name}" if prefix else class_name
                     
-                    # Extract class header
                     body = node.child_by_field_name("body")
                     sig_end = body.start_byte if body else node.end_byte
                     signature = self.source[node.start_byte:sig_end].strip()
@@ -157,36 +126,27 @@ class TreeSitterNav:
                     # Recurse into class body for methods
                     if body:
                         visit(body, prefix=full_name)
-                    return  # Don't process children again below
+                        return  # Don't double-process
             
-            # Recurse into children
+            # Recurse into all children
             for child in node.children:
                 visit(child, prefix)
         
         visit(self.tree)
-        
-        This is the FAST PATH - reuses existing tested code.
-        """
+    
+    def outline(self, max_depth: int = 3) -> str:
+        """Get skeletal view using LLMC's Skeletonizer."""
         return self._skeletonizer.skeletonize()
     
     def ls(self, scope: str = "") -> list[str]:
-        """List symbols, optionally filtered by scope prefix.
-        
-        Args:
-            scope: Filter prefix (e.g., "MyClass" shows MyClass.*)
-        
-        Returns:
-            List of symbol signatures
-        """
+        """List symbols, optionally filtered by scope prefix."""
         if not scope:
-            # Top-level: return all non-nested symbols
             return [
                 node.signature 
                 for name, node in self._symbols.items()
                 if "." not in name
             ]
         
-        # Filtered: return children of scope
         prefix = scope + "."
         return [
             node.signature
@@ -195,34 +155,19 @@ class TreeSitterNav:
         ]
     
     def read(self, symbol: str, chunk_index: int = 0, max_chars: int = 8000) -> str:
-        """Read source code of a symbol with pagination.
-        
-        FIXES V1.1.0 ISSUE: Previously referenced non-existent read_chunk().
-        Now properly implements pagination via chunk_index parameter.
-        
-        Args:
-            symbol: Symbol name (e.g., "MyClass.method")
-            chunk_index: Which chunk to return (0-indexed)
-            max_chars: Max characters per chunk
-        
-        Returns:
-            Source code chunk with metadata header
-        """
+        """Read source code of a symbol with pagination."""
         node = self._symbols.get(symbol)
         if not node:
             available = list(self._symbols.keys())[:20]
             return f"Error: Symbol '{symbol}' not found. Available: {available}"
         
-        # Extract full source
         lines = self.source.split('\n')
         full_code = '\n'.join(lines[node.start_line - 1:node.end_line])
         
-        # Check if chunking needed
         if len(full_code) <= max_chars:
             path = self.source_path or "<string>"
             return f"# {path}:{node.start_line}-{node.end_line}\n{full_code}"
         
-        # Chunk the code
         if symbol not in self._chunk_cache:
             self._chunk_cache[symbol] = self._split_into_chunks(full_code, max_chars)
         
@@ -246,7 +191,7 @@ class TreeSitterNav:
         current_size = 0
         
         for line in lines:
-            line_size = len(line) + 1  # +1 for newline
+            line_size = len(line) + 1
             if current_size + line_size > max_chars and current_chunk:
                 chunks.append('\n'.join(current_chunk))
                 current_chunk = []
@@ -260,19 +205,7 @@ class TreeSitterNav:
         return chunks
     
     def search(self, pattern: str, max_results: int = 20) -> list[SearchMatch]:
-        """Search for regex pattern in source.
-        
-        NOTE: This is TEXT search, not AST query.
-        The V1.1.0 docstring incorrectly claimed AST query support.
-        AST queries are a Phase 2 feature.
-        
-        Args:
-            pattern: Regex pattern
-            max_results: Maximum matches
-        
-        Returns:
-            List of SearchMatch with line numbers
-        """
+        """Search for regex pattern in source."""
         import re
         results = []
         
@@ -292,7 +225,6 @@ class TreeSitterNav:
                     end_char=match.end(),
                 ))
         except re.error as e:
-            # Return error as a "match" so agent sees it
             results.append(SearchMatch(
                 text=f"Regex error: {e}",
                 start_line=0,
@@ -316,10 +248,7 @@ class TreeSitterNav:
 
 
 def create_nav_tools(nav: TreeSitterNav) -> dict[str, callable]:
-    """Create tool functions for sandbox injection.
-    
-    IMPORTANT: These are the ONLY nav tools. Prompts must match exactly.
-    """
+    """Create tool functions for sandbox injection."""
     return {
         "nav_outline": lambda: nav.outline(),
         "nav_ls": lambda scope="": nav.ls(scope),

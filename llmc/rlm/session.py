@@ -57,7 +57,7 @@ class RLMSession:
         self._pending_warnings: list[str] = []
         
         # Initialize LLM backend (LLMC's existing infrastructure)
-        self._llm_backend = LiteLLMCore()
+        # LiteLLMCore not used - we call litellm directly
         
         # Initialize governance with config-based pricing
         pricing = load_pricing(Path("llmc.toml"))
@@ -167,8 +167,7 @@ class RLMSession:
     def _make_llm_query(self):
         """Create governed llm_query tool."""
         budget = self.budget
-        backend = self._llm_backend
-        config = self.config
+        
         session = self
         
         def llm_query(prompt: str, max_tokens: int = 1024) -> str:
@@ -277,7 +276,7 @@ class RLMSession:
                 
                 # Use litellm directly for async
                 import litellm
-                response = await litellm.acompletion(
+                response = await litellm.completion(
                     model=self.config.root_model,
                     messages=messages,
                     max_tokens=4096,
