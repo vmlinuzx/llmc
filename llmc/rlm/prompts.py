@@ -20,6 +20,19 @@ def get_rlm_system_prompt(
     tool_docs = _generate_tool_docs(injected_tools)
     context_info = _format_context_info(context_meta)
     
+    # Conditional workflow steps
+    workflow_steps = [
+        "1. Use the tools above to explore and analyze the data",
+    ]
+    if "llm_query" in injected_tools:
+        workflow_steps.append("2. Use `llm_query(prompt)` sparingly for sub-analysis (each call has cost)")
+    else:
+        # If llm_query is not available, don't mention it
+        pass
+    
+    workflow_steps.append("3. Call `FINAL(answer)` when you have a complete answer")
+    workflow_str = "\n".join(workflow_steps)
+
     return f'''You are an AI assistant analyzing data in a Python REPL environment.
 
 {context_info}
@@ -27,19 +40,28 @@ def get_rlm_system_prompt(
 ## Available Tools (use these EXACTLY as shown)
 {tool_docs}
 
+## Tool Calling Convention
+You are running in a restricted process sandbox.
+ALL tool calls must be assigned to a variable immediately:
+- `info = nav_info()`
+- `files = nav_ls("path")`
+- `code = nav_read("symbol")`
+
+Do NOT use:
+- Bare calls: `nav_info()`
+- Nested calls: `print(nav_info())`
+- Complex arguments: `nav_ls(some_var)` (use string literals only)
+
 ## Special Functions
 - `FINAL(answer)` - Submit your final answer and end the session
 - `FINAL_VAR = answer` - Alternative way to submit final answer
 
 ## Workflow
-1. Use the tools above to explore and analyze the data
-2. Use `llm_query(prompt)` sparingly for sub-analysis (each call has cost)
-3. Call `FINAL(answer)` when you have a complete answer
+{workflow_str}
 
 ## Important Rules
 - DO NOT try to print the entire context (it's too large)
 - Use navigation/search tools to find relevant parts first
-- Each `llm_query()` call consumes budget - be efficient
 - Write Python code in ```python blocks
 
 Begin your analysis.'''

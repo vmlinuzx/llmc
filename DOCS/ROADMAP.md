@@ -10,6 +10,19 @@ This roadmap focuses only on **active** work. Completed items are in `ROADMAP_CO
 
 ## 1. Now (P0 / P1)
 
+### 1.W RLM Phase 1: Callback Interception (P0) ✅
+**Status:** ✅ **COMPLETE** (2026-01-24)
+**Added:** 2026-01-24
+**Source:** RLM Phase 1 Implementation Plan
+
+**Problem:** `ProcessSandboxBackend` cannot support callbacks directly (runtime error).
+**Solution:** AST-based interception in orchestrator.
+- Rewrites `x = tool()` to use injected variables
+- Supports `nav_*` tools with literal arguments
+- Rejects invalid patterns (bare calls, nested calls) with helpful feedback
+
+**Effort:** 2-4 hours | **Difficulty:** 🟡 Medium
+
 ### 1.0 Eliminate Hardcoded Model Defaults (P0) 🚨
 
 **Status:** ✅ **COMPLETE** (2026-01-16)  
@@ -1024,6 +1037,11 @@ The RLM Phase 1.1.1 SDD failed to specify proper configuration loading. The `loa
    - Analyze diagrams, screenshots alongside code
    - PDF/document context integration
    - Image-based debugging
+
+7. **IPC Callbacks (Process Backend)**
+   - Full callback support via IPC (multiprocessing.Queue)
+   - Allows nested calls, complex args, `llm_query()` from inside sandbox
+   - Replaces Phase 1 AST interception
 
 **Effort:** TBD | **Difficulty:** 🔴 Hard  
 **Reference:** SDD Section 9 (Future Work)
