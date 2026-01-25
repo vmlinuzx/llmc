@@ -51,7 +51,11 @@ class TreeSitterNav:
         self,
         source: str | Path,
         language: str | None = None,
+        config = None,
     ):
+        # Import and store config
+        from llmc.rlm.config import RLMConfig
+        self.config = config if config is not None else RLMConfig()
         if isinstance(source, Path):
             self.source_path = source
             self.source = source.read_text()
@@ -100,7 +104,7 @@ class TreeSitterNav:
                         kind="function" if node.type == "function_definition" else "async_function",
                         start_line=node.start_point[0] + 1,
                         end_line=node.end_point[0] + 1,
-                        signature=signature[:200],
+                        signature=signature[:self.config.match_preview_chars],
                         docstring=None,
                     )
             
@@ -119,7 +123,7 @@ class TreeSitterNav:
                         kind="class",
                         start_line=node.start_point[0] + 1,
                         end_line=node.end_point[0] + 1,
-                        signature=signature[:200],
+                        signature=signature[:self.config.match_preview_chars],
                         docstring=None,
                     )
                     
@@ -218,7 +222,7 @@ class TreeSitterNav:
                 end_line = self.source[:match.end()].count('\n') + 1
                 
                 results.append(SearchMatch(
-                    text=match.group(0)[:200],
+                    text=match.group(0)[:self.config.match_preview_chars],
                     start_line=start_line,
                     end_line=end_line,
                     start_char=match.start(),
@@ -240,7 +244,7 @@ class TreeSitterNav:
         return {
             "total_chars": len(self.source),
             "total_lines": self.source.count('\n') + 1,
-            "estimated_tokens": len(self.source) // 4,
+            "estimated_tokens": len(self.source) // self.config.chars_per_token,
             "language": self.language,
             "symbol_count": len(self._symbols),
             "source_path": str(self.source_path) if self.source_path else None,

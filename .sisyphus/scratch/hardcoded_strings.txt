@@ -1,0 +1,59 @@
+llmc/rlm/__init__.py:__all__ = ["RLMConfig"]
+llmc/rlm/config.py:    root_model: str = "ollama_chat/qwen3-next-80b"
+llmc/rlm/config.py:    sub_model: str = "ollama_chat/qwen3-next-80b"
+llmc/rlm/config.py:    sandbox_backend: str = "process"
+llmc/rlm/config.py:    rlm_data = full_config.get("rlm", {})
+llmc/rlm/config.py:    sandbox_data = data.pop("sandbox", {})
+llmc/rlm/config.py:        overrides["blocked_builtins"] = frozenset(sandbox_data["blocked_builtins"])
+llmc/rlm/config.py:        overrides["allowed_modules"] = frozenset(sandbox_data["allowed_modules"])
+llmc/rlm/prompts.py:    workflow_str = "\n".join(workflow_steps)
+llmc/rlm/prompts.py:- `files = nav_ls("path")`
+llmc/rlm/prompts.py:- `code = nav_read("symbol")`
+llmc/rlm/prompts.py:    parts = ["## Context Information"]
+llmc/rlm/prompts.py:        doc = func.__doc__ or f"Call {name}()"
+llmc/rlm/governance/budget.py:    max_subcall_depth: int = 5  # Renamed from "recursion" - honest naming
+llmc/rlm/governance/budget.py:        call_type: Literal["root", "sub"] = "sub",
+llmc/rlm/governance/budget.py:        call_type: Literal["root", "sub"] = "sub",
+llmc/rlm/governance/budget.py:        if call_type == "root":
+llmc/rlm/session.py:                    line = context[: match.start()].count("\n") + 1
+llmc/rlm/session.py:                    call_type="sub",
+llmc/rlm/session.py:                        messages=[{"role": "user", "content": prompt}],
+llmc/rlm/session.py:                        call_type="sub",
+llmc/rlm/session.py:                last_error = f"Session timeout after {self.budget.state.elapsed_seconds:.1f}s"
+llmc/rlm/session.py:            prompt_text = "\n".join(m.get("content", "") for m in messages)
+llmc/rlm/session.py:                    call_type="root",
+llmc/rlm/session.py:                    call_type="root",
+llmc/rlm/session.py:                last_error = f"Budget exceeded on root call: {e}"
+llmc/rlm/session.py:                last_error = f"Root model error: {e}"
+llmc/rlm/session.py:                        inj_name = f"__rlm_icpt_{self.session_id}_{self._interception_counter}"
+llmc/rlm/session.py:        pattern = r"```(?:python)?\s*\n(.*?)```"
+llmc/rlm/nav/treesitter_nav.py:        self.language = language or "python"
+llmc/rlm/nav/treesitter_nav.py:        if self.language == "python":
+llmc/rlm/nav/treesitter_nav.py:                name_node = node.child_by_field_name("name")
+llmc/rlm/nav/treesitter_nav.py:                    full_name = f"{prefix}.{symbol_name}" if prefix else symbol_name
+llmc/rlm/nav/treesitter_nav.py:                    body = node.child_by_field_name("body")
+llmc/rlm/nav/treesitter_nav.py:                        kind="function" if node.type == "function_definition" else "async_function",
+llmc/rlm/nav/treesitter_nav.py:            elif node.type == "class_definition":
+llmc/rlm/nav/treesitter_nav.py:                name_node = node.child_by_field_name("name")
+llmc/rlm/nav/treesitter_nav.py:                    full_name = f"{prefix}.{class_name}" if prefix else class_name
+llmc/rlm/nav/treesitter_nav.py:                    body = node.child_by_field_name("body")
+llmc/rlm/nav/treesitter_nav.py:                        kind="class",
+llmc/rlm/nav/treesitter_nav.py:        prefix = scope + "."
+llmc/rlm/nav/treesitter_nav.py:            if name.startswith(prefix) and name.count(".") == scope.count(".") + 1
+llmc/rlm/nav/treesitter_nav.py:            path = self.source_path or "<string>"
+llmc/rlm/nav/treesitter_nav.py:        header = f"# {symbol} (chunk {chunk_index + 1}/{len(chunks)})\n"
+llmc/rlm/nav/treesitter_nav.py:            footer = f"\n# ... use read('{symbol}', {chunk_index + 1}) for next chunk"
+llmc/rlm/nav/treesitter_nav.py:                text=f"Regex error: {e}",
+llmc/rlm/nav/__init__.py:__all__ = ["TreeSitterNav", "NavNode", "SearchMatch", "create_nav_tools"]
+llmc/rlm/sandbox/__init__.py:__all__ = ["CodeExecutionEnvironment", "ExecutionResult", "create_sandbox"]
+llmc/rlm/sandbox/interface.py:    backend: str = "process",
+llmc/rlm/sandbox/interface.py:    if backend == "process":
+llmc/rlm/sandbox/interface.py:    elif backend == "restricted":
+llmc/rlm/sandbox/process_backend.py:            final_answer = str(namespace["FINAL_VAR"])
+llmc/rlm/sandbox/process_backend.py:                error=f"Execution killed after {timeout}s timeout",
+llmc/rlm/sandbox/process_backend.py:                error="Worker crashed without returning result",
+llmc/rlm/sandbox/process_backend.py:            success=result_data["success"],
+llmc/rlm/sandbox/process_backend.py:            stdout=result_data["stdout"],
+llmc/rlm/sandbox/process_backend.py:            stderr=result_data["stderr"],
+llmc/rlm/sandbox/process_backend.py:            error=result_data["error"],
+llmc/rlm/sandbox/process_backend.py:            final_answer=result_data["final_answer"],

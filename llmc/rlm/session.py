@@ -65,7 +65,7 @@ class RLMSession:
         # LiteLLMCore not used - we call litellm directly
 
         # Initialize governance with config-based pricing
-        pricing = load_pricing(Path("llmc.toml"))
+        pricing = load_pricing()
         budget_config = BudgetConfig(
             max_session_budget_usd=self.config.max_session_budget_usd,
             max_session_tokens=self.config.max_tokens_per_session,
@@ -80,8 +80,12 @@ class RLMSession:
         # Initialize sandbox
         self.sandbox = create_sandbox(
             backend=self.config.sandbox_backend,
+            
             max_output_chars=self.config.max_print_chars,
             timeout_seconds=self.config.code_timeout_seconds,
+            blocked_builtins=self.config.blocked_builtins,
+            allowed_modules=self.config.allowed_modules,
+            security_mode=self.config.security_mode,
         )
 
         # Navigation (set on load_code_context)
@@ -104,7 +108,7 @@ class RLMSession:
 
         self.context_meta = {
             "total_chars": len(context),
-            "estimated_tokens": len(context) // 4,
+            "estimated_tokens": len(context) // self.config.chars_per_token,
             "type": "string",
         }
 
@@ -129,7 +133,7 @@ class RLMSession:
         else:
             source_text = source
 
-        self.nav = TreeSitterNav(source_text, language=language)
+        self.nav = TreeSitterNav(source_text, language=language, config=self.config)
         self.context_meta = self.nav.get_info()
 
         self.sandbox.start()
@@ -160,7 +164,7 @@ class RLMSession:
                     line = context[: match.start()].count("\n") + 1
                     results.append(
                         {
-                            "text": match.group(0)[:200],
+                            "text": match.group(0)[:self.config.match_preview_chars],
                             "line": line,
                             "start": match.start(),
                         }
@@ -179,14 +183,14 @@ class RLMSession:
 
         def llm_query(prompt: str, max_tokens: int = 1024) -> str:
             """Query sub-LLM (governed by budget)."""
-            # Estimate tokens (conservative: char/4 + 20% buffer)
-            estimated_input = int(len(prompt) / 4 * 1.2)
+            # Estimate tokens
+            estimated_input = int(len(prompt) / self.config.chars_per_token * self.config.token_safety_multiplier)
             estimated_output = min(max_tokens, 1000)
 
             try:
                 # Check budget BEFORE call
                 budget.check_and_reserve(
-                    model=config.sub_model,
+                    model=self.config.sub_model,
                     estimated_input_tokens=estimated_input,
                     estimated_output_tokens=estimated_output,
                     call_type="sub",
@@ -202,10 +206,10 @@ class RLMSession:
                     import litellm
 
                     response = litellm.completion(
-                        model=config.sub_model,
+                        model=self.config.sub_model,
                         messages=[{"role": "user", "content": prompt}],
                         max_tokens=max_tokens,
-                        temperature=0.1,
+                        temperature=self.config.sub_temperature,
                     )
 
                     content = response.choices[0].message.content
@@ -214,7 +218,7 @@ class RLMSession:
 
                     # Record actual usage
                     budget.record_usage(
-                        model=config.sub_model,
+                        model=self.config.sub_model,
                         input_tokens=input_tokens,
                         output_tokens=output_tokens,
                         call_type="sub",
@@ -224,8 +228,8 @@ class RLMSession:
                         "sub_call",
                         {
                             "depth": depth,
-                            "prompt_preview": prompt[:200],
-                            "response_preview": content[:200],
+                            "prompt_preview": prompt[:self.config.prompt_preview_chars],
+                            "response_preview": content[:self.config.response_preview_chars],
                             "tokens": input_tokens + output_tokens,
                         },
                     )
@@ -240,8 +244,10 @@ class RLMSession:
 
         return llm_query
 
-    async def run(self, task: str, max_turns: int = 20) -> RLMResult:
+    async def run(self, task: str, max_turns: int | None = None) -> RLMResult:
         """Execute RLM loop with governed root calls."""
+        
+        limit_turns = max_turns if max_turns is not None else self.config.max_turns
 
         # Generate prompt from actual injected tools
         system_prompt = get_rlm_system_prompt(
@@ -257,7 +263,7 @@ class RLMSession:
         final_answer = None
         last_error = None
 
-        for turn in range(max_turns):
+        for turn in range(limit_turns):
             # Check timeout
             if self.budget.state.elapsed_seconds > self.config.session_timeout_seconds:
                 last_error = f"Session timeout after {self.budget.state.elapsed_seconds:.1f}s"
@@ -275,7 +281,7 @@ class RLMSession:
 
             # Estimate root call cost
             prompt_text = "\n".join(m.get("content", "") for m in messages)
-            estimated_input = int(len(prompt_text) / 4 * 1.2)
+            estimated_input = int(len(prompt_text) / self.config.chars_per_token * self.config.token_safety_multiplier)
             estimated_output = 2000  # Conservative for root
 
             try:
@@ -293,8 +299,8 @@ class RLMSession:
                 response = await litellm.acompletion(
                     model=self.config.root_model,
                     messages=messages,
-                    max_tokens=4096,
-                    temperature=0.1,
+                    max_tokens=self.config.root_max_tokens,
+                    temperature=self.config.root_temperature,
                 )
 
                 assistant_message = response.choices[0].message.content
@@ -440,7 +446,7 @@ class RLMSession:
                 exec_results.append(
                     {
                         "success": result.success,
-                        "stdout": result.stdout[:2000] if result.stdout else None,
+                        "stdout": result.stdout[:self.config.stdout_preview_chars] if result.stdout else None,
                         "stderr": result.stderr[:500] if result.stderr else None,
                         "error": result.error,
                     }

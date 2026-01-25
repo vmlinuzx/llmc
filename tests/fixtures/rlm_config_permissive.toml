@@ -1,0 +1,11 @@
+# Permissive Local Development Config
+[rlm]
+root_model = "ollama_chat/qwen3-next-80b"
+sub_model = "ollama_chat/qwen3-next-80b"
+
+[rlm.sandbox]
+security_mode = "permissive"
+code_timeout_seconds = 60  # Generous for debugging
+
+[rlm.budget]
+max_session_budget_usd = 5.00  # Higher for dev

@@ -31,7 +31,7 @@ class TestProcessSandbox:
     
     def test_blocked_imports(self):
         """Dangerous imports are blocked."""
-        sandbox = ProcessSandboxBackend()
+        sandbox = ProcessSandboxBackend(security_mode="restrictive")
         sandbox.start()
         
         result = sandbox.execute("import os")

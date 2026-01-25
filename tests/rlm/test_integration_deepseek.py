@@ -2,10 +2,16 @@
 
 import pytest
 import os
+import sys
 from pathlib import Path
 from llmc.rlm.config import RLMConfig
 from llmc.rlm.session import RLMSession
 
+try:
+    import litellm
+    LITELLM_INSTALLED = True
+except ImportError:
+    LITELLM_INSTALLED = False
 
 # Sample code to analyze
 SAMPLE_CODE = '''
@@ -45,6 +51,10 @@ class MathUtils:
 @pytest.mark.skipif(
     not os.getenv("DEEPSEEK_API_KEY"),
     reason="DEEPSEEK_API_KEY not set"
+)
+@pytest.mark.skipif(
+    not LITELLM_INSTALLED,
+    reason="litellm not installed"
 )
 async def test_rlm_deepseek_code_analysis():
     """Test RLM with real DeepSeek API analyzing Python code."""
@@ -93,22 +103,31 @@ async def test_rlm_deepseek_code_analysis():
         for event in result.trace[:5]:  # Show first 5
             print(f"  - {event['event']}")
     
+    if not result.success:
+        print(f"\n⚠️ Session did not complete: {result.error}")
+        
     # Assertions
     assert result.budget_summary['total_cost_usd'] <= config.max_session_budget_usd
-    assert result.budget_summary['total_tokens'] > 0
     
+    # Only assert tokens > 0 if success, otherwise we want to see the error above
     if result.success:
+        assert result.budget_summary['total_tokens'] > 0
         assert result.answer is not None
         assert len(result.answer) > 0
         print("\n✅ RLM session completed successfully!")
     else:
-        print(f"\n⚠️ Session did not complete: {result.error}")
+        # Fail if not successful
+        pytest.fail(f"RLM session failed: {result.error}")
 
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
     not os.getenv("DEEPSEEK_API_KEY"),
     reason="DEEPSEEK_API_KEY not set"
+)
+@pytest.mark.skipif(
+    not LITELLM_INSTALLED,
+    reason="litellm not installed"
 )
 async def test_rlm_deepseek_budget_enforcement():
     """Test that budget limits are enforced with DeepSeek."""

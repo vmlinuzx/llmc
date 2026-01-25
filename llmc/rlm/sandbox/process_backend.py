@@ -115,9 +115,16 @@ class ProcessSandboxBackend(CodeExecutionEnvironment):
         self,
         max_output_chars: int = 10_000,
         timeout_seconds: int = 30,
+        blocked_builtins: frozenset[str] | None = None,
+        allowed_modules: frozenset[str] | None = None,
+        security_mode: str = "permissive",
     ):
         self.max_output_chars = max_output_chars
         self.timeout_seconds = timeout_seconds
+        self.blocked_builtins = blocked_builtins if blocked_builtins is not None else self.BLOCKED_BUILTINS
+        self.allowed_modules = allowed_modules if allowed_modules is not None else self.ALLOWED_MODULES
+        self.security_mode = security_mode
+        
         self._namespace: dict[str, Any] = {}
         self._callbacks: dict[str, Callable] = {}
         self._callback_queue: Queue | None = None
@@ -140,7 +147,7 @@ class ProcessSandboxBackend(CodeExecutionEnvironment):
         
         safe_builtins = {
             k: v for k, v in vars(builtins).items()
-            if k not in self.BLOCKED_BUILTINS
+            if k not in self.blocked_builtins
         }
         safe_builtins['__import__'] = self._make_controlled_import()
         
@@ -150,15 +157,22 @@ class ProcessSandboxBackend(CodeExecutionEnvironment):
         }
     
     def _make_controlled_import(self):
-        """Create import function with whitelist."""
-        allowed = self.ALLOWED_MODULES
+        """Create import function with whitelist (restrictive) or permissive mode."""
+        allowed = self.allowed_modules
+        security_mode = self.security_mode
         
         def controlled_import(name, *args, **kwargs):
-            root = name.split('.')[0]
-            if root not in allowed:
-                raise ImportError(f"Import '{name}' blocked. Allowed: {sorted(allowed)}")
-            import importlib
-            return importlib.import_module(name)
+            if security_mode == "permissive":
+                # Permissive: allow all imports (blockedbuiltins still enforced separately)
+                import importlib
+                return importlib.import_module(name)
+            else:
+                # Restrictive: enforce allowlist
+                root = name.split('.')[0]
+                if root not in allowed:
+                    raise ImportError(f"Import '{name}' blocked. Allowed: {sorted(allowed)}")
+                import importlib
+                return importlib.import_module(name)
         
         return controlled_import
     

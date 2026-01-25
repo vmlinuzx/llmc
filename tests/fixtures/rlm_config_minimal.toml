@@ -1,0 +1,4 @@
+# Minimal RLM Config - Use all defaults except model
+[rlm]
+root_model = "ollama_chat/qwen3-next-80b"
+sub_model = "ollama_chat/qwen3-next-80b"

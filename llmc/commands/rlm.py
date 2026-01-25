@@ -8,7 +8,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 import json
 
-from llmc.rlm.config import RLMConfig
+from llmc.rlm.config import RLMConfig, load_rlm_config
 from llmc.rlm.session import RLMSession, RLMResult
 
 app = typer.Typer(help="RLM - Recursive Language Model for code analysis")
@@ -54,7 +54,8 @@ async def _run_query(
         raise typer.Exit(1)
     
     # Load config
-    config = RLMConfig()
+    config = load_rlm_config()  # Load from llmc.toml
+    # Apply CLI overrides
     if model:
         config.root_model = model
         config.sub_model = model

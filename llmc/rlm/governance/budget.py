@@ -11,7 +11,14 @@ from dataclasses import dataclass, field
 from typing import Callable, Literal
 from pathlib import Path
 import time
-import tomllib
+import sys
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
+from llmc.core import find_repo_root, load_config
 
 
 # Pricing loaded from config, not hardcoded
@@ -30,11 +37,18 @@ def load_pricing(config_path: Path | None = None) -> dict:
     """Load pricing from llmc.toml [rlm.pricing] section."""
     pricing = DEFAULT_PRICING.copy()
     
-    if config_path and config_path.exists():
-        with open(config_path, "rb") as f:
-            data = tomllib.load(f)
-        if "rlm" in data and "pricing" in data["rlm"]:
-            pricing.update(data["rlm"]["pricing"])
+    data = {}
+    if config_path:
+        if config_path.is_file():
+            with open(config_path, "rb") as f:
+                data = tomllib.load(f)
+        elif config_path.is_dir():
+            data = load_config(config_path)
+    else:
+        data = load_config(find_repo_root())
+            
+    if "rlm" in data and "pricing" in data["rlm"]:
+        pricing.update(data["rlm"]["pricing"])
     
     return pricing
 

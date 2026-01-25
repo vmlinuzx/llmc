@@ -1,5 +1,17 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
+import sys
+import contextlib
+
+# Fixture to mock litellm if missing
+@pytest.fixture(autouse=True)
+def mock_litellm_dependency():
+    """Ensure litellm is available (mocked) for these tests."""
+    with patch.dict(sys.modules):
+        if "litellm" not in sys.modules:
+            sys.modules["litellm"] = MagicMock()
+        yield
+
 from llmc.rlm.session import RLMSession, RLMConfig
 
 @pytest.mark.asyncio
@@ -21,9 +33,6 @@ async def test_callback_interception_end_to_end(sample_python_code):
     session.load_code_context(sample_python_code)
     
     # Mock litellm.acompletion to return a response that uses nav_info()
-    # 1st response: Use nav_info()
-    # 2nd response: FINAL answer
-    
     mock_response_1 = MagicMock()
     mock_response_1.choices = [MagicMock(message=MagicMock(content="""
 I'll check the code structure.
@@ -44,7 +53,6 @@ FINAL(info['language'])
     mock_response_2.usage.prompt_tokens = 10
     mock_response_2.usage.completion_tokens = 10
 
-    # 3rd response to catch failure loop
     mock_response_3 = MagicMock()
     mock_response_3.choices = [MagicMock(message=MagicMock(content="""
 I am stuck.
@@ -55,7 +63,13 @@ FINAL("stuck")
     mock_response_3.usage.prompt_tokens = 10
     mock_response_3.usage.completion_tokens = 10
 
-    with patch("litellm.acompletion", new_callable=AsyncMock) as mock_acompletion:
+    # We patch litellm.acompletion.
+    # Note: RLMSession imports litellm inside run().
+    # If litellm is mocked in sys.modules, import litellm returns the mock.
+    # We need to set the attribute on THAT mock.
+    
+    import litellm
+    with patch.object(litellm, "acompletion", new_callable=AsyncMock) as mock_acompletion:
         mock_acompletion.side_effect = [mock_response_1, mock_response_2, mock_response_3]
         
         result = await session.run("Analyze the code")
@@ -67,10 +81,8 @@ FINAL("stuck")
         
         assert result.success
         assert result.answer is not None
-        # nav_info should return a dict with language='python'
         assert "python" in str(result.answer)
         
-        # Verify trace shows interception
         intercept_events = [e for e in session.trace if e["event"] == "tool_intercepted"]
         assert len(intercept_events) == 1
         assert intercept_events[0]["tool"] == "nav_info"
@@ -87,7 +99,6 @@ async def test_interception_rejects_bare_calls():
     session = RLMSession(config)
     session.load_code_context("pass")
     
-    # Response with bare call
     mock_response_1 = MagicMock()
     mock_response_1.choices = [MagicMock(message=MagicMock(content="""
 ```python
@@ -97,7 +108,6 @@ nav_info()
     mock_response_1.usage.prompt_tokens = 10
     mock_response_1.usage.completion_tokens = 10
     
-    # Response fixing it
     mock_response_2 = MagicMock()
     mock_response_2.choices = [MagicMock(message=MagicMock(content="""
 Ah, I need to assign it.
@@ -119,7 +129,8 @@ FINAL("stuck")
     mock_response_3.usage.prompt_tokens = 10
     mock_response_3.usage.completion_tokens = 10
 
-    with patch("litellm.acompletion", new_callable=AsyncMock) as mock_acompletion:
+    import litellm
+    with patch.object(litellm, "acompletion", new_callable=AsyncMock) as mock_acompletion:
         mock_acompletion.side_effect = [mock_response_1, mock_response_2, mock_response_3]
         
         result = await session.run("Test bare call")
@@ -131,9 +142,6 @@ FINAL("stuck")
                  
         assert result.success
         
-        # Check that we sent feedback about the error
-        # The 2nd call to acompletion should contain the error message in 'messages'
-        # call_args_list[1] is the 2nd call (fixing it), based on messages from 1st call
         call_args_2 = mock_acompletion.call_args_list[1]
         messages_2 = call_args_2.kwargs['messages']
         last_user_msg = messages_2[-1]['content']

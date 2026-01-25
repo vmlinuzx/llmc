@@ -1,0 +1,18 @@
+# Restrictive Hospital Deployment Config
+[rlm]
+root_model = "deepseek/deepseek-reasoner"
+sub_model = "deepseek/deepseek-reasoner"
+
+[rlm.sandbox]
+security_mode = "restrictive"
+code_timeout_seconds = 10  # Tight limit
+blocked_builtins = ["open", "exec", "eval", "compile", "__import__", "input", "breakpoint", "exit", "quit"]
+allowed_modules = ["json", "re", "math"]  # Minimal set
+
+[rlm.budget]
+max_session_budget_usd = 0.10  # Strict budget
+max_tokens_per_session = 50000
+soft_limit_percentage = 0.70
+
+[rlm.pricing]
+"deepseek/deepseek-reasoner" = { input = 0.14, output = 2.19 }

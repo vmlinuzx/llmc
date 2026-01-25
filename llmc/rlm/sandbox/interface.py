@@ -55,6 +55,9 @@ def create_sandbox(
     backend: str = "process",
     max_output_chars: int = 10_000,
     timeout_seconds: int = 30,
+    blocked_builtins: frozenset[str] | None = None,
+    allowed_modules: frozenset[str] | None = None,
+    security_mode: str = "permissive",
 ) -> CodeExecutionEnvironment:
     """Factory for creating sandboxes."""
     if backend == "process":
@@ -62,6 +65,9 @@ def create_sandbox(
         return ProcessSandboxBackend(
             max_output_chars=max_output_chars,
             timeout_seconds=timeout_seconds,
+            blocked_builtins=blocked_builtins,
+            allowed_modules=allowed_modules,
+            security_mode=security_mode,
         )
     elif backend == "restricted":
         # TODO: Implement RestrictedPython backend (Tier -1)
