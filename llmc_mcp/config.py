@@ -190,6 +190,20 @@ class WorkspacesConfig:
 
 
 @dataclass
+class RLMConfig:
+    """Recursive Loop Manager settings."""
+    enabled: bool = False
+    max_loops: int = 5
+    timeout: int = 300
+
+    def validate(self) -> None:
+        if self.max_loops <= 0:
+            raise ValueError("max_loops must be positive")
+        if self.timeout <= 0:
+            raise ValueError("timeout must be positive")
+
+
+@dataclass
 class McpConfig:
     """Root MCP configuration."""
 
@@ -211,6 +225,7 @@ class McpConfig:
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
     rest_api: RestApiConfig = field(default_factory=RestApiConfig)
     workspaces: WorkspacesConfig = field(default_factory=WorkspacesConfig)
+    rlm: RLMConfig = field(default_factory=RLMConfig)
 
     def validate(self) -> None:
         if self.mode not in ("classic", "hybrid", "code_execution"):
@@ -225,6 +240,7 @@ class McpConfig:
         self.hybrid.validate()
         self.rest_api.validate()
         self.workspaces.validate()
+        self.rlm.validate()
 
 
 def _get_nested(data: dict[str, Any], *keys: str, default: Any = None) -> Any:
@@ -443,6 +459,12 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         workspaces = mcp_data.get("workspaces", {})
         cfg.workspaces.default = workspaces.get("default", cfg.workspaces.default)
         cfg.workspaces.repos = workspaces.get("repos", cfg.workspaces.repos)
+
+        # RLM config
+        rlm = mcp_data.get("rlm", {})
+        cfg.rlm.enabled = rlm.get("enabled", cfg.rlm.enabled)
+        cfg.rlm.max_loops = rlm.get("max_loops", cfg.rlm.max_loops)
+        cfg.rlm.timeout = rlm.get("timeout", cfg.rlm.timeout)
 
     # Apply ENV overrides (highest precedence)
     cfg = _apply_env_overrides(cfg)
