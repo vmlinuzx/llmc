@@ -55,8 +55,8 @@ class MathUtils:
     not LITELLM_INSTALLED,
     reason="litellm not installed"
 )
-async @pytest.mark.allow_network
-def test_rlm_deepseek_code_analysis():
+@pytest.mark.allow_network
+async def test_rlm_deepseek_code_analysis():
     """Test RLM with real DeepSeek API analyzing Python code."""
     
     # Configure for DeepSeek
