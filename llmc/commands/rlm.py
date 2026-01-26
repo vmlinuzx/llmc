@@ -110,7 +110,7 @@ async def _run_query(
             console.print(json.dumps({"success": False, "error": str(e)}))
         else:
             console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def _display_result(result: RLMResult, show_trace: bool):

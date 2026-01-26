@@ -1,0 +1,34 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pyproject.toml
+plugins: langsmith-0.4.46, anyio-4.12.0, respx-0.22.0, asyncio-1.3.0, requests-mock-1.12.1, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 2357 items / 1 skipped
+
+tests/REPORTS/archive/adversarial_enrichment_test.py s                   [  0%]
+tests/REPORTS/archive/adversarial_routing_test.py s                      [  0%]
+tests/_examples/test_nav_template.py .                                   [  0%]
+tests/agent/format/test_parsers.py ......................                [  1%]
+tests/agent/test_boxxie_integration.py ......                            [  1%]
+tests/agent/test_litellm_backends.py .............................       [  2%]
+tests/agent/test_litellm_validation.py ...............................   [  3%]
+tests/agent/test_openai_compat_backend.py .F
+
+=================================== FAILURES ===================================
+_____________________________ test_generate_errors _____________________________
+/home/vmlinux/src/llmc/tests/agent/test_openai_compat_backend.py:110: in test_generate_errors
+    await backend.generate(generate_request)
+/home/vmlinux/src/llmc/llmc_agent/backends/openai_compat.py:76: in generate
+    response.raise_for_status()
+/home/vmlinux/src/llmc/.venv/lib/python3.12/site-packages/httpx/_models.py:829: in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+E   httpx.HTTPStatusError: Client error '401 Unauthorized' for url 'http://localhost:8080/v1/chat/completions'
+E   For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_rag_repo_integration_edge_cases.py:28: Legacy RAG repo integration API not present; skipping edge-case tests
+SKIPPED [1] tests/REPORTS/archive/adversarial_enrichment_test.py: Standalone test script - run directly with python
+SKIPPED [1] tests/REPORTS/archive/adversarial_routing_test.py: Standalone test script - run directly with python
+FAILED tests/agent/test_openai_compat_backend.py::test_generate_errors - http...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+=================== 1 failed, 90 passed, 3 skipped in 7.45s ====================

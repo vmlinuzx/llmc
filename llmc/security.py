@@ -57,7 +57,7 @@ def normalize_path(repo_root: Path, target: str) -> Path:
             raise PathSecurityError(
                 f"Path '{target}' is outside repository boundary. "
                 f"Only paths within {repo_root} are allowed."
-            )
+            ) from None
 
     # Security: Check for traversal attempts (../)
     full_path = (repo_root / target).resolve()
@@ -67,7 +67,7 @@ def normalize_path(repo_root: Path, target: str) -> Path:
         raise PathSecurityError(
             f"Path '{target}' escapes repository boundary via traversal. "
             f"Only paths within {repo_root} are allowed."
-        )
+        ) from None
 
     if full_path.exists():
         return relative_path

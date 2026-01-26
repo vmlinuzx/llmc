@@ -258,7 +258,7 @@ class ProcessSandboxBackend(CodeExecutionEnvironment):
             pickle.dumps(value)  # Test picklability
             self._namespace[name] = value
         except Exception as e:
-            raise ValueError(f"Cannot inject '{name}': not picklable ({e})")
+            raise ValueError(f"Cannot inject '{name}': not picklable ({e})") from None
     
     def register_callback(self, name: str, func: Callable) -> None:
         """Register callback (handled via orchestrator interception in Phase 1)."""

@@ -15,7 +15,7 @@ RLM is a **stateful analysis loop**. When you ask RLM a question, it doesn't jus
 
 ### When to use RLM vs. RAG
 
-| Feature | Standard RAG (`llmc search`) | RLM (`llmc rlm query`) |
+| Feature | Standard RAG (`llmc-cli search`) | RLM (`llmc-cli rlm query`) |
 | :--- | :--- | :--- |
 | **Best for** | "Where is X?" "How do I usage Y?" | "Why is X broken?" "Refactor Y." "Explain the data flow of Z." |
 | **Mechanism** | Vector Similarity + Graph Traversal | Agentic Reasoning Loop (ReAct-style) |
@@ -39,7 +39,7 @@ sub_model = "ollama_chat/qwen2.5-coder:7b"
 
 [rlm.budget]
 # Hard caps to prevent infinite loops or excessive costs
-max_session_budget_usd = 1.00  # Stop if estimated cost exceeds $1
+max_session_budget_usd = 1.00  # Stop if estimated cost exceeds 
 max_session_tokens = 500_000   # Stop if total tokens exceed 500k
 max_subcall_depth = 5          # Max recursion depth
 
@@ -53,25 +53,62 @@ allowed_modules = ["os", "sys", "json", "re", "ast"]
 ### Budgeting
 
 RLM tracks token usage for every prompt and completion.
-- **`max_session_budget_usd`**: The primary safety brake. Defaults to $1.00.
+- **`max_session_budget_usd`**: The primary safety brake. Defaults to .00.
 - **`max_turns`**: Defaults to 20 turns per session.
 
 ---
 
-## 🖥️ CLI Usage
+## 🖥️ Using RLM via CLI (Local)
 
-The primary way to use RLM is via the CLI:
+The primary way to use RLM interactively is via the CLI. This is best for ad-hoc queries, debugging, or refactoring tasks where you want to watch the agent work.
 
 ```bash
 # Analyze a specific file
-llmc rlm query "Explain how the budget tracker works and if there are race conditions" --file llmc/rlm/budget.py
+llmc-cli rlm query "Explain how the budget tracker works and if there are race conditions" --file llmc/rlm/budget.py
 
 # Analyze a general concept (starts at repo root)
-llmc rlm query "How does the MCP server handle authentication?"
+llmc-cli rlm query "How does the MCP server handle authentication?"
 
 # Adjust budget for a complex query
-llmc rlm query "Refactor this module to use dependency injection" --file legacy_code.py --budget 2.0
+llmc-cli rlm query "Refactor this module to use dependency injection" --file legacy_code.py --budget 2.0
 ```
+
+**Options:**
+- `--file, -f`: Load a specific file into context immediately.
+- `--trace`: Show the "Thought/Action/Observation" loop in real-time.
+- `--json`: Output the final result as JSON (useful for scripts).
+
+---
+
+## 🔌 Using RLM via MCP (Agentic)
+
+RLM is exposed as a tool to MCP clients (like Claude Desktop, Antigravity, or other agents). This allows *other* AI agents to delegate complex code analysis tasks to RLM.
+
+### Tool Name: `rlm_query`
+
+When LLMC is running as an MCP server, it exposes the `rlm_query` tool.
+
+### Capabilities
+
+Unlike the CLI, the MCP tool operates within a **Restricted Profile** by default:
+- **No Network Access**: RLM cannot fetch external URLs.
+- **Path Restrictions**: Can only access files within the allowed MCP roots.
+- **Denylist Enforcement**: Cannot read sensitive files (e.g., `.env`).
+
+### Usage Example (System Prompt for Agents)
+
+If you are building an agent that uses LLMC as a backend, you can instruct it to use RLM:
+
+> "If you need to analyze a complex codebase or understand how multiple files interact, use the `rlm_query` tool. Provide a clear `task` description."
+
+### Tool Arguments
+
+| Argument | Type | Description |
+| :--- | :--- | :--- |
+| `task` | string | The analysis instructions (Required). |
+| `path` | string | File path to load as initial context. |
+| `context` | string | Raw text context (if not reading from a file). |
+| `budget_usd` | number | Max budget for this specific query (default .0). |
 
 ---
 
@@ -80,7 +117,7 @@ llmc rlm query "Refactor this module to use dependency injection" --file legacy_
 ### Common Errors
 
 **`BudgetExceededError`**
-> *The session has exceeded the maximum cost budget of $1.00.*
+> *The session has exceeded the maximum cost budget of .00.*
 
 *   **Cause:** The agent got stuck in a loop or the task was too large.
 *   **Fix:** Increase budget with `--budget 2.0` or make the prompt more specific.
@@ -93,10 +130,10 @@ llmc rlm query "Refactor this module to use dependency injection" --file legacy_
 
 ### Reading Trace Logs
 
-Use `--verbose` to see the agent's "thought process":
+Use `--verbose` (or `--trace` in CLI) to see the agent's "thought process":
 
 ```bash
-llmc rlm query "..." --verbose
+llmc-cli rlm query "..." --trace
 ```
 
 You will see:
@@ -112,7 +149,7 @@ You will see:
 **Task:** "Why is the indexer slow?"
 
 ```bash
-llmc rlm query "Analyze llmc/rag/indexer.py for performance bottlenecks. Look for N+1 queries or excessive file reads."
+llmc-cli rlm query "Analyze llmc/rag/indexer.py for performance bottlenecks. Look for N+1 queries or excessive file reads."
 ```
 *RLM will likely:*
 1. Read `indexer.py`.
@@ -124,7 +161,7 @@ llmc rlm query "Analyze llmc/rag/indexer.py for performance bottlenecks. Look fo
 **Task:** "Modernize legacy code."
 
 ```bash
-llmc rlm query "Refactor this class to use Pydantic v2 instead of dataclasses. Output the new code." --file my_model.py
+llmc-cli rlm query "Refactor this class to use Pydantic v2 instead of dataclasses. Output the new code." --file my_model.py
 ```
 *RLM will:*
 1. Read the file.
@@ -136,10 +173,9 @@ llmc rlm query "Refactor this class to use Pydantic v2 instead of dataclasses. O
 **Task:** "Fix the path traversal bug."
 
 ```bash
-llmc rlm query "Check llmc_mcp/tools/fs.py for path traversal vulnerabilities. Verify if '..' is blocked."
+llmc-cli rlm query "Check llmc_mcp/tools/fs.py for path traversal vulnerabilities. Verify if '..' is blocked."
 ```
 *RLM will:*
 1. Read the validator code.
 2. Write a test case (mentally or in sandbox) to see if `../../etc/passwd` passes.
 3. Confirm the regex is sufficient or flawed.
-

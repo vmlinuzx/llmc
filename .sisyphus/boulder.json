@@ -1,8 +1,9 @@
 {
-  "active_plan": "/home/vmlinux/src/llmc/.sisyphus/plans/rlm-config-surface-phase-1x.md",
-  "started_at": "2026-01-25T18:38:11.067Z",
+  "active_plan": "/home/vmlinux/src/llmc/.sisyphus/plans/ruthless-workflow-green-rlm-config-nested.md",
+  "started_at": "2026-01-26T20:10:54.415Z",
   "session_ids": [
-    "ses_4098cfd94ffeXX20t5vamQeOrA"
+    "ses_40521ae7effeQyrEddCwdjcI8a",
+    "ses_4040eeed6ffe90ijMynAhGUiHJ"
   ],
-  "plan_name": "rlm-config-surface-phase-1x"
+  "plan_name": "ruthless-workflow-green-rlm-config-nested"
 }

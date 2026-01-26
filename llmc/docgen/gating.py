@@ -259,7 +259,7 @@ def validate_source_path(repo_root: Path, relative_path: Path) -> Path:
         # resolve() handles '..' and symlinks
         candidate_path = (resolved_root / relative_path).resolve()
     except Exception as e:
-        raise ValueError(f"Invalid path resolution: {e}")
+        raise ValueError(f"Invalid path resolution: {e}") from None
 
     # Verify strict containment
     try:
@@ -268,6 +268,6 @@ def validate_source_path(repo_root: Path, relative_path: Path) -> Path:
         raise ValueError(
             f"Path traversal detected: {relative_path} resolves to {candidate_path}, "
             f"which is outside repository root {resolved_root}"
-        )
+        ) from None
 
     return candidate_path

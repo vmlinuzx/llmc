@@ -39,7 +39,7 @@ def inspect_symbol_command(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Check for graph staleness
     try:
@@ -63,7 +63,7 @@ def inspect_symbol_command(
         result = inspect_entity(repo_root, symbol=symbol)
     except ValueError as e:
         console.print(f"[red]Error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if not result:
         console.print(f"[red]Symbol not found:[/red] {symbol}")

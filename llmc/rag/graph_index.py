@@ -62,7 +62,7 @@ def _read_graph_payload(path: Path) -> dict:
             raise GraphNotFound(str(path))
         data: dict[str, Any] = raw
     except Exception as e:
-        raise GraphNotFound(f"Bad JSON in {path}: {e}")
+        raise GraphNotFound(f"Bad JSON in {path}: {e}") from None
 
     if not isinstance(data, dict):
         raise GraphNotFound(str(path))

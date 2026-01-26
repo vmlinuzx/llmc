@@ -114,7 +114,7 @@ def stitch_neighbors(
             # Fallback to JSON if SQLite fails
             graph_path = repo_root / ".llmc" / "rag_graph.json"
             if not graph_path.exists():
-                raise GraphNotFound(str(graph_path))
+                raise GraphNotFound(str(graph_path)) from None
             idx = _index_edges(_read_json(graph_path))
     
     # In-memory path: dict traversal (JSON-based)

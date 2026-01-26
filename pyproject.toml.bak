@@ -1,0 +1,110 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmc"
+version = "0.10.0"
+description = "LLM cost compression through intelligent RAG and multi-tier routing"
+authors = [{name="LLMC Core"}]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["requests", "tomli; python_version<'3.11'", "typer", "rich", "tomli-w", "textual", "tomlkit", "simpleeval", "urllib3>=2.6.0"]
+
+[project.optional-dependencies]
+rag = ["setuptools", "tree_sitter", "tree_sitter_languages", "click", "jsonschema", "sentence-transformers", "chromadb", "langchain", "watchdog", "gitpython", "pathspec", "pyyaml", "tqdm", "mcp", "psutil", "humanize", "mistune"]
+tui = ["typer", "rich", "textual"]
+daemon = ["uvicorn", "httpx"]
+agent = ["httpx", "click", "litellm>=1.50.0,<2.0.0"]
+dev = ["pytest", "pytest-cov", "mypy", "types-toml", "types-requests", "ruff"]
+# Document sidecar conversion (PDF, DOCX, etc.)
+sidecar = ["pymupdf>=1.23.0"]
+sidecar-full = ["pymupdf>=1.23.0", "python-docx>=1.0.0", "python-pptx>=0.6.21", "striprtf>=0.0.26"]
+
+[tool.setuptools]
+# Explicitly declare which top-level packages are part of the install.
+# This avoids setuptools' flat-layout safety check on unrelated dirs
+# like DOCS/, logs/, and legacy/.
+packages = ["llmc_mcp", "llmc", "llmc.backends", "llmc.te", "llmc.te.handlers", "llmc_agent", "llmc_agent.backends"]
+
+[project.scripts]
+llmc-cli = "llmc.main:app"
+mcgrep = "llmc.mcgrep:main"
+mcread = "llmc.mcread:main"
+mcinspect = "llmc.mcinspect:main"
+mcwho = "llmc.mcwho:main"
+mchot = "llmc.mchot:main"
+mcschema = "llmc.mcschema:main"
+mcrun = "llmc.mcrun:main"
+llmc-mcp = "llmc_mcp.cli:main"
+te = "llmc.te.cli:main"
+llmc-chat = "llmc_agent.cli:main"
+bx = "llmc_agent.cli:main"
+
+[tool.pytest.ini_options]
+addopts = ["-q", "-ra"]
+xfail_strict = true
+filterwarnings = [
+    "error::DeprecationWarning",
+    "ignore::ResourceWarning",
+]
+pythonpath = ["."]
+markers = [
+    "rag_freshness: tests for RAG freshness, envelopes, and routing",
+    "examples: Example or doc-style tests",
+    "integration: Integration tests (slower)",
+]
+
+[tool.ruff]
+# Use Ruff for both lint + format to keep it simple and fast.
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+  ".llmc",
+  "build",
+  "dist",
+  ".trash",
+  # Personal wrapper scripts (not part of production code)
+  "tools/*.sh",
+]
+
+[tool.ruff.lint]
+# Core rule sets: pyflakes/pycodestyle, isort, pyupgrade, flake-bugbear (subset), etc.
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort imports
+  "UP",  # pyupgrade
+  "B",   # bugbear (subset; runtime-safety)
+  "PLW", # pylint style: warnings likely to catch bugs
+]
+
+# Temporary ignores allowed during migration (trim over time).
+ignore = [
+  # allow long lines while we migrate off Black or wrap later
+  "E501",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S301", "S311", "E402"]
+"tools/**/tests/**" = ["S101", "S301", "S311", "E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
+known-first-party = ["llmc", "llmc_mcp", "llmc_agent"]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+check_untyped_defs = true

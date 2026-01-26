@@ -197,4 +197,4 @@ def search(
 
     except Exception as e:
         typer.echo(f"Search failed: {e}", err=True)
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None

@@ -1,172 +1,164 @@
 # LLMC Agent Instructions
 
-> **Drop this line in your AGENTS.md / CLINE.md / GEMINI.md:**
-> `Read and follow ~/.llmc/LLMCAGENTS.md OR <repo>/.llmc/LLMCAGENTS.md before using LLMC tools.`
+> **Add this to your AGENTS.md / CLAUDE.md:**  
+> `Read and follow ~/.llmc/LLMCAGENTS.md OR <repo>/.llmc/LLMCAGENTS.md for code analysis.`
 
 ## What is LLMC?
 
-LLMC (LLM Cost Compression) is a local RAG (Retrieval Augmented Generation) system that indexes, enriches, and embeds codebases. It gives you semantic search over code without burning API tokens.
+LLMC provides **RLM (Recursive Language Model)** - a code analysis tool that achieves **80-90% context reduction** compared to reading raw files.
 
-**You have access to LLMC via CLI commands.** Use them to search code, get context, and understand projects.
+Instead of stuffing your context window with 500 lines of code, RLM:
+1. Loads code into a sandboxed Python environment
+2. Uses recursive sub-calls to navigate and analyze
+3. Returns only the **answer** - not the code
 
 ---
 
-## 🚀 Bootstrap (Start Here)
+## 🚀 The One Tool You Need
 
-Before doing ANY code work in a repo, run these two commands:
+```
+rlm_query(task, path=None, context=None, ...)
+```
+
+### Usage Patterns
+
+**Analyze a file:**
+```python
+rlm_query(
+    task="How does authentication work in this file?",
+    path="src/auth/handler.py"
+)
+```
+
+**Analyze code in context:**
+```python
+rlm_query(
+    task="What does this function do? Are there any bugs?",
+    context="""
+def process_payment(user_id, amount):
+    if amount > get_balance(user_id):
+        return False
+    deduct(user_id, amount)
+    return True
+"""
+)
+```
+
+**Multi-hop trace:**
+```python
+rlm_query(
+    task="Trace the data flow from user input to database write",
+    path="src/api/routes.py",
+    max_turns=10
+)
+```
+
+---
+
+## Parameters
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `task` | str | **required** | The question or analysis task (max 5000 chars) |
+| `path` | str | None | File path to analyze (mutually exclusive with context) |
+| `context` | str | None | Raw text to analyze (mutually exclusive with path) |
+| `budget_usd` | float | 1.00 | Max cost for this query |
+| `max_turns` | int | 5 | Max reasoning iterations |
+| `max_bytes` | int | 262144 | Max file bytes to read |
+| `timeout_s` | int | 300 | Hard timeout (seconds) |
+| `language` | str | None | Language hint (python, javascript, etc.) |
+
+---
+
+## Why RLM vs. Reading Files?
+
+| Approach | Tokens Used | Accuracy |
+|----------|-------------|----------|
+| Read 500-line file | ~15,000 | Variable (lost-in-the-middle) |
+| **RLM query** | ~2,000 | High (focused analysis) |
+
+**RLM saves 80-90% of context tokens** by:
+- Lazy loading only relevant code sections
+- Recursive decomposition of complex questions  
+- Returning summaries, not raw code
+
+---
+
+## When to Use RLM
+
+| Use Case | RLM? | Why |
+|----------|------|-----|
+| "How does X work?" | ✅ Yes | Perfect for understanding code flow |
+| "Find bugs in this file" | ✅ Yes | Focused analysis, clear answer |
+| "Trace data flow" | ✅ Yes | Multi-hop navigation built-in |
+| Quick syntax check | ❌ No | Just read the file |
+| Simple grep/find | ❌ No | Use grep/glob tools |
+| Edit a known file | ❌ No | Just edit directly |
+
+---
+
+## Example Session
+
+**User:** "How does the payment flow work?"
+
+**Agent:**
+```python
+result = rlm_query(
+    task="Explain the payment flow from API request to database commit. List the key functions involved.",
+    path="src/payments/processor.py",
+    max_turns=8
+)
+# Returns: { "data": { "answer": "The payment flow works as follows:..." } }
+```
+
+Instead of reading a 600-line file, you get a focused answer using ~2k tokens.
+
+---
+
+## Error Handling
+
+RLM returns structured errors:
+
+```python
+{
+    "error": "File too large: 500,000 bytes (max 262,144)",
+    "meta": {
+        "error_code": "file_too_large",
+        "retryable": False,
+        "remediation": "Increase max_bytes or use 'context' with truncated text"
+    }
+}
+```
+
+Common error codes:
+- `file_too_large` - Use `max_bytes` or pass truncated context
+- `timeout` - Increase `timeout_s` or simplify the task
+- `path_denied` - File outside allowed roots
+- `invalid_args` - Check task length, path/context exclusivity
+
+---
+
+## CLI Quick Reference
 
 ```bash
-# 1. Check if repo is set up for LLMC
+# Check if repo is indexed (for semantic search fallback)
 llmc-cli repo list
 
-# 2. Search for relevant code (your first query)
-cd /path/to/repo && llmc-cli analytics search "your topic"
-```
+# Register a new codebase
+llmc-cli repo register /path/to/project
 
-**If the repo isn't listed:** Run `llmc-cli repo register /path/to/repo` to bootstrap it.
-
----
-
-## 📋 Core Commands (80% of usage)
-
-### Semantic Search
-```bash
-# Search enriched code summaries (fast, uses local embeddings)
-llmc-cli analytics search "authentication flow"
-llmc-cli analytics search "database connection" --limit 10
-```
-
-### Repository Stats & Health
-```bash
-# Quick stats for current repo
-llmc-cli analytics stats
-
-# Full repo status with enrichment progress
-llmc-cli repo list
-```
-
-### Navigation Tools
-```bash
-# Find where a symbol is used (callers, importers)
-llmc-cli analytics where-used "function_name"
-
-# Show symbol lineage (parents, children, dependencies)
-llmc-cli analytics lineage "ClassName"
+# Semantic search (uses pre-computed enrichments)
+llmc-cli analytics search "payment processing"
 ```
 
 ---
 
-## 🎯 Progressive Disclosure Rules
+## Key Insight
 
-**DO NOT** dump all commands at once. Follow these rules:
+**Don't read code files into your context window.** 
 
-1. **Start with `analytics search`** for any new topic
-2. **Only use `where-used`** when you need to trace callers
-3. **Use grep** for exact string matches (function names, imports, etc.)
-4. **Check `repo list`** if searches return empty or stale results
-
-### When to Use Which Command
-
-| Goal | Command |
-|------|---------|
-| "Find code related to X" | `llmc-cli analytics search "X"` |
-| "Find exact function name" | `grep -r "function_name" .` |
-| "Where is this called from?" | `llmc-cli analytics where-used "func"` |
-| "What does this depend on?" | `llmc-cli analytics lineage "Class"` |
-| "How big is the index?" | `llmc-cli analytics stats` |
-| "Is enrichment running?" | `llmc-cli repo list` |
+Use `rlm_query` to ask questions about code. The answer comes back - the code stays external. This is the "context externalization" paradigm.
 
 ---
 
-## 🔧 Service Management
-
-```bash
-# Check daemon status (handles background enrichment)
-llmc-cli service status
-
-# View enrichment logs
-llmc-cli service logs -f
-
-# Restart service (triggers re-enrichment)
-llmc-cli service restart
-```
-
----
-
-## 🧠 Token-Saving Guidelines
-
-1. **Never query the entire codebase** - Always filter by topic or file
-2. **Limit search results** - Use `--limit 5` unless you need more
-3. **Prefer summaries over raw code** - `analytics search` returns enriched summaries
-4. **Use progressive refinement** - Start broad, then narrow down
-
-### Example Workflow
-
-```bash
-# Step 1: Broad search
-llmc-cli analytics search "user authentication"
-
-# Step 2: Found auth/handler.py looks relevant, trace its usage
-llmc-cli analytics where-used "authenticate_user"
-
-# Step 3: Need exact import, use grep
-grep -r "from auth import" .
-```
-
----
-
-## ❌ Anti-Patterns
-
-**DON'T:**
-- Run `analytics search` with no query or very broad terms
-- Dump entire file contents when summaries suffice
-- Skip checking `repo list` when results seem wrong
-- Ignore the daemon (`service status`) if enrichment seems stale
-
-**DO:**
-- Start with specific queries
-- Use `--limit` to control output size
-- Check index health when things seem off
-- Trust the summaries - they're generated by LLMs specifically for code understanding
-
----
-
-## 🏥 Troubleshooting
-
-### "No results found"
-```bash
-llmc-cli analytics stats  # Check index health
-llmc-cli service status   # Is daemon running?
-```
-
-### "Results seem stale"
-```bash
-llmc-cli service restart  # Trigger re-enrichment
-llmc-cli repo list        # See pending work
-```
-
-### "Repo not recognized"
-```bash
-llmc-cli repo register .  # Bootstrap the repo
-llmc-cli repo validate .  # Check config
-```
-
----
-
-## 📍 Quick Reference
-
-```
-llmc-cli analytics search "query"     → Semantic search (start here!)
-llmc-cli analytics where-used "sym"   → Find callers/importers
-llmc-cli analytics lineage "sym"      → Show dependencies
-llmc-cli analytics stats              → Index statistics
-llmc-cli repo list                    → All repos + enrichment status
-llmc-cli repo register PATH           → Bootstrap new repo
-llmc-cli service status               → Daemon health
-llmc-cli service logs -f              → Watch enrichment logs
-```
-
----
-
-*This file is auto-installed by `llmc repo register`. Version: 2025-12-08*
-
+*Version: 2025-01-26 - RLM Paradigm*

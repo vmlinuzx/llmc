@@ -40,7 +40,7 @@ def _get_sidecar_module():
         }
     except ImportError as e:
         console.print(f"[red]Error: Sidecar module not available: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command("list")
@@ -52,7 +52,7 @@ def list_sidecars(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Error: Not in a repository[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     mod = _get_sidecar_module()
 
@@ -128,7 +128,7 @@ def clean_orphans(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Error: Not in a repository[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     mod = _get_sidecar_module()
 
@@ -172,7 +172,7 @@ def generate_sidecar(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Error: Not in a repository[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     mod = _get_sidecar_module()
 

@@ -84,7 +84,7 @@ class RagTestRunner:
                 self.log(f"stderr: {result.stderr}")
             return result
         except subprocess.TimeoutExpired:
-            raise Exception(f"Command timed out after {timeout}s: {' '.join(cmd)}")
+            raise Exception(f"Command timed out after {timeout}s: {' '.join(cmd)}") from None
 
     def create_temp_repo(self) -> Path:
         """Create a temporary test repository."""

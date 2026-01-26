@@ -47,10 +47,10 @@ def _get_graph_nx(repo_root: Path):
         return load_graph_nx(repo_root)
     except FileNotFoundError:
         console.print("[red]Graph not found.[/red] Run: mcwho graph")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except ImportError as e:
         console.print(f"[red]NetworkX not available:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def _get_graph_db(repo_root: Path) -> Any | None:
@@ -123,7 +123,7 @@ def _run_hotspots(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     G = _get_graph_nx(repo_root)
     
@@ -428,7 +428,7 @@ def path(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     G = _get_graph_nx(repo_root)
     import networkx as nx
@@ -460,7 +460,7 @@ def path(
             console.print(f"  {prefix}{display}")
     except nx.NetworkXNoPath:
         console.print(f"[yellow]No path exists between {source} and {target}[/yellow]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 @app.command()
@@ -475,7 +475,7 @@ def cycles():
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     G = _get_graph_nx(repo_root)
     import networkx as nx
@@ -484,7 +484,7 @@ def cycles():
         cycles_found = list(nx.simple_cycles(G))
     except Exception as e:
         console.print(f"[yellow]Cycle detection failed:[/yellow] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     if not cycles_found:
         console.print("[green]✓[/green] No circular dependencies detected!")
@@ -525,7 +525,7 @@ def context(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     G = _get_graph_nx(repo_root)
     

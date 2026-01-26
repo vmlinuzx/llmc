@@ -45,7 +45,7 @@ def _language(name: str):
     try:
         return get_language(name)
     except Exception as exc:  # pragma: no cover - tree-sitter loader errors
-        raise RuntimeError(f"Tree-sitter language '{name}' not available: {exc}")
+        raise RuntimeError(f"Tree-sitter language '{name}' not available: {exc}") from None
 
 
 @cache

@@ -1,0 +1,20 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pyproject.toml
+plugins: Faker-39.0.0, langsmith-0.4.46, anyio-4.12.0, timeout-2.4.0, asyncio-1.3.0, requests-mock-1.12.1, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 43 items
+
+tests/rlm/test_budget.py .....                                           [ 11%]
+tests/rlm/test_callback_intercept.py ..                                  [ 16%]
+tests/rlm/test_config.py .............                                   [ 46%]
+tests/rlm/test_integration_deepseek.py ss                                [ 51%]
+tests/rlm/test_intercept.py .........                                    [ 72%]
+tests/rlm/test_nav.py ......                                             [ 86%]
+tests/rlm/test_sandbox.py ......                                         [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] tests/rlm/test_integration_deepseek.py:50: litellm not installed
+SKIPPED [1] tests/rlm/test_integration_deepseek.py:123: litellm not installed
+======================== 41 passed, 2 skipped in 1.77s =========================

@@ -104,14 +104,14 @@ def _emit_search_training(query: str, path: str | None, limit: int) -> None:
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Run search to get results
     try:
         results = search_spans(query, limit=min(limit, 10), repo_root=repo_root)
     except Exception as e:
         console.print(f"[red]Search error:[/red] {e}", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Build tool output (simplified version of normal output)
     output_lines = []
@@ -160,17 +160,17 @@ def _run_search_expanded(query: str, path: str | None, limit: int, expand_count:
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcgrep init")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Run semantic search
     try:
         result = tool_rag_search(repo_root, query, limit=limit)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Search error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     items = getattr(result, "items", []) or []
 
@@ -252,7 +252,7 @@ def _run_search_extracted(
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcgrep init")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     effective_limit = max(limit, extract_count)
 
@@ -261,10 +261,10 @@ def _run_search_extracted(
         results = search_spans(query, limit=effective_limit, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Search error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     items = results
 
@@ -415,7 +415,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcgrep init")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Run embedding-based semantic search (has scoring fixes for filename matching)
     try:
@@ -423,10 +423,10 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
         results = search_spans(query, limit=limit, repo_root=repo_root)
     except FileNotFoundError:
         console.print("[red]No index found.[/red] Run: mcgrep watch")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Search error:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     items = results
 
@@ -651,7 +651,7 @@ def status():
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     report = run_rag_doctor(repo_root)
 

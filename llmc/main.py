@@ -146,7 +146,7 @@ def chat(
         agent_main(standalone_mode=False)
     except SystemExit as e:
         if e.code != 0:
-            raise typer.Exit(e.code)
+            raise typer.Exit(e.code) from None
 
 
 # ============================================================================

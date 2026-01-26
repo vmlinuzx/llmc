@@ -54,14 +54,14 @@ def run(
         except yaml.YAMLError as e:
             typer.echo(f"Error parsing YAML: {e}")
             recorder.close()
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     try:
         scen = Scenario(**scenario_data)
     except Exception as e:
         typer.echo(f"Invalid scenario definition: {e}")
         recorder.close()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     if manual:
         typer.echo("Running in MANUAL mode (legacy Phase 1 logic)...")

@@ -1,0 +1,168 @@
+"""RLM Configuration."""
+
+from __future__ import annotations
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
+
+from llmc.core import find_repo_root, load_config
+
+
+@dataclass
+class RLMConfig:
+    """Configuration for RLM sessions."""
+    
+    # Model selection
+    root_model: str = "ollama_chat/qwen3-next-80b"
+    sub_model: str = "ollama_chat/qwen3-next-80b"
+    
+    # Budget limits
+    max_session_budget_usd: float = 1.00
+    max_tokens_per_session: int = 500_000
+    max_subcall_depth: int = 5
+    soft_limit_percentage: float = 0.80
+    
+    # Timeouts
+    code_timeout_seconds: int = 30
+    session_timeout_seconds: int = 300  # 5 minutes
+    
+    # Context limits
+    max_context_chars: int = 1_000_000
+    max_print_chars: int = 10_000
+    max_turns: int = 20
+    
+    # LLM params
+    root_temperature: float = 0.1
+    root_max_tokens: int = 4096
+    sub_temperature: float = 0.1
+    sub_max_tokens: int = 1024
+    
+    # Token estimation
+    chars_per_token: int = 4
+    token_safety_multiplier: float = 1.2
+    
+    # Sandbox
+    sandbox_backend: str = "process"
+    security_mode: str = "permissive"  # or "restrictive"
+    blocked_builtins: frozenset[str] = frozenset({
+        'open', 'exec', 'eval', 'compile', '__import__',
+        'input', 'breakpoint', 'exit', 'quit',
+    })
+    allowed_modules: frozenset[str] = frozenset({
+        'json', 're', 'math', 'collections', 'itertools',
+        'functools', 'operator', 'string', 'textwrap',
+        'datetime', 'copy', 'typing', 'dataclasses',
+    })
+    
+    # Logging
+    trace_enabled: bool = True
+    
+    # Trace preview limits
+    prompt_preview_chars: int = 200
+    response_preview_chars: int = 200
+    match_preview_chars: int = 200
+    stdout_preview_chars: int = 2000
+
+    def validate(self) -> None:
+        """Validate config values. Raises ValueError on invalid config."""
+        if self.max_session_budget_usd < 0:
+            raise ValueError("max_session_budget_usd cannot be negative")
+        if self.code_timeout_seconds < 1:
+            raise ValueError("code_timeout_seconds must be >= 1")
+        if self.chars_per_token < 1:
+            raise ValueError("chars_per_token must be >= 1")
+        if self.max_subcall_depth < 0:
+            raise ValueError("max_subcall_depth cannot be negative")
+
+
+def load_rlm_config(config_path: Path | None = None) -> RLMConfig:
+    """Load RLM config from llmc.toml [rlm] section.
+    
+    Uses LLMC's standard config discovery via find_repo_root().
+    """
+    if config_path:
+        # If user provides a file, respect it (even if not in repo root)
+        if not config_path.is_absolute():
+            # If relative, resolve against CWD (standard CLI behavior)
+            # OR resolve against repo root? SDD says:
+            # "Uses LLMC's standard config discovery via find_repo_root()."
+            # But load_config takes repo_root.
+            # If specific path provided, we should probably load THAT file.
+            pass
+        
+        # But load_config logic in llmc/core.py assumes repo_root and appends llmc.toml.
+        # So we might need to manually load if config_path is a file.
+        
+        if config_path.is_file():
+            with open(config_path, "rb") as f:
+                full_config = tomllib.load(f)
+        else:
+            # Assume it's a directory
+            full_config = load_config(config_path)
+    else:
+        # Default discovery
+        full_config = load_config(find_repo_root())
+    
+    rlm_data = full_config.get("rlm", {})
+    return _parse_rlm_section(rlm_data)
+
+
+def _parse_rlm_section(data: dict) -> RLMConfig:
+    """Parse [rlm] section into RLMConfig, merging with defaults."""
+    defaults = RLMConfig()
+    
+    # Extract sandbox sub-section if present
+    sandbox_data = data.pop("sandbox", {})
+    # We ignore pricing here as it's handled by budget module, 
+    # OR we could stick it in RLMConfig if we added it.
+    # SDD does NOT add pricing to RLMConfig. 
+    # It says: "# Pricing: current location, NOT under [rlm.budget]"
+    # But RLMConfig dataclass in SDD 3.3.1 doesn't have pricing.
+    
+    # Build config from flat fields + nested sections
+    # We construct a dict of overrides then unpack
+    
+    overrides = {}
+    
+    # Map simple fields
+    for field_name in RLMConfig.__dataclass_fields__:
+        if field_name in data:
+            overrides[field_name] = data[field_name]
+            
+    # Handle sandbox overrides
+    if "blocked_builtins" in sandbox_data:
+        overrides["blocked_builtins"] = frozenset(sandbox_data["blocked_builtins"])
+    if "allowed_modules" in sandbox_data:
+        overrides["allowed_modules"] = frozenset(sandbox_data["allowed_modules"])
+        
+    # Create new instance with overrides
+    # (dataclass replace is cleaner but we are merging dicts)
+    # We'll just instantiate with **overrides on top of existing defaults?
+    # No, we can't easily do that without creating a dict of all defaults first.
+    # Easiest is to use dataclasses.replace on the default instance
+    
+    import dataclasses
+    
+    try:
+        config = dataclasses.replace(defaults, **overrides)
+        config.validate()
+        return config
+    except (TypeError, ValueError) as e:
+        # If replace fails due to invalid fields, fallback or raise?
+        # SDD suggests validation.
+        # If unknown keys are passed to replace, it raises TypeError.
+        # So we should filter overrides to only known fields.
+        
+        valid_overrides = {
+            k: v for k, v in overrides.items() 
+            if k in RLMConfig.__dataclass_fields__
+        }
+        config = dataclasses.replace(defaults, **valid_overrides)
+        config.validate()
+        return config

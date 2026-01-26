@@ -41,13 +41,13 @@ RLM doesn't just "grep". It uses Tree-sitter to understand code structure:
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI
+    participant CLI_or_MCP
     participant Session
     participant LLM
     participant Sandbox
     
-    User->>CLI: llmc rlm query "Fix bug"
-    CLI->>Session: init(config)
+    User->>CLI_or_MCP: Request Analysis ("Fix bug")
+    CLI_or_MCP->>Session: init(config)
     
     loop Reasoning Cycle (Max Turns)
         Session->>LLM: generate_next_step(history)
@@ -63,7 +63,7 @@ sequenceDiagram
         Session->>Session: update_history(observation)
     end
     
-    Session-->>CLI: Final Answer
+    Session-->>CLI_or_MCP: Final Answer
 ```
 
 ---
@@ -72,26 +72,27 @@ sequenceDiagram
 
 ### 1. Budget Enforcement
 To prevent "runaway agents" (infinite loops of API calls), RLM uses a strict dual-budget system:
-- **USD Limit**: Hard cap on estimated cost (e.g., $1.00).
+- **USD Limit**: Hard cap on estimated cost (e.g., .00).
 - **Token Limit**: Hard cap on total tokens sent/received.
 - **Depth Limit**: Prevents infinite recursion (if sub-agents are used).
 
-### 2. Path Policy (MCP Integration)
-When running via MCP (Model Context Protocol), RLM adheres to the server's security context:
+### 2. MCP Integration & Path Policy
+When running via MCP (Model Context Protocol) using the `rlm_query` tool, RLM adheres to the server's security context:
+- **Restricted Profile**: MCP sessions default to the `restricted` security profile.
 - **`allowed_roots`**: Can only read files within the specified workspace.
 - **`denylist`**: Sensitive files (`.env`, `id_rsa`) are blocked at the tool level.
 - **`max_bytes`**: Large files are truncated to prevent context window DoS.
 
 ### 3. Egress Control
-By default, RLM running inside MCP is **local-only** (Restricted Profile).
+By default, RLM running inside MCP is **local-only**.
 - **Network Access**: Blocked.
-- **Model Overrides**: Disabled (cannot force usage of GPT-4 if policy dictates Ollama).
+- **Model Overrides**: Disabled (cannot force usage of GPT-4 if policy dictates Ollama), unless explicitly allowed in config.
 
 ---
 
 ## 💾 State Management
 
-RLM is **stateless** between CLI invocations but **stateful** within a session.
+RLM is **stateless** between CLI/MCP invocations but **stateful** within a session.
 
 - **Conversation History**: Stored in-memory list of `Message` objects.
 - **Sandbox State**: The `ProcessSandboxBackend` is ephemeral. Variables defined in one turn *may* not persist to the next depending on backend implementation. (Current Phase 1 implementation treats each tool execution as atomic).

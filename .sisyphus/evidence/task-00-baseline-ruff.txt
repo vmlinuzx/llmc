@@ -1,0 +1,193 @@
+PLW0603 Using the global statement to update `_litellm_imported` is discouraged
+  --> llmc/backends/litellm_core.py:26:12
+   |
+24 | def _ensure_litellm() -> None:
+25 |     """Lazy import litellm and configure it."""
+26 |     global _litellm_imported
+   |            ^^^^^^^^^^^^^^^^^
+27 |     if not _litellm_imported:
+28 |         import litellm
+   |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+   --> llmc/cli.py:336:9
+    |
+334 |     except Exception as e:
+335 |         console.print(f"[bold red]Error resolving domain:[/bold red] {e}")
+336 |         raise typer.Exit(code=1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+337 |
+338 |     console.print(f"Domain: [bold green]{domain}[/bold green]")
+    |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/config.py:52:25
+   |
+50 |   @app.command("edit")
+51 |   def edit(
+52 |       config_path: Path = typer.Option(
+   |  _________________________^
+53 | |         None,
+54 | |         "--config-path",
+55 | |         "-c",
+56 | |         help="Path to llmc.toml (default: auto-detect from repo root)",
+57 | |     )
+   | |_____^
+58 |   ) -> None:
+59 |       """
+   |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+  --> llmc/commands/config.py:73:13
+   |
+71 |             typer.echo(f"Error: Could not find llmc.toml: {e}", err=True)
+72 |             typer.echo("Hint: Run from repo root or use --config-path", err=True)
+73 |             raise typer.Exit(1)
+   |             ^^^^^^^^^^^^^^^^^^^
+74 |
+75 |     if not config_path.exists():
+   |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+  --> llmc/commands/config.py:86:9
+   |
+84 |         typer.echo(f"  {e}", err=True)
+85 |         typer.echo("\nInstall with: pip install textual", err=True)
+86 |         raise typer.Exit(1)
+   |         ^^^^^^^^^^^^^^^^^^^
+87 |
+88 |     # Launch TUI
+   |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+  --> llmc/commands/config.py:93:9
+   |
+91 |     except KeyboardInterrupt:
+92 |         typer.echo("\nInterrupted by user", err=True)
+93 |         raise typer.Exit(130)
+   |         ^^^^^^^^^^^^^^^^^^^^^
+94 |     except Exception as e:
+95 |         typer.echo(f"Error: {e}", err=True)
+   |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+  --> llmc/commands/config.py:99:9
+   |
+98 |         traceback.print_exc()
+99 |         raise typer.Exit(1)
+   |         ^^^^^^^^^^^^^^^^^^^
+   |
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:35:25
+   |
+34 |   def compare_models(
+35 |       repo: Path | None = typer.Argument(
+   |  _________________________^
+36 | |         None, help="Repository path (default: current directory)"
+37 | |     ),
+   | |_____^
+38 |       baseline: Path | None = typer.Option(
+39 |           None, "--baseline", "-b", help="Baseline database to compare against"
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:38:29
+   |
+36 |           None, help="Repository path (default: current directory)"
+37 |       ),
+38 |       baseline: Path | None = typer.Option(
+   |  _____________________________^
+39 | |         None, "--baseline", "-b", help="Baseline database to compare against"
+40 | |     ),
+   | |_____^
+41 |       model_a: str | None = typer.Option(
+42 |           None,
+   |
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/commands/model_compare.py:130:22
+    |
+128 |         cur = conn.execute(query)
+129 |         cols = [d[0] for d in cur.description]
+130 |         rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+    |                      ^^^^^^^^^^^^^^
+131 |         return rows
+    |
+help: Add explicit value for parameter `strict=`
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/commands/model_compare.py:277:25
+    |
+276 |   def metrics(
+277 |       repo: Path | None = typer.Argument(
+    |  _________________________^
+278 | |         None, help="Repository path (default: current directory)"
+279 | |     ),
+    | |_____^
+280 |       model: str | None = typer.Option(None, "--model", "-m", help="Filter by model"),
+281 |       json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+    --> llmc/commands/rag.py:1006:13
+     |
+1004 |     with open(ledger_path) as f:
+1005 |         for i, line in enumerate(f, 1):
+1006 |             line = line.strip()
+     |             ^^^^
+1007 |             if not line:
+1008 |                 continue
+     |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+   --> llmc/commands/repo.py:874:9
+    |
+872 |     except Exception as e:
+873 |         console.print(f"[red]❌ Failed to read database: {e}[/red]")
+874 |         raise typer.Exit(code=1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+875 |
+876 |     if enrichment_count == 0 and embedding_count == 0:
+    |
+
+B904 Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None` to distinguish them from errors in exception handling
+   --> llmc/commands/repo.py:911:9
+    |
+909 |     except Exception as e:
+910 |         console.print(f"[red]❌ Failed to clear data: {e}[/red]")
+911 |         raise typer.Exit(code=1)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+
+B007 Loop control variable `profile_name` not used within loop body
+   --> llmc/commands/repo_validator.py:349:9
+    |
+348 |     # Also check embedding profiles
+349 |     for profile_name, profile in (
+    |         ^^^^^^^^^^^^
+350 |         config.get("embeddings", {}).get("profiles", {}).items()
+351 |     ):
+    |
+help: Rename unused `profile_name` to `_profile_name`
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:21:18
+   |
+19 | def query(
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:22:21
+   |
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+24 |     budget: float = typer.Option(None, "--budget", help="Override budget limit (USD)"),

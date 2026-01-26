@@ -871,7 +871,7 @@ def nukerag(
         conn.close()
     except Exception as e:
         console.print(f"[red]❌ Failed to read database: {e}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     if enrichment_count == 0 and embedding_count == 0:
         console.print("[yellow]ℹ️  No enrichment data to clear[/yellow]")
@@ -908,7 +908,7 @@ def nukerag(
         console.print("[dim]Run 'llmc service restart' to begin re-enrichment.[/dim]")
     except Exception as e:
         console.print(f"[red]❌ Failed to clear data: {e}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command("list")

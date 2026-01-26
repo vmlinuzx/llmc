@@ -259,7 +259,7 @@ class DocgenCoordinator:
             raise ValueError(
                 f"Access denied: '{source_path}' is not within repository root. "
                 f"Only files within {self.repo_root} are allowed."
-            )
+            ) from None
 
         try:
             # 1. Compute source hash (now safe after validation)

@@ -181,7 +181,7 @@ def health() -> None:
             raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]✗[/] Health check failed: {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 def main() -> None:

@@ -790,7 +790,7 @@ def schema(
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcgrep init")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     try:
         result = generate_schema(
@@ -801,10 +801,10 @@ def schema(
         )
     except FileNotFoundError as e:
         console.print(f"[red]{e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Error generating schema:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     if json_output:
         console.print(json.dumps(result, indent=2))
@@ -838,7 +838,7 @@ def graph(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     # Load NetworkX graph for call relationships
     try:
@@ -846,7 +846,7 @@ def graph(
         G = load_graph_nx(repo_root)
     except FileNotFoundError:
         console.print("[red]Graph not found.[/red] Run: mcwho graph")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     # Load file descriptions from database
     db_path = index_path_for_read(repo_root)
@@ -1066,16 +1066,16 @@ def manifest(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     try:
         data = generate_manifest(repo_root, include_tests=include_tests)
     except FileNotFoundError as e:
         console.print(f"[red]{e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Error generating manifest:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     if json_output:
         console.print(json.dumps(data, indent=2))
@@ -1106,7 +1106,7 @@ def startup(
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     try:
         # Generate both schema (rich) and manifest
@@ -1119,10 +1119,10 @@ def startup(
         manifest_data = generate_manifest(repo_root, include_tests=include_tests)
     except FileNotFoundError as e:
         console.print(f"[red]{e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     except Exception as e:
         console.print(f"[red]Error generating startup context:[/red] {e}")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     if json_output:
         combined = {

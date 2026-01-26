@@ -147,7 +147,7 @@ class SentenceTransformerEmbeddingProvider(EmbeddingProvider):
                 raise EmbeddingConfigError(
                     "sentence-transformers is not installed but "
                     "SentenceTransformerEmbeddingProvider is configured"
-                )
+                ) from None
 
         if metadata.dimension <= 0:
             logger.warning(

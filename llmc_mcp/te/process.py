@@ -154,7 +154,7 @@ def start_process(
             bufsize=0,  # Unbuffered
         )
     except Exception as e:
-        raise RuntimeError(f"Failed to start process: {e}")
+        raise RuntimeError(f"Failed to start process: {e}") from None
 
     # Create managed process
     proc_id = _generate_proc_id()
@@ -204,7 +204,7 @@ def send_input(proc_id: str, data: str) -> None:
         mp.p.stdin.flush()
         mp.last_activity = time.time()
     except Exception as e:
-        raise OSError(f"Failed to write to process {proc_id}: {e}")
+        raise OSError(f"Failed to write to process {proc_id}: {e}") from None
 
 
 def read_output(proc_id: str, timeout_sec: float = 1.0) -> tuple[str, str]:

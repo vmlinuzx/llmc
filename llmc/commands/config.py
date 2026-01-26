@@ -70,7 +70,7 @@ def edit(
         except Exception as e:
             typer.echo(f"Error: Could not find llmc.toml: {e}", err=True)
             typer.echo("Hint: Run from repo root or use --config-path", err=True)
-            raise typer.Exit(1)
+            raise typer.Exit(1) from None
 
     if not config_path.exists():
         typer.echo(f"Error: Config file not found: {config_path}", err=True)
@@ -83,20 +83,20 @@ def edit(
         typer.echo("Error: Missing required dependency for TUI", err=True)
         typer.echo(f"  {e}", err=True)
         typer.echo("\nInstall with: pip install textual", err=True)
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Launch TUI
     try:
         run_tui(config_path)
     except KeyboardInterrupt:
         typer.echo("\nInterrupted by user", err=True)
-        raise typer.Exit(130)
+        raise typer.Exit(130) from None
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
         import traceback
 
         traceback.print_exc()
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
 
 if __name__ == "__main__":

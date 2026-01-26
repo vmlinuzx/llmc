@@ -144,10 +144,10 @@ def main(
         )
     except KeyboardInterrupt:
         console.print("\n[dim]Interrupted[/dim]")
-        raise SystemExit(130)
+        raise SystemExit(130) from None
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
-        raise SystemExit(1)
+        raise SystemExit(1) from None
 
 
 def _get_or_create_session(

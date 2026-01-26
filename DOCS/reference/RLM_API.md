@@ -2,12 +2,12 @@
 
 ## 💻 CLI Commands
 
-### `llmc rlm query`
+### `llmc-cli rlm query`
 
 Execute an RLM analysis session.
 
 ```bash
-llmc rlm query [OPTIONS] TASK
+llmc-cli rlm query [OPTIONS] TASK
 ```
 
 **Arguments:**
@@ -15,10 +15,11 @@ llmc rlm query [OPTIONS] TASK
 
 **Options:**
 - `--file, -f PATH`: Load a specific file as initial context.
-- `--budget, -b FLOAT`: Max budget in USD (default: $1.00).
+- `--context, -c PATH`: Load raw context from a file.
+- `--budget, -b FLOAT`: Max budget in USD (default: .00).
 - `--model, -m NAME`: Override the root reasoning model.
-- `--verbose, -v`: Show internal thought process and tool outputs.
-- `--profile NAME`: Load a specific configuration profile (e.g., 'restricted').
+- `--trace`: Show execution trace (JSON events).
+- `--json`: Output result as JSON.
 
 ---
 
@@ -33,7 +34,7 @@ class RLMSession:
     def __init__(self, config: RLMConfig):
         ...
 
-    async def run(self, task: str, max_turns: int = 10) -> RLMResult:
+    async def run(self, task: str, max_turns: int = 20) -> RLMResult:
         """Execute the analysis loop."""
 ```
 
@@ -50,6 +51,7 @@ class RLMResult:
     history: List[Message]
     budget_summary: Dict[str, float]
     error: Optional[str] = None
+    trace: Optional[List[Dict]] = None
 ```
 
 ### `llmc.rlm.config.RLMConfig`
@@ -63,7 +65,7 @@ class RLMConfig:
     root_model: str = "..."
     max_session_budget_usd: float = 1.0
     trace_enabled: bool = True
-    ...
+    # ... and many more (see llmc/rlm/config.py)
 ```
 
 ---
@@ -76,15 +78,19 @@ Exposes RLM analysis to MCP clients (Claude Desktop, etc.).
 
 **Input Schema:**
 
-| Field | Type | Description | Required |
-| :--- | :--- | :--- | :--- |
-| `task` | string | Analysis instructions | Yes |
-| `path` | string | File path to analyze (Mutual exclusive with context) | No* |
-| `context` | string | Raw text context (Mutual exclusive with path) | No* |
-| `budget_usd` | number | Per-call budget cap (default 1.0) | No |
-| `max_turns` | integer | Max reasoning steps (default 5) | No |
+| Field | Type | Description | Required | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `task` | string | Analysis instructions | Yes | - |
+| `path` | string | File path to analyze (Mutual exclusive with context) | No* | - |
+| `context` | string | Raw text context (Mutual exclusive with path) | No* | - |
+| `budget_usd` | number | Per-call budget cap | No | 1.0 |
+| `max_turns` | integer | Max reasoning steps | No | 20 |
+| `model` | string | Override root model (if allowed by policy) | No | - |
+| `max_bytes` | integer | Max bytes to read from file | No | Configured Limit |
+| `timeout_s` | number | Session timeout in seconds | No | 300 |
+| `language` | string | Language hint for context | No | - |
 
-*\* Exactly one of `path` or `context` must be provided.*
+*` Exactly one of `path` or `context` must be provided.*
 
 **Output Schema:**
 
@@ -97,7 +103,8 @@ Exposes RLM analysis to MCP clients (Claude Desktop, etc.).
   },
   "meta": {
     "source": {"type": "path", "path": "src/main.py"},
-    "model_used": "ollama/qwen2.5"
+    "model_used": "ollama/qwen2.5",
+    "trace_included": false
   }
 }
 ```
@@ -106,5 +113,6 @@ Exposes RLM analysis to MCP clients (Claude Desktop, etc.).
 - `invalid_args`: Bad schema or missing fields.
 - `path_denied`: Access to file blocked by security policy.
 - `file_too_large`: File exceeds `max_bytes` limit.
-- `budget_exceeded`: Analysis stopped due to cost/token limits.
+- `egress_denied`: Model override or network access blocked.
 - `timeout`: Session took too long.
+- `internal_error`: Unexpected exception.

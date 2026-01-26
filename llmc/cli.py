@@ -333,7 +333,7 @@ def route(
         domain, reason, detail = resolve_domain(Path(test), repo_root)
     except Exception as e:
         console.print(f"[bold red]Error resolving domain:[/bold red] {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     console.print(f"Domain: [bold green]{domain}[/bold green]")
     if show_domain_decisions:

@@ -134,7 +134,7 @@ class PdfToMarkdown(DocumentConverter):
             raise ImportError(
                 "pymupdf is required for PDF conversion. "
                 "Install with: pip install pymupdf"
-            )
+            ) from None
         
         doc = fitz.open(path)
         lines = []
@@ -179,7 +179,7 @@ class DocxToMarkdown(DocumentConverter):
             raise ImportError(
                 "python-docx is required for DOCX conversion. "
                 "Install with: pip install python-docx"
-            )
+            ) from None
         
         doc = Document(path)
         lines = []
@@ -220,7 +220,7 @@ class PptxToMarkdown(DocumentConverter):
             raise ImportError(
                 "python-pptx is required for PPTX conversion. "
                 "Install with: pip install python-pptx"
-            )
+            ) from None
         
         prs = Presentation(path)
         lines = []
@@ -258,7 +258,7 @@ class RtfToMarkdown(DocumentConverter):
             raise ImportError(
                 "striprtf is required for RTF conversion. "
                 "Install with: pip install striprtf"
-            )
+            ) from None
         
         content = path.read_text(encoding="utf-8", errors="ignore")
         text = rtf_to_text(content)

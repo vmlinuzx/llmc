@@ -176,7 +176,7 @@ def _run_who(
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
         console.print("Run: mcwho graph")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     graph_db = _get_graph_db(repo_root)
     
@@ -276,7 +276,7 @@ def graph():
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     console.print("[bold]Building schema graph...[/bold]")
     build_graph_for_repo(repo_root)
@@ -292,7 +292,7 @@ def stats():
         repo_root = find_repo_root()
     except Exception:
         console.print("[red]Not in an LLMC-indexed repository.[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     
     graph_data = _load_graph(repo_root)
     nodes = graph_data["entities"]

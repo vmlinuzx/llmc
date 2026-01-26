@@ -1,0 +1,2945 @@
+PLW0603 Using the global statement to update `_litellm_imported` is discouraged
+  --> llmc/backends/litellm_core.py:26:12
+   |
+24 | def _ensure_litellm() -> None:
+25 |     """Lazy import litellm and configure it."""
+26 |     global _litellm_imported
+   |            ^^^^^^^^^^^^^^^^^
+27 |     if not _litellm_imported:
+28 |         import litellm
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/config.py:52:25
+   |
+50 |   @app.command("edit")
+51 |   def edit(
+52 |       config_path: Path = typer.Option(
+   |  _________________________^
+53 | |         None,
+54 | |         "--config-path",
+55 | |         "-c",
+56 | |         help="Path to llmc.toml (default: auto-detect from repo root)",
+57 | |     )
+   | |_____^
+58 |   ) -> None:
+59 |       """
+   |
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:35:25
+   |
+34 |   def compare_models(
+35 |       repo: Path | None = typer.Argument(
+   |  _________________________^
+36 | |         None, help="Repository path (default: current directory)"
+37 | |     ),
+   | |_____^
+38 |       baseline: Path | None = typer.Option(
+39 |           None, "--baseline", "-b", help="Baseline database to compare against"
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:38:29
+   |
+36 |           None, help="Repository path (default: current directory)"
+37 |       ),
+38 |       baseline: Path | None = typer.Option(
+   |  _____________________________^
+39 | |         None, "--baseline", "-b", help="Baseline database to compare against"
+40 | |     ),
+   | |_____^
+41 |       model_a: str | None = typer.Option(
+42 |           None,
+   |
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/commands/model_compare.py:130:22
+    |
+128 |         cur = conn.execute(query)
+129 |         cols = [d[0] for d in cur.description]
+130 |         rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+    |                      ^^^^^^^^^^^^^^
+131 |         return rows
+    |
+help: Add explicit value for parameter `strict=`
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/commands/model_compare.py:277:25
+    |
+276 |   def metrics(
+277 |       repo: Path | None = typer.Argument(
+    |  _________________________^
+278 | |         None, help="Repository path (default: current directory)"
+279 | |     ),
+    | |_____^
+280 |       model: str | None = typer.Option(None, "--model", "-m", help="Filter by model"),
+281 |       json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+    --> llmc/commands/rag.py:1006:13
+     |
+1004 |     with open(ledger_path) as f:
+1005 |         for i, line in enumerate(f, 1):
+1006 |             line = line.strip()
+     |             ^^^^
+1007 |             if not line:
+1008 |                 continue
+     |
+
+B007 Loop control variable `profile_name` not used within loop body
+   --> llmc/commands/repo_validator.py:349:9
+    |
+348 |     # Also check embedding profiles
+349 |     for profile_name, profile in (
+    |         ^^^^^^^^^^^^
+350 |         config.get("embeddings", {}).get("profiles", {}).items()
+351 |     ):
+    |
+help: Rename unused `profile_name` to `_profile_name`
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:21:18
+   |
+19 | def query(
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:22:21
+   |
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+24 |     budget: float = typer.Option(None, "--budget", help="Override budget limit (USD)"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/commands/run.py:104:27
+    |
+102 |   @app.command("skeleton")
+103 |   def skeleton_cmd(
+104 |       output: Path | None = typer.Option(
+    |  ___________________________^
+105 | |         None, "-o", "--output", help="Output file path (default: stdout)."
+106 | |     ),
+    | |_____^
+107 |       limit: int = typer.Option(
+108 |           500, "-n", "--limit", show_default=True, help="Maximum files to include."
+    |
+
+F841 Local variable `repo_name` is assigned to but never used
+   --> llmc/commands/service.py:185:9
+    |
+183 |     for repo in repos:
+184 |         repo_path = Path(repo)
+185 |         repo_name = repo_path.name
+    |         ^^^^^^^^^
+186 |
+187 |         # Get health info if available
+    |
+help: Remove assignment to unused variable `repo_name`
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/test_mcp.py:13:24
+   |
+11 | def test_mcp(
+12 |     mode: str = typer.Option("quick", help="Test mode: quick, standard, ruthless"),
+13 |     tools: list[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |     output: Path = typer.Option(None, "--output", "-o", help="Output report path"),
+15 |     fail_fast: bool = typer.Option(False, "--fail-fast", "-x", help="Stop on first failure"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/test_mcp.py:14:20
+   |
+12 |     mode: str = typer.Option("quick", help="Test mode: quick, standard, ruthless"),
+13 |     tools: list[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
+14 |     output: Path = typer.Option(None, "--output", "-o", help="Output report path"),
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 |     fail_fast: bool = typer.Option(False, "--fail-fast", "-x", help="Stop on first failure"),
+16 | ):
+   |
+
+F841 Local variable `status` is assigned to but never used
+   --> llmc/commands/wizard.py:220:62
+    |
+218 |     ollama_url = Prompt.ask("Ollama URL", default=default_url)
+219 |
+220 |     with console.status(f"Connecting to {ollama_url}...") as status:
+    |                                                              ^^^^^^
+221 |         connected, models = _check_ollama(ollama_url)
+    |
+help: Remove assignment to unused variable `status`
+
+E402 Module level import not at top of file
+   --> llmc/main.py:200:1
+    |
+199 | # Model comparison and performance metrics
+200 | from llmc.commands.model_compare import compare_models, metrics as model_metrics
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+201 |
+202 | analytics_app.command(name="compare-models")(compare_models)
+    |
+
+E402 Module level import not at top of file
+   --> llmc/main.py:328:1
+    |
+327 | # Docgen commands
+328 | from llmc.commands import docs as docs_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+329 |
+330 | docs_app.command(name="generate")(docs_commands.generate)
+    |
+
+E402 Module level import not at top of file
+   --> llmc/main.py:385:1
+    |
+383 | # RLM - Recursive Language Model
+384 | # ============================================================================
+385 | from llmc.commands import rlm as rlm_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+386 |
+387 | app.add_typer(rlm_commands.app, name="rlm")
+    |
+
+B007 Loop control variable `item` not used within loop body
+   --> llmc/mcgrep.py:210:21
+    |
+209 |     # Output in LLM-friendly format
+210 |     for file_path, (item, line_ranges) in top_files:
+    |                     ^^^^
+211 |         full_path = repo_root / file_path
+    |
+help: Rename unused `item` to `_item`
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/mcgrep.py:574:24
+    |
+572 | @app.command()
+573 | def search(
+574 |     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+575 |     limit: int = typer.Option(100, "-n", "-m", "--limit", help="Max spans to fetch (default: 100). Top 10 files shown in compact view…
+576 |     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
+    |
+
+B007 Loop control variable `score` not used within loop body
+   --> llmc/mchot.py:549:20
+    |
+547 |     # Build results with enrichments
+548 |     results = []
+549 |     for symbol_id, score in local_hotspots:
+    |                    ^^^^^
+550 |         metadata = _get_node_metadata(G, symbol_id)
+    |
+help: Rename unused `score` to `_score`
+
+F841 Local variable `content_source` is assigned to but never used
+  --> llmc/mcread.py:82:9
+   |
+80 |             raise typer.Exit(1)
+81 |         content = full_path.read_text()
+82 |         content_source = file_path
+   |         ^^^^^^^^^^^^^^
+83 |     
+84 |     lines = content.splitlines()
+   |
+help: Remove assignment to unused variable `content_source`
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/mcschema.py:132:17
+    |
+130 |             seen = set()
+131 |             for line in proc.stdout.strip().split("\n"):
+132 |                 line = line.strip()
+    |                 ^^^^
+133 |                 if line and line.endswith(".py") and line not in seen:
+134 |                     seen.add(line)
+    |
+
+F841 Local variable `score` is assigned to but never used
+   --> llmc/mcschema.py:723:13
+    |
+721 |         console.print("[bold]central_symbols:[/bold] [dim](load-bearing, touch with care)[/dim]")
+722 |         for sym in schema["central_symbols"][:10]:
+723 |             score = sym.get("score", 0)
+    |             ^^^^^
+724 |             symbol = sym.get("symbol", "")
+725 |             file_path = sym.get("file", "")
+    |
+help: Remove assignment to unused variable `score`
+
+F841 Local variable `known_subcommands` is assigned to but never used
+    --> llmc/mcschema.py:1150:5
+     |
+1148 |     # Handle bare invocation - default to schema subcommand
+1149 |     # But allow explicit subcommands like 'manifest', 'graph'
+1150 |     known_subcommands = {"schema", "graph", "manifest"}
+     |     ^^^^^^^^^^^^^^^^^
+1151 |     
+1152 |     if len(sys.argv) == 1:
+     |
+help: Remove assignment to unused variable `known_subcommands`
+
+B007 Loop control variable `i` not used within loop body
+   --> llmc/mcwho.py:152:9
+    |
+150 |         return
+151 |     
+152 |     for i, edge in enumerate(edges[:max_show]):
+    |         ^
+153 |         source = edge.get("source") or edge.get("src") or ""
+154 |         target = edge.get("target") or edge.get("dst") or ""
+    |
+help: Rename unused `i` to `_i`
+
+F841 Local variable `edges` is assigned to but never used
+   --> llmc/mcwho.py:244:5
+    |
+242 |     graph_data = _load_graph(repo_root)
+243 |     nodes = graph_data["entities"]
+244 |     edges = graph_data["relations"]
+    |     ^^^^^
+    |
+help: Remove assignment to unused variable `edges`
+
+F401 `typing.Optional` imported but unused
+ --> llmc/rag/__init__.py:7:20
+  |
+5 | from pathlib import Path
+6 | import sys
+7 | from typing import Optional
+  |                    ^^^^^^^^
+8 |
+9 | # Add repo root to sys.path to enable llmc imports even when not installed
+  |
+help: Remove unused import: `typing.Optional`
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/__init__.py:110:21
+    |
+108 |                 # Look for class inheritance patterns
+109 |                 for line in content.split("\n"):
+110 |                     line = line.strip()
+    |                     ^^^^
+111 |                     if line.startswith("class ") and "(" in line:
+112 |                         # Extract base class
+    |
+
+F401 `.sidecar.get_sidecar_path` imported but unused; consider using `importlib.util.find_spec` to test for availability
+    --> llmc/rag/cli.py:1616:30
+     |
+1615 |     try:
+1616 |         from .sidecar import get_sidecar_path, is_sidecar_stale
+     |                              ^^^^^^^^^^^^^^^^
+1617 |     except ImportError:
+1618 |         click.echo("Error: Sidecar module not available.", err=True)
+     |
+help: Remove unused import: `.sidecar.get_sidecar_path`
+
+PLW0603 Using the global statement to update `SentenceTransformer` is discouraged
+   --> llmc/rag/embedding_providers.py:141:16
+    |
+139 |         trust_remote_code: bool = False,
+140 |     ) -> None:
+141 |         global SentenceTransformer
+    |                ^^^^^^^^^^^^^^^^^^^
+142 |         if SentenceTransformer is None:
+143 |             try:
+    |
+
+F841 Local variable `backend` is assigned to but never used
+   --> llmc/rag/enrichment_pipeline.py:673:9
+    |
+671 |         # Extract metadata
+672 |         model = meta.get("model", "unknown")
+673 |         backend = meta.get("backend", "unknown")
+    |         ^^^^^^^
+674 |         chain_name = decision.chain_name or "default"
+    |
+help: Remove assignment to unused variable `backend`
+
+B905 `zip()` without an explicit `strict=` parameter
+  --> llmc/rag/eval/medical_eval.py:40:37
+   |
+39 |         recalls = []
+40 |         for pred_list, true_list in zip(predictions, ground_truth):
+   |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+41 |             # Take top k predictions
+42 |             top_k_pred = pred_list[:k]
+   |
+help: Add explicit value for parameter `strict=`
+
+B905 `zip()` without an explicit `strict=` parameter
+  --> llmc/rag/eval/medical_eval.py:80:37
+   |
+79 |         reciprocal_ranks = []
+80 |         for pred_list, true_list in zip(predictions, ground_truth):
+   |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+81 |             true_set = set(true_list)
+   |
+help: Add explicit value for parameter `strict=`
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/rag/eval/medical_eval.py:119:37
+    |
+118 |         precisions = []
+119 |         for pred_list, true_list in zip(predictions, ground_truth):
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+120 |             # Take top k predictions
+121 |             top_k_pred = pred_list[:k]
+    |
+help: Add explicit value for parameter `strict=`
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/rag/eval/medical_eval.py:154:37
+    |
+153 |         average_precisions = []
+154 |         for pred_list, true_list in zip(predictions, ground_truth):
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+155 |             true_set = set(true_list)
+    |
+help: Add explicit value for parameter `strict=`
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+  --> llmc/rag/eval/routing_eval.py:43:13
+   |
+41 |     with open(dataset_path) as f:
+42 |         for line in f:
+43 |             line = line.strip()
+   |             ^^^^
+44 |             if not line:
+45 |                 continue
+   |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+  --> llmc/rag/eval/search_eval.py:29:13
+   |
+27 |     with path.open("r", encoding="utf-8") as handle:
+28 |         for line in handle:
+29 |             line = line.strip()
+   |             ^^^^
+30 |             if not line:
+31 |                 continue
+   |
+
+F841 Local variable `entity_length` is assigned to but never used
+  --> llmc/rag/extractors/context_detector.py:89:9
+   |
+87 |         """Extract context window around entity span"""
+88 |         start, end = entity_span
+89 |         entity_length = end - start
+   |         ^^^^^^^^^^^^^
+90 |
+91 |         # Calculate window boundaries
+   |
+help: Remove assignment to unused variable `entity_length`
+
+F401 `medspacy.context.ConTextComponent` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> llmc/rag/extractors/medical.py:13:34
+   |
+11 | # Try to import heavy NLP libs, fall back to stubs
+12 | try:
+13 |     from medspacy.context import ConTextComponent
+   |                                  ^^^^^^^^^^^^^^^^
+14 |     import scispacy
+15 |     import spacy
+   |
+help: Remove unused import: `medspacy.context.ConTextComponent`
+
+F401 `scispacy` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> llmc/rag/extractors/medical.py:14:12
+   |
+12 | try:
+13 |     from medspacy.context import ConTextComponent
+14 |     import scispacy
+   |            ^^^^^^^^
+15 |     import spacy
+   |
+help: Remove unused import: `scispacy`
+
+E712 Avoid equality comparisons to `True`; use `result:` for truth checks
+  --> llmc/rag/extractors/test_context_detector.py:24:12
+   |
+22 |     detector = ContextDetector()
+23 |     result = detector.detect_negation(text, entity_span)
+24 |     assert result == True, f"Expected 'chest pain' to be negated in '{text}'"
+   |            ^^^^^^^^^^^^^^
+25 |
+26 |     # Test using the convenience function
+   |
+help: Replace with `result`
+
+E712 Avoid equality comparisons to `True`; use `result_func:` for truth checks
+  --> llmc/rag/extractors/test_context_detector.py:28:12
+   |
+26 |     # Test using the convenience function
+27 |     result_func = detect_negation(text, entity_span)
+28 |     assert result_func == True, "Convenience function should also detect negation"
+   |            ^^^^^^^^^^^^^^^^^^^
+   |
+help: Replace with `result_func`
+
+E712 Avoid equality comparisons to `True`; use `result["negated"]:` for truth checks
+  --> llmc/rag/extractors/test_context_detector.py:43:12
+   |
+41 |     result = detector.detect_context(text, entity_span)
+42 |
+43 |     assert result["negated"] == True, "Expected 'chest pain' to be negated"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+44 |     assert result["historical"] == False, "Should not be historical"
+45 |     assert result["family"] == False, "Should not be family"
+   |
+help: Replace with `result["negated"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["historical"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:44:12
+   |
+43 |     assert result["negated"] == True, "Expected 'chest pain' to be negated"
+44 |     assert result["historical"] == False, "Should not be historical"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+45 |     assert result["family"] == False, "Should not be family"
+46 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |
+help: Replace with `not result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["family"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:45:12
+   |
+43 |     assert result["negated"] == True, "Expected 'chest pain' to be negated"
+44 |     assert result["historical"] == False, "Should not be historical"
+45 |     assert result["family"] == False, "Should not be family"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+46 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |
+help: Replace with `not result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["hypothetical"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:46:12
+   |
+44 |     assert result["historical"] == False, "Should not be historical"
+45 |     assert result["family"] == False, "Should not be family"
+46 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+47 |
+48 |     # Test convenience function
+   |
+help: Replace with `not result["hypothetical"]`
+
+E712 Avoid equality comparisons to `True`; use `result["historical"]:` for truth checks
+  --> llmc/rag/extractors/test_context_detector.py:65:12
+   |
+63 |     result = detector.detect_context(text, entity_span)
+64 |
+65 |     assert result["historical"] == True, "Expected 'diabetes' to be historical"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+66 |     assert result["negated"] == False, "Should not be negated"
+67 |     assert result["family"] == False, "Should not be family"
+   |
+help: Replace with `result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["negated"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:66:12
+   |
+65 |     assert result["historical"] == True, "Expected 'diabetes' to be historical"
+66 |     assert result["negated"] == False, "Should not be negated"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+67 |     assert result["family"] == False, "Should not be family"
+68 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |
+help: Replace with `not result["negated"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["family"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:67:12
+   |
+65 |     assert result["historical"] == True, "Expected 'diabetes' to be historical"
+66 |     assert result["negated"] == False, "Should not be negated"
+67 |     assert result["family"] == False, "Should not be family"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+68 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |
+help: Replace with `not result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["hypothetical"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:68:12
+   |
+66 |     assert result["negated"] == False, "Should not be negated"
+67 |     assert result["family"] == False, "Should not be family"
+68 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: Replace with `not result["hypothetical"]`
+
+E712 Avoid equality comparisons to `True`; use `result["family"]:` for truth checks
+  --> llmc/rag/extractors/test_context_detector.py:83:12
+   |
+81 |     result = detector.detect_context(text, entity_span)
+82 |
+83 |     assert result["family"] == True, "Expected 'cancer' to be family history"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^
+84 |     assert result["negated"] == False, "Should not be negated"
+85 |     assert (
+   |
+help: Replace with `result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["negated"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:84:12
+   |
+83 |     assert result["family"] == True, "Expected 'cancer' to be family history"
+84 |     assert result["negated"] == False, "Should not be negated"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+85 |     assert (
+86 |         result["historical"] == False
+   |
+help: Replace with `not result["negated"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["historical"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:86:9
+   |
+84 |     assert result["negated"] == False, "Should not be negated"
+85 |     assert (
+86 |         result["historical"] == False
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+87 |     ), "Should not be historical (it's family, not patient's history)"
+88 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |
+help: Replace with `not result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["hypothetical"]:` for false checks
+  --> llmc/rag/extractors/test_context_detector.py:88:12
+   |
+86 |         result["historical"] == False
+87 |     ), "Should not be historical (it's family, not patient's history)"
+88 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: Replace with `not result["hypothetical"]`
+
+E712 Avoid equality comparisons to `True`; use `result["negated"]:` for truth checks
+   --> llmc/rag/extractors/test_context_detector.py:104:12
+    |
+103 |     # 'No' indicates negation, 'family history' indicates family
+104 |     assert result["negated"] == True, "Expected 'diabetes' to be negated due to 'No'"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+105 |     assert (
+106 |         result["family"] == True
+    |
+help: Replace with `result["negated"]`
+
+E712 Avoid equality comparisons to `True`; use `result["family"]:` for truth checks
+   --> llmc/rag/extractors/test_context_detector.py:106:9
+    |
+104 |     assert result["negated"] == True, "Expected 'diabetes' to be negated due to 'No'"
+105 |     assert (
+106 |         result["family"] == True
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^
+107 |     ), "Expected 'diabetes' to be family due to 'family history'"
+108 |     assert (
+    |
+help: Replace with `result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["historical"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:109:9
+    |
+107 |     ), "Expected 'diabetes' to be family due to 'family history'"
+108 |     assert (
+109 |         result["historical"] == False
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+110 |     ), "Should not be historical (it's family history)"
+111 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+    |
+help: Replace with `not result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["hypothetical"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:111:12
+    |
+109 |         result["historical"] == False
+110 |     ), "Should not be historical (it's family history)"
+111 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: Replace with `not result["hypothetical"]`
+
+E712 Avoid equality comparisons to `True`; use `result["hypothetical"]:` for truth checks
+   --> llmc/rag/extractors/test_context_detector.py:127:9
+    |
+126 |     assert (
+127 |         result["hypothetical"] == True
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+128 |     ), "Expected 'infection' to be hypothetical due to 'consider'"
+129 |     assert result["negated"] == False, "Should not be negated"
+    |
+help: Replace with `result["hypothetical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["negated"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:129:12
+    |
+127 |         result["hypothetical"] == True
+128 |     ), "Expected 'infection' to be hypothetical due to 'consider'"
+129 |     assert result["negated"] == False, "Should not be negated"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+130 |     assert result["historical"] == False, "Should not be historical"
+131 |     assert result["family"] == False, "Should not be family"
+    |
+help: Replace with `not result["negated"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["historical"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:130:12
+    |
+128 |     ), "Expected 'infection' to be hypothetical due to 'consider'"
+129 |     assert result["negated"] == False, "Should not be negated"
+130 |     assert result["historical"] == False, "Should not be historical"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+131 |     assert result["family"] == False, "Should not be family"
+    |
+help: Replace with `not result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["family"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:131:12
+    |
+129 |     assert result["negated"] == False, "Should not be negated"
+130 |     assert result["historical"] == False, "Should not be historical"
+131 |     assert result["family"] == False, "Should not be family"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: Replace with `not result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["negated"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:146:12
+    |
+144 |     result = detector.detect_context(text, entity_span)
+145 |
+146 |     assert result["negated"] == False, "Should not be negated"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+147 |     assert result["historical"] == False, "Should not be historical"
+148 |     assert result["family"] == False, "Should not be family"
+    |
+help: Replace with `not result["negated"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["historical"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:147:12
+    |
+146 |     assert result["negated"] == False, "Should not be negated"
+147 |     assert result["historical"] == False, "Should not be historical"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+148 |     assert result["family"] == False, "Should not be family"
+149 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+    |
+help: Replace with `not result["historical"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["family"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:148:12
+    |
+146 |     assert result["negated"] == False, "Should not be negated"
+147 |     assert result["historical"] == False, "Should not be historical"
+148 |     assert result["family"] == False, "Should not be family"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+149 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+    |
+help: Replace with `not result["family"]`
+
+E712 Avoid equality comparisons to `False`; use `not result["hypothetical"]:` for false checks
+   --> llmc/rag/extractors/test_context_detector.py:149:12
+    |
+147 |     assert result["historical"] == False, "Should not be historical"
+148 |     assert result["family"] == False, "Should not be family"
+149 |     assert result["hypothetical"] == False, "Should not be hypothetical"
+    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: Replace with `not result["hypothetical"]`
+
+E712 Avoid equality comparisons to `True`; use `result:` for truth checks
+   --> llmc/rag/extractors/test_context_detector.py:166:12
+    |
+164 |     # The window should capture "denies" which is before the entity
+165 |     result = detector.detect_negation(text, entity_span)
+166 |     assert result == True, "Should detect negation even with surrounding text"
+    |            ^^^^^^^^^^^^^^
+    |
+help: Replace with `result`
+
+F841 Local variable `result` is assigned to but never used
+   --> llmc/rag/extractors/test_context_detector.py:185:9
+    |
+183 |         # This shouldn't happen in our tests since we're careful
+184 |         detector = ContextDetector()
+185 |         result = detector.detect_context(text, entity_span)
+    |         ^^^^^^
+186 |         # The result may be unexpected since entity isn't actually in the text
+    |
+help: Remove assignment to unused variable `result`
+
+E712 Avoid equality comparisons to `True`; use `result:` for truth checks
+   --> llmc/rag/extractors/test_context_detector.py:201:12
+    |
+199 |     result = detector.detect_negation(text, entity_span)
+200 |
+201 |     assert result == True, "Should detect negation even with uppercase 'DENIES'"
+    |            ^^^^^^^^^^^^^^
+    |
+help: Replace with `result`
+
+F841 Local variable `now` is assigned to but never used
+   --> llmc/rag/graph_index.py:280:5
+    |
+278 |     # Check cache with mtime validation
+279 |     cache_key = str(graph_path.resolve())
+280 |     now = time.time()
+    |     ^^^
+281 |     
+282 |     try:
+    |
+help: Remove assignment to unused variable `now`
+
+F401 `.sidecar.SidecarConverter` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> llmc/rag/indexer.py:45:9
+   |
+43 | try:
+44 |     from .sidecar import (
+45 |         SidecarConverter,
+   |         ^^^^^^^^^^^^^^^^
+46 |         get_converter as get_doc_sidecar_converter,
+47 |         get_sidecar_path,
+   |
+help: Remove unused import: `.sidecar.SidecarConverter`
+
+E722 Do not use bare `except`
+   --> llmc/rag/inspector.py:200:21
+    |
+198 |                     try:
+199 |                         data[key] = json.loads(row[key])
+200 |                     except:
+    |                     ^^^^^^
+201 |                         data[key] = row[key]
+    |
+
+E722 Do not use bare `except`
+   --> llmc/rag/inspector.py:207:17
+    |
+205 |                     ev = json.loads(row["evidence"])
+206 |                     data["evidence_count"] = len(ev)
+207 |                 except:
+    |                 ^^^^^^
+208 |                     pass
+209 |     except Exception:
+    |
+
+E722 Do not use bare `except`
+   --> llmc/rag/inspector.py:307:9
+    |
+305 |             graph = SchemaGraph.load(graph_path)
+306 |             graph_status = "loaded"
+307 |         except:
+    |         ^^^^^^
+308 |             pass
+    |
+
+UP035 `typing.Dict` is deprecated, use `dict` instead
+ --> llmc/rag/ontologies/__init__.py:7:1
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+UP035 `typing.List` is deprecated, use `list` instead
+ --> llmc/rag/ontologies/__init__.py:7:1
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+F401 `typing.Any` imported but unused
+ --> llmc/rag/ontologies/__init__.py:7:20
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  |                    ^^^
+  |
+help: Remove unused import
+
+F401 `typing.Dict` imported but unused
+ --> llmc/rag/ontologies/__init__.py:7:25
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  |                         ^^^^
+  |
+help: Remove unused import
+
+F401 `typing.List` imported but unused
+ --> llmc/rag/ontologies/__init__.py:7:31
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  |                               ^^^^
+  |
+help: Remove unused import
+
+F401 `typing.Optional` imported but unused
+ --> llmc/rag/ontologies/__init__.py:7:37
+  |
+5 | import json
+6 | from pathlib import Path
+7 | from typing import Any, Dict, List, Optional
+  |                                     ^^^^^^^^
+  |
+help: Remove unused import
+
+PLW0603 Using the global statement to update `_loader` is discouraged
+   --> llmc/rag/ontologies/__init__.py:165:12
+    |
+164 | def get_ontology_loader(repo_root: Path) -> OntologyLoader:
+165 |     global _loader
+    |            ^^^^^^^
+166 |     if _loader is None:
+167 |         _loader = OntologyLoader(repo_root / "config/ontologies")
+    |
+
+B007 Loop control variable `t` not used within loop body
+  --> llmc/rag/phi/detector.py:87:27
+   |
+85 |                 start, end = match.start(), match.end()
+86 |                 overlapping = False
+87 |                 for s, e, t in matches:
+   |                           ^
+88 |                     if not (end <= s or start >= e):
+89 |                         overlapping = True
+   |
+help: Rename unused `t` to `_t`
+
+F401 `typing.Optional` imported but unused
+  --> llmc/rag/quality_check/__init__.py:19:29
+   |
+17 | import logging
+18 | import re
+19 | from typing import Literal, Optional
+   |                             ^^^^^^^^
+20 |
+21 | # Rule version for telemetry and regression tracking
+   |
+help: Remove unused import: `typing.Optional`
+
+F821 Undefined name `Any`
+   --> llmc/rag/reader.py:114:39
+    |
+112 |     return None
+113 |
+114 | def _read_span(repo_root: Path, node: Any) -> CodeSpan:
+    |                                       ^^^
+115 |     # node has .path which is "absolute_path:start-end" or relative?
+116 |     # schema.py stores: path=f"{self.file_path}:{node.lineno}-{node.end_lineno}"
+    |
+
+E701 Multiple statements on one line (colon)
+   --> llmc/rag/reader.py:163:22
+    |
+161 |     # Slice: start_line-1 to end_line
+162 |     # Safety checks
+163 |     if start_line < 1: start_line = 1
+    |                      ^
+164 |     if end_line > len(lines): end_line = len(lines)
+    |
+
+E701 Multiple statements on one line (colon)
+   --> llmc/rag/reader.py:164:29
+    |
+162 |     # Safety checks
+163 |     if start_line < 1: start_line = 1
+164 |     if end_line > len(lines): end_line = len(lines)
+    |                             ^
+165 |     
+166 |     snippet = "\n".join(lines[start_line-1 : end_line])
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:173:1
+    |
+171 | # =============================================================================
+172 |
+173 | import json
+    | ^^^^^^^^^^^
+174 | import logging
+175 | from typing import Protocol
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:174:1
+    |
+173 | import json
+174 | import logging
+    | ^^^^^^^^^^^^^^
+175 | from typing import Protocol
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:175:1
+    |
+173 | import json
+174 | import logging
+175 | from typing import Protocol
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+176 |
+177 | logger = logging.getLogger(__name__)
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/runner.py:104:17
+    |
+102 |                 encoding="utf-8", errors="ignore"
+103 |             ).splitlines():
+104 |                 line = line.strip()
+    |                 ^^^^
+105 |                 if not line or line.startswith("#"):
+106 |                     continue
+    |
+
+F401 `collections.abc.Sequence` imported but unused
+ --> llmc/rag/search/__init__.py:3:39
+  |
+1 | from __future__ import annotations
+2 |
+3 | from collections.abc import Iterable, Sequence
+  |                                       ^^^^^^^^
+4 | from dataclasses import asdict, dataclass, field
+5 | import json
+  |
+help: Remove unused import: `collections.abc.Sequence`
+
+F401 `math` imported but unused
+ --> llmc/rag/search/__init__.py:6:8
+  |
+4 | from dataclasses import asdict, dataclass, field
+5 | import json
+6 | import math
+  |        ^^^^
+7 | from pathlib import Path
+8 | import struct
+  |
+help: Remove unused import: `math`
+
+F841 Local variable `result` is assigned to but never used
+   --> llmc/rag/service.py:916:13
+    |
+915 |         try:
+916 |             result = run_async_enrichment_sync(
+    |             ^^^^^^
+917 |                 repos=repos,
+918 |                 batch_size=batch_size,
+    |
+help: Remove assignment to unused variable `result`
+
+PLW0603 Using the global statement to update `_default_converter` is discouraged
+   --> llmc/rag/sidecar.py:374:12
+    |
+372 | def get_converter() -> SidecarConverter:
+373 |     """Get the default sidecar converter instance."""
+374 |     global _default_converter
+    |            ^^^^^^^^^^^^^^^^^^
+375 |     if _default_converter is None:
+376 |         _default_converter = SidecarConverter()
+    |
+
+E731 Do not assign a `lambda` expression, use a `def`
+  --> llmc/rag/utils.py:45:9
+   |
+43 |     except ImportError:
+44 |         sidecar_available = False
+45 |         is_sidecar_eligible = lambda x: False
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+46 |     
+47 |     exclude_dirs = get_exclude_dirs(repo_root)
+   |
+help: Rewrite `is_sidecar_eligible` as a `def`
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/utils.py:122:17
+    |
+120 |         try:
+121 |             for line in cfg.read_text(encoding="utf-8", errors="ignore").splitlines():
+122 |                 line = line.strip()
+    |                 ^^^^
+123 |                 if not line or line.startswith("#"):
+124 |                     continue
+    |
+
+PLW0127 Self-assignment of variable `UTC`
+  --> llmc/rag_daemon/models.py:90:1
+   |
+90 | UTC = UTC
+   | ^^^
+   |
+
+F403 `from llmc.rag import *` used; unable to detect undefined names
+ --> llmc/rag_nav/__init__.py:2:1
+  |
+1 | # Compatibility shim for tests - redirects to tools.rag
+2 | from llmc.rag import *
+  | ^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+UP036 Version block is outdated for minimum Python version
+  --> llmc/rlm/config.py:9:4
+   |
+ 7 | import sys
+ 8 |
+ 9 | if sys.version_info >= (3, 11):
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+10 |     import tomllib
+11 | else:
+   |
+help: Remove outdated version block
+
+UP036 Version block is outdated for minimum Python version
+  --> llmc/rlm/governance/budget.py:18:4
+   |
+16 | from typing import Literal
+17 |
+18 | if sys.version_info >= (3, 11):
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+19 |     import tomllib
+20 | else:
+   |
+help: Remove outdated version block
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/rlm/sandbox/intercept.py:99:69
+    |
+ 97 | class RewriteTransformer(ast.NodeTransformer):
+ 98 |     def __init__(self, sites: list[CallbackSite], injections: list[str]):
+ 99 |         self.sites_map = {site.lineno: (site, inj) for site, inj in zip(sites, injections)}
+    |                                                                     ^^^^^^^^^^^^^^^^^^^^^^
+100 |     
+101 |     def visit_Assign(self, node: ast.Assign):
+    |
+help: Add explicit value for parameter `strict=`
+
+E722 Do not use bare `except`
+   --> llmc/rlm/sandbox/process_backend.py:219:9
+    |
+217 |         try:
+218 |             result_data = result_queue.get_nowait()
+219 |         except:
+    |         ^^^^^^
+220 |             return ExecutionResult(
+221 |                 success=False,
+    |
+
+PLW2901 `for` loop variable `code` overwritten by assignment target
+   --> llmc/rlm/session.py:426:25
+    |
+424 |                 if sites:
+425 |                     try:
+426 |                         code = rewrite_ast(code, sites, injections)
+    |                         ^^^^
+427 |                     except Exception as e:
+428 |                         exec_results.append({
+    |
+
+F841 Local variable `result` is assigned to but never used
+  --> llmc/rmta/runner.py:87:17
+   |
+85 |             try:
+86 |                 # Using pytest to run the tests
+87 |                 result = subprocess.run(
+   |                 ^^^^^^
+88 |                     ["python3", "-m", "pytest", str(test.path)],
+89 |                     capture_output=True,
+   |
+help: Remove assignment to unused variable `result`
+
+B007 Loop control variable `slice_id` not used within loop body
+   --> llmc/routing/fusion.py:120:9
+    |
+118 |     # Convert back to list and sort
+119 |     final_results = []
+120 |     for slice_id, (fused_score, res_obj) in merged_map.items():
+    |         ^^^^^^^^
+121 |         final_res = res_obj.copy()
+122 |         final_res["score"] = fused_score
+    |
+help: Rename unused `slice_id` to `_slice_id`
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> llmc/routing/fusion.py:177:25
+    |
+175 |         normalized_routes[route_name] = [
+176 |             (r["slice_id"], z, r)
+177 |             for r, z in zip(results, z_scores)
+    |                         ^^^^^^^^^^^^^^^^^^^^^^
+178 |         ]
+    |
+help: Add explicit value for parameter `strict=`
+
+B007 Loop control variable `slice_id` not used within loop body
+   --> llmc/routing/fusion.py:202:9
+    |
+200 |     # Build final list
+201 |     final_results = []
+202 |     for slice_id, (final_z, result) in merged.items():
+    |         ^^^^^^^^
+203 |         r = result.copy()
+204 |         r["score"] = final_z
+    |
+help: Rename unused `slice_id` to `_slice_id`
+
+B007 Loop control variable `route_name` not used within loop body
+   --> llmc/routing/fusion.py:232:9
+    |
+230 |     merged_objs: dict[str, tuple[int, dict[str, Any]]] = {}  # slice_id -> (best_rank, obj)
+231 |
+232 |     for route_name, results in route_results.items():
+    |         ^^^^^^^^^^
+233 |         for i, res in enumerate(results):
+234 |             rank = i + 1
+    |
+help: Rename unused `route_name` to `_route_name`
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/tui/screens/dashboard.py:260:25
+    |
+258 |                 try:
+259 |                     for line in self._log_proc.stdout:
+260 |                         line = line.rstrip()
+    |                         ^^^^
+261 |                         if line:
+262 |                             self.logs.append(line)
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/tui/screens/service.py:304:25
+    |
+302 |                 try:
+303 |                     for line in self._log_proc.stdout:
+304 |                         line = line.rstrip()
+    |                         ^^^^
+305 |                         if line:
+306 |                             self.logs.append(line)
+    |
+
+F821 Undefined name `Session`
+   --> llmc_agent/agent.py:125:18
+    |
+123 |         self,
+124 |         question: str,
+125 |         session: Session | None = None,
+    |                  ^^^^^^^
+126 |     ) -> AgentResponse:
+127 |         """Ask the agent a question.
+    |
+
+F821 Undefined name `Session`
+   --> llmc_agent/agent.py:299:18
+    |
+297 |         self,
+298 |         question: str,
+299 |         session: Session | None = None,
+    |                  ^^^^^^^
+300 |         max_tool_rounds: int = 5,
+301 |         verbose_callback: callable | None = None,
+    |
+
+F841 Local variable `response` is assigned to but never used
+   --> llmc_agent/cli.py:140:9
+    |
+138 |     # Run the agent
+139 |     try:
+140 |         response = asyncio.run(
+    |         ^^^^^^^^
+141 |             _run_agent(
+142 |                 prompt, config, session, session_mgr, json_output, quiet, not no_tools, verbose
+    |
+help: Remove assignment to unused variable `response`
+
+UP036 Version block is outdated for minimum Python version
+  --> llmc_agent/config.py:21:4
+   |
+20 | # tomli for Python < 3.11, else tomllib
+21 | if sys.version_info >= (3, 11):
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+22 |     import tomllib
+23 | else:
+   |
+help: Remove outdated version block
+
+PLW0603 Using the global statement to update `_lock_manager` is discouraged
+   --> llmc_mcp/locks.py:388:12
+    |
+386 | def get_lock_manager() -> LockManager:
+387 |     """Get or create global lock manager."""
+388 |     global _lock_manager
+    |            ^^^^^^^^^^^^^
+389 |     if _lock_manager is None:
+390 |         _lock_manager = LockManager()
+    |
+
+PLW0603 Using the global statement to update `_maasl` is discouraged
+   --> llmc_mcp/maasl.py:515:12
+    |
+513 | def get_maasl(config: dict | None = None) -> MAASL:
+514 |     """Get or create global MAASL instance."""
+515 |     global _maasl
+    |            ^^^^^^
+516 |     if _maasl is None:
+517 |         policy = PolicyRegistry(config=config)
+    |
+
+PLW0603 Using the global statement to update `_maasl` is discouraged
+   --> llmc_mcp/maasl.py:524:12
+    |
+522 | def configure_maasl(config: dict):
+523 |     """Configure global MAASL instance."""
+524 |     global _maasl
+    |            ^^^^^^
+525 |     policy = PolicyRegistry(config=config)
+526 |     _maasl = MAASL(policy_registry=policy)
+    |
+
+PLW0603 Using the global statement to update `_telemetry_sink` is discouraged
+   --> llmc_mcp/telemetry.py:263:12
+    |
+261 | def get_telemetry_sink() -> TelemetrySink:
+262 |     """Get or create global telemetry sink."""
+263 |     global _telemetry_sink
+    |            ^^^^^^^^^^^^^^^
+264 |     if _telemetry_sink is None:
+265 |         _telemetry_sink = TelemetrySink()
+    |
+
+PLW0603 Using the global statement to update `_telemetry_sink` is discouraged
+   --> llmc_mcp/telemetry.py:271:12
+    |
+269 | def configure_telemetry(enabled: bool = True):
+270 |     """Configure global telemetry sink."""
+271 |     global _telemetry_sink
+    |            ^^^^^^^^^^^^^^^
+272 |     _telemetry_sink = TelemetrySink(enabled=enabled)
+    |
+
+F841 Local variable `config` is assigned to but never used
+   --> llmc_mcp/transport/rest/routes.py:265:5
+    |
+263 |     """
+264 |     start_time = time.perf_counter()
+265 |     config = get_config(request)
+    |     ^^^^^^
+266 |     workspace_id = request.path_params["workspace_id"]
+267 |     symbol_name = request.path_params["name"]
+    |
+help: Remove assignment to unused variable `config`
+
+F841 Local variable `depth` is assigned to but never used
+   --> llmc_mcp/transport/rest/routes.py:429:5
+    |
+427 |     if isinstance(depth_raw, str):
+428 |         return add_request_id(error_response("invalid_request", depth_raw, 400), request)
+429 |     depth = max(1, min(3, depth_raw))
+    |     ^^^^^
+430 |
+431 |     from llmc.rag_nav.tool_handlers import tool_rag_lineage
+    |
+help: Remove assignment to unused variable `depth`
+
+F841 Local variable `config` is assigned to but never used
+   --> llmc_mcp/transport/rest/routes.py:473:5
+    |
+471 |     """
+472 |     start_time = time.perf_counter()
+473 |     config = get_config(request)
+    |     ^^^^^^
+474 |     workspace_id = request.path_params["workspace_id"]
+475 |     file_path = request.path_params["file_path"]
+    |
+help: Remove assignment to unused variable `config`
+
+PLW1509 `preexec_fn` argument is unsafe when using threads
+  --> mcp_test_runner.py:53:13
+   |
+51 |             text=True,
+52 |             bufsize=1,
+53 |             preexec_fn=os.setsid,
+   |             ^^^^^^^^^^^^^^^^^^^^
+54 |             env=env
+55 |         )
+   |
+
+F841 Local variable `avg_tokens` is assigned to but never used
+   --> scripts/benchmark_rlm_quick.py:227:9
+    |
+226 |         # Context window comparison
+227 |         avg_tokens = sum(r['total_tokens'] for r in successful) / len(successful)
+    |         ^^^^^^^^^^
+228 |         
+229 |         # Estimate traditional RAG token usage
+    |
+help: Remove assignment to unused variable `avg_tokens`
+
+F841 Local variable `service` is assigned to but never used
+   --> scripts/benchmark_rlm_vs_rag.py:179:9
+    |
+177 |         from llmc.rag.service import RAGService
+178 |         
+179 |         service = RAGService()
+    |         ^^^^^^^
+180 |         search_results = await search_spans(
+181 |             query=task.question,
+    |
+help: Remove assignment to unused variable `service`
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> scripts/benchmark_rlm_vs_rag.py:495:20
+    |
+493 |     task_set: str = typer.Option("basic", help="Task set: basic, advanced, hallucination, all"),
+494 |     model: str = typer.Option("gpt-4", help="LLM model to use"),
+495 |     output: Path = typer.Option(None, help="Save results to JSON file"),
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+496 |     skip_rag: bool = typer.Option(False, help="Skip traditional RAG (RLM only)"),
+497 |     skip_rlm: bool = typer.Option(False, help="Skip RLM (RAG only)"),
+    |
+
+B007 Loop control variable `module` not used within loop body
+  --> scripts/generate_cli_docs.py:54:19
+   |
+52 |     ]
+53 |
+54 |     for cmd_name, module, description in CLI_COMMANDS:
+   |                   ^^^^^^
+55 |         index_lines.append(f"| [`{cmd_name}`]({cmd_name}.md) | {description} |")
+   |
+help: Rename unused `module` to `_module`
+
+B023 Function definition does not bind loop variable `target_file`
+  --> scripts/maasl_stress_test.py:57:31
+   |
+55 |                 # Simulate file edit with MAASL protection
+56 |                 def edit_file():
+57 |                     content = target_file.read_text()
+   |                               ^^^^^^^^^^^
+58 |                     lines = content.split("\n")
+59 |                     # Increment value
+   |
+
+B023 Function definition does not bind loop variable `target_file`
+  --> scripts/maasl_stress_test.py:64:21
+   |
+62 |                             current = int(line.split("=")[1].strip())
+63 |                             lines[i] = f"value = {current + 1}"
+64 |                     target_file.write_text("\n".join(lines))
+   |                     ^^^^^^^^^^^
+65 |                     return True
+   |
+
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:25:1
+   |
+23 | sys.path.insert(0, str(REPO_ROOT))
+24 |
+25 | from llmc.rag.config import index_path_for_read
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+26 | from llmc.rag.database import Database
+   |
+
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:26:1
+   |
+25 | from llmc.rag.config import index_path_for_read
+26 | from llmc.rag.database import Database
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:166:9
+    |
+164 |             self.collection = self.client.get_collection(COLLECTION_NAME)
+165 |             print(f"✅ Loaded existing collection: {COLLECTION_NAME}")
+166 |         except:
+    |         ^^^^^^
+167 |             self.collection = self.client.create_collection(
+168 |                 name=COLLECTION_NAME,
+    |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:207:9
+    |
+205 |             if file_path.stat().st_size > 1_000_000:  # 1MB
+206 |                 return False
+207 |         except:
+    |         ^^^^^^
+208 |             return False
+    |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:217:9
+    |
+215 |             relative = file_path.relative_to(self.workspace_root)
+216 |             return str(relative.parts[0]) if relative.parts else "unknown"
+217 |         except:
+    |         ^^^^^^
+218 |             return "unknown"
+    |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:234:9
+    |
+232 |                 ).isoformat(),
+233 |             }
+234 |         except:
+    |         ^^^^^^
+235 |             return None
+    |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:255:9
+    |
+253 |                 hasher.update(f.read())
+254 |             return hasher.hexdigest()
+255 |         except:
+    |         ^^^^^^
+256 |             return ""
+    |
+
+E722 Do not use bare `except`
+   --> scripts/rag/index_workspace.py:351:17
+    |
+349 |                     if not str(rel).startswith(project_filter):
+350 |                         continue
+351 |                 except:
+    |                 ^^^^^^
+352 |                     continue
+    |
+
+E402 Module level import not at top of file
+  --> scripts/rag/watch_workspace.py:33:1
+   |
+31 |     ".llmc",
+32 | }
+33 | from watchdog.events import FileSystemEventHandler
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+34 | from watchdog.observers import Observer
+   |
+
+E402 Module level import not at top of file
+  --> scripts/rag/watch_workspace.py:34:1
+   |
+32 | }
+33 | from watchdog.events import FileSystemEventHandler
+34 | from watchdog.observers import Observer
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E722 Do not use bare `except`
+  --> scripts/rag/watch_workspace.py:61:13
+   |
+59 |                 if not str(rel).startswith(self.project_filter):
+60 |                     return False
+61 |             except:
+   |             ^^^^^^
+62 |                 return False
+   |
+
+F401 `_setup_path` imported but unused; consider using `importlib.util.find_spec` to test for availability
+ --> scripts/rag_plan_snippet.py:7:12
+  |
+6 | try:
+7 |     import _setup_path
+  |            ^^^^^^^^^^^
+8 | except ImportError:
+9 |     pass
+  |
+help: Remove unused import: `_setup_path`
+
+F401 `_setup_path` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> scripts/rag_quality_check.py:20:12
+   |
+19 | try:
+20 |     import _setup_path
+   |            ^^^^^^^^^^^
+21 | except ImportError:
+22 |     pass
+   |
+help: Remove unused import: `_setup_path`
+
+E402 Module level import not at top of file
+  --> scripts/verify_idle_throttling.py:17:1
+   |
+15 | sys.path.insert(0, str(repo_root))
+16 |
+17 | from llmc.rag.service import FailureTracker, RAGService, ServiceState
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+  --> scripts/verify_idle_throttling.py:71:12
+   |
+69 |         return_annotation = sig.return_annotation
+70 |         print(f"   Return type: {return_annotation}")
+71 |         if return_annotation == bool:
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+72 |             print("   ✓ Correct return type annotation")
+73 |         else:
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/REPRO_rlm_path_explosion.py:2:1
+  |
+2 | / import pytest
+3 | | from pathlib import Path
+4 | | from unittest.mock import patch
+5 | | from llmc_mcp.tools.rlm import mcp_rlm_query
+6 | | from llmc_mcp.config import McpRlmConfig
+  | |________________________________________^
+7 |
+8 |   @pytest.mark.asyncio
+  |
+help: Organize imports
+
+F841 Local variable `mock_v` is assigned to but never used
+  --> tests/REPRO_rlm_path_explosion.py:17:70
+   |
+16 |     # We use autospec=True here to ensure the mock has the same signature as the real validate_path
+17 |     with patch("llmc_mcp.tools.rlm.validate_path", autospec=True) as mock_v:
+   |                                                                      ^^^^^^
+18 |         # This SHOULD fail because mcp_rlm_query passes repo_root and operation
+19 |         try:
+   |
+help: Remove assignment to unused variable `mock_v`
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/agent/test_litellm_validation.py:451:18
+    |
+449 |             mock.side_effect = Exception("API Error")
+450 |             
+451 |             with pytest.raises(Exception):
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^
+452 |                 adapter.generate("test", item={})
+    |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/core/test_config_robustness.py:17:10
+   |
+15 |     # Execution & Assertion
+16 |     # This assertion is expected to FAIL currently, exposing the gap.
+17 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+18 |         load_config(tmp_path)
+   |
+
+F841 Local variable `result` is assigned to but never used
+  --> tests/gap/security/test_hybrid_mode.py:48:9
+   |
+47 |         # Test run_cmd
+48 |         result = await server._handle_run_cmd({"command": "echo check"})
+   |         ^^^^^^
+49 |
+50 |         # Assert run_cmd was called with host_mode=True
+   |
+help: Remove assignment to unused variable `result`
+
+F841 Local variable `result` is assigned to but never used
+  --> tests/gap/security/test_hybrid_mode.py:70:9
+   |
+69 |         # Test run_cmd
+70 |         result = await server._handle_run_cmd({"command": "echo check"})
+   |         ^^^^^^
+71 |
+72 |         # Assert run_cmd was called with host_mode=False
+   |
+help: Remove assignment to unused variable `result`
+
+F841 Local variable `msg` is assigned to but never used
+  --> tests/gap/test_docgen_security.py:38:9
+   |
+36 |         # if the security gap is closed.
+37 |         # Until fixed, this test is expected to FAIL.
+38 |         msg = "DocgenCoordinator allowed access to file outside repository root"
+   |         ^^^
+39 |
+40 |         # We accept either ValueError or PermissionError
+   |
+help: Remove assignment to unused variable `msg`
+
+F841 Local variable `mock_iso` is assigned to but never used
+  --> tests/gap/test_mcp_dos.py:14:59
+   |
+12 |     """
+13 |     # Patch require_isolation to bypass the environment check
+14 |     with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+   |                                                           ^^^^^^^^
+15 |         # Code that triggers sys.exit(1)
+16 |         code = "import sys; sys.exit(1)"
+   |
+help: Remove assignment to unused variable `mock_iso`
+
+F841 Local variable `mock_iso` is assigned to but never used
+  --> tests/gap/test_mcp_dos.py:29:59
+   |
+27 |     """
+28 |     # Patch require_isolation to bypass the environment check
+29 |     with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+   |                                                           ^^^^^^^^
+30 |         # Code that raises KeyboardInterrupt
+31 |         code = "raise KeyboardInterrupt"
+   |
+help: Remove assignment to unused variable `mock_iso`
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:235:33
+    |
+233 |         for tool in self.tools:
+234 |             name = tool["name"]
+235 |             if name == "00_INIT": continue # Already tested
+    |                                 ^
+236 |
+237 |             print(f"Testing {name}...", end=" ", flush=True)
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:294:20
+    |
+293 |     def _is_success(self, resp):
+294 |         if not resp: return False
+    |                    ^
+295 |         if "error" in resp: return False
+296 |         if "result" in resp:
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:295:27
+    |
+293 |     def _is_success(self, resp):
+294 |         if not resp: return False
+295 |         if "error" in resp: return False
+    |                           ^
+296 |         if "result" in resp:
+297 |             content = resp["result"].get("content", [])
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:300:38
+    |
+298 |             if content:
+299 |                 text = content[0].get("text", "")
+300 |                 if '"error":' in text: return False
+    |                                      ^
+301 |         return True
+    |
+
+F841 Local variable `res` is assigned to but never used
+  --> tests/mcp/test_te_repo.py:34:5
+   |
+33 |     monkeypatch.setattr(te_repo, "te_run", fake_te_run)
+34 |     res = te_repo.rag_query(
+   |     ^^^
+35 |         "howdy", k=3, index="default", filters={"lang": "py"}
+36 |     )  # noqa: F841
+   |
+help: Remove assignment to unused variable `res`
+
+B905 `zip()` without an explicit `strict=` parameter
+   --> tests/rag/ci/test_llmc_docs_validation.py:124:19
+    |
+123 |     # Same content
+124 |     for c1, c2 in zip(chunks1, chunks2):
+    |                   ^^^^^^^^^^^^^^^^^^^^^
+125 |         assert c1.content == c2.content, "Chunk content should be deterministic"
+126 |         assert c1.section_path == c2.section_path, "Section paths should be deterministic"
+    |
+help: Add explicit value for parameter `strict=`
+
+F841 Local variable `original_hash` is assigned to but never used
+   --> tests/rag/test_file_descriptions.py:232:9
+    |
+230 |             ("test.py",),
+231 |         ).fetchone()
+232 |         original_hash = row["input_hash"]
+    |         ^^^^^^^^^^^^^
+233 |         
+234 |         # Second update should be skipped
+    |
+help: Remove assignment to unused variable `original_hash`
+
+F841 Local variable `mock_read` is assigned to but never used
+  --> tests/rag/test_indexer_domain_logic.py:49:71
+   |
+48 |     # Mock file reading (absolute path)
+49 |     with patch("pathlib.Path.read_bytes", return_value=b"content") as mock_read:
+   |                                                                       ^^^^^^^^^
+50 |         with patch("pathlib.Path.stat") as mock_stat:
+51 |             mock_stat.return_value.st_size = 100
+   |
+help: Remove assignment to unused variable `mock_read`
+
+F841 Local variable `converter` is assigned to but never used
+   --> tests/rag/test_sidecar.py:239:13
+    |
+237 |             sys.modules['fitz'].open = MagicMock(return_value=mock_doc)
+238 |
+239 |             converter = PdfToMarkdown()
+    |             ^^^^^^^^^
+240 |
+241 |             # This will use our mocked fitz
+    |
+help: Remove assignment to unused variable `converter`
+
+F841 Local variable `result` is assigned to but never used
+   --> tests/rag/test_tech_docs_graph_edges.py:186:9
+    |
+184 |         ensure_edges_table(mock_db)
+185 |
+186 |         result = write_tech_docs_edges(
+    |         ^^^^^^
+187 |             db=mock_db,
+188 |             span_hash="source_hash",
+    |
+help: Remove assignment to unused variable `result`
+
+F841 Local variable `result` is assigned to but never used
+   --> tests/rag/test_tech_docs_graph_edges.py:208:9
+    |
+206 |         ensure_edges_table(mock_db)
+207 |
+208 |         result = write_tech_docs_edges(
+    |         ^^^^^^
+209 |             db=mock_db,
+210 |             span_hash="source_hash",
+    |
+help: Remove assignment to unused variable `result`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_intercept_collision.py:1:1
+  |
+1 | from llmc.rlm.sandbox.intercept import extract_tool_calls, rewrite_ast
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2 |
+3 | def test_multiple_calls_per_line():
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_permissive_import.py:2:1
+  |
+2 | / import asyncio
+3 | | from llmc.rlm.sandbox.process_backend import ProcessSandboxBackend
+  | |__________________________________________________________________^
+4 |
+5 |   async def test_permissive_import():
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_sandbox_escape.py:2:1
+  |
+2 | / import asyncio
+3 | | from llmc.rlm.sandbox.process_backend import ProcessSandboxBackend
+  | |__________________________________________________________________^
+4 |
+5 |   async def test_sandbox_escape():
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_unicode_alignment_v2.py:1:1
+  |
+1 | / import sys
+2 | | from pathlib import Path
+  | |________________________^
+3 |
+4 |   # Add project root to sys.path
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_unicode_alignment_v2.py:7:1
+  |
+5 | sys.path.append(str(Path(__file__).parent.parent))
+6 |
+7 | from llmc.rlm.nav.treesitter_nav import TreeSitterNav
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |
+9 | def test_unicode_alignment():
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/repro_validate_path.py:1:1
+  |
+1 | / import asyncio
+2 | | from pathlib import Path
+3 | | from llmc_mcp.config import McpRlmConfig
+4 | | from llmc_mcp.tools.rlm import mcp_rlm_query
+5 | | import pytest
+  | |_____________^
+6 |
+7 |   @pytest.mark.asyncio
+  |
+help: Organize imports
+
+UP036 Version block is outdated for minimum Python version
+ --> tests/rlm/test_config.py:7:4
+  |
+6 | # Ensure compatibility with python < 3.11
+7 | if sys.version_info >= (3, 11):
+  |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+8 |     pass
+9 | else:
+  |
+help: Remove outdated version block
+
+E712 Avoid equality comparisons to `False`; use `not config.trace_enabled:` for false checks
+   --> tests/rlm/test_config.py:162:16
+    |
+160 |         assert config.session_timeout_seconds == 600
+161 |         assert config.max_context_chars == 500000
+162 |         assert config.trace_enabled == False
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+163 |         assert config.prompt_preview_chars == 100
+164 |         assert config.response_preview_chars == 150
+    |
+help: Replace with `not config.trace_enabled`
+
+I001 Import block is un-sorted or un-formatted
+   --> tests/rlm/test_config.py:168:9
+    |
+166 |     def test_load_restrictive_fixture(self, tmp_path):
+167 |         """Load restrictive fixture and verify nested values."""
+168 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+169 |         
+170 |         # From [rlm]
+    |
+help: Organize imports
+
+E702 Multiple statements on one line (semicolon)
+   --> tests/rlm/test_config.py:168:38
+    |
+166 |     def test_load_restrictive_fixture(self, tmp_path):
+167 |         """Load restrictive fixture and verify nested values."""
+168 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |                                      ^
+169 |         
+170 |         # From [rlm]
+    |
+
+E702 Multiple statements on one line (semicolon)
+   --> tests/rlm/test_config.py:168:125
+    |
+166 |     def test_load_restrictive_fixture(self, tmp_path):
+167 |         """Load restrictive fixture and verify nested values."""
+168 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |                                                                                                                             ^
+169 |         
+170 |         # From [rlm]
+    |
+
+F401 `litellm` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/rlm/test_integration_deepseek.py:11:12
+   |
+10 | try:
+11 |     import litellm
+   |            ^^^^^^^
+12 |     LITELLM_INSTALLED = True
+13 | except ImportError:
+   |
+help: Remove unused import: `litellm`
+
+E722 Do not use bare `except`
+   --> tests/rmta_gemini_runner.py:105:13
+    |
+103 |             try:
+104 |                 await self.process.wait()
+105 |             except:
+    |             ^^^^^^
+106 |                 pass
+    |
+
+E722 Do not use bare `except`
+   --> tests/rmta_gemini_runner.py:266:21
+    |
+264 |                             is_soft_error = True
+265 |                             test_result["error"] = parsed["error"]
+266 |                     except:
+    |                     ^^^^^^
+267 |                         pass
+    |
+
+F841 Local variable `description` is assigned to but never used
+   --> tests/rmta_harness.py:146:13
+    |
+144 |         for tool in all_tools:
+145 |             name = tool["name"]
+146 |             description = tool.get("description", "")
+    |             ^^^^^^^^^^^
+147 |             is_stub = tool.get("is_stub", False)
+148 |             print(f"\nTesting tool: {name} {'(Stub)' if is_stub else ''}")
+    |
+help: Remove assignment to unused variable `description`
+
+E722 Do not use bare `except`
+   --> tests/rmta_systematic_tester.py:247:21
+    |
+245 |                             # It's a tool-level error, not a crash
+246 |                             status = "⚠️ Buggy"
+247 |                     except:
+    |                     ^^^^^^
+248 |                         pass
+    |
+
+E722 Do not use bare `except`
+   --> tests/rmta_systematic_tester.py:297:21
+    |
+295 |                                 f"⚠️ P1: execute_code failed: {data.get('stderr', '')[:100]}"
+296 |                             )
+297 |                     except:
+    |                     ^^^^^^
+298 |                         results["incidents"].append(
+299 |                             {
+    |
+
+E722 Do not use bare `except`
+   --> tests/rmta_systematic_tester.py:463:21
+    |
+461 |                                 }
+462 |                             )
+463 |                     except:
+    |                     ^^^^^^
+464 |                         status = "⚠️ Buggy"
+465 |                         results["incidents"].append(
+    |
+
+F841 Local variable `issues` is assigned to but never used
+   --> tests/ruthless/test_rem_attack.py:153:9
+    |
+152 |         # Check issues for connectivity warnings/errors
+153 |         issues = [str(i) for i in result.issues if i.category == "connectivity"]
+    |         ^^^^^^
+154 |         # It likely failed because file:// response doesn't behave like HTTP response (no .status)
+155 |         # or because it's considered valid but data processing failed.
+    |
+help: Remove assignment to unused variable `issues`
+
+F401 `llmc.docgen.locks.LockError` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/ruthless/test_ren_offensive.py:25:47
+   |
+24 | try:
+25 |     from llmc.docgen.locks import DocgenLock, LockError
+   |                                               ^^^^^^^^^
+26 | except ImportError:
+27 |     DocgenLock = None
+   |
+help: Remove unused import: `llmc.docgen.locks.LockError`
+
+F841 Local variable `MockServer` is assigned to but never used
+  --> tests/security/test_mcp_shell.py:22:49
+   |
+21 |         # We need to mock Server because __init__ creates one
+22 |         with patch("llmc_mcp.server.Server") as MockServer:
+   |                                                 ^^^^^^^^^^
+23 |             server_instance = LlmcMcpServer(mock_config)
+   |
+help: Remove assignment to unused variable `MockServer`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/security/test_rlm_budget_bypass_poc.py:2:1
+  |
+2 | / import pytest
+3 | | from llmc.rlm.session import RLMSession
+4 | | from llmc.rlm.config import RLMConfig
+  | |_____________________________________^
+5 |
+6 |   def test_rlm_budget_estimation_bypass():
+  |
+help: Organize imports
+
+F401 [*] `pytest` imported but unused
+ --> tests/security/test_rlm_budget_bypass_poc.py:2:8
+  |
+2 | import pytest
+  |        ^^^^^^
+3 | from llmc.rlm.session import RLMSession
+4 | from llmc.rlm.config import RLMConfig
+  |
+help: Remove unused import: `pytest`
+
+F841 Local variable `session` is assigned to but never used
+  --> tests/security/test_rlm_budget_bypass_poc.py:15:5
+   |
+13 |         token_safety_multiplier=1.0
+14 |     )
+15 |     session = RLMSession(config=config)
+   |     ^^^^^^^
+16 |     
+17 |     # Text that tokenizes 1:1 or worse, but we tell the system it's 4 chars per token.
+   |
+help: Remove assignment to unused variable `session`
+
+F841 Local variable `prompt` is assigned to but never used
+  --> tests/security/test_rlm_budget_bypass_poc.py:25:5
+   |
+23 |     # to show that it uses the weak estimation.
+24 |     
+25 |     prompt = "A" * 4000 # 4000 chars -> 1000 estimated tokens
+   |     ^^^^^^
+26 |     
+27 |     # messages will have system prompt + prompt
+   |
+help: Remove assignment to unused variable `prompt`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/security/test_rlm_sandbox_escape_poc.py:2:1
+  |
+2 | / import pytest
+3 | | from llmc.rlm.session import RLMSession
+4 | | from llmc.rlm.config import RLMConfig
+  | |_____________________________________^
+5 |
+6 |   def test_rlm_sandbox_escape_via_permissive_import():
+  |
+help: Organize imports
+
+F401 [*] `pytest` imported but unused
+ --> tests/security/test_rlm_sandbox_escape_poc.py:2:8
+  |
+2 | import pytest
+  |        ^^^^^^
+3 | from llmc.rlm.session import RLMSession
+4 | from llmc.rlm.config import RLMConfig
+  |
+help: Remove unused import: `pytest`
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> tests/security/test_rlm_traversal_poc.py:2:1
+  |
+2 | / import pytest
+3 | | from pathlib import Path
+4 | | from llmc.rlm.session import RLMSession
+5 | | from llmc.rlm.config import RLMConfig
+  | |_____________________________________^
+6 |
+7 |   def test_rlm_load_context_path_traversal():
+  |
+help: Organize imports
+
+F401 [*] `llmc.rlm.config.RLMConfig` imported but unused
+ --> tests/security/test_rlm_traversal_poc.py:5:29
+  |
+3 | from pathlib import Path
+4 | from llmc.rlm.session import RLMSession
+5 | from llmc.rlm.config import RLMConfig
+  |                             ^^^^^^^^^
+6 |
+7 | def test_rlm_load_context_path_traversal():
+  |
+help: Remove unused import: `llmc.rlm.config.RLMConfig`
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:15:10
+   |
+13 | def test_safe_eval_blocks_import():
+14 |     """Verify that __import__ is blocked."""
+15 |     with pytest.raises(Exception):  # simpleeval raises NameError or specific errors
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+16 |         _safe_eval("__import__('os').system('ls')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:21:10
+   |
+19 | def test_safe_eval_blocks_open():
+20 |     """Verify that open is blocked."""
+21 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+22 |         _safe_eval("open('/etc/passwd')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:28:10
+   |
+26 |     """Verify that common python jailbreak gadgets are blocked."""
+27 |     gadget = "(1).__class__.__base__.__subclasses__()"
+28 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+29 |         _safe_eval(gadget, {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:36:10
+   |
+34 |     context = {"x": 10, "y": 20}
+35 |     assert _safe_eval("x + y", context) == 30
+36 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+37 |         _safe_eval("z", context)
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_simpleeval.py:10:10
+   |
+ 9 |     # 1. Block import
+10 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+11 |         _safe_eval("__import__('os').system('echo pwned')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_simpleeval.py:14:10
+   |
+13 |     # 2. Block builtins access
+14 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+15 |         _safe_eval("open('/etc/passwd').read()", {})
+   |
+
+F841 Local variable `is_safe_check` is assigned to but never used
+  --> tests/security/test_security_normalization.py:49:5
+   |
+47 |     # Simulate the vulnerable check
+48 |     str_path = str(result)
+49 |     is_safe_check = not str_path.startswith("private")
+   |     ^^^^^^^^^^^^^
+50 |
+51 |     # If the check thinks it's safe (because it doesn't start with private), fail the test
+   |
+help: Remove assignment to unused variable `is_safe_check`
+
+F841 Local variable `mock_run` is assigned to but never used
+  --> tests/security/test_te_repo_security.py:25:37
+   |
+24 |     # Attempt to read from an allowed root directory
+25 |     with patch("subprocess.run") as mock_run:
+   |                                     ^^^^^^^^
+26 |         repo_read(root=str(safe_dir), path="some_file", allowed_roots=allowed_roots)
+27 |         # We don't need to check the result here, just that it doesn't raise an exception
+   |
+help: Remove assignment to unused variable `mock_run`
+
+F401 `textual.widgets.Static` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/smoke_analytics_screen.py:10:33
+   |
+ 8 | try:
+ 9 |     from textual.app import App
+10 |     from textual.widgets import Static
+   |                                 ^^^^^^
+11 |
+12 |     from llmc.tui.screens.analytics import AnalyticsScreen
+   |
+help: Remove unused import: `textual.widgets.Static`
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_e2e_daemon_operation.py:29:9
+   |
+28 |     with tempfile.TemporaryDirectory() as home:
+29 |         home = Path(home)
+   |         ^^^^
+30 |
+31 |         # Create dummy job runner that logs calls
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:129:9
+    |
+127 |     """End-to-end test: daemon processes multiple repos."""
+128 |     with tempfile.TemporaryDirectory() as home:
+129 |         home = Path(home)
+    |         ^^^^
+130 |
+131 |         # Create dummy runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:218:9
+    |
+216 |     """End-to-end test: daemon handles job failures correctly."""
+217 |     with tempfile.TemporaryDirectory() as home:
+218 |         home = Path(home)
+    |         ^^^^
+219 |
+220 |         # Create failing runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:298:9
+    |
+296 |     """End-to-end test: control flags trigger immediate refresh."""
+297 |     with tempfile.TemporaryDirectory() as home:
+298 |         home = Path(home)
+    |         ^^^^
+299 |
+300 |         # Create runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:390:9
+    |
+388 |     """End-to-end test: daemon state persists across restarts."""
+389 |     with tempfile.TemporaryDirectory() as home:
+390 |         home = Path(home)
+    |         ^^^^
+391 |
+392 |         # Create runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:472:9
+    |
+470 |     """End-to-end test: daemon respects max_concurrent_jobs."""
+471 |     with tempfile.TemporaryDirectory() as home:
+472 |         home = Path(home)
+    |         ^^^^
+473 |
+474 |         # Create slow runner
+    |
+
+PLW2901 `with` statement variable `temp_home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:551:9
+    |
+549 |     """End-to-end test using temporary HOME directory."""
+550 |     with tempfile.TemporaryDirectory() as temp_home:
+551 |         temp_home = Path(temp_home)
+    |         ^^^^^^^^^
+552 |
+553 |         # Set up fake home environment
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:617:9
+    |
+615 |     """End-to-end test: shutdown flag stops daemon."""
+616 |     with tempfile.TemporaryDirectory() as home:
+617 |         home = Path(home)
+    |         ^^^^
+618 |
+619 |         # This test would require a running daemon which is complex in pytest
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:644:9
+    |
+642 |     """End-to-end test: complete workflow from add to daemon processing."""
+643 |     with tempfile.TemporaryDirectory() as home:
+644 |         home = Path(home)
+    |         ^^^^
+645 |
+646 |         # Step 1: Create job runner
+    |
+
+F401 `llmc.rag.enrichment.enrich_spans` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_error_handling_comprehensive.py:27:37
+   |
+25 | # Import enrichment functions - these may not exist yet
+26 | try:
+27 |     from llmc.rag.enrichment import enrich_spans
+   |                                     ^^^^^^^^^^^^
+28 |
+29 |     ENRICHMENT_AVAILABLE = True
+   |
+help: Remove unused import: `llmc.rag.enrichment.enrich_spans`
+
+E722 Do not use bare `except`
+   --> tests/test_error_handling_comprehensive.py:938:21
+    |
+936 |                     try:
+937 |                         f.close()
+938 |                     except:
+    |                     ^^^^^^
+939 |                         pass
+    |
+
+F401 `llmc.rag.enrichment_db_helpers.EnrichmentRecord` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_graph_enrichment_merge.py:9:48
+   |
+ 7 | # Ideally these imports would work once the code is written.
+ 8 | try:
+ 9 |     from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+   |                                                ^^^^^^^^^^^^^^^^
+10 |     from llmc.rag.schema import Entity, SchemaGraph
+11 |     from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
+   |
+help: Remove unused import
+
+F401 `llmc.rag.enrichment_db_helpers.load_enrichment_data` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_graph_enrichment_merge.py:9:66
+   |
+ 7 | # Ideally these imports would work once the code is written.
+ 8 | try:
+ 9 |     from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+   |                                                                  ^^^^^^^^^^^^^^^^^^^^
+10 |     from llmc.rag.schema import Entity, SchemaGraph
+11 |     from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
+   |
+help: Remove unused import
+
+F401 `llmc.rag.schema.Entity` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_graph_enrichment_merge.py:10:33
+   |
+ 8 | try:
+ 9 |     from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+10 |     from llmc.rag.schema import Entity, SchemaGraph
+   |                                 ^^^^^^
+11 |     from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
+12 | except ImportError:
+   |
+help: Remove unused import
+
+F401 `llmc.rag.schema.SchemaGraph` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_graph_enrichment_merge.py:10:41
+   |
+ 8 | try:
+ 9 |     from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+10 |     from llmc.rag.schema import Entity, SchemaGraph
+   |                                         ^^^^^^^^^^^
+11 |     from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
+12 | except ImportError:
+   |
+help: Remove unused import
+
+F401 `llmc.rag_nav.tool_handlers.build_enriched_schema_graph` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_graph_enrichment_merge.py:11:44
+   |
+ 9 |     from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
+10 |     from llmc.rag.schema import Entity, SchemaGraph
+11 |     from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
+   |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 | except ImportError:
+13 |     pass  # Allow test collection to fail gracefully if modules don't exist yet
+   |
+help: Remove unused import: `llmc.rag_nav.tool_handlers.build_enriched_schema_graph`
+
+E741 Ambiguous variable name: `l`
+   --> tests/test_log_management_scripts.py:310:63
+    |
+308 |             # Create JSONL with many lines
+309 |             lines = [{"key": f"value_{i}"} for i in range(2000)]
+310 |             jsonl_file.write_text("\n".join(json.dumps(l) for l in lines))
+    |                                                               ^
+311 |
+312 |             subprocess.run(
+    |
+
+E722 Do not use bare `except`
+   --> tests/test_maasl_db_guard.py:291:13
+    |
+289 |                 ) as c2:
+290 |                     c2.execute("INSERT INTO test VALUES (2, 200)")
+291 |             except:
+    |             ^^^^^^
+292 |                 pass  # Expected - different MAASL locks would conflict
+    |
+
+E722 Do not use bare `except`
+   --> tests/test_maasl_db_guard.py:348:13
+    |
+346 |                     results.append(True)
+347 |                 break
+348 |             except:
+    |             ^^^^^^
+349 |                 time.sleep(0.01)
+350 |                 continue
+    |
+
+E712 Avoid equality comparisons to `True`; use `graph.add_node(node1):` for truth checks
+  --> tests/test_medical_graph.py:62:16
+   |
+60 |         node2 = MedicalNode("drug:lisinopril", "Lisinopril", "drug")
+61 |
+62 |         assert graph.add_node(node1) == True
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+63 |         assert graph.add_node(node2) == True
+   |
+help: Replace with `graph.add_node(node1)`
+
+E712 Avoid equality comparisons to `True`; use `graph.add_node(node2):` for truth checks
+  --> tests/test_medical_graph.py:63:16
+   |
+62 |         assert graph.add_node(node1) == True
+63 |         assert graph.add_node(node2) == True
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+64 |
+65 |         # Test adding edge
+   |
+help: Replace with `graph.add_node(node2)`
+
+E712 Avoid equality comparisons to `True`; use `...:` for truth checks
+  --> tests/test_medical_graph.py:67:13
+   |
+65 |           # Test adding edge
+66 |           assert (
+67 | /             graph.add_edge(
+68 | |                 source_id="condition:hypertension",
+69 | |                 target_id="drug:lisinopril",
+70 | |                 edge_type=EdgeType.TREATED_BY,
+71 | |                 confidence=0.9,
+72 | |             )
+73 | |             == True
+   | |___________________^
+74 |           )
+   |
+help: Replace comparison
+
+F841 Local variable `text` is assigned to but never used
+   --> tests/test_medical_integration.py:191:13
+    |
+190 |         for note in sample_notes:
+191 |             text = note.get("text", "")
+    |             ^^^^
+192 |             expected_phi = note.get("expected_phi", [])
+    |
+help: Remove assignment to unused variable `text`
+
+PLW0127 Self-assignment of variable `UTC`
+  --> tests/test_multiple_registry_entries.py:16:1
+   |
+14 | from llmc.rag_daemon.workers import WorkerPool
+15 |
+16 | UTC = UTC
+   | ^^^
+17 |
+18 | # Calculate REPO_ROOT dynamically
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_multiple_registry_entries.py:25:9
+   |
+23 |     """Registry with multiple repos respects different min_refresh_interval."""
+24 |     with tempfile.TemporaryDirectory() as home:
+25 |         home = Path(home)
+   |         ^^^^
+26 |
+27 |         # Create multiple repos
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:182:9
+    |
+180 |     """Registry with mixed eligibility states (some eligible, some not)."""
+181 |     with tempfile.TemporaryDirectory() as home:
+182 |         home = Path(home)
+    |         ^^^^
+183 |
+184 |         # Create 5 repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:271:9
+    |
+269 |     """Registry entries without explicit interval use default (tick_interval)."""
+270 |     with tempfile.TemporaryDirectory() as home:
+271 |         home = Path(home)
+    |         ^^^^
+272 |
+273 |         # Create repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:363:9
+    |
+361 |     """Registry.load_all() returns all registered entries."""
+362 |     with tempfile.TemporaryDirectory() as home:
+363 |         home = Path(home)
+    |         ^^^^
+364 |
+365 |         # Create repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:426:9
+    |
+424 |     """Registry with empty file returns empty dict."""
+425 |     with tempfile.TemporaryDirectory() as home:
+426 |         home = Path(home)
+    |         ^^^^
+427 |
+428 |         registry_path = home / "empty.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:455:9
+    |
+453 |     """Registry with non-existent file returns empty dict (doesn't crash)."""
+454 |     with tempfile.TemporaryDirectory() as home:
+455 |         home = Path(home)
+    |         ^^^^
+456 |
+457 |         registry_path = home / "nonexistent.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:484:9
+    |
+482 |     """Registry with invalid repo paths doesn't crash on load."""
+483 |     with tempfile.TemporaryDirectory() as home:
+484 |         home = Path(home)
+    |         ^^^^
+485 |
+486 |         # Create registry with non-existent paths
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:535:9
+    |
+533 |     """Registry entries can use timedelta objects for intervals."""
+534 |     with tempfile.TemporaryDirectory() as home:
+535 |         home = Path(home)
+    |         ^^^^
+536 |
+537 |         repo = home / "repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:584:9
+    |
+582 |     """refresh_all flag forces all repos to refresh regardless of intervals."""
+583 |     with tempfile.TemporaryDirectory() as home:
+584 |         home = Path(home)
+    |         ^^^^
+585 |
+586 |         # Create 3 repos with different intervals
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:679:9
+    |
+677 |     """refresh_<repo_id>.flag forces specific repo to refresh."""
+678 |     with tempfile.TemporaryDirectory() as home:
+679 |         home = Path(home)
+    |         ^^^^
+680 |
+681 |         # Create repos
+    |
+
+E741 Ambiguous variable name: `l`
+  --> tests/test_p0_acceptance.py:61:5
+   |
+59 |     s = tool_rag_search(repo_root=str(repo), query=q, limit=5)
+60 |     w = tool_rag_where_used(repo_root=str(repo), symbol=q, limit=5)
+61 |     l = tool_rag_lineage(
+   |     ^
+62 |         repo_root=str(repo), symbol=q, direction="downstream", max_results=5
+63 |     )
+   |
+
+F841 Local variable `types_found` is assigned to but never used
+  --> tests/test_phi_filter.py:56:5
+   |
+54 |     matches = detector.detect(text)
+55 |     # Should find at least: NAME, MRN, DATE, SSN, PHONE, EMAIL
+56 |     types_found = {m[2] for m in matches}
+   |     ^^^^^^^^^^^
+57 |     expected_types = {"NAME", "MRN", "DATE", "SSN", "PHONE", "EMAIL"}
+58 |     # Check that all expected types are found (some might not be detected due to pattern limitations)
+   |
+help: Remove assignment to unused variable `types_found`
+
+F841 Local variable `expected_types` is assigned to but never used
+  --> tests/test_phi_filter.py:57:5
+   |
+55 |     # Should find at least: NAME, MRN, DATE, SSN, PHONE, EMAIL
+56 |     types_found = {m[2] for m in matches}
+57 |     expected_types = {"NAME", "MRN", "DATE", "SSN", "PHONE", "EMAIL"}
+   |     ^^^^^^^^^^^^^^
+58 |     # Check that all expected types are found (some might not be detected due to pattern limitations)
+59 |     # For now, just check we found multiple matches
+   |
+help: Remove assignment to unused variable `expected_types`
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/test_rag_benchmark.py:201:14
+    |
+200 |         # Should not be able to modify after creation
+201 |         with pytest.raises(Exception):
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+202 |             case.name = "modified"
+    |
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/test_rag_benchmark.py:445:14
+    |
+444 |         # Should raise exception
+445 |         with pytest.raises(Exception):
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+446 |             run_embedding_benchmark()
+    |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/test_rag_daemon_complete.py:97:14
+   |
+95 |         mock_env.return_value = str(config_file)
+96 |         # PyYAML should raise an exception
+97 |         with pytest.raises(Exception):
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^
+98 |             load_config()
+   |
+
+F401 `llmc.rag_nav.metadata.IndexStatus` imported but unused; consider using `importlib.util.find_spec` to test for availability
+   --> tests/test_rag_nav_comprehensive.py:318:51
+    |
+316 |         try:
+317 |             try:
+318 |                 from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
+    |                                                   ^^^^^^^^^^^
+319 |
+320 |                 # Create corrupt file
+    |
+help: Remove unused import
+
+F401 `llmc.rag_nav.metadata.save_status` imported but unused; consider using `importlib.util.find_spec` to test for availability
+   --> tests/test_rag_nav_comprehensive.py:318:77
+    |
+316 |         try:
+317 |             try:
+318 |                 from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
+    |                                                                             ^^^^^^^^^^^
+319 |
+320 |                 # Create corrupt file
+    |
+help: Remove unused import
+
+F401 `llmc.rag_nav.cli` imported but unused; consider using `importlib.util.find_spec` to test for availability
+   --> tests/test_rag_nav_comprehensive.py:496:28
+    |
+494 |                 # Check if module exists
+495 |                 try:
+496 |                     import llmc.rag_nav.cli
+    |                            ^^^^^^^^^^^^^^^^
+497 |
+498 |                     self.add_result(
+    |
+help: Remove unused import: `llmc.rag_nav.cli`
+
+F401 `llmc.rag_nav.models.SearchItem` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_rag_nav_enriched_tools.py:41:17
+   |
+39 |         try:
+40 |             from llmc.rag_nav.models import (
+41 |                 SearchItem,
+   |                 ^^^^^^^^^^
+42 |                 SearchResult,
+43 |                 Snippet,
+   |
+help: Remove unused import
+
+F401 `llmc.rag_nav.models.SearchResult` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_rag_nav_enriched_tools.py:42:17
+   |
+40 |             from llmc.rag_nav.models import (
+41 |                 SearchItem,
+42 |                 SearchResult,
+   |                 ^^^^^^^^^^^^
+43 |                 Snippet,
+44 |                 SnippetLocation,
+   |
+help: Remove unused import
+
+F401 `llmc.rag_nav.models.Snippet` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_rag_nav_enriched_tools.py:43:17
+   |
+41 |                 SearchItem,
+42 |                 SearchResult,
+43 |                 Snippet,
+   |                 ^^^^^^^
+44 |                 SnippetLocation,
+45 |             )
+   |
+help: Remove unused import
+
+F401 `llmc.rag_nav.models.SnippetLocation` imported but unused; consider using `importlib.util.find_spec` to test for availability
+  --> tests/test_rag_nav_enriched_tools.py:44:17
+   |
+42 |                 SearchResult,
+43 |                 Snippet,
+44 |                 SnippetLocation,
+   |                 ^^^^^^^^^^^^^^^
+45 |             )
+46 |             from llmc.rag_nav.tool_handlers import tool_rag_search
+   |
+help: Remove unused import
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_repo_add_idempotency.py:20:9
+   |
+18 |     """Test that adding a new repo creates the workspace structure."""
+19 |     with tempfile.TemporaryDirectory() as home:
+20 |         home = Path(home)
+   |         ^^^^
+21 |
+22 |         # Create a mock repo
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_repo_add_idempotency.py:74:9
+   |
+72 |     """Test that adding an already-registered repo is idempotent."""
+73 |     with tempfile.TemporaryDirectory() as home:
+74 |         home = Path(home)
+   |         ^^^^
+75 |
+76 |         # Create a mock repo with existing workspace
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:134:9
+    |
+132 |     """Test that add doesn't clobber existing configs."""
+133 |     with tempfile.TemporaryDirectory() as home:
+134 |         home = Path(home)
+    |         ^^^^
+135 |
+136 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:193:9
+    |
+191 |     """Test adding the same repo multiple times doesn't duplicate registry."""
+192 |     with tempfile.TemporaryDirectory() as home:
+193 |         home = Path(home)
+    |         ^^^^
+194 |
+195 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:232:9
+    |
+230 |     """Test adding same repo via different path representations."""
+231 |     with tempfile.TemporaryDirectory() as home:
+232 |         home = Path(home)
+    |         ^^^^
+233 |
+234 |         # Create repo with symlink
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:281:9
+    |
+279 |     """Test that workspace initialization creates proper structure."""
+280 |     with tempfile.TemporaryDirectory() as home:
+281 |         home = Path(home)
+    |         ^^^^
+282 |
+283 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:337:9
+    |
+335 |     """Test that add creates proper registry entry."""
+336 |     with tempfile.TemporaryDirectory() as home:
+337 |         home = Path(home)
+    |         ^^^^
+338 |
+339 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:386:9
+    |
+384 |     """Test adding repo with custom profile."""
+385 |     with tempfile.TemporaryDirectory() as home:
+386 |         home = Path(home)
+    |         ^^^^
+387 |
+388 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:421:9
+    |
+419 |     """Test add command with JSON output flag."""
+420 |     with tempfile.TemporaryDirectory() as home:
+421 |         home = Path(home)
+    |         ^^^^
+422 |
+423 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:470:9
+    |
+468 |     """Test that add fails gracefully for non-existent repo."""
+469 |     with tempfile.TemporaryDirectory() as home:
+470 |         home = Path(home)
+    |         ^^^^
+471 |
+472 |         registry_path = home / "registry.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:505:9
+    |
+503 |     """Test that add creates all necessary directories."""
+504 |     with tempfile.TemporaryDirectory() as home:
+505 |         home = Path(home)
+    |         ^^^^
+506 |
+507 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:551:9
+    |
+549 |     """Test that add is idempotent even if registry is modified externally."""
+550 |     with tempfile.TemporaryDirectory() as home:
+551 |         home = Path(home)
+    |         ^^^^
+552 |
+553 |         repo_root = home / "test_repo"
+    |
+
+F821 Undefined name `_attach_graph_enrichment`
+  --> tests/test_resilient_rag.py:57:17
+   |
+55 |         # It should parse the file, find 'login' at 101, construct ID 'auth.login',
+56 |         # match it to graph node 'sym:auth.login', and attach metadata.
+57 |         items = _attach_graph_enrichment(repo_root, [item])
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+58 |
+59 |         # 5. Assert
+   |
+
+PLW0127 Self-assignment of variable `UTC`
+  --> tests/test_scheduler_eligibility_comprehensive.py:14:1
+   |
+12 | from llmc.rag_daemon.scheduler import Scheduler
+13 |
+14 | UTC = UTC
+   | ^^^
+   |
+
+PLW0127 Self-assignment of variable `UTC`
+  --> tests/test_worker_pool_comprehensive.py:16:1
+   |
+14 | from llmc.rag_daemon.workers import WorkerPool, make_job_id
+15 |
+16 | UTC = UTC
+   | ^^^
+   |
+
+F841 Local variable `screen` is assigned to but never used
+  --> tests/tui/test_service_screen_methods.py:34:9
+   |
+32 |     def test_get_registered_repos_fallback(self, tmp_path):
+33 |         """Test fallback to file reading when ServiceState raises ImportError."""
+34 |         screen = ServiceScreen()
+   |         ^^^^^^
+35 |
+36 |         fake_state_file = tmp_path / "rag-service.json"
+   |
+help: Remove assignment to unused variable `screen`
+
+Found 266 errors.
+[*] 13 fixable with the `--fix` option (90 hidden fixes can be enabled with the `--unsafe-fixes` option).

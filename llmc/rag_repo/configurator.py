@@ -311,4 +311,4 @@ class RepoConfigurator:
             text = template_path.read_text(encoding="utf-8")
             return tomlkit.parse(text)
         except tomlkit.exceptions.ParseError as e:
-            raise ValueError(f"Invalid TOML in template: {e}")
+            raise ValueError(f"Invalid TOML in template: {e}") from None

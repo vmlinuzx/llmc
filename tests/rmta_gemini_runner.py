@@ -89,7 +89,7 @@ class MCPClient:
             return await asyncio.wait_for(future, timeout=30.0)
         except TimeoutError:
             del self.pending_requests[req_id]
-            raise Exception(f"Timeout waiting for {method}")
+            raise Exception(f"Timeout waiting for {method}") from None
 
     async def send_notification(self, method: str, params: dict | None = None):
         request = {"jsonrpc": "2.0", "method": method, "params": params or {}}

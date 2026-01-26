@@ -363,7 +363,7 @@ class MAASL:
             raise MaaslInternalError(
                 message=f"Unexpected error during {intent}: {str(e)}",
                 original_exception=e,
-            )
+            ) from None
 
         finally:
             # Step 6: Release all acquired locks (in reverse order)

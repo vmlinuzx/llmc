@@ -189,6 +189,53 @@ patterns: method: 2968, function: 2168, class: 714
 | `mcinspect` | Deep symbol inspection + graph | `llmc-cli run mcinspect Foo` |
 | `mcread` | Read file with graph context | `llmc-cli run mcread llmc/rag/database.py` |
 | `mcrun` | Execute command with logging | `llmc-cli run mcrun pytest tests/` |
+| **`rlm query`** | **Recursive analysis: 80-90% token reduction for deep code analysis** | `llmc-cli rlm query "Explain auth flow" --file auth.py` |
+
+### 6.0.5 RLM - Recursive Language Model (80-90% Context Reduction)
+
+**RLM is a game-changer for deep analysis tasks.** Instead of reading entire files/codebases, RLM acts as an agentic researcher that navigates, filters, and recursively decomposes problems.
+
+**When to use RLM vs standard RAG:**
+
+| Task Type | Use | Why |
+|-----------|-----|-----|
+| "Where is X?" "Find Y" | `mcgrep`, `mcwho` | Fast, cheap, single-turn |
+| "Why is X broken?" "Explain data flow" "Refactor Y" | **`rlm query`** | Deep analysis, multi-turn reasoning |
+| Quick symbol lookup | `mcinspect`, `mcread` | Surgical precision |
+| Architectural audit, global refactoring | **`rlm query`** | Handles 1M+ token contexts |
+
+**CLI Usage:**
+
+```bash
+# Analyze a specific file (80-90% fewer tokens than reading full file)
+llmc-cli rlm query "Explain how the budget tracker works" --file llmc/rlm/budget.py
+
+# Analyze general concept (navigates codebase automatically)
+llmc-cli rlm query "How does MCP authentication work?"
+
+# Override budget for complex analysis
+llmc-cli rlm query "Find all race conditions in the session manager" --budget 2.0
+
+# Override model (e.g., use DeepSeek Reasoner for complex logic)
+llmc-cli rlm query "Refactor this for dependency injection" --file legacy.py --model deepseek/deepseek-reasoner
+
+# Show agent's reasoning trace
+llmc-cli rlm query "Find the bug" --file buggy.py --trace
+```
+
+**How it works:**
+- RLM treats massive codebases as **external environment variables**
+- Uses recursive sub-calls with cheaper models for specific checks
+- Navigates programmatically instead of semantic search
+- **Result**: 2+ orders of magnitude context expansion with constant context window usage
+
+**Cost comparison (example):**
+- Standard approach: Read 50 files → 200k tokens → $0.60 (GPT-4)
+- RLM approach: Navigate + snipe relevant sections → 20k tokens → $0.06 (10x cheaper)
+
+**MCP Tool Name:** `rlm_query` (available when using LLMC MCP server)
+
+
 
 ### 6.1 Mechanical Context Tools (LSP / Tree-Sitter)
 
@@ -271,8 +318,11 @@ Models already know `{"name": "...", "arguments": {...}}` format from training. 
 | `mcinspect` | `inspect` | `{"name": "inspect", "arguments": {"symbol": "..."}}` |
 | `mcread` | `read_file` | `{"name": "read_file", "arguments": {"path": "..."}}` |
 | `mcrun` | `run_cmd` | `{"name": "run_cmd", "arguments": {"cmd": "..."}}` |
+| **`rlm query`** | **`rlm_query`** | **`{"name": "rlm_query", "arguments": {"task": "...", "file": "..."}}`** |
 
 Same instructions work for MCP, CLI, or local execution.
+
+**Pro tip for agents:** When doing deep analysis (SDD generation, architectural review, refactoring), prefer `rlm_query` over reading multiple files. It's 80-90% cheaper and often more accurate because it can navigate and think recursively.
 
 ---
 
@@ -606,3 +656,39 @@ After loading this file:
    - **CONTRACTS.md** → constraints and environment.
 
 You now understand the rules. Try not to piss off Future Dave.
+
+## 4.5 RLM Protocol (Recursive Intelligence)
+
+**RLM (Recursive Language Model)** is your "Deep Dive" capability. Unlike standard RAG (which gives you snippets), RLM acts as a sub-agent that can navigate the codebase, follow imports, and read files dynamically.
+
+### When to use RLM
+Use RLM for **Complexity**, not just Search.
+
+| Task Type | Use Standard RAG (`mcgrep`) | Use RLM (`rlm_query`) |
+|-----------|------------------------------|-------------------------|
+| **Discovery** | "Where is the auth logic?" | "Trace the auth flow from API to DB." |
+| **Explanation** | "What does this class do?" | "Why is this class causing a race condition?" |
+| **Modification** | "Find all calls to X." | "Refactor X to use Y pattern." |
+| **Verification** | "Does this file exist?" | "Verify that this change won't break the build." |
+
+### How to use RLM
+If the `rlm_query` tool is available, use it directly. If not, use the CLI via `run_cmd`.
+
+**Agent Instruction:**
+> *"If you need to analyze a complex chain of logic, investigate a bug with unknown root cause, or verify a multi-file refactor, delegate to RLM. Do not try to read 50 files yourself."*
+
+**Example (Tool Call):**
+```json
+{
+  "name": "rlm_query",
+  "arguments": {
+    "task": "Trace the lifecycle of the 'BudgetConfig' object. Where is it instantiated and how does it reach the RLMSession?",
+    "budget_usd": 0.50
+  }
+}
+```
+
+**Example (CLI):**
+```bash
+llmc-cli rlm query "Analyze the dependency graph of the 'rag' module and identify circular imports."
+```

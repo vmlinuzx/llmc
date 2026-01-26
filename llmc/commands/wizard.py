@@ -191,7 +191,7 @@ def run_wizard(
                     existing_config = tomllib.load(f)
             except Exception as e:
                 console.print(f"[red]❌ Failed to parse config: {e}[/red]")
-                raise typer.Exit(1)
+                raise typer.Exit(1) from None
         else:
             console.print(
                 "[red]❌ No TOML parser available (install tomli or use Python 3.11+)[/red]"
@@ -429,7 +429,7 @@ def run_wizard(
         console.print(f"[green]✨ Configuration saved to {config_path}[/green]")
     except Exception as e:
         console.print(f"[red]❌ Failed to save config: {e}[/red]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     # Validate
     if Confirm.ask("Run validation now?"):

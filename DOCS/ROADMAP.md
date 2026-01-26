@@ -1054,3 +1054,27 @@ Tree-sitter provides fast, offline AST parsing but is **syntactic only**. Could 
 **Related:** oh-my-opencode's LSP tools (`lsp_goto_definition`, `lsp_find_references`)
 
 ---
+
+### 5.2 Fuzzy Knowledge Codification (The "Doc-Object Model") 🔮
+
+**Status:** 📋 **RESEARCH BACKLOG**
+**Added:** 2026-01-26
+**Source:** RFC_Fuzzy_Knowledge_Codification.md
+
+**The Vision:**
+Transform unstructured documentation (Markdown, PDF) into structured "code-like" objects that RLM can import, inspect, and reason about just like actual code.
+
+**The "Doc-Object Model":**
+- **Headers = Classes** (Containers/Namespaces)
+- **Links = Imports** (Directed edges)
+- **Content = Docstrings** (Metadata)
+
+**Why:**
+Allows RLM to "unit test" documentation against code (e.g., Doc says "timeout is 60s", Code says "timeout=30"). Enables true **Knowledge Engineering** where documentation is treated as a computable graph rather than just searchable text.
+
+**Research Track:**
+- [ ] Feasibility study: Mapping Markdown structure to Python AST
+- [ ] Prototype: "Virtual Import" hook for RLM sandbox
+- [ ] Experiment: Drift detection between Code and Docs
+
+**Effort:** High (Research) | **Difficulty:** 🟣 Hard / Novel
