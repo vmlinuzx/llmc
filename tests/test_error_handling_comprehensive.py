@@ -934,7 +934,7 @@ class TestResourceExhaustionHandling:
                 for f in open_files:
                     try:
                         f.close()
-                    except:
+                    except Exception:
                         pass
 
     def test_handles_memory_pressure(self):

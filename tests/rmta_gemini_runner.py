@@ -102,7 +102,7 @@ class MCPClient:
             self.process.terminate()
             try:
                 await self.process.wait()
-            except:
+            except Exception:
                 pass
 
 
@@ -263,7 +263,7 @@ async def run_tests():
                         if isinstance(parsed, dict) and "error" in parsed:
                             is_soft_error = True
                             test_result["error"] = parsed["error"]
-                    except:
+                    except Exception:
                         pass
 
                     test_result["response"] = text_content

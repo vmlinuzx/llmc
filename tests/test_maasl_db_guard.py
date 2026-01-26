@@ -288,7 +288,7 @@ def test_begin_immediate_prevents_deadlock():
                     agent_id="agent2", session_id="s2", operation_mode="interactive"
                 ) as c2:
                     c2.execute("INSERT INTO test VALUES (2, 200)")
-            except:
+            except Exception:
                 pass  # Expected - different MAASL locks would conflict
 
         conn1.close()
@@ -345,7 +345,7 @@ def test_stress_concurrent_writers(db_manager):
                 with lock:
                     results.append(True)
                 break
-            except:
+            except Exception:
                 time.sleep(0.01)
                 continue
 

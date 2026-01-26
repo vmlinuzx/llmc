@@ -197,14 +197,14 @@ def _fetch_enrichment(
                 if row[key]:
                     try:
                         data[key] = json.loads(row[key])
-                    except:
+                    except Exception:
                         data[key] = row[key]
 
             if row["evidence"]:
                 try:
                     ev = json.loads(row["evidence"])
                     data["evidence_count"] = len(ev)
-                except:
+                except Exception:
                     pass
     except Exception:
         pass
@@ -304,7 +304,7 @@ def inspect_entity(
         try:
             graph = SchemaGraph.load(graph_path)
             graph_status = "loaded"
-        except:
+        except Exception:
             pass
 
     # 2. Resolve Target

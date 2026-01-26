@@ -6,7 +6,9 @@ from unittest.mock import patch
 # we can mock or reference them to define the test structure.
 # Ideally these imports would work once the code is written.
 try:
-
+    pass
+except ImportError:
+    pass
 
 class TestGraphEnrichment:
     """Tests for Phase 2: Graph Enrichment logic."""

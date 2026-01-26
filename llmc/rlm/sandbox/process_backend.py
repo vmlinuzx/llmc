@@ -216,7 +216,7 @@ class ProcessSandboxBackend(CodeExecutionEnvironment):
         # Get result
         try:
             result_data = result_queue.get_nowait()
-        except:
+        except Exception:
             return ExecutionResult(
                 success=False,
                 stdout="",
