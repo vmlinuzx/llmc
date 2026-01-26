@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from llmc_mcp.config import McpConfig, McpToolsConfig
+
 try:
     from llmc_mcp.server import LlmcMcpServer
 except ImportError as e:

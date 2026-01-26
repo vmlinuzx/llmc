@@ -29,7 +29,6 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 import logging
 from pathlib import Path
-import sys
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 

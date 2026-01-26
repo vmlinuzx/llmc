@@ -1,5 +1,4 @@
-import pytest
-from llmc.rlm.sandbox.intercept import extract_tool_calls, rewrite_ast, CallbackSite
+from llmc.rlm.sandbox.intercept import extract_tool_calls, rewrite_ast
 
 ALLOWED = {"nav_info", "nav_ls"}
 

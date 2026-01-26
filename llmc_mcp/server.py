@@ -581,6 +581,29 @@ TOOLS: list[Tool] = [
             "required": ["path", "old_text", "new_text"],
         },
     ),
+    Tool(
+        name="rlm_query",
+        description="Analyze code or text using Recursive Language Model with semantic navigation and iterative reasoning. Supports file-based or context-based analysis with configurable security policies.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "task": {"type": "string", "maxLength": 5000, "description": "Analysis task/question (max 5000 chars)"},
+                "path": {"type": "string", "description": "File path to analyze (mutually exclusive with context)"},
+                "context": {"type": "string", "description": "Raw text context to analyze (mutually exclusive with path)"},
+                "budget_usd": {"type": "number", "minimum": 0.01, "default": 1.0, "description": "Per-call budget cap in USD"},
+                "model": {"type": "string", "description": "Optional model override (subject to policy)"},
+                "max_bytes": {"type": "integer", "minimum": 1, "default": 262144, "description": "Maximum bytes to read from file"},
+                "timeout_s": {"type": "integer", "minimum": 1, "default": 300, "description": "Hard timeout for entire query"},
+                "max_turns": {"type": "integer", "minimum": 1, "maximum": 10, "default": 5, "description": "Max RLM reasoning turns"},
+                "language": {"type": "string", "description": "Language hint (e.g., 'python', 'javascript')"}
+            },
+            "required": ["task"],
+            "oneOf": [
+                {"required": ["path"], "not": {"required": ["context"]}},
+                {"required": ["context"], "not": {"required": ["path"]}}
+            ]
+        },
+    ),
 ]
 
 # Code execution mode tool (Phase 2 - Anthropic Code Mode pattern)
@@ -696,13 +719,11 @@ class LlmcMcpServer:
             "00_INIT": self._handle_bootstrap,
         }
         
-        # RLM Registration
+        # RLM query tool handler (registered if enabled)
         if self.config.rlm.enabled:
-            from llmc_mcp.tools.rlm import RLMTool
-            rlm_tool = RLMTool(self.config.rlm)
-            self.tools.append(rlm_tool.to_mcp_tool())
-            self.tool_handlers["run_rlm"] = rlm_tool.run
+            self.tool_handlers["rlm_query"] = self._handle_rlm_query
             logger.info("RLM tool registered")
+
 
         # Append bootstrap tool to the list
         self.tools.append(BOOTSTRAP_TOOL)
@@ -1474,6 +1495,31 @@ class LlmcMcpServer:
                     text=json.dumps({"error": result.error, "meta": result.meta}),
                 )
             ]
+
+
+    async def _handle_rlm_query(self, args: dict) -> list[TextContent]:
+        """RLM query handler with hospital-grade security."""
+        import json
+        from pathlib import Path
+        
+        from llmc_mcp.tools.rlm import mcp_rlm_query
+        
+        # Determine repo_root from allowed_roots
+        repo_root = (
+            Path(self.config.tools.allowed_roots[0])
+            if self.config.tools.allowed_roots
+            else Path(".")
+        )
+        
+        # Call security-hardened RLM tool
+        result = await mcp_rlm_query(
+            args=args,
+            config=self.config.rlm,
+            allowed_roots=self.config.tools.allowed_roots,
+            repo_root=repo_root
+        )
+        
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_list_dir(self, args: dict) -> list[TextContent]:
         """List directory handler."""

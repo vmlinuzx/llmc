@@ -5,7 +5,8 @@ V1.1.1: Prompts are GENERATED from actual injected tool names.
 """
 
 from __future__ import annotations
-from typing import Callable
+
+from collections.abc import Callable
 
 
 def get_rlm_system_prompt(

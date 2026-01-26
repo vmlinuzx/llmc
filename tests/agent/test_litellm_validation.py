@@ -11,17 +11,17 @@ Phase 3 validation covering:
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from llmc.backends import (
+    LiteLLMAgentBackend,
     LiteLLMConfig,
     LiteLLMCore,
-    LiteLLMAgentBackend,
     LiteLLMEnrichmentAdapter,
     to_litellm_model,
 )
-from llmc_agent.backends.base import GenerateRequest, GenerateResponse
-
+from llmc_agent.backends.base import GenerateRequest
 
 # =============================================================================
 # Provider-Specific Tests
@@ -464,6 +464,7 @@ class TestExceptionMapping:
     def test_rate_limit_error(self):
         """Should map RateLimitError to rate_limit failure_type."""
         from litellm.exceptions import RateLimitError
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")
@@ -478,6 +479,7 @@ class TestExceptionMapping:
     def test_timeout_error(self):
         """Should map Timeout to timeout failure_type."""
         from litellm.exceptions import Timeout
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")
@@ -492,6 +494,7 @@ class TestExceptionMapping:
     def test_auth_error(self):
         """Should map AuthenticationError to auth_error failure_type."""
         from litellm.exceptions import AuthenticationError
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")
@@ -506,6 +509,7 @@ class TestExceptionMapping:
     def test_service_unavailable(self):
         """Should map ServiceUnavailableError to server_error failure_type."""
         from litellm.exceptions import ServiceUnavailableError
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")

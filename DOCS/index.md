@@ -32,6 +32,7 @@ Step-by-step lessons to help you get up and running.
 Practical steps for everyday tasks and problem-solving.
 - [CLI Reference](user-guide/cli-reference.md)
 - [Configuration](user-guide/configuration.md)
+- [RLM Agent Guide](guides/RLM_User_Guide.md)
 - [Native Tool Scripts](user-guide/native-tool-scripts.md)
 - [Search & Navigation](user-guide/search/index.md)
 - [Enrichment](user-guide/enrichment/index.md)
@@ -52,6 +53,7 @@ Deep dives into how LLMC functions under the hood.
 - [RAG Engine](architecture/rag-engine.md)
 - [Enrichment Pipeline](architecture/enrichment-pipeline.md)
 - [Security Model](architecture/security-model.md)
+- [RLM Architecture](architecture/RLM_Architecture.md)
 
 ### 📚 [Reference](reference/index.md)
 **Technical Reference**
@@ -59,6 +61,7 @@ Precise technical descriptions of APIs, configuration, and tools.
 - [CLI Commands](reference/cli/index.md)
 - [Configuration Schema](reference/config/index.md)
 - [MCP Tools](reference/mcp-tools/index.md)
+- [RLM API](reference/RLM_API.md)
 
 ### 👩‍💻 [Development](development/index.md)
 **Contributing**

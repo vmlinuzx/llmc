@@ -10,7 +10,7 @@ mid-tier (MiniMax), and premium (Claude) models. These tests ensure:
 """
 
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytest
 

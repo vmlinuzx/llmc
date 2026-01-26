@@ -1,6 +1,9 @@
-import pytest
 from pathlib import Path
+
+import pytest
+
 from llmc_mcp.tools.rag import validate_repo_root
+
 
 def test_repo_root_in_allowed_roots(tmp_path, monkeypatch):
     """Test valid repo_root passes validation."""

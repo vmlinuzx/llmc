@@ -1,6 +1,6 @@
+from pathlib import Path
 import threading
 import time
-from pathlib import Path
 
 from watchfiles import Change
 

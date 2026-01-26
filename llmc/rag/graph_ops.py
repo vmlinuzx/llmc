@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+
 from llmc.rag.schema import SchemaGraph
 
 
@@ -23,7 +24,7 @@ def load_graph(repo_root: Path) -> SchemaGraph | None:
         return None
 
 
-def get_file_context(graph: SchemaGraph | None, file_path: str) -> Dict[str, Any]:
+def get_file_context(graph: SchemaGraph | None, file_path: str) -> dict[str, Any]:
     """Get graph context for a file.
 
     Args:
@@ -33,7 +34,7 @@ def get_file_context(graph: SchemaGraph | None, file_path: str) -> Dict[str, Any
     Returns:
         A dictionary containing the graph context for the file.
     """
-    ctx: Dict[str, Any] = {
+    ctx: dict[str, Any] = {
         "purpose": None,
         "called_by": [],
         "imports": [],
@@ -117,7 +118,7 @@ def get_file_context(graph: SchemaGraph | None, file_path: str) -> Dict[str, Any
     return ctx
 
 
-def get_symbol_context(graph: SchemaGraph | None, symbol: str) -> Dict[str, Any]:
+def get_symbol_context(graph: SchemaGraph | None, symbol: str) -> dict[str, Any]:
     """Get graph context for a symbol.
 
     Args:
@@ -127,7 +128,7 @@ def get_symbol_context(graph: SchemaGraph | None, symbol: str) -> Dict[str, Any]
     Returns:
         A dictionary containing the graph context for the symbol.
     """
-    ctx: Dict[str, Any] = {
+    ctx: dict[str, Any] = {
         "callers": [],
         "callees": [],
         "extends": None,

@@ -1,19 +1,17 @@
 """Tests for the document sidecar system."""
 
 import gzip
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from llmc.rag.sidecar import (
-    SidecarConverter,
-    PdfToMarkdown,
     DocxToMarkdown,
+    PdfToMarkdown,
+    SidecarConverter,
+    cleanup_orphan_sidecars,
+    get_sidecar_path,
     is_sidecar_eligible,
     is_sidecar_stale,
-    get_sidecar_path,
-    cleanup_orphan_sidecars,
-    SIDECAR_EXTENSIONS,
 )
 
 

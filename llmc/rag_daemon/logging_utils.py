@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 import logging
 from pathlib import Path
 
@@ -43,14 +44,14 @@ class JSONFormatter(logging.Formatter):
     """Simple JSON formatter for structured logging."""
 
     def format(self, record: logging.LogRecord) -> str:
+        from datetime import datetime
         import json
-        from datetime import datetime, timezone
 
         # format message first to handle args
         message = record.getMessage()
 
         entry = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "name": record.name,
             "message": message,

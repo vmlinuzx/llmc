@@ -1,15 +1,15 @@
 """RLM CLI commands - agentic code analysis."""
 
 import asyncio
+import json
 from pathlib import Path
-import typer
+
 from rich.console import Console
 from rich.panel import Panel
-from rich.syntax import Syntax
-import json
+import typer
 
-from llmc.rlm.config import RLMConfig, load_rlm_config
-from llmc.rlm.session import RLMSession, RLMResult
+from llmc.rlm.config import load_rlm_config
+from llmc.rlm.session import RLMResult, RLMSession
 
 app = typer.Typer(help="RLM - Recursive Language Model for code analysis")
 console = Console()
@@ -68,7 +68,7 @@ async def _run_query(
     
     # Load context
     if not json_output:
-        console.print(f"[cyan]Loading context...[/cyan]")
+        console.print("[cyan]Loading context...[/cyan]")
     
     if file:
         if not file.exists():

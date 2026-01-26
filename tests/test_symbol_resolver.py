@@ -1,5 +1,6 @@
 
 import pytest
+
 from llmc.rag.schema import Entity, SchemaGraph
 from llmc.symbol_resolver import (
     resolve_symbol,
@@ -130,7 +131,6 @@ def test_empty_query_and_graph():
 from llmc.symbol_resolver import (
     resolve_symbol_in_nodes,
     resolve_symbol_in_nodes_best,
-    NodeMatch,
 )
 
 

@@ -1,5 +1,4 @@
 
-import os
 from pathlib import Path
 import sys
 
@@ -8,6 +7,7 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from llmc.rag_nav.tool_handlers import _read_snippet
+
 
 def test_path_traversal_in_read_snippet():
     """

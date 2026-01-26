@@ -14,6 +14,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+# LiteLLM unified backend (preferred for new code)
+from llmc.backends import LiteLLMConfig, LiteLLMEnrichmentAdapter, to_litellm_model
 from llmc.rag.config_enrichment import EnrichmentBackendSpec
 from llmc.rag.enrichment_adapters import (
     AnthropicBackend,
@@ -21,9 +23,6 @@ from llmc.rag.enrichment_adapters import (
     OllamaBackend,
     OpenAICompatBackend,
 )
-
-# LiteLLM unified backend (preferred for new code)
-from llmc.backends import LiteLLMConfig, LiteLLMEnrichmentAdapter, to_litellm_model
 from llmc.rag.enrichment_backends import BackendAdapter
 from llmc.rag.enrichment_config import (
     get_provider_metadata,
@@ -36,7 +35,6 @@ from llmc.rag.enrichment_reliability import (
     CostTrackerConfig,
     RateLimiter,
 )
-
 
 
 def create_litellm_backend(

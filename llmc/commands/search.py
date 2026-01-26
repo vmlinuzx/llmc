@@ -11,7 +11,6 @@ This module provides the primary `llmc search` entry point that:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Annotated, Any
 
 import typer

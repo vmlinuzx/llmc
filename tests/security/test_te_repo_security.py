@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 from llmc_mcp.tools.te_repo import repo_read
 
+
 def test_repo_read_path_traversal_blocked():
     """
     Verify that `repo_read` blocks attempts to access paths outside allowed roots.

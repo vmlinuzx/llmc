@@ -1,6 +1,5 @@
 """Test TreeSitterNav."""
 
-import pytest
 from llmc.rlm.nav.treesitter_nav import TreeSitterNav
 
 

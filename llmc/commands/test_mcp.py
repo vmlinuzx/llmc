@@ -1,15 +1,16 @@
 
-import typer
 from pathlib import Path
+
+import typer
+
 from llmc.rmta.runner import RMTARunner
-from typing import List
 
 app = typer.Typer(no_args_is_help=True)
 
 @app.command()
 def test_mcp(
     mode: str = typer.Option("quick", help="Test mode: quick, standard, ruthless"),
-    tools: List[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
+    tools: list[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
     output: Path = typer.Option(None, "--output", "-o", help="Output report path"),
     fail_fast: bool = typer.Option(False, "--fail-fast", "-x", help="Stop on first failure"),
 ):

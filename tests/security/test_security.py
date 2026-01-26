@@ -1,6 +1,8 @@
+
 import pytest
-from pathlib import Path
-from llmc.security import normalize_path, PathSecurityError
+
+from llmc.security import PathSecurityError, normalize_path
+
 
 @pytest.fixture
 def repo_root(tmp_path):

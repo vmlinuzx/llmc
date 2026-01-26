@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .graph_index import GraphIndices, load_indices, GraphNotFound
+from .graph_index import GraphIndices, GraphNotFound, load_indices
 
 logger = logging.getLogger(__name__)
 

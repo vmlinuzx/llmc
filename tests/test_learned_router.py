@@ -1,10 +1,9 @@
 """Tests for LearnedRouter fallback behavior."""
-import pytest
 from llmc.routing.learned_router import (
-    LearnedRouter,
     INTENT_CODE_LOOKUP,
     INTENT_CONCEPT_EXPLORATION,
     INTENT_MIXED,
+    LearnedRouter,
     get_learned_router,
 )
 

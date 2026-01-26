@@ -8,6 +8,8 @@ import time
 
 import click
 
+from llmc.rag.config_models import get_default_enrichment_model
+
 from .benchmark import run_embedding_benchmark
 from .config import (
     get_est_tokens_per_span,
@@ -16,7 +18,6 @@ from .config import (
     rag_dir,
     spans_export_path as resolve_spans_export_path,
 )
-from llmc.rag.config_models import get_default_enrichment_model
 from .database import Database
 from .planner import generate_plan, plan_as_dict
 from .schema import build_graph_for_repo as schema_build_graph_for_repo

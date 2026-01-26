@@ -12,6 +12,7 @@ from typing import NamedTuple
 
 from .graph_db import GraphDatabase
 
+
 class CodeSpan(NamedTuple):
     file_path: Path
     start_line: int

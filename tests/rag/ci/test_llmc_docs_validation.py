@@ -10,7 +10,6 @@ from pathlib import Path
 
 import pytest
 
-
 # Skip if mistune not available
 pytestmark = pytest.mark.skipif(
     not importlib.util.find_spec("mistune"),

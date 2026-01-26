@@ -1,6 +1,7 @@
 import sqlite3
-from pathlib import Path
-from llmc.rag.database import check_and_migrate_all_repos, Database, DB_SCHEMA_VERSION
+
+from llmc.rag.database import DB_SCHEMA_VERSION, check_and_migrate_all_repos
+
 
 def test_check_and_migrate_all_repos_empty():
     assert check_and_migrate_all_repos([]) == {}
@@ -36,6 +37,7 @@ def test_check_and_migrate_all_repos_returns_version(tmp_path):
     assert ver == DB_SCHEMA_VERSION
 
 from unittest.mock import patch
+
 
 def test_check_and_migrate_all_repos_exception(tmp_path):
     repo = tmp_path / "repo"

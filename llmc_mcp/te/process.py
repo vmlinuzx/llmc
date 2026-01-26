@@ -13,7 +13,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import logging
 import os
-import select
 import selectors
 import shlex
 import signal as sigmod

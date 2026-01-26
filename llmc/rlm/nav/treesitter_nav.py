@@ -9,18 +9,17 @@ Correct LLMC locations:
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 # CORRECT IMPORTS - Using actual LLMC module locations
 from llmc.rag.lang import (
-    parse_source,
     language_for_path,
-    EXTENSION_LANG,
+    parse_source,
 )
 from llmc.rag.skeleton import Skeletonizer
-from llmc.rag.types import SpanRecord
 
 
 @dataclass

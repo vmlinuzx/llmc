@@ -24,8 +24,8 @@ Output includes:
 from __future__ import annotations
 
 from collections import defaultdict
-from pathlib import Path
 import json
+from pathlib import Path
 import sys
 
 from rich.console import Console
@@ -103,7 +103,7 @@ def _get_recent_activity(repo_root: Path, limit: int = 5) -> dict:
         # Recent commits
         proc = subprocess.run(
             ["git", "log", f"-{limit}", "--oneline", "--no-decorate"],
-            cwd=repo_root,
+            check=False, cwd=repo_root,
             capture_output=True,
             text=True,
             timeout=5,
@@ -121,7 +121,7 @@ def _get_recent_activity(repo_root: Path, limit: int = 5) -> dict:
         # Active files (modified in last 7 days)
         proc = subprocess.run(
             ["git", "log", "--since=7 days ago", "--name-only", "--pretty=format:"],
-            cwd=repo_root,
+            check=False, cwd=repo_root,
             capture_output=True,
             text=True,
             timeout=10,
@@ -140,7 +140,7 @@ def _get_recent_activity(repo_root: Path, limit: int = 5) -> dict:
     return result
 
 
-def _get_patterns(graph: "SchemaGraph") -> dict:
+def _get_patterns(graph: SchemaGraph) -> dict:
     """Get structural patterns from the graph."""
     patterns = {
         "kinds": {},
@@ -180,7 +180,7 @@ def _get_patterns(graph: "SchemaGraph") -> dict:
 # =============================================================================
 
 
-def _get_language_distribution(db: "Database") -> dict[str, int]:
+def _get_language_distribution(db: Database) -> dict[str, int]:
     """Get file count by language - tells LLM the tech stack."""
     try:
         rows = db.conn.execute(
@@ -191,7 +191,7 @@ def _get_language_distribution(db: "Database") -> dict[str, int]:
         return {}
 
 
-def _get_architecture_signals(graph: "SchemaGraph") -> dict:
+def _get_architecture_signals(graph: SchemaGraph) -> dict:
     """Extract architecture signals from graph structure.
     
     Helps LLM understand:
@@ -245,7 +245,7 @@ def _get_architecture_signals(graph: "SchemaGraph") -> dict:
     return signals
 
 
-def _get_code_structure(graph: "SchemaGraph") -> dict:
+def _get_code_structure(graph: SchemaGraph) -> dict:
     """Get code structure breakdown with ratios.
     
     Helps LLM understand:
@@ -292,8 +292,9 @@ def _get_central_symbols(repo_root: Path, top_k: int = 10) -> list[dict]:
     Filters out test files to focus on production code.
     """
     try:
-        from llmc.rag.graph_nx import load_graph_nx
         import networkx as nx
+
+        from llmc.rag.graph_nx import load_graph_nx
         
         G = load_graph_nx(repo_root)
         
@@ -345,7 +346,7 @@ def _get_central_symbols(repo_root: Path, top_k: int = 10) -> list[dict]:
         return []
 
 
-def _get_external_dependencies(graph: "SchemaGraph", top_k: int = 10) -> list[dict]:
+def _get_external_dependencies(graph: SchemaGraph, top_k: int = 10) -> list[dict]:
     """Identify most-used external symbols (not defined in repo).
     
     Tells LLM which stdlib/library APIs are heavily used.

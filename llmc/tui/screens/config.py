@@ -7,6 +7,9 @@ from textual.containers import ScrollableContainer
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
+# We might need to call find_repo_root from llmc.core
+from llmc.core import find_repo_root
+
 # Import RAG configuration tools
 from llmc.rag.config import (
     embedding_device_preference,
@@ -23,9 +26,6 @@ from llmc.rag.config import (
     index_path_for_read,
     load_rerank_weights,
 )
-
-# We might need to call find_repo_root from llmc.core
-from llmc.core import find_repo_root
 
 
 class ConfigScreen(Screen):

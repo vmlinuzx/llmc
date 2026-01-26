@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 import struct
 from typing import Any
+
 import numpy as np
 
 from ..config import (
@@ -54,12 +55,12 @@ except ImportError:
 
 import logging
 
+from llmc.core import find_repo_root
 from llmc.rag.config import ConfigError  # Added import
 from llmc.rag.scoring import Scorer
 
 from ..database import Database
 from ..embeddings import HASH_MODELS, build_embedding_backend
-from llmc.core import find_repo_root
 
 logger = logging.getLogger(__name__)
 

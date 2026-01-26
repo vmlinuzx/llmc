@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from typing import Any
 import statistics
+from typing import Any
 
 
 @dataclass

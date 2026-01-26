@@ -1,10 +1,11 @@
 """Test token budget system."""
 
 import pytest
+
 from llmc.rlm.governance.budget import (
-    TokenBudget,
     BudgetConfig,
     BudgetExceededError,
+    TokenBudget,
 )
 
 

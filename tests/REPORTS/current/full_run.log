@@ -1,0 +1,17 @@
+
+==================================== ERRORS ====================================
+__________ ERROR collecting tests/agent/test_openai_compat_backend.py __________
+ImportError while importing test module '/home/vmlinux/src/llmc/tests/agent/test_openai_compat_backend.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/agent/test_openai_compat_backend.py:3: in <module>
+    import respx
+E   ModuleNotFoundError: No module named 'respx'
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_rag_repo_integration_edge_cases.py:28: Legacy RAG repo integration API not present; skipping edge-case tests
+ERROR tests/agent/test_openai_compat_backend.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 skipped, 1 error in 5.60s

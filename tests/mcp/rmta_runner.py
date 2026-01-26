@@ -2,13 +2,12 @@
 """
 RMTA Comprehensive Test Runner - Systematically tests all discovered MCP tools.
 """
-import asyncio
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
-import os
 import time
 
 # Create a scratch directory for file system tests

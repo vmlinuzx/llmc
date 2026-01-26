@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from llmc.rag.schema import Entity
@@ -78,7 +78,7 @@ def resolve_symbol(
     return matches[:max_results]
 
 
-def resolve_symbol_best(symbol: str, graph) -> Optional[Entity]:
+def resolve_symbol_best(symbol: str, graph) -> Entity | None:
     """
     Returns the single best matching entity for a symbol, or None if no
     match is found.

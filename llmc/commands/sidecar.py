@@ -10,11 +10,10 @@ Commands:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
-import typer
 from rich.console import Console
 from rich.table import Table
+import typer
 
 from llmc.core import find_repo_root
 
@@ -46,7 +45,7 @@ def _get_sidecar_module():
 
 @app.command("list")
 def list_sidecars(
-    path: Optional[str] = typer.Argument(None, help="Limit to specific directory"),
+    path: str | None = typer.Argument(None, help="Limit to specific directory"),
 ):
     """List all document sidecars and their freshness status."""
     try:

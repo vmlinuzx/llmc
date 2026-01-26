@@ -11,8 +11,9 @@ import sqlite3
 import subprocess
 import sys
 
-from .config import index_path_for_write
 from llmc.core import find_repo_root
+
+from .config import index_path_for_write
 from .lang import EXTENSION_LANG
 
 logger = logging.getLogger(__name__)

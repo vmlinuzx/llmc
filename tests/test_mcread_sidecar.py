@@ -1,9 +1,7 @@
 """Tests for mcread sidecar integration."""
 
 import gzip
-import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 
 class TestMcreadSidecarIntegration:
@@ -34,7 +32,7 @@ class TestMcreadSidecarIntegration:
             f.write(expected_content)
         
         # Verify sidecar detection works
-        from llmc.rag.sidecar import is_sidecar_eligible, get_sidecar_path
+        from llmc.rag.sidecar import get_sidecar_path, is_sidecar_eligible
         
         assert is_sidecar_eligible(Path("docs/spec.pdf")) is True
         computed_sidecar = get_sidecar_path(Path("docs/spec.pdf"), repo_root)

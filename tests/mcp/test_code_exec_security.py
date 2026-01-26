@@ -1,6 +1,6 @@
 
-import pytest
 from llmc_mcp.tools import code_exec
+
 
 def test_run_untrusted_python_security_warning():
     """Verify that the tool's docstring includes a prominent security warning."""

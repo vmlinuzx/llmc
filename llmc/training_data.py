@@ -16,10 +16,10 @@ Output format (OpenAI fine-tuning compatible):
 
 from __future__ import annotations
 
-import json
-import uuid
 from dataclasses import dataclass, field
+import json
 from typing import Any
+import uuid
 
 
 @dataclass

@@ -10,14 +10,14 @@ Usage:
     mcread read llmc/router.py --json         # Structured output
 """
 
-from pathlib import Path
-import typer
-from rich.console import Console
 import json
-import sys
+from pathlib import Path
+
+from rich.console import Console
+import typer
 
 from llmc.core import find_repo_root
-from llmc.rag.graph_ops import load_graph, get_file_context
+from llmc.rag.graph_ops import get_file_context, load_graph
 from llmc.training_data import ToolCallExample, emit_training_example
 
 console = Console()
@@ -58,7 +58,7 @@ def read_file_command(
     sidecar_content = None
     sidecar_source = None
     try:
-        from llmc.rag.sidecar import is_sidecar_eligible, get_sidecar_path
+        from llmc.rag.sidecar import get_sidecar_path, is_sidecar_eligible
         
         if is_sidecar_eligible(Path(file_path)):
             sidecar_path = get_sidecar_path(Path(file_path), repo_root)
@@ -142,7 +142,7 @@ def _emit_human(file_path: str, lines: list[str], ctx: dict | None, sidecar_sour
     # Show sidecar info if reading from converted document
     if sidecar_source:
         console.print(f"[dim green]📄 Reading from sidecar: {sidecar_source}[/dim green]")
-        console.print(f"[dim](Original document converted to markdown for readability)[/dim]\n")
+        console.print("[dim](Original document converted to markdown for readability)[/dim]\n")
 
     if ctx:
         if ctx.get("purpose"):

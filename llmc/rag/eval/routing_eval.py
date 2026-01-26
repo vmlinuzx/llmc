@@ -4,9 +4,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from llmc.core import find_repo_root
 from llmc.rag.config import load_config
 from llmc.rag.search import search_spans
-from llmc.core import find_repo_root
 from llmc.routing.router import create_router
 
 log = logging.getLogger(__name__)

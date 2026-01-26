@@ -7,11 +7,13 @@ V1.1.1: All LLM calls go through the same budget enforcement.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Literal
 from pathlib import Path
-import time
 import sys
+import time
+from typing import Literal
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -19,7 +21,6 @@ else:
     import tomli as tomllib
 
 from llmc.core import find_repo_root, load_config
-
 
 # Pricing loaded from config, not hardcoded
 # FIXES V1.1.0 ISSUE: Hardcoded pricing will rot

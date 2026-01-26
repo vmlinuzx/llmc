@@ -1,10 +1,13 @@
 """
 Unit tests for Graph Expansion (Phase 2).
 """
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
 from llmc.rag.graph_expand import GraphExpander, expand_with_graph
 from llmc.rag.graph_index import GraphIndices, GraphNotFound
+
 
 @pytest.fixture
 def mock_indices():

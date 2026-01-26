@@ -3,12 +3,8 @@
 from __future__ import annotations
 
 import logging
-import time
-import traceback
+from typing import TYPE_CHECKING
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -30,7 +26,7 @@ from llmc_mcp.transport.rest.schemas import ErrorDetail, ErrorResponse
 from llmc_mcp.transport.rest_auth import RestAuthMiddleware
 
 if TYPE_CHECKING:
-    from starlette.types import ASGIApp
+    pass
 
 logger = logging.getLogger(__name__)
 

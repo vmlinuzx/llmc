@@ -15,8 +15,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-from llmc.security import PathSecurityError, normalize_path
-
 # --- Context Gateway integration imports ---
 from llmc.rag.config import load_rerank_weights
 from llmc.rag.db_fts import RagDbNotFound, fts_search
@@ -30,7 +28,6 @@ from llmc.rag.graph_stitch import Neighbor, expand_search_items
 from llmc.rag.rerank import RerankHit, rerank_hits
 from llmc.rag_nav.gateway import compute_route as _compute_route
 from llmc.rag_nav.models import (
-    EnrichmentData,
     LineageItem,
     LineageResult,
     SearchItem,
@@ -41,6 +38,7 @@ from llmc.rag_nav.models import (
     WhereUsedItem,
     WhereUsedResult,
 )
+from llmc.security import PathSecurityError, normalize_path
 
 # -------------------------------------------
 

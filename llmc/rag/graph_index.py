@@ -25,7 +25,7 @@ ALLOWED_EDGE_TYPES: set[str] = {"CALLS", "IMPORTS", "EXTENDS", "READS", "WRITES"
 
 # Cache for loaded graph indices: repo_path -> (mtime, GraphIndices)
 # This avoids re-parsing large JSON graphs on every tool call
-_INDICES_CACHE: dict[str, tuple[float, "GraphIndices"]] = {}
+_INDICES_CACHE: dict[str, tuple[float, GraphIndices]] = {}
 
 
 

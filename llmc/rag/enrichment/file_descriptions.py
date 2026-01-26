@@ -13,8 +13,8 @@ Staleness tracking via input_hash prevents unnecessary recomputation.
 from __future__ import annotations
 
 import hashlib
-import re
 from pathlib import Path
+import re
 from typing import Any
 
 from llmc.rag.config_models import get_default_enrichment_model

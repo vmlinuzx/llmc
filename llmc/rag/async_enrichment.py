@@ -10,11 +10,11 @@ server. Per-backend semaphores ensure each server always has work in flight.
 """
 
 import asyncio
-import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
 from itertools import cycle
+from pathlib import Path
+import time
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from llmc.rag.database import Database
@@ -89,14 +89,14 @@ async def run_async_enrichment(
     from llmc.rag.database import Database
     from llmc.rag.enrichment_factory import create_backend_from_spec
     from llmc.rag.enrichment_pipeline import build_enrichment_prompt
-    from llmc.rag.enrichment_router import build_router_from_toml, EnrichmentSliceView
+    from llmc.rag.enrichment_router import EnrichmentSliceView, build_router_from_toml
     
     start = time.monotonic()
     result = AsyncEnrichmentResult()
     
     # Collect all work items across repos
-    all_work: list[tuple["Database", Path, str, dict, str]] = []  # (db, repo, hash, item, prompt)
-    dbs_to_close: list["Database"] = []
+    all_work: list[tuple[Database, Path, str, dict, str]] = []  # (db, repo, hash, item, prompt)
+    dbs_to_close: list[Database] = []
     all_backend_specs: list[Any] = []  # Available backends from first repo's chain
     
     for repo_path in repos:
@@ -188,7 +188,7 @@ async def run_async_enrichment(
     
     # Round-robin assign work to backends (ensures even distribution)
     backend_cycle = cycle(working_backends)
-    work_with_backend: list[tuple["Database", Path, str, dict, str, Any]] = []
+    work_with_backend: list[tuple[Database, Path, str, dict, str, Any]] = []
     
     for db, repo, span_hash, item, prompt in all_work:
         backend_spec = next(backend_cycle)
@@ -268,7 +268,7 @@ async def run_async_enrichment(
                     db.store_enrichment(span_hash, payload, meta=meta)
                 except Exception as e:
                     print(f"⚠️ DB write failed: {e}", flush=True)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
             except asyncio.CancelledError:
                 break

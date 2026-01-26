@@ -1,6 +1,6 @@
 import tomlkit
 
-with open("pyproject.toml", "r") as f:
+with open("pyproject.toml") as f:
     data = tomlkit.load(f)
 
 if "project" in data and "dependencies" in data["project"]:

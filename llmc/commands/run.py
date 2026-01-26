@@ -15,9 +15,10 @@ from pathlib import Path
 
 import typer
 
+from llmc.mcgrep import app as mcgrep_app
+
 # Import tool apps for multi-command tools
 from llmc.mchot import app as mchot_app
-from llmc.mcgrep import app as mcgrep_app
 from llmc.mcrun import app as mcrun_app
 from llmc.mcschema import app as mcschema_app
 from llmc.mcwho import app as mcwho_app

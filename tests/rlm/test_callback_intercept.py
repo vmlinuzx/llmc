@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 import sys
-import contextlib
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 
 # Fixture to mock litellm if missing
 @pytest.fixture(autouse=True)
@@ -12,7 +13,8 @@ def mock_litellm_dependency():
             sys.modules["litellm"] = MagicMock()
         yield
 
-from llmc.rlm.session import RLMSession, RLMConfig
+from llmc.rlm.session import RLMConfig, RLMSession
+
 
 @pytest.mark.asyncio
 async def test_callback_interception_end_to_end(sample_python_code):

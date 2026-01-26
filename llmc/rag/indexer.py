@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import time
 
+from llmc.core import find_repo_root
 from llmc.rag.routing import is_format_allowed, resolve_domain
 
 # Import classification logic
@@ -23,7 +24,6 @@ from .database import Database
 from .index_naming import resolve_index_name
 from .lang import extract_spans, language_for_path
 from .types import FileRecord, SpanRecord
-from llmc.core import find_repo_root
 from .utils import (
     _gitignore_matcher,
     git_changed_paths,
@@ -43,10 +43,10 @@ except ImportError:
 try:
     from .sidecar import (
         SidecarConverter,
+        get_converter as get_doc_sidecar_converter,
         get_sidecar_path,
         is_sidecar_eligible,
         is_sidecar_stale,
-        get_converter as get_doc_sidecar_converter,
     )
 
     DOC_SIDECAR_AVAILABLE = True

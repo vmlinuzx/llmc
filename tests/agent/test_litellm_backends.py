@@ -10,12 +10,13 @@ Tests cover:
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from llmc.backends import (
+    LiteLLMAgentBackend,
     LiteLLMConfig,
     LiteLLMCore,
-    LiteLLMAgentBackend,
     LiteLLMEnrichmentAdapter,
     to_litellm_model,
 )
@@ -378,6 +379,7 @@ class TestExceptionMapping:
     def test_rate_limit_error(self):
         """Should map RateLimitError correctly."""
         from litellm.exceptions import RateLimitError
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")
@@ -392,6 +394,7 @@ class TestExceptionMapping:
     def test_timeout_error(self):
         """Should map Timeout correctly."""
         from litellm.exceptions import Timeout
+
         from llmc.rag.enrichment_backends import BackendError
         
         config = LiteLLMConfig(model="test")

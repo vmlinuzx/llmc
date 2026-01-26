@@ -1,6 +1,5 @@
 """Test process-based sandbox."""
 
-import pytest
 from llmc.rlm.sandbox.process_backend import ProcessSandboxBackend
 
 

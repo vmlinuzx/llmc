@@ -11,11 +11,10 @@ Usage:
 """
 
 import json
-import sys
 from pathlib import Path
 
-import typer
 from rich.console import Console
+import typer
 
 from llmc.core import find_repo_root
 from llmc.rag.inspector import InspectionResult, inspect_entity
@@ -44,9 +43,9 @@ def inspect_symbol_command(
 
     # Check for graph staleness
     try:
+        from llmc.rag.config import index_path_for_read
         from llmc.rag.database import Database
         from llmc.rag.graph_db import GraphDatabase
-        from llmc.rag.config import index_path_for_read
         
         index_path = index_path_for_read(repo_root)
         graph_path = repo_root / ".llmc" / "rag_graph.db"
@@ -125,7 +124,7 @@ def _format_size(path: str) -> tuple[int, int]:
     try:
         p = Path(path)
         byte_size = p.stat().st_size
-        with open(p, "r", encoding="utf-8", errors="ignore") as f:
+        with open(p, encoding="utf-8", errors="ignore") as f:
             line_count = sum(1 for _ in f)
         return line_count, byte_size
     except Exception:
@@ -186,8 +185,8 @@ def _emit_summary(result: InspectionResult):
 
 def _get_enriched_chunks(repo_root: Path, symbol: str, file_path: str) -> list[dict]:
     """Get all enriched chunks for a symbol from the database."""
-    from llmc.rag.database import Database
     from llmc.rag.config import index_path_for_read
+    from llmc.rag.database import Database
     
     try:
         db_path = index_path_for_read(repo_root)

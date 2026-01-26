@@ -1,8 +1,10 @@
+import httpx
 import pytest
 import respx
-import httpx
-from llmc_agent.backends.openai_compat import OpenAICompatBackend
+
 from llmc_agent.backends.base import GenerateRequest
+from llmc_agent.backends.openai_compat import OpenAICompatBackend
+
 
 # Define custom exceptions as per SDD
 class AuthenticationError(Exception):

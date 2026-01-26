@@ -1,10 +1,11 @@
 import dataclasses
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List, Literal
-import subprocess
 import json
+from pathlib import Path
+import subprocess
 import time
+from typing import Literal
+
 
 @dataclass
 class TestResult:
@@ -16,7 +17,7 @@ class TestResult:
 
 @dataclass
 class RMTAReport:
-    results: List[TestResult] = field(default_factory=list)
+    results: list[TestResult] = field(default_factory=list)
     mode: str = "unknown"
 
     @property

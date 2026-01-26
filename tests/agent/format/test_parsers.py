@@ -1,6 +1,5 @@
 """Unit tests for UTP parsers."""
 
-import pytest
 from llmc_agent.format.parsers import CompositeParser, OpenAINativeParser, XMLToolParser
 
 

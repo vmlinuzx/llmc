@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
-from llmc_mcp.tools.te import te_run, PathSecurityError
+from llmc_mcp.tools.te import te_run
+
 
 def test_te_run_rce_fixed():
     """Verify that the RCE vulnerability in te_run is fixed."""

@@ -1,4 +1,5 @@
-from llmc.rag.eval.metrics import is_code_file, code_at_k, mrr_code
+from llmc.rag.eval.metrics import code_at_k, is_code_file, mrr_code
+
 
 def test_is_code_file():
     assert is_code_file("test.py") is True

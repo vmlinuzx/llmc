@@ -1,7 +1,8 @@
 """Integration test for Boxxie tool calling with UTP."""
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.integration
@@ -92,8 +93,8 @@ class TestBoxxieIntegration:
     @pytest.mark.asyncio
     async def test_agent_format_negotiator_initialization(self):
         """Test that Agent initializes format_negotiator correctly."""
-        from llmc_agent.config import Config
         from llmc_agent.agent import Agent
+        from llmc_agent.config import Config
         
         # Create minimal config
         config = Config()

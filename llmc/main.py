@@ -17,9 +17,9 @@ import re
 import typer
 
 from llmc.commands import (
-    run as run_commands,
     config as config_commands,
     repo as repo_commands,
+    run as run_commands,
     service as service_commands,
     test_mcp as test_mcp_commands,
 )
@@ -383,4 +383,5 @@ if __name__ == "__main__":
 # RLM - Recursive Language Model
 # ============================================================================
 from llmc.commands import rlm as rlm_commands
+
 app.add_typer(rlm_commands.app, name="rlm")

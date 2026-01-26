@@ -1,9 +1,9 @@
 import threading
 import time
 from unittest.mock import patch
-import pytest
 
 from llmc.rag.watcher import ChangeQueue
+
 
 class TestChangeQueue:
     def test_debounce_basic(self):

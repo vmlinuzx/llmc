@@ -7,11 +7,12 @@ Solution: Use multiprocessing.Process which CAN be terminated.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 import multiprocessing as mp
 from multiprocessing import Queue
 import time
-from typing import Any, Callable
-from dataclasses import dataclass
+from typing import Any
 
 from llmc.rlm.sandbox.interface import CodeExecutionEnvironment, ExecutionResult
 
@@ -23,11 +24,10 @@ def _sandbox_worker(
     max_output_chars: int,
 ):
     """Worker function that runs in separate process."""
-    import sys
-    import io
     import ast
+    from contextlib import redirect_stderr, redirect_stdout
+    import io
     import traceback
-    from contextlib import redirect_stdout, redirect_stderr
     
     stdout_capture = io.StringIO()
     stderr_capture = io.StringIO()

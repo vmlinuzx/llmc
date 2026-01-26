@@ -244,6 +244,7 @@ class ClinicalLongformerEmbeddingProvider(EmbeddingProvider):
     def _ensure_adapter(self) -> None:
         if self._adapter is None:
             from pathlib import Path
+
             # Lazy import to avoid 5+ second startup penalty
             from llmc.rag.embeddings.hf_longcontext_adapter import LongContextAdapter
 

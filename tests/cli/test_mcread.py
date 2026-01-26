@@ -1,7 +1,9 @@
-from typer.testing import CliRunner
-from llmc.mcread import app
 from pathlib import Path
+
 import pytest
+from typer.testing import CliRunner
+
+from llmc.mcread import app
 
 pytestmark = pytest.mark.skip(reason="Pre-existing test failures")
 

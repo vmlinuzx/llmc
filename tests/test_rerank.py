@@ -1,5 +1,4 @@
 """Tests for LLM-based setwise reranker."""
-import pytest
 from llmc.rag.rerank import SetwiseReranker, rerank_with_llm
 
 

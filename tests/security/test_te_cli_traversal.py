@@ -2,11 +2,12 @@
 Security test for Tool Envelope (TE) CLI path traversal vulnerability.
 """
 
-import sys
-import pytest
 from unittest.mock import patch
-from pathlib import Path
+
+import pytest
+
 from llmc.te.cli import main
+
 
 def test_te_repo_read_traversal_blocked(tmp_path):
     """

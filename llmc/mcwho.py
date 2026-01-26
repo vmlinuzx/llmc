@@ -28,8 +28,6 @@ from rich.console import Console
 import typer
 
 from llmc.core import find_repo_root
-from llmc.rag.schema import SchemaGraph
-from llmc.symbol_resolver import resolve_symbol, resolve_symbol_in_nodes
 
 console = Console()
 
@@ -148,7 +146,7 @@ def _print_edge_list(
 ) -> None:
     """Print a list of edges with resolved names."""
     if not edges:
-        console.print(f"  [dim](none)[/dim]")
+        console.print("  [dim](none)[/dim]")
         return
     
     for i, edge in enumerate(edges[:max_show]):
@@ -316,15 +314,15 @@ def stats():
         kind = n.get("kind") or n.get("type") or "unknown"
         kind_counts[kind] = kind_counts.get(kind, 0) + 1
     
-    console.print(f"\n[bold]Schema Graph Stats[/bold]")
+    console.print("\n[bold]Schema Graph Stats[/bold]")
     console.print(f"  Entities: {len(nodes)}")
     console.print(f"  Edges: {len(edges)}")
     
-    console.print(f"\n[bold cyan]Entity Kinds:[/bold cyan]")
+    console.print("\n[bold cyan]Entity Kinds:[/bold cyan]")
     for kind, count in sorted(kind_counts.items(), key=lambda x: -x[1]):
         console.print(f"  {kind}: {count}")
     
-    console.print(f"\n[bold yellow]Edge Types:[/bold yellow]")
+    console.print("\n[bold yellow]Edge Types:[/bold yellow]")
     for edge_type, count in sorted(edge_counts.items(), key=lambda x: -x[1]):
         console.print(f"  {edge_type}: {count}")
 

@@ -9,26 +9,24 @@ FIXES:
 """
 
 from __future__ import annotations
-import time
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+import time
 from uuid import uuid4
 
 # Use LLMC's existing backend - single call surface
-from llmc.backends.litellm_core import LiteLLMCore
-
 from llmc.rlm.config import RLMConfig, load_rlm_config
-from llmc.rlm.sandbox.interface import create_sandbox, ExecutionResult
-from llmc.rlm.nav.treesitter_nav import TreeSitterNav, create_nav_tools
 from llmc.rlm.governance.budget import (
-    TokenBudget,
     BudgetConfig,
     BudgetExceededError,
+    TokenBudget,
     load_pricing,
 )
+from llmc.rlm.nav.treesitter_nav import TreeSitterNav, create_nav_tools
 from llmc.rlm.prompts import get_rlm_system_prompt
 from llmc.rlm.sandbox.intercept import extract_tool_calls, rewrite_ast
+from llmc.rlm.sandbox.interface import create_sandbox
 
 
 @dataclass
@@ -129,6 +127,14 @@ class RLMSession:
     def load_code_context(self, source: str | Path, language: str | None = None) -> dict:
         """Load code context with semantic navigation."""
         if isinstance(source, Path):
+            #SECURITY: Check file size before reading to prevent DoS
+            file_size = source.stat().st_size
+            max_bytes = getattr(self.config, 'max_file_bytes', 10 * 1024 * 1024)  # 10MB default
+            if file_size > max_bytes:
+                raise ValueError(
+                    f"File too large: {file_size:,} bytes (max {max_bytes:,}). "
+                    f"Use context parameter with truncated text instead."
+                )
             source_text = source.read_text()
         else:
             source_text = source

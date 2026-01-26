@@ -97,8 +97,8 @@ def _emit_search_training(query: str, path: str | None, limit: int) -> None:
     Outputs a JSON training example that can be used to fine-tune models
     on LLMC tool calling patterns.
     """
+
     from llmc.rag.search import search_spans
-    import json
 
     try:
         repo_root = find_repo_root()
@@ -498,7 +498,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
     # Check for sidecar-eligible files (for display)
     sidecar_files: set[str] = set()
     try:
-        from llmc.rag.sidecar import is_sidecar_eligible, get_sidecar_path
+        from llmc.rag.sidecar import get_sidecar_path, is_sidecar_eligible
         for file_path in list(code_groups.keys()) + list(docs_groups.keys()):
             if is_sidecar_eligible(Path(file_path)):
                 sidecar_path = get_sidecar_path(Path(file_path), repo_root)
@@ -543,7 +543,7 @@ def _run_search(query: str, path: str | None, limit: int, show_summary: bool) ->
 
     # === PART 2: Top 10 detailed span results (like mgrep) ===
     
-    console.print(f"\n[dim]─── Top 10 spans (detailed) ───[/dim]\n")
+    console.print("\n[dim]─── Top 10 spans (detailed) ───[/dim]\n")
     
     # Show top 10 spans in detail
     for i, item in enumerate(items[:10], 1):

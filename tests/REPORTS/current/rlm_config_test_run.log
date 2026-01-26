@@ -1,0 +1,72 @@
+FFFF                                                                     [100%]
+=================================== FAILURES ===================================
+_________ test_invalid_rlm_config_raises_validation_error[rlm_params0] _________
+
+rlm_params = {'enabled': 'true'}
+
+    @pytest.mark.parametrize("rlm_params", [
+        {"enabled": "true"},
+        {"provider": 123},
+        {"models": "model-name"},
+        {"tools": {"tool": "a"}},
+    ])
+    def test_invalid_rlm_config_raises_validation_error(rlm_params):
+        config = {"rlm": rlm_params}
+>       with pytest.raises(ValidationError):
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+
+/home/vmlinux/src/llmc/tests/mcp/test_rlm_config.py:28: Failed
+_________ test_invalid_rlm_config_raises_validation_error[rlm_params1] _________
+
+rlm_params = {'provider': 123}
+
+    @pytest.mark.parametrize("rlm_params", [
+        {"enabled": "true"},
+        {"provider": 123},
+        {"models": "model-name"},
+        {"tools": {"tool": "a"}},
+    ])
+    def test_invalid_rlm_config_raises_validation_error(rlm_params):
+        config = {"rlm": rlm_params}
+>       with pytest.raises(ValidationError):
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+
+/home/vmlinux/src/llmc/tests/mcp/test_rlm_config.py:28: Failed
+_________ test_invalid_rlm_config_raises_validation_error[rlm_params2] _________
+
+rlm_params = {'models': 'model-name'}
+
+    @pytest.mark.parametrize("rlm_params", [
+        {"enabled": "true"},
+        {"provider": 123},
+        {"models": "model-name"},
+        {"tools": {"tool": "a"}},
+    ])
+    def test_invalid_rlm_config_raises_validation_error(rlm_params):
+        config = {"rlm": rlm_params}
+>       with pytest.raises(ValidationError):
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+
+/home/vmlinux/src/llmc/tests/mcp/test_rlm_config.py:28: Failed
+_________ test_invalid_rlm_config_raises_validation_error[rlm_params3] _________
+
+rlm_params = {'tools': {'tool': 'a'}}
+
+    @pytest.mark.parametrize("rlm_params", [
+        {"enabled": "true"},
+        {"provider": 123},
+        {"models": "model-name"},
+        {"tools": {"tool": "a"}},
+    ])
+    def test_invalid_rlm_config_raises_validation_error(rlm_params):
+        config = {"rlm": rlm_params}
+>       with pytest.raises(ValidationError):
+E       Failed: DID NOT RAISE <class 'pydantic_core._pydantic_core.ValidationError'>
+
+/home/vmlinux/src/llmc/tests/mcp/test_rlm_config.py:28: Failed
+=========================== short test summary info ============================
+FAILED tests/mcp/test_rlm_config.py::test_invalid_rlm_config_raises_validation_error[rlm_params0]
+FAILED tests/mcp/test_rlm_config.py::test_invalid_rlm_config_raises_validation_error[rlm_params1]
+FAILED tests/mcp/test_rlm_config.py::test_invalid_rlm_config_raises_validation_error[rlm_params2]
+FAILED tests/mcp/test_rlm_config.py::test_invalid_rlm_config_raises_validation_error[rlm_params3]
+4 failed in 1.00s

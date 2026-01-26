@@ -1,16 +1,15 @@
 """Tests for RLM config loading."""
-import pytest
-from pathlib import Path
-import tempfile
 import sys
+
+import pytest
 
 # Ensure compatibility with python < 3.11
 if sys.version_info >= (3, 11):
-    import tomllib
+    pass
 else:
-    import tomli as tomllib
+    pass
 
-from llmc.rlm.config import load_rlm_config, RLMConfig
+from llmc.rlm.config import load_rlm_config
 
 
 class TestLoadRLMConfig:

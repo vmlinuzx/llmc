@@ -1,11 +1,13 @@
 
-import os
-import asyncio
-from pathlib import Path
-import pytest
 import json
-from llmc_mcp.server import LlmcMcpServer
+import os
+from pathlib import Path
+
+import pytest
+
 from llmc_mcp.config import load_config
+from llmc_mcp.server import LlmcMcpServer
+
 
 @pytest.fixture
 def mcp_server():

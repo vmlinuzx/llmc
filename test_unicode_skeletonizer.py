@@ -42,4 +42,5 @@ except Exception as e:
 finally:
     import os
     os.remove(file_path)
-    os.remove("test_skeletonizer.py")
+    if os.path.exists("test_skeletonizer.py"):
+        os.remove("test_skeletonizer.py")

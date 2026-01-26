@@ -738,8 +738,8 @@ def feed_queue_from_repos(repo_paths: list[str], limit_per_repo: int = 100) -> i
     Returns:
         Total number of items added to queue.
     """
-    from llmc.rag.database import Database
     from llmc.rag.config import index_path_for_write
+    from llmc.rag.database import Database
     
     queue = WorkQueue()
     total_added = 0

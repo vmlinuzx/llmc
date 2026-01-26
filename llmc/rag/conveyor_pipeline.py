@@ -23,11 +23,11 @@ import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 import time
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from llmc.rag.config_enrichment import EnrichmentBackendSpec
-from llmc.rag.enrichment_backends import BackendAdapter, BackendCascade, BackendError
-from llmc.rag.enrichment_pipeline import build_enrichment_prompt, EnrichmentResult
+from llmc.rag.enrichment_backends import BackendAdapter, BackendError
+from llmc.rag.enrichment_pipeline import build_enrichment_prompt
 from llmc.rag.enrichment_router import EnrichmentSliceView
 
 if TYPE_CHECKING:
@@ -152,7 +152,7 @@ class ConveyorBeltPipeline:
     
     def __init__(
         self,
-        db: "Database",
+        db: Database,
         backend_factory: callable,
         config: ConveyorConfig,
         *,
@@ -187,12 +187,11 @@ class ConveyorBeltPipeline:
         self._target_limit = 0
     
     @classmethod
-    def from_config(cls, repo_root: Path) -> "ConveyorBeltPipeline":
+    def from_config(cls, repo_root: Path) -> ConveyorBeltPipeline:
         """Create pipeline from llmc.toml configuration."""
-        from llmc.rag.config import load_config, index_path_for_write
+        from llmc.rag.config import index_path_for_write, load_config
         from llmc.rag.database import Database
         from llmc.rag.enrichment_factory import create_backend_from_spec
-        from llmc.rag.enrichment_router import build_router_from_toml
         
         # Load config
         cfg = load_config(repo_root)
@@ -310,7 +309,7 @@ class ConveyorBeltPipeline:
                     self._wait_for_completion(),
                     timeout=timeout,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 print(f"⏱️ Conveyor belt timed out after {timeout}s")
             
         finally:
@@ -388,7 +387,7 @@ class ConveyorBeltPipeline:
                         self.work_queue.get(),
                         timeout=1.0,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
                 
                 if work is None:  # Shutdown signal
@@ -420,7 +419,7 @@ class ConveyorBeltPipeline:
                         self.completed_queue.get(),
                         timeout=0.5,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # Check if we need to commit
                     if pending_count > 0 and time.time() - last_commit > commit_interval:
                         try:

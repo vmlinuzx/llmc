@@ -825,59 +825,53 @@ default = { input = 0.01, output = 0.03 }
 
 ### 1.Y RLM Phase 1.1.1 Bug Fixes (P0) 🐛
 
-**Status:** 📋 **PLANNED**  
+**Status:** ✅ **COMPLETE**  
+**Completed:** 2026-01-25  
 **Added:** 2026-01-24  
 **Source:** Implementation session - feature branch needs cleanup before merge  
-**Branch:** `feature/rlm-phase-1.1.1`  
-**Commits:** 4 commits, 16 files, 1,721 insertions
+**Branch:** `feat/rlm-config-nested-phase-1x` (worked on current branch instead of feature/rlm-phase-1.1.1)  
 
-**Current Status:**
-- ✅ 16/17 tests passing (94%)
-- ✅ Core infrastructure complete
-- ✅ CLI entry point registered
-- ✅ DeepSeek integration test written
-- 🔴 1 failing nav test (symbol extraction)
-- 🔴 venv/litellm installation conflict
-- 🔴 Session loop needs live API validation
+**Completion Summary:**
+- ✅ 43/43 RLM tests passing (100%)
+- ✅ urllib3 dependency conflict resolved
+- ✅ DeepSeek integration working with real API
+- ✅ Budget tracking verified
+- ✅ All known issues fixed
 
-**Known Issues:**
+**Issues Resolved:**
 
-1. **TreeSitterNav Class Symbol Extraction (P0)**
-   - **File:** `llmc/rlm/nav/treesitter_nav.py`
-   - **Test:** `tests/rlm/test_nav.py::test_ls_filters_by_scope`
-   - **Issue:** `_index_python_symbols()` doesn't recurse into class bodies properly
-   - **Impact:** `ls("Calculator")` returns empty instead of showing methods
-   - **Fix:** Ensure `visit(body, prefix=full_name)` is called for class definitions
-   - **Effort:** 15 minutes
+1. **TreeSitterNav Class Symbol Extraction** ✅
+   - Status: ALREADY FIXED (test was passing, roadmap was stale)
+   - Test `tests/rlm/test_nav.py::test_ls_filters_by_scope` passes
 
-2. **Venv litellm Installation Conflict (P1)**
-   - **Issue:** `pip install -e .` in venv causes urllib3 version conflict
-   - **Error:** `kubernetes 34.1.0 requires urllib3<2.4.0,>=1.24.2, but you have urllib3 2.6.3`
-   - **Impact:** Can't run integration tests in venv
-   - **Fix:** Update pyproject.toml dependencies or use `--break-system-packages`
-   - **Effort:** 30 minutes
+2. **Venv litellm Installation Conflict** ✅ FIXED
+   - **Solution:** Changed `pyproject.toml` line 12 from `urllib3>=2.6.0` to `urllib3>=1.24.2,<2.4.0`
+   - **Result:** urllib3 downgraded from 2.6.3 to 2.3.0, compatible with kubernetes 34.1.0
+   - **Verification:** litellm 1.80.16 now imports successfully
 
-3. **Session Live API Validation (P0)**
-   - **File:** `llmc/rlm/session.py`
-   - **Issue:** Session loop hasn't been tested with real DeepSeek API yet
-   - **Tests Written:** `tests/rlm/test_integration_deepseek.py`
-   - **Blockers:** venv installation issue (item #2)
-   - **Steps:**
-     1. Fix venv installation
-     2. Run `DEEPSEEK_API_KEY=sk-xxx python tests/rlm/test_integration_deepseek.py`
-     3. Verify budget tracking works
-     4. Fix any litellm API issues
-   - **Effort:** 1-2 hours
+3. **Session Live API Validation** ✅ COMPLETE
+   - **Tests:** Both integration tests in `tests/rlm/test_integration_deepseek.py` passing
+   - **Test 1:** `test_rlm_deepseek_code_analysis` - Full session loop working
+   - **Test 2:** `test_rlm_deepseek_budget_enforcement` - Budget limits enforced
+   - **Note:** Tests require `--allow-network` flag due to pytest_ruthless plugin
 
-**Acceptance Criteria:**
-- ✅ All 17/17 tests passing
+**Test Results:**
+- Baseline: 41 passed, 2 skipped (litellm missing)
+- After fix: 43 passed, 0 skipped
+- Command: `pytest tests/rlm/ -v --allow-network`
+
+**Files Modified:**
+- `pyproject.toml` - Fixed urllib3 constraint
+
+**Acceptance Criteria:** ✅ ALL MET
+- ✅ All 43/43 tests passing
 - ✅ Live DeepSeek integration test passes
 - ✅ Budget tracking verified with real API
 - ✅ Session completes full loop with FINAL() answer
 - ✅ Ready to merge to main
 
-**Effort:** 2-3 hours | **Difficulty:** 🟢 Easy  
-**Reference:** Session summary in /tmp/session_summary.md
+**Completion Date:** 2026-01-25  
+**Actual Effort:** 1 hour | **Difficulty:** 🟢 Easy  
 
 ---
 
@@ -1018,5 +1012,45 @@ default = { input = 0.01, output = 0.03 }
 
 **Effort:** TBD | **Difficulty:** 🔴 Hard  
 **Reference:** SDD Section 9 (Future Work)
+
+---
+
+## 5. Someday Maybe (Research)
+
+### 5.1 LSP Graph Integration 🔬
+
+**Status:** 📋 **RESEARCH BACKLOG**  
+**Added:** 2026-01-25  
+**Source:** Architecture discussion - could LSP enrich LLMC's graph beyond Tree-sitter?
+
+**The Question:**
+Tree-sitter provides fast, offline AST parsing but is **syntactic only**. Could integrating with LSP servers (pyright, typescript-language-server) add semantic value to the graph?
+
+**What LSP Could Add:**
+| Capability | Tree-sitter (Current) | LSP (Potential) |
+|------------|----------------------|-----------------|
+| Cross-file references | ❌ No | ✅ "This calls function in file B" |
+| Type information | ❌ No | ✅ "Variable x is `List[CodeBlock]`" |
+| Import resolution | ❌ Syntax only | ✅ Trace actual module paths |
+| Semantic symbols | ❌ No | ✅ "Method override" vs "method" |
+
+**Trade-offs:**
+- ✅ Rich semantic data for better context stitching
+- ❌ Requires running server per language
+- ❌ Slower than Tree-sitter for bulk indexing
+- ❌ Flaky with broken/incomplete code
+
+**Hybrid Strategy (Hypothesis):**
+1. **Index** with Tree-sitter (fast, offline, robust)
+2. **Enrich on-demand** via LSP for semantic queries (find-references, type info)
+
+**Research Spike:**
+- [ ] Prototype pyright integration for Python repos
+- [ ] Compare `nav_where_used` with LSP `textDocument/references`
+- [ ] Measure latency + accuracy delta
+- [ ] Evaluate graph enrichment value vs complexity
+
+**Effort:** TBD (research spike: 4-8 hours) | **Difficulty:** 🔴 TBD  
+**Related:** oh-my-opencode's LSP tools (`lsp_goto_definition`, `lsp_find_references`)
 
 ---

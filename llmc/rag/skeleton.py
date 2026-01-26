@@ -8,8 +8,10 @@ Removes implementation details while preserving architectural structure (signatu
 from __future__ import annotations
 
 from pathlib import Path
+
 from tree_sitter import Node
-from .lang import parse_source, _node_text
+
+from .lang import parse_source
 
 
 class Skeletonizer:

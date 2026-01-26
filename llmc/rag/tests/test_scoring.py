@@ -1,8 +1,7 @@
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from llmc.rag.scoring import Scorer
+
 
 class TestScorer:
     @patch("llmc.rag.scoring.load_config")

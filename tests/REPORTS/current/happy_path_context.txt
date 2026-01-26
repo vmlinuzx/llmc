@@ -1,0 +1,4 @@
+This is a simple test context.
+There is a variable `x` and a function `my_func`.
+`x` is an integer.
+`my_func` adds 1 to `x`.

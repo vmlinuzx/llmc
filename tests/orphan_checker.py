@@ -1,8 +1,8 @@
 
-import os
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
+
 
 def find_orphan_docs(docs_dir: str):
     markdown_files = {str(p.resolve()) for p in Path(docs_dir).rglob("*.md")}
@@ -10,13 +10,13 @@ def find_orphan_docs(docs_dir: str):
 
     for file_path in markdown_files:
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
         except UnicodeDecodeError:
             try:
-                with open(file_path, "r", encoding="latin-1") as f:
+                with open(file_path, encoding="latin-1") as f:
                     content = f.read()
-            except Exception as e:
+            except Exception:
                 # print(f"Could not read {file_path}: {e}", file=sys.stderr)
                 continue
 

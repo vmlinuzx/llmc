@@ -21,8 +21,8 @@ This is ideal for:
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 from rich.console import Console
@@ -309,7 +309,6 @@ def _output_skeleton(repo_root: Path, G, results: list[dict]) -> None:
     - Includes relationship counts
     - Includes LLM-generated enrichment summaries (the 10x crack cocaine)
     """
-    import networkx as nx
     
     enriched_count = 0
     

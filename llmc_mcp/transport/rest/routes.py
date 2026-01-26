@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import base64
+from datetime import UTC, datetime
 import json
 import logging
-import time
-import uuid
-from datetime import datetime, timezone
 from pathlib import Path
+import time
 from typing import TYPE_CHECKING, Any
+import uuid
 
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
@@ -133,7 +133,7 @@ async def get_health(request: Request) -> JSONResponse:
         version="1.0.0",
         api="rest",
         workspaces=workspaces,
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
     return add_request_id(JSONResponse(response.to_dict()), request)
 
@@ -285,7 +285,7 @@ async def get_symbol(request: Request) -> JSONResponse:
         )
     except FileNotFoundError:
         return add_request_id(
-            error_response("index_not_found", f"RAG index not built for workspace", 503),
+            error_response("index_not_found", "RAG index not built for workspace", 503),
             request,
         )
 
@@ -364,7 +364,7 @@ async def get_symbol_references(request: Request) -> JSONResponse:
         )
     except FileNotFoundError:
         return add_request_id(
-            error_response("index_not_found", f"RAG index not built for workspace", 503),
+            error_response("index_not_found", "RAG index not built for workspace", 503),
             request,
         )
 
@@ -441,7 +441,7 @@ async def get_symbol_lineage(request: Request) -> JSONResponse:
         )
     except FileNotFoundError:
         return add_request_id(
-            error_response("index_not_found", f"RAG index not built for workspace", 503),
+            error_response("index_not_found", "RAG index not built for workspace", 503),
             request,
         )
 

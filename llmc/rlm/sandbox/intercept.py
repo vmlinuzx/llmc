@@ -1,6 +1,7 @@
 import ast
 from dataclasses import dataclass
-from typing import Any, List, Dict, Set, Tuple
+from typing import Any
+
 
 @dataclass
 class CallbackSite:
@@ -8,14 +9,14 @@ class CallbackSite:
     col_offset: int
     target_name: str
     tool_name: str
-    args: List[Any]
-    kwargs: Dict[str, Any]
+    args: list[Any]
+    kwargs: dict[str, Any]
 
 class ToolCallVisitor(ast.NodeVisitor):
-    def __init__(self, allowed_tools: Set[str]):
+    def __init__(self, allowed_tools: set[str]):
         self.allowed_tools = allowed_tools
-        self.sites: List[CallbackSite] = []
-        self.errors: List[str] = []
+        self.sites: list[CallbackSite] = []
+        self.errors: list[str] = []
 
     def visit_Assign(self, node: ast.Assign):
         is_tool = self._is_tool_call(node.value)
@@ -81,7 +82,7 @@ class ToolCallVisitor(ast.NodeVisitor):
             return node.func.id in self.allowed_tools
         return False
 
-def extract_tool_calls(code: str, allowed: Set[str]) -> Tuple[List[CallbackSite], List[str]]:
+def extract_tool_calls(code: str, allowed: set[str]) -> tuple[list[CallbackSite], list[str]]:
     try:
         tree = ast.parse(code)
     except SyntaxError as e:
@@ -94,7 +95,7 @@ def extract_tool_calls(code: str, allowed: Set[str]) -> Tuple[List[CallbackSite]
     return visitor.sites, visitor.errors
 
 class RewriteTransformer(ast.NodeTransformer):
-    def __init__(self, sites: List[CallbackSite], injections: List[str]):
+    def __init__(self, sites: list[CallbackSite], injections: list[str]):
         self.sites_map = {site.lineno: (site, inj) for site, inj in zip(sites, injections)}
     
     def visit_Assign(self, node: ast.Assign):
@@ -110,7 +111,7 @@ class RewriteTransformer(ast.NodeTransformer):
             return new_node
         return node
 
-def rewrite_ast(code: str, sites: List[CallbackSite], injections: List[str]) -> str:
+def rewrite_ast(code: str, sites: list[CallbackSite], injections: list[str]) -> str:
     tree = ast.parse(code)
     transformer = RewriteTransformer(sites, injections)
     new_tree = transformer.visit(tree)

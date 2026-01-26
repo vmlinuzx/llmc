@@ -1,6 +1,8 @@
-import pytest
 from pydantic import ValidationError
+import pytest
+
 from llmc_mcp.config import McpConfig
+
 
 def test_rlm_config_defaults():
     config = McpConfig()

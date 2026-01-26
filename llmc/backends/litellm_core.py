@@ -9,9 +9,9 @@ Design: HLD-litellm-migration-FINAL.md Section 4.2
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import re
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -123,8 +123,6 @@ class LiteLLMCore:
             BackendError with appropriate failure_type
         """
         # Import here to avoid circular imports
-        from llmc.rag.enrichment_backends import BackendError
-        
         # Import litellm exceptions
         from litellm.exceptions import (
             APIError,
@@ -133,6 +131,8 @@ class LiteLLMCore:
             ServiceUnavailableError,
             Timeout,
         )
+
+        from llmc.rag.enrichment_backends import BackendError
 
         if isinstance(exc, RateLimitError):
             return BackendError(str(exc), failure_type="rate_limit")

@@ -1,9 +1,9 @@
 """Integration test with real DeepSeek API."""
 
-import pytest
 import os
-import sys
-from pathlib import Path
+
+import pytest
+
 from llmc.rlm.config import RLMConfig
 from llmc.rlm.session import RLMSession
 
@@ -91,7 +91,7 @@ async def test_rlm_deepseek_code_analysis():
     assert result is not None
     print(f"\nSuccess: {result.success}")
     print(f"Answer: {result.answer}")
-    print(f"\nBudget Summary:")
+    print("\nBudget Summary:")
     print(f"  Cost: ${result.budget_summary['total_cost_usd']:.4f}")
     print(f"  Root calls: {result.budget_summary['root_calls']}")
     print(f"  Sub calls: {result.budget_summary['sub_calls']}")

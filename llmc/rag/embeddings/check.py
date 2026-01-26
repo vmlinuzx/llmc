@@ -2,13 +2,12 @@
 Check embedding model availability, primarily for Ollama.
 """
 
-import json
-import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
+import json
 from pathlib import Path
-from typing import List
 from urllib.error import URLError
+import urllib.request
 
 from llmc.core import load_config
 
@@ -22,7 +21,7 @@ class EmbeddingCheckResult:
     message: str
 
 
-def check_embedding_models(repo_path: Path) -> List[EmbeddingCheckResult]:
+def check_embedding_models(repo_path: Path) -> list[EmbeddingCheckResult]:
     """
     Check all configured Ollama embedding models for availability.
 

@@ -20,10 +20,9 @@ This is a thin UX wrapper for command execution with:
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import shlex
 import subprocess
-import sys
-from pathlib import Path
 
 from rich.console import Console
 import typer
@@ -56,7 +55,7 @@ def _run_command(
         
         result = subprocess.run(
             args,
-            cwd=cwd,
+            check=False, cwd=cwd,
             capture_output=capture,
             text=True,
             timeout=timeout,

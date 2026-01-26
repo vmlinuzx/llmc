@@ -23,7 +23,8 @@ from pathlib import Path
 import subprocess
 import sys
 
-from llmc.security import normalize_path, PathSecurityError
+from llmc.security import PathSecurityError, normalize_path
+
 from .config import _find_repo_root, get_te_config
 from .handlers import handle_grep
 from .store import get_entry, list_handles, load

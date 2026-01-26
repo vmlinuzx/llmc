@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from llmc.rag.config_models import get_default_enrichment_model
 import logging
 import re
 from typing import Any, Literal
+
+from llmc.rag.config_models import get_default_enrichment_model
 
 logger = logging.getLogger(__name__)
 

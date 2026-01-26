@@ -13,8 +13,6 @@ import os
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
 try:
     from llmc_mcp.tools.cmd import run_cmd
 except ImportError:

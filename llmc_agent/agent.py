@@ -73,7 +73,7 @@ class Agent:
         """
         # Check if LiteLLM is enabled (feature flag)
         if config.litellm.enabled:
-            from llmc.backends import LiteLLMConfig, LiteLLMAgentBackend
+            from llmc.backends import LiteLLMAgentBackend, LiteLLMConfig
             
             litellm_config = LiteLLMConfig(
                 model=config.litellm.model,

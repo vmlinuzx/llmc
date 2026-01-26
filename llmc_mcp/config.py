@@ -190,17 +190,54 @@ class WorkspacesConfig:
 
 
 @dataclass
-class RLMConfig:
-    """Recursive Loop Manager settings."""
+class McpRlmConfig:
+    """RLM tool policy settings (hospital-grade security)."""
+    
+    # Feature flag
     enabled: bool = False
-    max_loops: int = 5
-    timeout: int = 300
-
+    
+    # Security profile
+    profile: str = "unrestricted"  # "restricted" | "unrestricted"
+    
+    # File access
+    allow_path: bool = True
+    allow_absolute_paths: bool = False
+    denylist_globs: list[str] = field(default_factory=lambda: [
+        "**/.env", "**/.env.*", "**/*.pem", "**/id_rsa*", 
+        "**/*credential*", "**/*token*", "**/*secret*"
+    ])
+    
+    # Size/time limits
+    default_max_bytes: int = 262144  # 256KB conservative default
+    default_timeout_s: int = 300
+    default_max_turns: int = 5
+    
+    # Egress/model controls
+    allow_model_override: bool = False
+    allowed_model_prefixes: list[str] = field(default_factory=list)
+    
     def validate(self) -> None:
-        if self.max_loops <= 0:
-            raise ValueError("max_loops must be positive")
-        if self.timeout <= 0:
-            raise ValueError("timeout must be positive")
+        if self.profile not in ("restricted", "unrestricted"):
+            raise ValueError(f"Invalid profile: {self.profile}")
+        
+        # Restricted profile validation
+        if self.profile == "restricted":
+            if self.allow_model_override:
+                raise ValueError(
+                    "Restricted profile requires allow_model_override=false"
+                )
+            if not self.allowed_model_prefixes:
+                raise ValueError(
+                    "Restricted profile requires non-empty allowed_model_prefixes "
+                    "(e.g., ['ollama_chat/'] for local-only)"
+                )
+        
+        if self.default_max_bytes <= 0:
+            raise ValueError("default_max_bytes must be positive")
+        if self.default_timeout_s <= 0:
+            raise ValueError("default_timeout_s must be positive")
+        if self.default_max_turns <= 0 or self.default_max_turns > 20:
+            raise ValueError("default_max_turns must be 1-20")
 
 
 @dataclass
@@ -225,7 +262,7 @@ class McpConfig:
     linux_ops: LinuxOpsConfig = field(default_factory=LinuxOpsConfig)
     rest_api: RestApiConfig = field(default_factory=RestApiConfig)
     workspaces: WorkspacesConfig = field(default_factory=WorkspacesConfig)
-    rlm: RLMConfig = field(default_factory=RLMConfig)
+    rlm: McpRlmConfig = field(default_factory=McpRlmConfig)
 
     def validate(self) -> None:
         if self.mode not in ("classic", "hybrid", "code_execution"):
@@ -460,11 +497,18 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.workspaces.default = workspaces.get("default", cfg.workspaces.default)
         cfg.workspaces.repos = workspaces.get("repos", cfg.workspaces.repos)
 
-        # RLM config
+        # RLM config (expanded per SDD v2)
         rlm = mcp_data.get("rlm", {})
         cfg.rlm.enabled = rlm.get("enabled", cfg.rlm.enabled)
-        cfg.rlm.max_loops = rlm.get("max_loops", cfg.rlm.max_loops)
-        cfg.rlm.timeout = rlm.get("timeout", cfg.rlm.timeout)
+        cfg.rlm.profile = rlm.get("profile", cfg.rlm.profile)
+        cfg.rlm.allow_path = rlm.get("allow_path", cfg.rlm.allow_path)
+        cfg.rlm.allow_absolute_paths = rlm.get("allow_absolute_paths", cfg.rlm.allow_absolute_paths)
+        cfg.rlm.denylist_globs = rlm.get("denylist_globs", cfg.rlm.denylist_globs)
+        cfg.rlm.default_max_bytes = rlm.get("default_max_bytes", cfg.rlm.default_max_bytes)
+        cfg.rlm.default_timeout_s = rlm.get("default_timeout_s", cfg.rlm.default_timeout_s)
+        cfg.rlm.default_max_turns = rlm.get("default_max_turns", cfg.rlm.default_max_turns)
+        cfg.rlm.allow_model_override = rlm.get("allow_model_override", cfg.rlm.allow_model_override)
+        cfg.rlm.allowed_model_prefixes = rlm.get("allowed_model_prefixes", cfg.rlm.allowed_model_prefixes)
 
     # Apply ENV overrides (highest precedence)
     cfg = _apply_env_overrides(cfg)

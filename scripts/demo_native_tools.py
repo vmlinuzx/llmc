@@ -6,9 +6,8 @@ Demonstrates the OpenAI/Anthropic/MCP-compatible tool scripts.
 Run from repo root: python3 scripts/demo_native_tools.py
 """
 import json
-import subprocess
-import sys
 from pathlib import Path
+import subprocess
 
 # Colors for terminal
 GREEN = "\033[92m"
@@ -42,7 +41,7 @@ def run_tool(script_path: str, args: dict, description: str = ""):
     try:
         result = subprocess.run(
             [str(repo_root / script_path), json.dumps(args)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             cwd=str(repo_root),
             timeout=30,

@@ -5,19 +5,13 @@ Tests the file_descriptions module which provides stable file-level
 summaries for mcgrep and LLM context.
 """
 
-import hashlib
-import sqlite3
-import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
+import sqlite3
 
 from llmc.rag.enrichment.file_descriptions import (
-    ALGO_VERSION,
     compute_input_hash,
-    generate_cheap_description,
     generate_all_file_descriptions,
+    generate_cheap_description,
     update_file_description,
 )
 

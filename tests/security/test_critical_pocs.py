@@ -36,7 +36,7 @@ def test_te_cli_no_shell_injection():
         ), "CRITICAL: TE CLI is still using shell=True for pass-through!"
 
         print(
-            f"\n[+] Security Verified: TE CLI uses shell=False, preventing injection"
+            "\n[+] Security Verified: TE CLI uses shell=False, preventing injection"
         )
 
 

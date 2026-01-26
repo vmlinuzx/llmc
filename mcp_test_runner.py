@@ -1,9 +1,10 @@
 
-import sys
 import json
-import subprocess
 import os
+import subprocess
+import sys
 import time
+
 
 def write_message(process, message):
     message_str = json.dumps(message)
