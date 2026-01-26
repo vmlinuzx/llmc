@@ -51,7 +51,7 @@ def main():
         "|---------|-------------|",
     ]
 
-    for cmd_name, module, description in CLI_COMMANDS:
+    for cmd_name, _module, description in CLI_COMMANDS:
         index_lines.append(f"| [`{cmd_name}`]({cmd_name}.md) | {description} |")
 
     index_lines.extend(["", "---", ""])

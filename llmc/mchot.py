@@ -546,7 +546,7 @@ def context(
     
     # Build results with enrichments
     results = []
-    for symbol_id, score in local_hotspots:
+    for symbol_id, _score in local_hotspots:
         metadata = _get_node_metadata(G, symbol_id)
         
         embedded_meta = metadata.get("metadata", {})

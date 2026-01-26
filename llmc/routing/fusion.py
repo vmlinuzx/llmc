@@ -117,7 +117,7 @@ def fuse_scores(
 
     # Convert back to list and sort
     final_results = []
-    for slice_id, (fused_score, res_obj) in merged_map.items():
+    for _slice_id, (fused_score, res_obj) in merged_map.items():
         final_res = res_obj.copy()
         final_res["score"] = fused_score
         final_results.append(final_res)
@@ -199,7 +199,7 @@ def z_score_fuse_scores(
 
     # Build final list
     final_results = []
-    for slice_id, (final_z, result) in merged.items():
+    for _slice_id, (final_z, result) in merged.items():
         r = result.copy()
         r["score"] = final_z
         r["_fusion_method"] = "z_score"

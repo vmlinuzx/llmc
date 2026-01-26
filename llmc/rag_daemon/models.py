@@ -87,7 +87,6 @@ class ControlEvents:
     shutdown: bool = False
 
 
-UTC = UTC
 
 
 def utc_now() -> datetime:

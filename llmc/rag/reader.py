@@ -8,7 +8,7 @@ in the LSP Graph database.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from .graph_db import GraphDatabase
 
