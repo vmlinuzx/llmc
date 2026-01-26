@@ -54,7 +54,7 @@ async def test_poc_llmc_flag_injection():
     """
     print("\n[+] Testing LLMC Backend Flag Injection...")
 
-    backend = LLMCBackend(repo_root=Path("."))
+    backend = LLMCBackend(repo_root=Path(__file__).parent.parent.parent.resolve())
 
     # Mock _check_llmc_available to force fallback search (rg)
     backend._llmc_available = False  # Force fallback to rg
@@ -65,17 +65,18 @@ async def test_poc_llmc_flag_injection():
 
         await backend._fallback_search(query, limit=5)
 
-        assert mock_run.called
+        assert mock_run.called, "subprocess.run was not called"
         call_args = mock_run.call_args[0][0]  # The command list
 
         print(f"Subprocess call: {call_args}")
 
-        # Check if query is treated as a positional arg or if it might be a flag
-        # If the command is ['rg', ..., '--help'], rg prints help instead of searching.
-        if "--" not in call_args and query in call_args:
-            print("[!] VULNERABILITY CONFIRMED: Query passed without '--' delimiter.")
-        else:
-            print("[-] Mitigation found: '--' delimiter present.")
+        # Check if query is protected by "--" delimiter
+        # The fix ensures "--" is present before user query
+        assert "--" in call_args, "VULNERABILITY: Query passed without '--' delimiter"
+        delimiter_idx = call_args.index("--")
+        query_idx = call_args.index(query)
+        assert query_idx > delimiter_idx, "Query must come after '--' delimiter"
+        print("[✓] Mitigation confirmed: '--' delimiter present before query.")
 
 
 # --- POC 3: RUTA Safe Eval Bypass (DoS) ---
