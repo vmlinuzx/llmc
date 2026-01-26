@@ -22,6 +22,7 @@ except ImportError:
     GraphContextBuilder = None
 
 try:
+    pass
 except ImportError:
     DocgenLock = None
 

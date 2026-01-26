@@ -17,6 +17,7 @@ import sqlite3
 import sys
 
 try:
+    pass
 except ImportError:
     pass
 from datetime import UTC, datetime
