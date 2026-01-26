@@ -1,0 +1,78 @@
+=== RUFF CHECK ===
+B007 Loop control variable `item` not used within loop body
+   --> llmc/mcgrep.py:210:21
+    |
+209 |     # Output in LLM-friendly format
+210 |     for file_path, (item, line_ranges) in top_files:
+    |                     ^^^^
+211 |         full_path = repo_root / file_path
+    |
+help: Rename unused `item` to `_item`
+
+invalid-syntax: Expected one or more symbol names after import
+  --> llmc/rag/cli.py:14:22
+   |
+13 | from .benchmark import run_embedding_benchmark
+14 | from .config import (
+   |                      ^
+15 | from llmc.rag.sidecar import is_sidecar_stale
+16 |     get_est_tokens_per_span,
+   |
+
+invalid-syntax: Unexpected indentation
+  --> llmc/rag/cli.py:16:1
+   |
+14 | from .config import (
+15 | from llmc.rag.sidecar import is_sidecar_stale
+16 |     get_est_tokens_per_span,
+   | ^^^^
+17 |     index_path_for_read,
+18 |     index_path_for_write,
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:20:23
+   |
+18 |     index_path_for_write,
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+   |                       ^^
+21 | )
+22 | from .database import Database
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:21:1
+   |
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+21 | )
+   | ^
+22 | from .database import Database
+23 | from .planner import generate_plan, plan_as_dict
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:21:2
+   |
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+21 | )
+   |  ^
+22 | from .database import Database
+23 | from .planner import generate_plan, plan_as_dict
+   |
+
+invalid-syntax: Expected `,`, found name
+  --> llmc/rag/cli.py:27:16
+   |
+25 | from .search import search_spans
+26 | from .workers import (
+27 |     default    get_est_tokens_per_span,
+   |                ^^^^^^^^^^^^^^^^^^^^^^^
+28 |     index_path_for_read,
+29 |     index_path_for_write,
+   |
+
+Found 7 errors.
+Exit code: 1

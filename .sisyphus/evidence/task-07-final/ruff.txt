@@ -1,0 +1,146 @@
+=== RUFF CHECK ===
+B007 Loop control variable `item` not used within loop body
+   --> llmc/mcgrep.py:210:21
+    |
+209 |     # Output in LLM-friendly format
+210 |     for file_path, (item, line_ranges) in top_files:
+    |                     ^^^^
+211 |         full_path = repo_root / file_path
+    |
+help: Rename unused `item` to `_item`
+
+invalid-syntax: Expected one or more symbol names after import
+  --> llmc/rag/cli.py:14:22
+   |
+13 | from .benchmark import run_embedding_benchmark
+14 | from .config import (
+   |                      ^
+15 | from llmc.rag.sidecar import is_sidecar_stale
+16 |     get_est_tokens_per_span,
+   |
+
+invalid-syntax: Unexpected indentation
+  --> llmc/rag/cli.py:16:1
+   |
+14 | from .config import (
+15 | from llmc.rag.sidecar import is_sidecar_stale
+16 |     get_est_tokens_per_span,
+   | ^^^^
+17 |     index_path_for_read,
+18 |     index_path_for_write,
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:20:23
+   |
+18 |     index_path_for_write,
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+   |                       ^^
+21 | )
+22 | from .database import Database
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:21:1
+   |
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+21 | )
+   | ^
+22 | from .database import Database
+23 | from .planner import generate_plan, plan_as_dict
+   |
+
+invalid-syntax: Expected a statement
+  --> llmc/rag/cli.py:21:2
+   |
+19 |     rag_dir,
+20 |     spans_export_path as resolve_spans_export_path,
+21 | )
+   |  ^
+22 | from .database import Database
+23 | from .planner import generate_plan, plan_as_dict
+   |
+
+invalid-syntax: Expected `,`, found name
+  --> llmc/rag/cli.py:27:16
+   |
+25 | from .search import search_spans
+26 | from .workers import (
+27 |     default    get_est_tokens_per_span,
+   |                ^^^^^^^^^^^^^^^^^^^^^^^
+28 |     index_path_for_read,
+29 |     index_path_for_write,
+   |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> llmc/rag/search/__init__.py:1:1
+   |
+ 1 | / from __future__ import annotations
+ 2 | |
+ 3 | | from dataclasses import asdict, dataclass, field
+ 4 | | import json
+ 5 | | from pathlib import Path
+ 6 | | import struct
+ 7 | | from typing import Any
+ 8 | | from collections.abc import Iterable
+ 9 | |
+10 | | import numpy as np
+11 | |
+12 | | from ..config import (
+13 | |     embedding_model_dim,
+14 | |     embedding_model_name,
+15 | |     get_multi_route_config,
+16 | |     index_path_for_read,
+17 | |     is_query_routing_enabled,
+18 | |     load_config,
+19 | |     resolve_route,
+20 | | )
+   | |_^
+21 |
+22 |   # Conditional import for telemetry - allows the module to work without llmc dependency
+   |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> llmc_agent/agent.py:11:1
+   |
+ 9 |   """
+10 |
+11 | / from __future__ import annotations
+12 | |
+13 | | import asyncio
+14 | | from dataclasses import dataclass, field
+15 | | import json
+16 | | from pathlib import Path
+17 | | from typing import Any
+18 | |
+19 | | from llmc_agent.backends.base import Backend, GenerateRequest
+20 | | from llmc_agent.backends.llmc import LLMCBackend, RAGResult
+21 | | from llmc_agent.backends.ollama import OllamaBackend
+22 | | from llmc_agent.backends.openai_compat import OpenAICompatBackend
+23 | |
+24 | | # LiteLLM backend import is deferred to avoid import cost when not used
+25 | | from llmc_agent.config import Config
+26 | | from llmc_agent.format import FormatNegotiator
+27 | | from llmc_agent.session import Session
+28 | | from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
+   | |_______________________________________________________________________________^
+   |
+help: Organize imports
+
+I001 Import block is un-sorted or un-formatted
+   --> tests/rlm/test_config.py:164:9
+    |
+162 |     def test_load_restrictive_fixture(self, tmp_path):
+163 |         """Load restrictive fixture and verify nested values."""
+164 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+165 |         
+166 |         # From [rlm]
+    |
+help: Organize imports
+
+Found 10 errors.
+[*] 2 fixable with the `--fix` option.

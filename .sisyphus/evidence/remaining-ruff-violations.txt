@@ -1,0 +1,94 @@
+llmc/commands/rag.py:1006:13: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/main.py:200:1: E402 Module level import not at top of file
+llmc/main.py:328:1: E402 Module level import not at top of file
+llmc/main.py:385:1: E402 Module level import not at top of file
+llmc/mcgrep.py:210:21: B007 Loop control variable `item` not used within loop body
+llmc/mchot.py:549:20: B007 Loop control variable `score` not used within loop body
+llmc/mcschema.py:132:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag/__init__.py:109:21: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag/cli.py:1643:18: F821 Undefined name `is_sidecar_stale`
+llmc/rag/eval/routing_eval.py:43:13: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag/eval/search_eval.py:29:13: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag/quality_check/__init__.py:47:16: F821 Undefined name `Literal`
+llmc/rag/reader.py:114:39: F821 Undefined name `Any`
+llmc/rag/reader.py:163:22: E701 Multiple statements on one line (colon)
+llmc/rag/reader.py:164:29: E701 Multiple statements on one line (colon)
+llmc/rag/rerank.py:173:1: E402 Module level import not at top of file
+llmc/rag/rerank.py:174:1: E402 Module level import not at top of file
+llmc/rag/rerank.py:175:1: E402 Module level import not at top of file
+llmc/rag/runner.py:104:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag/search/__init__.py:109:11: F821 Undefined name `Iterable`
+llmc/rag/utils.py:123:17: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/rag_daemon/models.py:90:1: PLW0127 Self-assignment of variable `UTC`
+llmc/rag_nav/__init__.py:2:1: F403 `from llmc.rag import *` used; unable to detect undefined names
+llmc/rlm/session.py:426:25: PLW2901 `for` loop variable `code` overwritten by assignment target
+llmc/routing/fusion.py:120:9: B007 Loop control variable `slice_id` not used within loop body
+llmc/routing/fusion.py:202:9: B007 Loop control variable `slice_id` not used within loop body
+llmc/tui/screens/dashboard.py:260:25: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc/tui/screens/service.py:304:25: PLW2901 `for` loop variable `line` overwritten by assignment target
+llmc_agent/agent.py:125:18: F821 Undefined name `Session`
+llmc_agent/agent.py:299:18: F821 Undefined name `Session`
+mcp_test_runner.py:53:13: PLW1509 `preexec_fn` argument is unsafe when using threads
+scripts/generate_cli_docs.py:54:19: B007 Loop control variable `module` not used within loop body
+scripts/maasl_stress_test.py:57:31: B023 Function definition does not bind loop variable `target_file`
+scripts/maasl_stress_test.py:64:21: B023 Function definition does not bind loop variable `target_file`
+scripts/migrate_fts5_no_stopwords.py:25:1: E402 Module level import not at top of file
+scripts/migrate_fts5_no_stopwords.py:26:1: E402 Module level import not at top of file
+scripts/rag/watch_workspace.py:33:1: E402 Module level import not at top of file
+scripts/rag/watch_workspace.py:34:1: E402 Module level import not at top of file
+scripts/verify_idle_throttling.py:17:1: E402 Module level import not at top of file
+scripts/verify_idle_throttling.py:71:12: E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+tests/agent/test_litellm_validation.py:451:18: B017 Do not assert blind exception: `Exception`
+tests/core/test_config_robustness.py:17:10: B017 Do not assert blind exception: `Exception`
+tests/mcp/rmta_runner.py:235:33: E701 Multiple statements on one line (colon)
+tests/mcp/rmta_runner.py:294:20: E701 Multiple statements on one line (colon)
+tests/mcp/rmta_runner.py:295:27: E701 Multiple statements on one line (colon)
+tests/mcp/rmta_runner.py:300:38: E701 Multiple statements on one line (colon)
+tests/rlm/test_config.py:164:9: I001 Import block is un-sorted or un-formatted
+tests/rlm/test_config.py:164:38: E702 Multiple statements on one line (semicolon)
+tests/rlm/test_config.py:164:125: E702 Multiple statements on one line (semicolon)
+tests/security/test_ruta_eval_bypass.py:15:10: B017 Do not assert blind exception: `Exception`
+tests/security/test_ruta_eval_bypass.py:21:10: B017 Do not assert blind exception: `Exception`
+tests/security/test_ruta_eval_bypass.py:28:10: B017 Do not assert blind exception: `Exception`
+tests/security/test_ruta_eval_bypass.py:36:10: B017 Do not assert blind exception: `Exception`
+tests/security/test_ruta_simpleeval.py:10:10: B017 Do not assert blind exception: `Exception`
+tests/security/test_ruta_simpleeval.py:14:10: B017 Do not assert blind exception: `Exception`
+tests/test_e2e_daemon_operation.py:29:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:129:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:218:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:298:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:390:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:472:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:551:9: PLW2901 `with` statement variable `temp_home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:617:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_e2e_daemon_operation.py:644:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_log_management_scripts.py:310:63: E741 Ambiguous variable name: `l`
+tests/test_multiple_registry_entries.py:23:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:180:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:269:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:361:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:424:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:453:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:482:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:533:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:582:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_multiple_registry_entries.py:677:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_p0_acceptance.py:61:5: E741 Ambiguous variable name: `l`
+tests/test_rag_benchmark.py:201:14: B017 Do not assert blind exception: `Exception`
+tests/test_rag_benchmark.py:445:14: B017 Do not assert blind exception: `Exception`
+tests/test_rag_daemon_complete.py:97:14: B017 Do not assert blind exception: `Exception`
+tests/test_rag_nav_comprehensive.py:324:26: F821 Undefined name `load_status`
+tests/test_repo_add_idempotency.py:20:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:74:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:134:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:193:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:232:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:281:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:337:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:386:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:421:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:470:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:505:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_repo_add_idempotency.py:551:9: PLW2901 `with` statement variable `home` overwritten by assignment target
+tests/test_resilient_rag.py:57:17: F821 Undefined name `_attach_graph_enrichment`
+Found 93 errors.
