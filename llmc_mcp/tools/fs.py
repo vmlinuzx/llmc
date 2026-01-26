@@ -140,13 +140,20 @@ def _check_symlink_escape(path: Path, allowed_roots: list[str]) -> bool:
     return not check_path_allowed(resolved, allowed_roots)
 
 
-def validate_path(path: str | Path, allowed_roots: list[str]) -> Path:
+def validate_path(
+    path: str | Path,
+    allowed_roots: list[str],
+    repo_root: Path | None = None,
+    operation: str | None = None,
+) -> Path:
     """
     Validate and normalize path for safe access.
 
     Args:
         path: Raw path from user
         allowed_roots: Allowed root directories
+        repo_root: Optional repo root for resolving relative paths (unused currently)
+        operation: Optional operation name for logging/debugging (unused currently)
 
     Returns:
         Validated, resolved Path
