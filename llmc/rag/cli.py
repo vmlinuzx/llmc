@@ -12,19 +12,7 @@ from llmc.rag.config_models import get_default_enrichment_model
 
 from .benchmark import run_embedding_benchmark
 from .config import (
-from llmc.rag.sidecar import is_sidecar_stale
     get_est_tokens_per_span,
-    index_path_for_read,
-    index_path_for_write,
-    rag_dir,
-    spans_export_path as resolve_spans_export_path,
-)
-from .database import Database
-from .planner import generate_plan, plan_as_dict
-from .schema import build_graph_for_repo as schema_build_graph_for_repo
-from .search import search_spans
-from .workers import (
-    default    get_est_tokens_per_span,
     index_path_for_read,
     index_path_for_write,
     rag_dir,
