@@ -4,7 +4,8 @@ from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 import struct
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 
 import numpy as np
 
