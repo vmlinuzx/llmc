@@ -244,7 +244,7 @@ def run_rmta_tests():
                         if "error" in data:
                             # It's a tool-level error, not a crash
                             status = "⚠️ Buggy"
-                    except:
+                    except Exception:
                         pass
 
             results["direct_tools"].append(
@@ -294,7 +294,7 @@ print(f"SUCCESS: Found {len(result.get('data', []))} entries")
                             print(
                                 f"⚠️ P1: execute_code failed: {data.get('stderr', '')[:100]}"
                             )
-                    except:
+                    except Exception:
                         results["incidents"].append(
                             {
                                 "id": "RMTA-006",
@@ -460,7 +460,7 @@ print(f"Inspect successful: {result.get('data') is not None}")
                                     "details": error[:200],
                                 }
                             )
-                    except:
+                    except Exception:
                         status = "⚠️ Buggy"
                         results["incidents"].append(
                             {

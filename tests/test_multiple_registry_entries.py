@@ -13,7 +13,6 @@ from llmc.rag_daemon.scheduler import Scheduler
 from llmc.rag_daemon.state_store import StateStore
 from llmc.rag_daemon.workers import WorkerPool
 
-
 # Calculate REPO_ROOT dynamically
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
