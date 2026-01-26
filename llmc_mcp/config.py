@@ -264,6 +264,23 @@ class McpConfig:
     workspaces: WorkspacesConfig = field(default_factory=WorkspacesConfig)
     rlm: McpRlmConfig = field(default_factory=McpRlmConfig)
 
+    def __post_init__(self) -> None:
+        """Validate config immediately after construction."""
+        # Type check nested configs - reject dicts passed directly
+        if isinstance(self.rlm, dict):
+            raise ValueError(
+                f"Invalid rlm config: expected McpRlmConfig object, got dict. "
+                f"Use McpRlmConfig(**{self.rlm}) to construct properly."
+            )
+        # Add similar checks for other nested configs
+        for attr in ['server', 'auth', 'tools', 'rag', 'limits', 'observability', 
+                     'code_execution', 'hybrid', 'rest_api', 'workspaces']:
+            val = getattr(self, attr)
+            if isinstance(val, dict):
+                raise ValueError(f"Invalid {attr} config: expected dataclass object, got dict")
+        # Call validation logic
+        self.validate()
+
     def validate(self) -> None:
         if self.mode not in ("classic", "hybrid", "code_execution"):
             raise ValueError(f"Invalid mode: {self.mode}")

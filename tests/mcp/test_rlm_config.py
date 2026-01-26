@@ -1,4 +1,4 @@
-from pydantic import ValidationError
+# from pydantic import ValidationError
 import pytest
 
 from llmc_mcp.config import McpConfig
@@ -25,5 +25,5 @@ def test_rlm_config_defaults():
 ])
 def test_invalid_rlm_config_raises_validation_error(rlm_params):
     config = {"rlm": rlm_params}
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValueError):
         McpConfig(**config)

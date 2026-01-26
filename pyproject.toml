@@ -16,7 +16,7 @@ rag = ["setuptools", "tree_sitter", "tree_sitter_languages", "click", "jsonschem
 tui = ["typer", "rich", "textual"]
 daemon = ["uvicorn", "httpx"]
 agent = ["httpx", "click", "litellm>=1.50.0,<2.0.0"]
-dev = ["pytest", "pytest-cov", "mypy", "types-toml", "types-requests", "ruff"]
+dev = ["respx", "pytest", "pytest-cov", "mypy", "types-toml", "types-requests", "ruff"]
 # Document sidecar conversion (PDF, DOCX, etc.)
 sidecar = ["pymupdf>=1.23.0"]
 sidecar-full = ["pymupdf>=1.23.0", "python-docx>=1.0.0", "python-pptx>=0.6.21", "striprtf>=0.0.26"]
