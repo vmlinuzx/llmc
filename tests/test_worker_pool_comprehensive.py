@@ -13,8 +13,6 @@ from llmc.rag_daemon.models import DaemonConfig, Job, RepoDescriptor
 from llmc.rag_daemon.state_store import StateStore
 from llmc.rag_daemon.workers import WorkerPool, make_job_id
 
-UTC = UTC
-
 
 def make_config(tmp_path: Path, max_concurrent_jobs: int = 2) -> DaemonConfig:
     """Create a test configuration."""
