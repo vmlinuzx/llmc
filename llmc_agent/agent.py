@@ -24,7 +24,7 @@ from llmc_agent.backends.openai_compat import OpenAICompatBackend
 # LiteLLM backend import is deferred to avoid import cost when not used
 from llmc_agent.config import Config
 from llmc_agent.format import FormatNegotiator
-from llmc_agent.models import Session
+from llmc_agent.session import Session
 from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
 
 
