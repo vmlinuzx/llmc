@@ -58,7 +58,7 @@ class CodeFileHandler(FileSystemEventHandler):
                 rel = file_path.relative_to(WORKSPACE_ROOT)
                 if not str(rel).startswith(self.project_filter):
                     return False
-            except:
+            except Exception:
                 return False
 
         # Debounce

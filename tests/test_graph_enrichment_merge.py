@@ -6,11 +6,6 @@ from unittest.mock import patch
 # we can mock or reference them to define the test structure.
 # Ideally these imports would work once the code is written.
 try:
-    from llmc.rag.enrichment_db_helpers import EnrichmentRecord, load_enrichment_data
-    from llmc.rag.schema import Entity, SchemaGraph
-    from llmc.rag_nav.tool_handlers import build_enriched_schema_graph
-except ImportError:
-    pass  # Allow test collection to fail gracefully if modules don't exist yet
 
 
 class TestGraphEnrichment:

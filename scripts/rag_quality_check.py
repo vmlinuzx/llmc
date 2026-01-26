@@ -17,7 +17,6 @@ import sqlite3
 import sys
 
 try:
-    import _setup_path
 except ImportError:
     pass
 from datetime import UTC, datetime

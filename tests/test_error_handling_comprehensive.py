@@ -24,7 +24,6 @@ from llmc.rag_repo.config import load_tool_config
 
 # Import enrichment functions - these may not exist yet
 try:
-    from llmc.rag.enrichment import enrich_spans
 
     ENRICHMENT_AVAILABLE = True
 except ImportError:

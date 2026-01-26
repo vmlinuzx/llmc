@@ -7,7 +7,6 @@ sys.path.append("/home/vmlinux/src/llmc")
 
 try:
     from textual.app import App
-    from textual.widgets import Static
 
     from llmc.tui.screens.analytics import AnalyticsScreen
 except ImportError as e:

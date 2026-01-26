@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass, field
 import json
-import math
 from pathlib import Path
 import struct
 from typing import Any

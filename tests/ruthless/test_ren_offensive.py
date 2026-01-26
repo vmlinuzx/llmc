@@ -22,7 +22,6 @@ except ImportError:
     GraphContextBuilder = None
 
 try:
-    from llmc.docgen.locks import DocgenLock, LockError
 except ImportError:
     DocgenLock = None
 

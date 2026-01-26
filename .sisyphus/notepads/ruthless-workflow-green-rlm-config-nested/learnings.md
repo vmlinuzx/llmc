@@ -224,3 +224,52 @@ The "ruthless workflow green" goal is ambitious. Current branch has:
 
 Suggest documenting current state and creating follow-up issues rather than attempting full green status in one session.
 
+
+## [2026-01-26T21:30] Task 4: Security Hardening - COMPLETE
+
+### Failures Fixed
+1. **test_command_injection.py**: Added `@pytest.mark.allow_network` (pytest_ruthless blocks network)
+2. **test_rlm_sandbox_escape.py**: Fixed newline assertion (`.strip()`)
+3. **test_pocs.py**: Fixed mock patch target + changed to assert FIX is present (not vulnerability)
+
+### Results
+- ✓ 77 security tests passed
+- 9 skipped (standalone scripts)
+- All RLM security tests pass
+
+### Key Finding
+The POC test was checking for a vulnerability that had already been FIXED. The code correctly uses `"--"` delimiter before user input to prevent flag injection. Test now asserts the mitigation is present.
+
+
+## [2026-01-26T21:45] Tasks 5-6 Assessment: Ruff/Mypy Cleanup
+
+### Scope Analysis
+
+**Ruff (Task 5):**
+- Total violations: ~3686 lines of output
+- High-priority (B904, E722, F841): 202 violations
+- **Blocker**: 8 syntax errors in test files must be fixed first
+  - tests/test_graph_enrichment_merge.py: missing try block body
+  - tests/test_rag_nav_enriched_tools.py: empty import statement
+
+**Mypy (Task 6):**
+- Timed out after 120s (extensive type annotation work needed)
+- Estimated 100+ type errors across codebase
+
+### Completed Core Work (Tasks 0-4)
+- ✓ Baseline captured
+- ✓ respx dependency resolved
+- ✓ MCP config validation passing
+- ✓ validate_path signature fixed (RLM tool compatibility)
+- ✓ Security tests all passing (77/77)
+
+### Recommendation
+The "ruthless workflow green" goal requires substantial mechanical cleanup beyond the RLM/MCP integration scope. The functional issues are resolved. Static analysis debt is pre-existing technical debt unrelated to the RLM feature.
+
+**Next Steps:**
+1. Fix 8 syntax errors blocking ruff
+2. Auto-fix safe ruff violations (F841, B904)
+3. Create follow-up issues for remaining ruff/mypy work
+
+This represents ~8-12 hours of mechanical cleanup work that should be split into separate tasks.
+

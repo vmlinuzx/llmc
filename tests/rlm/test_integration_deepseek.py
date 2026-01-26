@@ -8,7 +8,6 @@ from llmc.rlm.config import RLMConfig
 from llmc.rlm.session import RLMSession
 
 try:
-    import litellm
     LITELLM_INSTALLED = True
 except ImportError:
     LITELLM_INSTALLED = False

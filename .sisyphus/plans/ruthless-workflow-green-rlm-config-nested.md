@@ -217,9 +217,9 @@ High-level dependency chain:
 - `tests/security/README.md` - intended structure: POCs vs regression tests
 
 **Acceptance Criteria**:
-- [ ] `python3 -m pytest tests/security/ -v` → PASS
-- [ ] A default-config RLM session cannot import `os` / execute host commands in “normal” mode
-- [ ] A default-config RLM session cannot read `/etc/passwd` by passing a `Path`
+- [x] `python3 -m pytest tests/security/ -v` → PASS
+- [x] A default-config RLM session cannot import `os` / execute host commands in “normal” mode
+- [x] A default-config RLM session cannot read `/etc/passwd` by passing a `Path`
 
 ---
 

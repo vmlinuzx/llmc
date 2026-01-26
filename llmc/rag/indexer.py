@@ -42,7 +42,6 @@ except ImportError:
 # Import document sidecar system (for PDF/DOCX conversion)
 try:
     from .sidecar import (
-        SidecarConverter,
         get_converter as get_doc_sidecar_converter,
         get_sidecar_path,
         is_sidecar_eligible,

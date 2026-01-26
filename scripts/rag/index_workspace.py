@@ -163,7 +163,7 @@ class WorkspaceIndexer:
         try:
             self.collection = self.client.get_collection(COLLECTION_NAME)
             print(f"✅ Loaded existing collection: {COLLECTION_NAME}")
-        except:
+        except Exception:
             self.collection = self.client.create_collection(
                 name=COLLECTION_NAME,
                 metadata={"description": "Workspace code embeddings"},
@@ -204,7 +204,7 @@ class WorkspaceIndexer:
         try:
             if file_path.stat().st_size > 1_000_000:  # 1MB
                 return False
-        except:
+        except Exception:
             return False
 
         return True
@@ -214,7 +214,7 @@ class WorkspaceIndexer:
         try:
             relative = file_path.relative_to(self.workspace_root)
             return str(relative.parts[0]) if relative.parts else "unknown"
-        except:
+        except Exception:
             return "unknown"
 
     def get_git_info(self, file_path: Path) -> dict | None:
@@ -231,7 +231,7 @@ class WorkspaceIndexer:
                     last_commit.committed_date
                 ).isoformat(),
             }
-        except:
+        except Exception:
             return None
 
     def chunk_text(self, text: str, file_path: str) -> list[tuple[str, dict]]:
@@ -252,7 +252,7 @@ class WorkspaceIndexer:
             with open(file_path, "rb") as f:
                 hasher.update(f.read())
             return hasher.hexdigest()
-        except:
+        except Exception:
             return ""
 
     def index_file(self, file_path: Path) -> int:
@@ -348,7 +348,7 @@ class WorkspaceIndexer:
                     rel = root_path.relative_to(self.workspace_root)
                     if not str(rel).startswith(project_filter):
                         continue
-                except:
+                except Exception:
                     continue
 
             for file in files:

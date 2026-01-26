@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import sys
-from typing import Optional
 
 # Add repo root to sys.path to enable llmc imports even when not installed
 # This fixes ModuleNotFoundError when running RAG tools from arbitrary directories

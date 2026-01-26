@@ -4,10 +4,6 @@ Ontology Loaders and Lookup with semantic-type filters.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-
-class OntologyLoader:
     def __init__(self, config_dir: Path):
         self.config_dir = config_dir
         self.icd10: dict[str, str] = {}

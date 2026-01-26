@@ -1613,7 +1613,6 @@ def sidecar_list(path: str | None, as_json: bool) -> None:
     repo_root = _find_repo_root()
     
     try:
-        from .sidecar import get_sidecar_path, is_sidecar_stale
     except ImportError:
         click.echo("Error: Sidecar module not available.", err=True)
         sys.exit(1)

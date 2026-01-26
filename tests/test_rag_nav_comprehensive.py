@@ -315,8 +315,6 @@ def complex_usage():
 
         try:
             try:
-                from llmc.rag_nav.metadata import IndexStatus, load_status, save_status
-
                 # Create corrupt file
                 status_file = test_repo / ".llmc" / "rag_index_status.json"
                 status_file.parent.mkdir(parents=True, exist_ok=True)
@@ -493,7 +491,6 @@ def complex_usage():
             else:
                 # Check if module exists
                 try:
-                    import llmc.rag_nav.cli
 
                     self.add_result(
                         "graph_cli_help",

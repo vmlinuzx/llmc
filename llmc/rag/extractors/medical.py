@@ -10,8 +10,6 @@ from .medical_segmenter import segment_note
 
 # Try to import heavy NLP libs, fall back to stubs
 try:
-    from medspacy.context import ConTextComponent
-    import scispacy
     import spacy
 
     NLP_AVAILABLE = True

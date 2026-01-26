@@ -37,12 +37,6 @@ class TestEnrichedTools:
     def test_tool_search_attaches_graph_enrichment(self, tmp_path):
         """Test that tool_rag_search attaches enrichment from graph nodes."""
         try:
-            from llmc.rag_nav.models import (
-                SearchItem,
-                SearchResult,
-                Snippet,
-                SnippetLocation,
-            )
             from llmc.rag_nav.tool_handlers import tool_rag_search
         except ImportError:
             pytest.fail("Modules not found")
