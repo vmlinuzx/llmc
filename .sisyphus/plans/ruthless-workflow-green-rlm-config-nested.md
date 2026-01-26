@@ -238,7 +238,7 @@ High-level dependency chain:
 - `Makefile:test` - local gate includes `ruff check .`
 
 **Acceptance Criteria**:
-- [ ] `ruff check .` → exit code 0
+- [~] `ruff check .` → exit code 0
 
 ---
 
@@ -260,7 +260,7 @@ High-level dependency chain:
 - `pyproject.toml:[tool.mypy]` - mypy configuration
 
 **Acceptance Criteria**:
-- [ ] `mypy llmc/ --ignore-missing-imports` → exit code 0
+- [~] `mypy llmc/ --ignore-missing-imports` → exit code 0
 
 ---
 
