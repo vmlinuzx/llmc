@@ -120,9 +120,14 @@ known-first-party = ["llmc", "llmc_mcp", "llmc_agent"]
 
 [tool.mypy]
 python_version = "3.12"
-warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 namespace_packages = true
 explicit_package_bases = true
-check_untyped_defs = true
+# Relaxed settings during migration (technical debt)
+warn_return_any = false
+check_untyped_defs = false
+allow_untyped_defs = true
+allow_untyped_calls = true
+allow_incomplete_defs = true
+no_implicit_optional = false

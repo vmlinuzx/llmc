@@ -1,0 +1,52 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0
+rootdir: /home/vmlinux/src/llmc
+configfile: pyproject.toml
+plugins: Faker-39.0.0, langsmith-0.4.46, anyio-4.12.0, respx-0.22.0, timeout-2.4.0, asyncio-1.3.0, requests-mock-1.12.1, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 143 items
+
+tests/security/VULN-001/test_vuln_001.py s                               [  0%]
+tests/security/test_audit_20251212.py ...                                [  2%]
+tests/security/test_code_exec_breakout.py ....                           [  5%]
+tests/security/test_code_exec_vulnerability.py .....                     [  9%]
+tests/security/test_command_injection.py .                               [  9%]
+tests/security/test_critical_pocs.py ..                                  [ 11%]
+tests/security/test_fs_traversal.py ....                                 [ 13%]
+tests/security/test_mcp_shell.py s                                       [ 14%]
+tests/security/test_path_traversal.py ........                           [ 20%]
+tests/security/test_pocs.py ...                                          [ 22%]
+tests/security/test_rag_security.py ....                                 [ 25%]
+tests/security/test_rlm_budget_bypass_poc.py .                           [ 25%]
+tests/security/test_rlm_sandbox_escape.py .                              [ 26%]
+tests/security/test_rlm_sandbox_escape_poc.py ..                         [ 27%]
+tests/security/test_rlm_traversal_poc.py ..                              [ 29%]
+tests/security/test_run_cmd_bypass.py ssss                               [ 32%]
+tests/security/test_ruta_bypass.py ss                                    [ 33%]
+tests/security/test_ruta_eval_bypass.py .....                            [ 37%]
+tests/security/test_ruta_simpleeval.py ...                               [ 39%]
+tests/security/test_security.py ....                                     [ 41%]
+tests/security/test_security_normalization.py ........                   [ 47%]
+tests/security/test_security_normalize_path.py ........                  [ 53%]
+tests/security/test_te_cli_traversal.py .                                [ 53%]
+tests/security/test_te_injection.py s                                    [ 54%]
+tests/security/test_te_repo_security.py .                                [ 55%]
+tests/security/test_te_security.py ..                                    [ 56%]
+tests/security/test_tool_security.py .....                               [ 60%]
+tests/mcp/test_rlm_config.py .....                                       [ 63%]
+tests/mcp/test_tool_rlm.py .........                                     [ 69%]
+tests/rlm/test_budget.py .....                                           [ 73%]
+tests/rlm/test_callback_intercept.py ..                                  [ 74%]
+tests/rlm/test_config.py .............                                   [ 83%]
+tests/rlm/test_integration_deepseek.py ..                                [ 85%]
+tests/rlm/test_intercept.py .........                                    [ 91%]
+tests/rlm/test_nav.py ......                                             [ 95%]
+tests/rlm/test_sandbox.py ......                                         [100%]
+
+=========================== short test summary info ============================
+SKIPPED [1] tests/security/VULN-001/test_vuln_001.py: Standalone test script - run directly with python
+SKIPPED [1] tests/security/test_mcp_shell.py: Standalone test script - run directly with python
+SKIPPED [4] tests/security/test_run_cmd_bypass.py: Standalone test script - run directly with python
+SKIPPED [2] tests/security/test_ruta_bypass.py: Standalone test script - run directly with python
+SKIPPED [1] tests/security/test_te_injection.py: Standalone test script - run directly with python
+======================= 134 passed, 9 skipped in 42.54s ========================
