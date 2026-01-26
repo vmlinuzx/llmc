@@ -1,0 +1,1170 @@
+=== RUFF CHECK (Final) ===
+PLW0603 Using the global statement to update `_litellm_imported` is discouraged
+  --> llmc/backends/litellm_core.py:26:12
+   |
+24 | def _ensure_litellm() -> None:
+25 |     """Lazy import litellm and configure it."""
+26 |     global _litellm_imported
+   |            ^^^^^^^^^^^^^^^^^
+27 |     if not _litellm_imported:
+28 |         import litellm
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/config.py:52:25
+   |
+50 |   @app.command("edit")
+51 |   def edit(
+52 |       config_path: Path = typer.Option(
+   |  _________________________^
+53 | |         None,
+54 | |         "--config-path",
+55 | |         "-c",
+56 | |         help="Path to llmc.toml (default: auto-detect from repo root)",
+57 | |     )
+   | |_____^
+58 |   ) -> None:
+59 |       """
+   |
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:35:25
+   |
+34 |   def compare_models(
+35 |       repo: Path | None = typer.Argument(
+   |  _________________________^
+36 | |         None, help="Repository path (default: current directory)"
+37 | |     ),
+   | |_____^
+38 |       baseline: Path | None = typer.Option(
+39 |           None, "--baseline", "-b", help="Baseline database to compare against"
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/model_compare.py:38:29
+   |
+36 |           None, help="Repository path (default: current directory)"
+37 |       ),
+38 |       baseline: Path | None = typer.Option(
+   |  _____________________________^
+39 | |         None, "--baseline", "-b", help="Baseline database to compare against"
+40 | |     ),
+   | |_____^
+41 |       model_a: str | None = typer.Option(
+42 |           None,
+   |
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/commands/model_compare.py:277:25
+    |
+276 |   def metrics(
+277 |       repo: Path | None = typer.Argument(
+    |  _________________________^
+278 | |         None, help="Repository path (default: current directory)"
+279 | |     ),
+    | |_____^
+280 |       model: str | None = typer.Option(None, "--model", "-m", help="Filter by model"),
+281 |       json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+    --> llmc/commands/rag.py:1006:13
+     |
+1004 |     with open(ledger_path) as f:
+1005 |         for i, line in enumerate(f, 1):
+1006 |             line = line.strip()
+     |             ^^^^
+1007 |             if not line:
+1008 |                 continue
+     |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:21:18
+   |
+19 | def query(
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/rlm.py:22:21
+   |
+20 |     task: str = typer.Argument(..., help="Analysis task/question"),
+21 |     file: Path = typer.Option(None, "--file", "-f", help="Source file to analyze"),
+22 |     context: Path = typer.Option(None, "--context", "-c", help="Raw context file"),
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+23 |     model: str = typer.Option(None, "--model", help="Override root model (e.g., deepseek/deepseek-reasoner)"),
+24 |     budget: float = typer.Option(None, "--budget", help="Override budget limit (USD)"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/commands/run.py:104:27
+    |
+102 |   @app.command("skeleton")
+103 |   def skeleton_cmd(
+104 |       output: Path | None = typer.Option(
+    |  ___________________________^
+105 | |         None, "-o", "--output", help="Output file path (default: stdout)."
+106 | |     ),
+    | |_____^
+107 |       limit: int = typer.Option(
+108 |           500, "-n", "--limit", show_default=True, help="Maximum files to include."
+    |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/test_mcp.py:13:24
+   |
+11 | def test_mcp(
+12 |     mode: str = typer.Option("quick", help="Test mode: quick, standard, ruthless"),
+13 |     tools: list[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
+   |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 |     output: Path = typer.Option(None, "--output", "-o", help="Output report path"),
+15 |     fail_fast: bool = typer.Option(False, "--fail-fast", "-x", help="Stop on first failure"),
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+  --> llmc/commands/test_mcp.py:14:20
+   |
+12 |     mode: str = typer.Option("quick", help="Test mode: quick, standard, ruthless"),
+13 |     tools: list[str] = typer.Option(None, "--tools", "-t", help="Specific tools to test"),
+14 |     output: Path = typer.Option(None, "--output", "-o", help="Output report path"),
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+15 |     fail_fast: bool = typer.Option(False, "--fail-fast", "-x", help="Stop on first failure"),
+16 | ):
+   |
+
+E402 Module level import not at top of file
+   --> llmc/main.py:200:1
+    |
+199 | # Model comparison and performance metrics
+200 | from llmc.commands.model_compare import compare_models, metrics as model_metrics
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+201 |
+202 | analytics_app.command(name="compare-models")(compare_models)
+    |
+
+E402 Module level import not at top of file
+   --> llmc/main.py:328:1
+    |
+327 | # Docgen commands
+328 | from llmc.commands import docs as docs_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+329 |
+330 | docs_app.command(name="generate")(docs_commands.generate)
+    |
+
+E402 Module level import not at top of file
+   --> llmc/main.py:385:1
+    |
+383 | # RLM - Recursive Language Model
+384 | # ============================================================================
+385 | from llmc.commands import rlm as rlm_commands
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+386 |
+387 | app.add_typer(rlm_commands.app, name="rlm")
+    |
+
+B007 Loop control variable `item` not used within loop body
+   --> llmc/mcgrep.py:210:21
+    |
+209 |     # Output in LLM-friendly format
+210 |     for file_path, (item, line_ranges) in top_files:
+    |                     ^^^^
+211 |         full_path = repo_root / file_path
+    |
+help: Rename unused `item` to `_item`
+
+B008 Do not perform function call `typer.Argument` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> llmc/mcgrep.py:574:24
+    |
+572 | @app.command()
+573 | def search(
+574 |     query: list[str] = typer.Argument(..., help="Search query (natural language)"),
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+575 |     limit: int = typer.Option(100, "-n", "-m", "--limit", help="Max spans to fetch (default: 100). Top 10 files shown in compact view…
+576 |     path: str = typer.Option(None, "-p", "--path", help="Filter to path"),
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/mcschema.py:132:17
+    |
+130 |             seen = set()
+131 |             for line in proc.stdout.strip().split("\n"):
+132 |                 line = line.strip()
+    |                 ^^^^
+133 |                 if line and line.endswith(".py") and line not in seen:
+134 |                     seen.add(line)
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/__init__.py:109:21
+    |
+107 |                 # Look for class inheritance patterns
+108 |                 for line in content.split("\n"):
+109 |                     line = line.strip()
+    |                     ^^^^
+110 |                     if line.startswith("class ") and "(" in line:
+111 |                         # Extract base class
+    |
+
+F821 Undefined name `is_sidecar_stale`
+    --> llmc/rag/cli.py:1643:18
+     |
+1641 |             if not source_path.exists():
+1642 |                 status = "orphan"
+1643 |             elif is_sidecar_stale(Path(source_rel), repo_root):
+     |                  ^^^^^^^^^^^^^^^^
+1644 |                 status = "stale"
+1645 |             else:
+     |
+
+PLW0603 Using the global statement to update `SentenceTransformer` is discouraged
+   --> llmc/rag/embedding_providers.py:141:16
+    |
+139 |         trust_remote_code: bool = False,
+140 |     ) -> None:
+141 |         global SentenceTransformer
+    |                ^^^^^^^^^^^^^^^^^^^
+142 |         if SentenceTransformer is None:
+143 |             try:
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+  --> llmc/rag/eval/routing_eval.py:43:13
+   |
+41 |     with open(dataset_path) as f:
+42 |         for line in f:
+43 |             line = line.strip()
+   |             ^^^^
+44 |             if not line:
+45 |                 continue
+   |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+  --> llmc/rag/eval/search_eval.py:29:13
+   |
+27 |     with path.open("r", encoding="utf-8") as handle:
+28 |         for line in handle:
+29 |             line = line.strip()
+   |             ^^^^
+30 |             if not line:
+31 |                 continue
+   |
+
+PLW0603 Using the global statement to update `_loader` is discouraged
+   --> llmc/rag/ontologies/__init__.py:165:12
+    |
+164 | def get_ontology_loader(repo_root: Path) -> OntologyLoader:
+165 |     global _loader
+    |            ^^^^^^^
+166 |     if _loader is None:
+167 |         _loader = OntologyLoader(repo_root / "config/ontologies")
+    |
+
+E701 Multiple statements on one line (colon)
+   --> llmc/rag/reader.py:163:22
+    |
+161 |     # Slice: start_line-1 to end_line
+162 |     # Safety checks
+163 |     if start_line < 1: start_line = 1
+    |                      ^
+164 |     if end_line > len(lines): end_line = len(lines)
+    |
+
+E701 Multiple statements on one line (colon)
+   --> llmc/rag/reader.py:164:29
+    |
+162 |     # Safety checks
+163 |     if start_line < 1: start_line = 1
+164 |     if end_line > len(lines): end_line = len(lines)
+    |                             ^
+165 |     
+166 |     snippet = "\n".join(lines[start_line-1 : end_line])
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:173:1
+    |
+171 | # =============================================================================
+172 |
+173 | import json
+    | ^^^^^^^^^^^
+174 | import logging
+175 | from typing import Protocol
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:174:1
+    |
+173 | import json
+174 | import logging
+    | ^^^^^^^^^^^^^^
+175 | from typing import Protocol
+    |
+
+E402 Module level import not at top of file
+   --> llmc/rag/rerank.py:175:1
+    |
+173 | import json
+174 | import logging
+175 | from typing import Protocol
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+176 |
+177 | logger = logging.getLogger(__name__)
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/runner.py:104:17
+    |
+102 |                 encoding="utf-8", errors="ignore"
+103 |             ).splitlines():
+104 |                 line = line.strip()
+    |                 ^^^^
+105 |                 if not line or line.startswith("#"):
+106 |                     continue
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> llmc/rag/search/__init__.py:1:1
+   |
+ 1 | / from __future__ import annotations
+ 2 | |
+ 3 | | from dataclasses import asdict, dataclass, field
+ 4 | | import json
+ 5 | | from pathlib import Path
+ 6 | | import struct
+ 7 | | from typing import Any
+ 8 | | from collections.abc import Iterable
+ 9 | |
+10 | | import numpy as np
+11 | |
+12 | | from ..config import (
+13 | |     embedding_model_dim,
+14 | |     embedding_model_name,
+15 | |     get_multi_route_config,
+16 | |     index_path_for_read,
+17 | |     is_query_routing_enabled,
+18 | |     load_config,
+19 | |     resolve_route,
+20 | | )
+   | |_^
+21 |
+22 |   # Conditional import for telemetry - allows the module to work without llmc dependency
+   |
+help: Organize imports
+
+PLW0603 Using the global statement to update `_default_converter` is discouraged
+   --> llmc/rag/sidecar.py:374:12
+    |
+372 | def get_converter() -> SidecarConverter:
+373 |     """Get the default sidecar converter instance."""
+374 |     global _default_converter
+    |            ^^^^^^^^^^^^^^^^^^
+375 |     if _default_converter is None:
+376 |         _default_converter = SidecarConverter()
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/rag/utils.py:123:17
+    |
+121 |         try:
+122 |             for line in cfg.read_text(encoding="utf-8", errors="ignore").splitlines():
+123 |                 line = line.strip()
+    |                 ^^^^
+124 |                 if not line or line.startswith("#"):
+125 |                     continue
+    |
+
+F403 `from llmc.rag import *` used; unable to detect undefined names
+ --> llmc/rag_nav/__init__.py:2:1
+  |
+1 | # Compatibility shim for tests - redirects to tools.rag
+2 | from llmc.rag import *
+  | ^^^^^^^^^^^^^^^^^^^^^^
+  |
+
+PLW2901 `for` loop variable `code` overwritten by assignment target
+   --> llmc/rlm/session.py:426:25
+    |
+424 |                 if sites:
+425 |                     try:
+426 |                         code = rewrite_ast(code, sites, injections)
+    |                         ^^^^
+427 |                     except Exception as e:
+428 |                         exec_results.append({
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/tui/screens/dashboard.py:260:25
+    |
+258 |                 try:
+259 |                     for line in self._log_proc.stdout:
+260 |                         line = line.rstrip()
+    |                         ^^^^
+261 |                         if line:
+262 |                             self.logs.append(line)
+    |
+
+PLW2901 `for` loop variable `line` overwritten by assignment target
+   --> llmc/tui/screens/service.py:304:25
+    |
+302 |                 try:
+303 |                     for line in self._log_proc.stdout:
+304 |                         line = line.rstrip()
+    |                         ^^^^
+305 |                         if line:
+306 |                             self.logs.append(line)
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> llmc_agent/agent.py:11:1
+   |
+ 9 |   """
+10 |
+11 | / from __future__ import annotations
+12 | |
+13 | | import asyncio
+14 | | from dataclasses import dataclass, field
+15 | | import json
+16 | | from pathlib import Path
+17 | | from typing import Any
+18 | |
+19 | | from llmc_agent.backends.base import Backend, GenerateRequest
+20 | | from llmc_agent.backends.llmc import LLMCBackend, RAGResult
+21 | | from llmc_agent.backends.ollama import OllamaBackend
+22 | | from llmc_agent.backends.openai_compat import OpenAICompatBackend
+23 | |
+24 | | # LiteLLM backend import is deferred to avoid import cost when not used
+25 | | from llmc_agent.config import Config
+26 | | from llmc_agent.format import FormatNegotiator
+27 | | from llmc_agent.session import Session
+28 | | from llmc_agent.prompt import assemble_prompt, count_tokens, load_system_prompt
+   | |_______________________________________________________________________________^
+   |
+help: Organize imports
+
+PLW0603 Using the global statement to update `_lock_manager` is discouraged
+   --> llmc_mcp/locks.py:388:12
+    |
+386 | def get_lock_manager() -> LockManager:
+387 |     """Get or create global lock manager."""
+388 |     global _lock_manager
+    |            ^^^^^^^^^^^^^
+389 |     if _lock_manager is None:
+390 |         _lock_manager = LockManager()
+    |
+
+PLW0603 Using the global statement to update `_maasl` is discouraged
+   --> llmc_mcp/maasl.py:515:12
+    |
+513 | def get_maasl(config: dict | None = None) -> MAASL:
+514 |     """Get or create global MAASL instance."""
+515 |     global _maasl
+    |            ^^^^^^
+516 |     if _maasl is None:
+517 |         policy = PolicyRegistry(config=config)
+    |
+
+PLW0603 Using the global statement to update `_maasl` is discouraged
+   --> llmc_mcp/maasl.py:524:12
+    |
+522 | def configure_maasl(config: dict):
+523 |     """Configure global MAASL instance."""
+524 |     global _maasl
+    |            ^^^^^^
+525 |     policy = PolicyRegistry(config=config)
+526 |     _maasl = MAASL(policy_registry=policy)
+    |
+
+PLW0603 Using the global statement to update `_telemetry_sink` is discouraged
+   --> llmc_mcp/telemetry.py:263:12
+    |
+261 | def get_telemetry_sink() -> TelemetrySink:
+262 |     """Get or create global telemetry sink."""
+263 |     global _telemetry_sink
+    |            ^^^^^^^^^^^^^^^
+264 |     if _telemetry_sink is None:
+265 |         _telemetry_sink = TelemetrySink()
+    |
+
+PLW0603 Using the global statement to update `_telemetry_sink` is discouraged
+   --> llmc_mcp/telemetry.py:271:12
+    |
+269 | def configure_telemetry(enabled: bool = True):
+270 |     """Configure global telemetry sink."""
+271 |     global _telemetry_sink
+    |            ^^^^^^^^^^^^^^^
+272 |     _telemetry_sink = TelemetrySink(enabled=enabled)
+    |
+
+PLW1509 `preexec_fn` argument is unsafe when using threads
+  --> mcp_test_runner.py:53:13
+   |
+51 |             text=True,
+52 |             bufsize=1,
+53 |             preexec_fn=os.setsid,
+   |             ^^^^^^^^^^^^^^^^^^^^
+54 |             env=env
+55 |         )
+   |
+
+B008 Do not perform function call `typer.Option` in argument defaults; instead, perform the call within the function, or read the default from a module-level singleton variable
+   --> scripts/benchmark_rlm_vs_rag.py:495:20
+    |
+493 |     task_set: str = typer.Option("basic", help="Task set: basic, advanced, hallucination, all"),
+494 |     model: str = typer.Option("gpt-4", help="LLM model to use"),
+495 |     output: Path = typer.Option(None, help="Save results to JSON file"),
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+496 |     skip_rag: bool = typer.Option(False, help="Skip traditional RAG (RLM only)"),
+497 |     skip_rlm: bool = typer.Option(False, help="Skip RLM (RAG only)"),
+    |
+
+B023 Function definition does not bind loop variable `target_file`
+  --> scripts/maasl_stress_test.py:57:31
+   |
+55 |                 # Simulate file edit with MAASL protection
+56 |                 def edit_file():
+57 |                     content = target_file.read_text()
+   |                               ^^^^^^^^^^^
+58 |                     lines = content.split("\n")
+59 |                     # Increment value
+   |
+
+B023 Function definition does not bind loop variable `target_file`
+  --> scripts/maasl_stress_test.py:64:21
+   |
+62 |                             current = int(line.split("=")[1].strip())
+63 |                             lines[i] = f"value = {current + 1}"
+64 |                     target_file.write_text("\n".join(lines))
+   |                     ^^^^^^^^^^^
+65 |                     return True
+   |
+
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:25:1
+   |
+23 | sys.path.insert(0, str(REPO_ROOT))
+24 |
+25 | from llmc.rag.config import index_path_for_read
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+26 | from llmc.rag.database import Database
+   |
+
+E402 Module level import not at top of file
+  --> scripts/migrate_fts5_no_stopwords.py:26:1
+   |
+25 | from llmc.rag.config import index_path_for_read
+26 | from llmc.rag.database import Database
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E402 Module level import not at top of file
+  --> scripts/rag/watch_workspace.py:33:1
+   |
+31 |     ".llmc",
+32 | }
+33 | from watchdog.events import FileSystemEventHandler
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+34 | from watchdog.observers import Observer
+   |
+
+E402 Module level import not at top of file
+  --> scripts/rag/watch_workspace.py:34:1
+   |
+32 | }
+33 | from watchdog.events import FileSystemEventHandler
+34 | from watchdog.observers import Observer
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E402 Module level import not at top of file
+  --> scripts/verify_idle_throttling.py:17:1
+   |
+15 | sys.path.insert(0, str(repo_root))
+16 |
+17 | from llmc.rag.service import FailureTracker, RAGService, ServiceState
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+
+E721 Use `is` and `is not` for type comparisons, or `isinstance()` for isinstance checks
+  --> scripts/verify_idle_throttling.py:71:12
+   |
+69 |         return_annotation = sig.return_annotation
+70 |         print(f"   Return type: {return_annotation}")
+71 |         if return_annotation == bool:
+   |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+72 |             print("   ✓ Correct return type annotation")
+73 |         else:
+   |
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/agent/test_litellm_validation.py:451:18
+    |
+449 |             mock.side_effect = Exception("API Error")
+450 |             
+451 |             with pytest.raises(Exception):
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^
+452 |                 adapter.generate("test", item={})
+    |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/core/test_config_robustness.py:17:10
+   |
+15 |     # Execution & Assertion
+16 |     # This assertion is expected to FAIL currently, exposing the gap.
+17 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+18 |         load_config(tmp_path)
+   |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:235:33
+    |
+233 |         for tool in self.tools:
+234 |             name = tool["name"]
+235 |             if name == "00_INIT": continue # Already tested
+    |                                 ^
+236 |
+237 |             print(f"Testing {name}...", end=" ", flush=True)
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:294:20
+    |
+293 |     def _is_success(self, resp):
+294 |         if not resp: return False
+    |                    ^
+295 |         if "error" in resp: return False
+296 |         if "result" in resp:
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:295:27
+    |
+293 |     def _is_success(self, resp):
+294 |         if not resp: return False
+295 |         if "error" in resp: return False
+    |                           ^
+296 |         if "result" in resp:
+297 |             content = resp["result"].get("content", [])
+    |
+
+E701 Multiple statements on one line (colon)
+   --> tests/mcp/rmta_runner.py:300:38
+    |
+298 |             if content:
+299 |                 text = content[0].get("text", "")
+300 |                 if '"error":' in text: return False
+    |                                      ^
+301 |         return True
+    |
+
+I001 Import block is un-sorted or un-formatted
+   --> tests/rlm/test_config.py:164:9
+    |
+162 |     def test_load_restrictive_fixture(self, tmp_path):
+163 |         """Load restrictive fixture and verify nested values."""
+164 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+165 |         
+166 |         # From [rlm]
+    |
+help: Organize imports
+
+E702 Multiple statements on one line (semicolon)
+   --> tests/rlm/test_config.py:164:38
+    |
+162 |     def test_load_restrictive_fixture(self, tmp_path):
+163 |         """Load restrictive fixture and verify nested values."""
+164 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |                                      ^
+165 |         
+166 |         # From [rlm]
+    |
+
+E702 Multiple statements on one line (semicolon)
+   --> tests/rlm/test_config.py:164:125
+    |
+162 |     def test_load_restrictive_fixture(self, tmp_path):
+163 |         """Load restrictive fixture and verify nested values."""
+164 |         from pathlib import Path as P; fixture_path = P(__file__).parent.parent / "fixtures" / "rlm_config_restrictive.toml"; config …
+    |                                                                                                                             ^
+165 |         
+166 |         # From [rlm]
+    |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:15:10
+   |
+13 | def test_safe_eval_blocks_import():
+14 |     """Verify that __import__ is blocked."""
+15 |     with pytest.raises(Exception):  # simpleeval raises NameError or specific errors
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+16 |         _safe_eval("__import__('os').system('ls')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:21:10
+   |
+19 | def test_safe_eval_blocks_open():
+20 |     """Verify that open is blocked."""
+21 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+22 |         _safe_eval("open('/etc/passwd')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:28:10
+   |
+26 |     """Verify that common python jailbreak gadgets are blocked."""
+27 |     gadget = "(1).__class__.__base__.__subclasses__()"
+28 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+29 |         _safe_eval(gadget, {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_eval_bypass.py:36:10
+   |
+34 |     context = {"x": 10, "y": 20}
+35 |     assert _safe_eval("x + y", context) == 30
+36 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+37 |         _safe_eval("z", context)
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_simpleeval.py:10:10
+   |
+ 9 |     # 1. Block import
+10 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+11 |         _safe_eval("__import__('os').system('echo pwned')", {})
+   |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/security/test_ruta_simpleeval.py:14:10
+   |
+13 |     # 2. Block builtins access
+14 |     with pytest.raises(Exception):
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^
+15 |         _safe_eval("open('/etc/passwd').read()", {})
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_e2e_daemon_operation.py:29:9
+   |
+28 |     with tempfile.TemporaryDirectory() as home:
+29 |         home = Path(home)
+   |         ^^^^
+30 |
+31 |         # Create dummy job runner that logs calls
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:129:9
+    |
+127 |     """End-to-end test: daemon processes multiple repos."""
+128 |     with tempfile.TemporaryDirectory() as home:
+129 |         home = Path(home)
+    |         ^^^^
+130 |
+131 |         # Create dummy runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:218:9
+    |
+216 |     """End-to-end test: daemon handles job failures correctly."""
+217 |     with tempfile.TemporaryDirectory() as home:
+218 |         home = Path(home)
+    |         ^^^^
+219 |
+220 |         # Create failing runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:298:9
+    |
+296 |     """End-to-end test: control flags trigger immediate refresh."""
+297 |     with tempfile.TemporaryDirectory() as home:
+298 |         home = Path(home)
+    |         ^^^^
+299 |
+300 |         # Create runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:390:9
+    |
+388 |     """End-to-end test: daemon state persists across restarts."""
+389 |     with tempfile.TemporaryDirectory() as home:
+390 |         home = Path(home)
+    |         ^^^^
+391 |
+392 |         # Create runner
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:472:9
+    |
+470 |     """End-to-end test: daemon respects max_concurrent_jobs."""
+471 |     with tempfile.TemporaryDirectory() as home:
+472 |         home = Path(home)
+    |         ^^^^
+473 |
+474 |         # Create slow runner
+    |
+
+PLW2901 `with` statement variable `temp_home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:551:9
+    |
+549 |     """End-to-end test using temporary HOME directory."""
+550 |     with tempfile.TemporaryDirectory() as temp_home:
+551 |         temp_home = Path(temp_home)
+    |         ^^^^^^^^^
+552 |
+553 |         # Set up fake home environment
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:617:9
+    |
+615 |     """End-to-end test: shutdown flag stops daemon."""
+616 |     with tempfile.TemporaryDirectory() as home:
+617 |         home = Path(home)
+    |         ^^^^
+618 |
+619 |         # This test would require a running daemon which is complex in pytest
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_e2e_daemon_operation.py:644:9
+    |
+642 |     """End-to-end test: complete workflow from add to daemon processing."""
+643 |     with tempfile.TemporaryDirectory() as home:
+644 |         home = Path(home)
+    |         ^^^^
+645 |
+646 |         # Step 1: Create job runner
+    |
+
+E741 Ambiguous variable name: `l`
+   --> tests/test_log_management_scripts.py:310:63
+    |
+308 |             # Create JSONL with many lines
+309 |             lines = [{"key": f"value_{i}"} for i in range(2000)]
+310 |             jsonl_file.write_text("\n".join(json.dumps(l) for l in lines))
+    |                                                               ^
+311 |
+312 |             subprocess.run(
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_multiple_registry_entries.py:23:9
+   |
+21 |     """Registry with multiple repos respects different min_refresh_interval."""
+22 |     with tempfile.TemporaryDirectory() as home:
+23 |         home = Path(home)
+   |         ^^^^
+24 |
+25 |         # Create multiple repos
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:180:9
+    |
+178 |     """Registry with mixed eligibility states (some eligible, some not)."""
+179 |     with tempfile.TemporaryDirectory() as home:
+180 |         home = Path(home)
+    |         ^^^^
+181 |
+182 |         # Create 5 repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:269:9
+    |
+267 |     """Registry entries without explicit interval use default (tick_interval)."""
+268 |     with tempfile.TemporaryDirectory() as home:
+269 |         home = Path(home)
+    |         ^^^^
+270 |
+271 |         # Create repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:361:9
+    |
+359 |     """Registry.load_all() returns all registered entries."""
+360 |     with tempfile.TemporaryDirectory() as home:
+361 |         home = Path(home)
+    |         ^^^^
+362 |
+363 |         # Create repos
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:424:9
+    |
+422 |     """Registry with empty file returns empty dict."""
+423 |     with tempfile.TemporaryDirectory() as home:
+424 |         home = Path(home)
+    |         ^^^^
+425 |
+426 |         registry_path = home / "empty.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:453:9
+    |
+451 |     """Registry with non-existent file returns empty dict (doesn't crash)."""
+452 |     with tempfile.TemporaryDirectory() as home:
+453 |         home = Path(home)
+    |         ^^^^
+454 |
+455 |         registry_path = home / "nonexistent.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:482:9
+    |
+480 |     """Registry with invalid repo paths doesn't crash on load."""
+481 |     with tempfile.TemporaryDirectory() as home:
+482 |         home = Path(home)
+    |         ^^^^
+483 |
+484 |         # Create registry with non-existent paths
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:533:9
+    |
+531 |     """Registry entries can use timedelta objects for intervals."""
+532 |     with tempfile.TemporaryDirectory() as home:
+533 |         home = Path(home)
+    |         ^^^^
+534 |
+535 |         repo = home / "repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:582:9
+    |
+580 |     """refresh_all flag forces all repos to refresh regardless of intervals."""
+581 |     with tempfile.TemporaryDirectory() as home:
+582 |         home = Path(home)
+    |         ^^^^
+583 |
+584 |         # Create 3 repos with different intervals
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_multiple_registry_entries.py:677:9
+    |
+675 |     """refresh_<repo_id>.flag forces specific repo to refresh."""
+676 |     with tempfile.TemporaryDirectory() as home:
+677 |         home = Path(home)
+    |         ^^^^
+678 |
+679 |         # Create repos
+    |
+
+E741 Ambiguous variable name: `l`
+  --> tests/test_p0_acceptance.py:61:5
+   |
+59 |     s = tool_rag_search(repo_root=str(repo), query=q, limit=5)
+60 |     w = tool_rag_where_used(repo_root=str(repo), symbol=q, limit=5)
+61 |     l = tool_rag_lineage(
+   |     ^
+62 |         repo_root=str(repo), symbol=q, direction="downstream", max_results=5
+63 |     )
+   |
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/test_rag_benchmark.py:201:14
+    |
+200 |         # Should not be able to modify after creation
+201 |         with pytest.raises(Exception):
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+202 |             case.name = "modified"
+    |
+
+B017 Do not assert blind exception: `Exception`
+   --> tests/test_rag_benchmark.py:445:14
+    |
+444 |         # Should raise exception
+445 |         with pytest.raises(Exception):
+    |              ^^^^^^^^^^^^^^^^^^^^^^^^
+446 |             run_embedding_benchmark()
+    |
+
+B017 Do not assert blind exception: `Exception`
+  --> tests/test_rag_daemon_complete.py:97:14
+   |
+95 |         mock_env.return_value = str(config_file)
+96 |         # PyYAML should raise an exception
+97 |         with pytest.raises(Exception):
+   |              ^^^^^^^^^^^^^^^^^^^^^^^^
+98 |             load_config()
+   |
+
+F821 Undefined name `load_status`
+   --> tests/test_rag_nav_comprehensive.py:324:26
+    |
+323 |                 # Try to load - should return None or safe default
+324 |                 result = load_status(test_repo)
+    |                          ^^^^^^^^^^^
+325 |
+326 |                 if result is None:
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_repo_add_idempotency.py:20:9
+   |
+18 |     """Test that adding a new repo creates the workspace structure."""
+19 |     with tempfile.TemporaryDirectory() as home:
+20 |         home = Path(home)
+   |         ^^^^
+21 |
+22 |         # Create a mock repo
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+  --> tests/test_repo_add_idempotency.py:74:9
+   |
+72 |     """Test that adding an already-registered repo is idempotent."""
+73 |     with tempfile.TemporaryDirectory() as home:
+74 |         home = Path(home)
+   |         ^^^^
+75 |
+76 |         # Create a mock repo with existing workspace
+   |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:134:9
+    |
+132 |     """Test that add doesn't clobber existing configs."""
+133 |     with tempfile.TemporaryDirectory() as home:
+134 |         home = Path(home)
+    |         ^^^^
+135 |
+136 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:193:9
+    |
+191 |     """Test adding the same repo multiple times doesn't duplicate registry."""
+192 |     with tempfile.TemporaryDirectory() as home:
+193 |         home = Path(home)
+    |         ^^^^
+194 |
+195 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:232:9
+    |
+230 |     """Test adding same repo via different path representations."""
+231 |     with tempfile.TemporaryDirectory() as home:
+232 |         home = Path(home)
+    |         ^^^^
+233 |
+234 |         # Create repo with symlink
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:281:9
+    |
+279 |     """Test that workspace initialization creates proper structure."""
+280 |     with tempfile.TemporaryDirectory() as home:
+281 |         home = Path(home)
+    |         ^^^^
+282 |
+283 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:337:9
+    |
+335 |     """Test that add creates proper registry entry."""
+336 |     with tempfile.TemporaryDirectory() as home:
+337 |         home = Path(home)
+    |         ^^^^
+338 |
+339 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:386:9
+    |
+384 |     """Test adding repo with custom profile."""
+385 |     with tempfile.TemporaryDirectory() as home:
+386 |         home = Path(home)
+    |         ^^^^
+387 |
+388 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:421:9
+    |
+419 |     """Test add command with JSON output flag."""
+420 |     with tempfile.TemporaryDirectory() as home:
+421 |         home = Path(home)
+    |         ^^^^
+422 |
+423 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:470:9
+    |
+468 |     """Test that add fails gracefully for non-existent repo."""
+469 |     with tempfile.TemporaryDirectory() as home:
+470 |         home = Path(home)
+    |         ^^^^
+471 |
+472 |         registry_path = home / "registry.yml"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:505:9
+    |
+503 |     """Test that add creates all necessary directories."""
+504 |     with tempfile.TemporaryDirectory() as home:
+505 |         home = Path(home)
+    |         ^^^^
+506 |
+507 |         repo_root = home / "test_repo"
+    |
+
+PLW2901 `with` statement variable `home` overwritten by assignment target
+   --> tests/test_repo_add_idempotency.py:551:9
+    |
+549 |     """Test that add is idempotent even if registry is modified externally."""
+550 |     with tempfile.TemporaryDirectory() as home:
+551 |         home = Path(home)
+    |         ^^^^
+552 |
+553 |         repo_root = home / "test_repo"
+    |
+
+F821 Undefined name `_attach_graph_enrichment`
+  --> tests/test_resilient_rag.py:57:17
+   |
+55 |         # It should parse the file, find 'login' at 101, construct ID 'auth.login',
+56 |         # match it to graph node 'sym:auth.login', and attach metadata.
+57 |         items = _attach_graph_enrichment(repo_root, [item])
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^
+58 |
+59 |         # 5. Assert
+   |
+
+Found 105 errors.
+[*] 2 fixable with the `--fix` option.
+Ruff exit code: 0

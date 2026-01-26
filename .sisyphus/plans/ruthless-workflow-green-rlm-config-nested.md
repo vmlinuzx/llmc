@@ -276,8 +276,8 @@ High-level dependency chain:
 - `.agent/workflows/ruthless-testing.md`
 
 **Acceptance Criteria**:
-- [ ] All commands in the ruthless flow return exit code 0
-- [ ] Evidence outputs captured and linked
+- [x] All commands in the ruthless flow return exit code 0
+- [x] Evidence outputs captured and linked
 
 ---
 

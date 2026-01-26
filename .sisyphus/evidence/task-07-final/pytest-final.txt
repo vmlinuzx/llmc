@@ -1,0 +1,62 @@
+=== PYTEST (Core RLM/MCP/Security) ===
+tests/security/test_ruta_eval_bypass.py .....                            [ 37%]
+tests/security/test_ruta_simpleeval.py ...                               [ 39%]
+tests/security/test_security.py ....                                     [ 41%]
+tests/security/test_security_normalization.py ........                   [ 47%]
+tests/security/test_security_normalize_path.py ........                  [ 53%]
+tests/security/test_te_cli_traversal.py .                                [ 53%]
+tests/security/test_te_injection.py s                                    [ 54%]
+tests/security/test_te_repo_security.py .                                [ 55%]
+tests/security/test_te_security.py ..                                    [ 56%]
+tests/security/test_tool_security.py .....                               [ 60%]
+tests/mcp/test_rlm_config.py .....                                       [ 63%]
+tests/mcp/test_tool_rlm.py .........                                     [ 69%]
+tests/rlm/test_budget.py .....                                           [ 73%]
+tests/rlm/test_callback_intercept.py ..                                  [ 74%]
+tests/rlm/test_config.py .............                                   [ 83%]
+tests/rlm/test_integration_deepseek.py F.                                [ 85%]
+tests/rlm/test_intercept.py .........                                    [ 91%]
+tests/rlm/test_nav.py ......                                             [ 95%]
+tests/rlm/test_sandbox.py ......                                         [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_rlm_deepseek_code_analysis ________________________
+/home/vmlinux/src/llmc/tests/rlm/test_integration_deepseek.py:119: in test_rlm_deepseek_code_analysis
+    pytest.fail(f"RLM session failed: {result.error}")
+E   Failed: RLM session failed: Root model error: litellm.InternalServerError: InternalServerError: DeepseekException - Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network
+----------------------------- Captured stdout call -----------------------------
+
+Context loaded: 766 chars, ~191 tokens
+Symbols indexed: 4
+
+Task: What are the performance issues in this code? List all functions with their complexity.
+Running RLM session with DeepSeek...
+
+
+[1;31mGive Feedback / Get Help: https://github.com/BerriAI/litellm/issues/new[0m
+LiteLLM.Info: If you need to debug this error, use `litellm._turn_on_debug()'.
+
+
+Success: False
+Answer: None
+
+Budget Summary:
+  Cost: $0.0000
+  Root calls: 0
+  Sub calls: 0
+  Total tokens: 0
+  Time: 3.4s
+
+Trace events: 1
+  - root_error
+
+⚠️ Session did not complete: Root model error: litellm.InternalServerError: InternalServerError: DeepseekException - Network is blocked by pytest_ruthless. Use --allow-network or @pytest.mark.allow_network
+=========================== short test summary info ============================
+SKIPPED [1] tests/security/VULN-001/test_vuln_001.py: Standalone test script - run directly with python
+SKIPPED [1] tests/security/test_mcp_shell.py: Standalone test script - run directly with python
+SKIPPED [4] tests/security/test_run_cmd_bypass.py: Standalone test script - run directly with python
+SKIPPED [2] tests/security/test_ruta_bypass.py: Standalone test script - run directly with python
+SKIPPED [1] tests/security/test_te_injection.py: Standalone test script - run directly with python
+FAILED tests/rlm/test_integration_deepseek.py::test_rlm_deepseek_code_analysis
+=================== 1 failed, 133 passed, 9 skipped in 9.13s ===================
+Pytest exit code: 1
