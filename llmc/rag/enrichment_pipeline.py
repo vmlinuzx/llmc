@@ -670,7 +670,7 @@ class EnrichmentPipeline:
         """
         # Extract metadata
         model = meta.get("model", "unknown")
-        backend = meta.get("backend", "unknown")
+        meta.get("backend", "unknown")
         chain_name = decision.chain_name or "default"
 
         # 1. Log to JSONL (structured, always)

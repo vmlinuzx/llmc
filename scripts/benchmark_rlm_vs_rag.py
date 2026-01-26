@@ -176,7 +176,7 @@ async def run_traditional_rag(task: BenchmarkTask, model: str = "gpt-4") -> Benc
         # Step 1: Semantic search to find relevant chunks
         from llmc.rag.service import RAGService
         
-        service = RAGService()
+        RAGService()
         search_results = await search_spans(
             query=task.question,
             limit=10,  # Retrieve more chunks to ensure coverage

@@ -913,7 +913,7 @@ class RAGService:
         repos = self.state.state["repos"]
         
         try:
-            result = run_async_enrichment_sync(
+            run_async_enrichment_sync(
                 repos=repos,
                 batch_size=batch_size,
                 concurrency=concurrency,

@@ -224,7 +224,7 @@ async def run_all_tests(model_choice: str, verbose: bool):
         console.print(f"  Total time: {sum(r['latency_seconds'] for r in successful):.1f}s")
         
         # Context window comparison
-        avg_tokens = sum(r['total_tokens'] for r in successful) / len(successful)
+        sum(r['total_tokens'] for r in successful) / len(successful)
         
         # Estimate traditional RAG token usage
         # (would paste entire file into context)

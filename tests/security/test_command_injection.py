@@ -6,6 +6,7 @@ import pytest
 from llmc_agent.backends.llmc import LLMCBackend
 
 
+@pytest.mark.allow_network
 def test_llmc_backend_injection_sync():
     """Verify that user queries starting with - are treated as flags without -- delimiter."""
 

@@ -53,8 +53,7 @@ def test_phi_detector_multiple():
 
     matches = detector.detect(text)
     # Should find at least: NAME, MRN, DATE, SSN, PHONE, EMAIL
-    types_found = {m[2] for m in matches}
-    expected_types = {"NAME", "MRN", "DATE", "SSN", "PHONE", "EMAIL"}
+    {m[2] for m in matches}
     # Check that all expected types are found (some might not be detected due to pattern limitations)
     # For now, just check we found multiple matches
     assert len(matches) >= 4

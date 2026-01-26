@@ -143,7 +143,7 @@ def run_tests():
         # Test Loop
         for tool in all_tools:
             name = tool["name"]
-            description = tool.get("description", "")
+            tool.get("description", "")
             is_stub = tool.get("is_stub", False)
             print(f"\nTesting tool: {name} {'(Stub)' if is_stub else ''}")
 

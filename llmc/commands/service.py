@@ -182,7 +182,6 @@ def status():
 
     for repo in repos:
         repo_path = Path(repo)
-        repo_name = repo_path.name
 
         # Get health info if available
         health_line = _get_repo_health_summary(repo_path)

@@ -59,8 +59,8 @@ def test_medical_graph_creation():
         node1 = MedicalNode("condition:hypertension", "Hypertension", "condition")
         node2 = MedicalNode("drug:lisinopril", "Lisinopril", "drug")
 
-        assert graph.add_node(node1) == True
-        assert graph.add_node(node2) == True
+        assert graph.add_node(node1)
+        assert graph.add_node(node2)
 
         # Test adding edge
         assert (
@@ -70,7 +70,6 @@ def test_medical_graph_creation():
                 edge_type=EdgeType.TREATED_BY,
                 confidence=0.9,
             )
-            == True
         )
 
         # Test query functions

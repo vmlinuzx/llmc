@@ -262,7 +262,7 @@ async def get_symbol(request: Request) -> JSONResponse:
     Get detailed information about a symbol.
     """
     start_time = time.perf_counter()
-    config = get_config(request)
+    get_config(request)
     workspace_id = request.path_params["workspace_id"]
     symbol_name = request.path_params["name"]
 
@@ -426,7 +426,7 @@ async def get_symbol_lineage(request: Request) -> JSONResponse:
     depth_raw = parse_int_param(request, "depth", 1)
     if isinstance(depth_raw, str):
         return add_request_id(error_response("invalid_request", depth_raw, 400), request)
-    depth = max(1, min(3, depth_raw))
+    max(1, min(3, depth_raw))
 
     from llmc.rag_nav.tool_handlers import tool_rag_lineage
 
@@ -470,7 +470,7 @@ async def get_file(request: Request) -> JSONResponse:
     Get file content with RAG context.
     """
     start_time = time.perf_counter()
-    config = get_config(request)
+    get_config(request)
     workspace_id = request.path_params["workspace_id"]
     file_path = request.path_params["file_path"]
 

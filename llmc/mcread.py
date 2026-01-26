@@ -73,13 +73,11 @@ def read_file_command(
     # Use sidecar content if available, otherwise read original file
     if sidecar_content:
         content = sidecar_content
-        content_source = f"{file_path} (via sidecar: {sidecar_source})"
     else:
         if not full_path.exists():
             console.print(f"[red]File not found:[/red] {file_path}")
             raise typer.Exit(1)
         content = full_path.read_text()
-        content_source = file_path
     
     lines = content.splitlines()
 

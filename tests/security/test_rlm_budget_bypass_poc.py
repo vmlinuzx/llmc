@@ -1,7 +1,7 @@
 
-import pytest
-from llmc.rlm.session import RLMSession
 from llmc.rlm.config import RLMConfig
+from llmc.rlm.session import RLMSession
+
 
 def test_rlm_budget_estimation_bypass():
     """
@@ -12,7 +12,7 @@ def test_rlm_budget_estimation_bypass():
         chars_per_token=4,
         token_safety_multiplier=1.0
     )
-    session = RLMSession(config=config)
+    RLMSession(config=config)
     
     # Text that tokenizes 1:1 or worse, but we tell the system it's 4 chars per token.
     # Actually, the bypass is that we can fit a lot of "expensive" content if we know the multiplier.
@@ -22,7 +22,6 @@ def test_rlm_budget_estimation_bypass():
     # This test is hard to run without a real LLM, but we can mock the budget.check_and_reserve
     # to show that it uses the weak estimation.
     
-    prompt = "A" * 4000 # 4000 chars -> 1000 estimated tokens
     
     # messages will have system prompt + prompt
     # system prompt is quite large.

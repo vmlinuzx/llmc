@@ -46,7 +46,7 @@ def test_normalize_path_bypass_scenario(tmp_path):
 
     # Simulate the vulnerable check
     str_path = str(result)
-    is_safe_check = not str_path.startswith("private")
+    not str_path.startswith("private")
 
     # If the check thinks it's safe (because it doesn't start with private), fail the test
     # (In this simulation, we want to access private, so if is_safe_check is True, it means we bypassed the block)

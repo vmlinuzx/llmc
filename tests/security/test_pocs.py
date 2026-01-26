@@ -16,7 +16,7 @@ def test_poc_te_command_injection():
     """
     print("\n[+] Testing TE Command Injection Prevention...")
 
-    with patch("subprocess.run") as mock_run:
+    with patch("llmc_agent.backends.llmc.subprocess.run") as mock_run:
         # Simulate 'te run "; echo pwned"'
         command = "run"
         args = ["; echo pwned"]
@@ -59,7 +59,7 @@ async def test_poc_llmc_flag_injection():
     # Mock _check_llmc_available to force fallback search (rg)
     backend._llmc_available = False  # Force fallback to rg
 
-    with patch("subprocess.run") as mock_run:
+    with patch("llmc_agent.backends.llmc.subprocess.run") as mock_run:
         # Simulate searching for a flag-like string
         query = "--help"
 

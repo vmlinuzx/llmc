@@ -22,7 +22,7 @@ def test_repo_read_path_traversal_blocked():
     assert "outside allowed roots" in result.get("meta", {}).get("stderr", "")
 
     # Attempt to read from an allowed root directory
-    with patch("subprocess.run") as mock_run:
+    with patch("subprocess.run"):
         repo_read(root=str(safe_dir), path="some_file", allowed_roots=allowed_roots)
         # We don't need to check the result here, just that it doesn't raise an exception
         # and that the validation was triggered. The fact that the test doesn't fail

@@ -11,7 +11,7 @@ def test_dos_via_exit():
     when isolation is bypassed (mocked).
     """
     # Patch require_isolation to bypass the environment check
-    with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+    with patch("llmc_mcp.isolation.require_isolation"):
         # Code that triggers sys.exit(1)
         code = "import sys; sys.exit(1)"
 
@@ -26,7 +26,7 @@ def test_dos_via_keyboard_interrupt():
     Test that calling execute_code with raise KeyboardInterrupt propagates KeyboardInterrupt.
     """
     # Patch require_isolation to bypass the environment check
-    with patch("llmc_mcp.isolation.require_isolation") as mock_iso:
+    with patch("llmc_mcp.isolation.require_isolation"):
         # Code that raises KeyboardInterrupt
         code = "raise KeyboardInterrupt"
 

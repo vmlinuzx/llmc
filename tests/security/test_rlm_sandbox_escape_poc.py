@@ -1,7 +1,7 @@
 
-import pytest
-from llmc.rlm.session import RLMSession
 from llmc.rlm.config import RLMConfig
+from llmc.rlm.session import RLMSession
+
 
 def test_rlm_sandbox_escape_via_permissive_import():
     """

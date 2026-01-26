@@ -229,7 +229,7 @@ class TestUpdateFileDescription:
             "SELECT input_hash FROM file_descriptions WHERE file_path = ?",
             ("test.py",),
         ).fetchone()
-        original_hash = row["input_hash"]
+        row["input_hash"]
         
         # Second update should be skipped
         result = update_file_description(db, "test.py", "content_hash_1")

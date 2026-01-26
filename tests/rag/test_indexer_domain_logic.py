@@ -46,7 +46,7 @@ def test_index_repo_domain_logging(
     mock_get_path_overrides.return_value = {"DOCS/**": "tech_docs", "*.py": "code"}
 
     # Mock file reading (absolute path)
-    with patch("pathlib.Path.read_bytes", return_value=b"content") as mock_read:
+    with patch("pathlib.Path.read_bytes", return_value=b"content"):
         with patch("pathlib.Path.stat") as mock_stat:
             mock_stat.return_value.st_size = 100
             mock_stat.return_value.st_mtime = 1000.0

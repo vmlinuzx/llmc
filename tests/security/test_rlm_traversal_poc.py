@@ -1,8 +1,10 @@
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from llmc.rlm.session import RLMSession
-from llmc.rlm.config import RLMConfig
+
 
 def test_rlm_load_context_path_traversal():
     """

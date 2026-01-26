@@ -96,7 +96,7 @@ def extract_tool_calls(code: str, allowed: set[str]) -> tuple[list[CallbackSite]
 
 class RewriteTransformer(ast.NodeTransformer):
     def __init__(self, sites: list[CallbackSite], injections: list[str]):
-        self.sites_map = {site.lineno: (site, inj) for site, inj in zip(sites, injections)}
+        self.sites_map = {site.lineno: (site, inj) for site, inj in zip(sites, injections, strict=False)}
     
     def visit_Assign(self, node: ast.Assign):
         if node.lineno in self.sites_map:

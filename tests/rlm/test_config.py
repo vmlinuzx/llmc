@@ -1,13 +1,9 @@
 """Tests for RLM config loading."""
-import sys
 
 import pytest
 
 # Ensure compatibility with python < 3.11
-if sys.version_info >= (3, 11):
-    pass
-else:
-    pass
+pass
 
 from llmc.rlm.config import load_rlm_config
 
@@ -159,7 +155,7 @@ response_preview_chars = 150
         assert config.max_turns == 15
         assert config.session_timeout_seconds == 600
         assert config.max_context_chars == 500000
-        assert config.trace_enabled == False
+        assert not config.trace_enabled
         assert config.prompt_preview_chars == 100
         assert config.response_preview_chars == 150
     

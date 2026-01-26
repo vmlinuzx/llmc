@@ -188,7 +188,7 @@ class TestMedicalRAGIntegration:
         detected_phi_instances = 0
 
         for note in sample_notes:
-            text = note.get("text", "")
+            note.get("text", "")
             expected_phi = note.get("expected_phi", [])
 
             # Count expected PHI

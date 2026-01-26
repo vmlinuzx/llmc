@@ -150,7 +150,7 @@ code = {{ profile = "docs", index = "code" }}
         # We just want to ensure it handles it gracefully.
 
         # Check issues for connectivity warnings/errors
-        issues = [str(i) for i in result.issues if i.category == "connectivity"]
+        [str(i) for i in result.issues if i.category == "connectivity"]
         # It likely failed because file:// response doesn't behave like HTTP response (no .status)
         # or because it's considered valid but data processing failed.
 

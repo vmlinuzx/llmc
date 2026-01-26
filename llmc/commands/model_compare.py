@@ -127,7 +127,7 @@ def compare_models(
 
         cur = conn.execute(query)
         cols = [d[0] for d in cur.description]
-        rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+        rows = [dict(zip(cols, row, strict=False)) for row in cur.fetchall()]
         return rows
 
     # Get stats from both DBs

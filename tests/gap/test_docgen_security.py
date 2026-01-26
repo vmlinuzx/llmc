@@ -35,7 +35,6 @@ def test_docgen_out_of_bounds_access():
         # This SHOULD raise an exception (ValueError or PermissionError)
         # if the security gap is closed.
         # Until fixed, this test is expected to FAIL.
-        msg = "DocgenCoordinator allowed access to file outside repository root"
 
         # We accept either ValueError or PermissionError
         with pytest.raises(

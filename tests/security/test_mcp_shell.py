@@ -19,7 +19,7 @@ class TestMCPShellFixed(unittest.IsolatedAsyncioTestCase):
         mock_config.observability = MagicMock()
 
         # We need to mock Server because __init__ creates one
-        with patch("llmc_mcp.server.Server") as MockServer:
+        with patch("llmc_mcp.server.Server"):
             server_instance = LlmcMcpServer(mock_config)
 
         with patch("subprocess.run") as mock_run:

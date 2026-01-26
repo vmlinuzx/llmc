@@ -277,7 +277,7 @@ def load_indices(repo_root: Path | str) -> GraphIndices:
 
     # Check cache with mtime validation
     cache_key = str(graph_path.resolve())
-    now = time.time()
+    time.time()
     
     try:
         current_mtime = graph_path.stat().st_mtime

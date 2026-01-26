@@ -217,7 +217,7 @@ def run_wizard(
 
     ollama_url = Prompt.ask("Ollama URL", default=default_url)
 
-    with console.status(f"Connecting to {ollama_url}...") as status:
+    with console.status(f"Connecting to {ollama_url}..."):
         connected, models = _check_ollama(ollama_url)
 
     if not connected:

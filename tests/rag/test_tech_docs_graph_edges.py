@@ -183,7 +183,7 @@ class TestWriteTechDocsEdges:
         """Should create REQUIRES edges from prerequisites."""
         ensure_edges_table(mock_db)
 
-        result = write_tech_docs_edges(
+        write_tech_docs_edges(
             db=mock_db,
             span_hash="source_hash",
             enrichment=sample_enrichment,
@@ -205,7 +205,7 @@ class TestWriteTechDocsEdges:
         """Should create WARNS_ABOUT edges from warnings."""
         ensure_edges_table(mock_db)
 
-        result = write_tech_docs_edges(
+        write_tech_docs_edges(
             db=mock_db,
             span_hash="source_hash",
             enrichment=sample_enrichment,

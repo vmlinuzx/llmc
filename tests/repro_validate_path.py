@@ -1,8 +1,11 @@
 import asyncio
 from pathlib import Path
+
+import pytest
+
 from llmc_mcp.config import McpRlmConfig
 from llmc_mcp.tools.rlm import mcp_rlm_query
-import pytest
+
 
 @pytest.mark.asyncio
 async def test_validate_path_signature_mismatch():

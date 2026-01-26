@@ -11,14 +11,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-import sys
 import time
+import tomllib
 from typing import Literal
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
 
 from llmc.core import find_repo_root, load_config
 

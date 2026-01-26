@@ -121,6 +121,6 @@ def test_llmc_docs_deterministic():
     assert len(chunks1) == len(chunks2), "Chunk count should be deterministic"
     
     # Same content
-    for c1, c2 in zip(chunks1, chunks2):
+    for c1, c2 in zip(chunks1, chunks2, strict=False):
         assert c1.content == c2.content, "Chunk content should be deterministic"
         assert c1.section_path == c2.section_path, "Section paths should be deterministic"

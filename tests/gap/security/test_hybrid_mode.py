@@ -45,7 +45,7 @@ async def test_hybrid_mode_bypasses_isolation(mock_config):
         server = LlmcMcpServer(mock_config)
 
         # Test run_cmd
-        result = await server._handle_run_cmd({"command": "echo check"})
+        await server._handle_run_cmd({"command": "echo check"})
 
         # Assert run_cmd was called with host_mode=True
         mock_run_cmd.assert_called_once()
@@ -67,7 +67,7 @@ async def test_classic_mode_enforces_isolation(mock_config):
         server = LlmcMcpServer(mock_config)
 
         # Test run_cmd
-        result = await server._handle_run_cmd({"command": "echo check"})
+        await server._handle_run_cmd({"command": "echo check"})
 
         # Assert run_cmd was called with host_mode=False
         mock_run_cmd.assert_called_once()

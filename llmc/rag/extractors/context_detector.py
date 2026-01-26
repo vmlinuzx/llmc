@@ -86,7 +86,7 @@ class ContextDetector:
     def _get_context_window(self, text, entity_span):
         """Extract context window around entity span"""
         start, end = entity_span
-        entity_length = end - start
+        end - start
 
         # Calculate window boundaries
         window_start = max(0, start - self.window_size)

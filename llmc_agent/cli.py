@@ -137,7 +137,7 @@ def main(
 
     # Run the agent
     try:
-        response = asyncio.run(
+        asyncio.run(
             _run_agent(
                 prompt, config, session, session_mgr, json_output, quiet, not no_tools, verbose
             )

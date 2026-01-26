@@ -84,7 +84,7 @@ class PHIDetector:
                 # Avoid overlapping matches by checking if this range is already covered
                 start, end = match.start(), match.end()
                 overlapping = False
-                for s, e, t in matches:
+                for s, e, _t in matches:
                     if not (end <= s or start >= e):
                         overlapping = True
                         break

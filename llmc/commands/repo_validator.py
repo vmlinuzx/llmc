@@ -346,7 +346,7 @@ def check_ollama_connectivity(config: dict[str, Any], result: ValidationResult) 
                 urls_to_check.add(url.rstrip("/"))
 
     # Also check embedding profiles
-    for profile_name, profile in (
+    for _profile_name, profile in (
         config.get("embeddings", {}).get("profiles", {}).items()
     ):
         if profile.get("provider") == "ollama":

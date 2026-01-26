@@ -21,11 +21,11 @@ def test_detect_negation():
     # Test using the class method
     detector = ContextDetector()
     result = detector.detect_negation(text, entity_span)
-    assert result == True, f"Expected 'chest pain' to be negated in '{text}'"
+    assert result, f"Expected 'chest pain' to be negated in '{text}'"
 
     # Test using the convenience function
     result_func = detect_negation(text, entity_span)
-    assert result_func == True, "Convenience function should also detect negation"
+    assert result_func, "Convenience function should also detect negation"
 
 
 def test_detect_context_negation():
@@ -40,10 +40,10 @@ def test_detect_context_negation():
     detector = ContextDetector()
     result = detector.detect_context(text, entity_span)
 
-    assert result["negated"] == True, "Expected 'chest pain' to be negated"
-    assert result["historical"] == False, "Should not be historical"
-    assert result["family"] == False, "Should not be family"
-    assert result["hypothetical"] == False, "Should not be hypothetical"
+    assert result["negated"], "Expected 'chest pain' to be negated"
+    assert not result["historical"], "Should not be historical"
+    assert not result["family"], "Should not be family"
+    assert not result["hypothetical"], "Should not be hypothetical"
 
     # Test convenience function
     result_func = detect_context(text, entity_span)
@@ -62,10 +62,10 @@ def test_detect_context_historical():
     detector = ContextDetector()
     result = detector.detect_context(text, entity_span)
 
-    assert result["historical"] == True, "Expected 'diabetes' to be historical"
-    assert result["negated"] == False, "Should not be negated"
-    assert result["family"] == False, "Should not be family"
-    assert result["hypothetical"] == False, "Should not be hypothetical"
+    assert result["historical"], "Expected 'diabetes' to be historical"
+    assert not result["negated"], "Should not be negated"
+    assert not result["family"], "Should not be family"
+    assert not result["hypothetical"], "Should not be hypothetical"
 
 
 def test_detect_context_family():
@@ -80,12 +80,12 @@ def test_detect_context_family():
     detector = ContextDetector()
     result = detector.detect_context(text, entity_span)
 
-    assert result["family"] == True, "Expected 'cancer' to be family history"
-    assert result["negated"] == False, "Should not be negated"
+    assert result["family"], "Expected 'cancer' to be family history"
+    assert not result["negated"], "Should not be negated"
     assert (
-        result["historical"] == False
+        not result["historical"]
     ), "Should not be historical (it's family, not patient's history)"
-    assert result["hypothetical"] == False, "Should not be hypothetical"
+    assert not result["hypothetical"], "Should not be hypothetical"
 
 
 def test_detect_context_multiple_categories():
@@ -101,14 +101,14 @@ def test_detect_context_multiple_categories():
     result = detector.detect_context(text, entity_span)
 
     # 'No' indicates negation, 'family history' indicates family
-    assert result["negated"] == True, "Expected 'diabetes' to be negated due to 'No'"
+    assert result["negated"], "Expected 'diabetes' to be negated due to 'No'"
     assert (
-        result["family"] == True
+        result["family"]
     ), "Expected 'diabetes' to be family due to 'family history'"
     assert (
-        result["historical"] == False
+        not result["historical"]
     ), "Should not be historical (it's family history)"
-    assert result["hypothetical"] == False, "Should not be hypothetical"
+    assert not result["hypothetical"], "Should not be hypothetical"
 
 
 def test_detect_context_hypothetical():
@@ -124,11 +124,11 @@ def test_detect_context_hypothetical():
     result = detector.detect_context(text, entity_span)
 
     assert (
-        result["hypothetical"] == True
+        result["hypothetical"]
     ), "Expected 'infection' to be hypothetical due to 'consider'"
-    assert result["negated"] == False, "Should not be negated"
-    assert result["historical"] == False, "Should not be historical"
-    assert result["family"] == False, "Should not be family"
+    assert not result["negated"], "Should not be negated"
+    assert not result["historical"], "Should not be historical"
+    assert not result["family"], "Should not be family"
 
 
 def test_detect_context_no_context():
@@ -143,10 +143,10 @@ def test_detect_context_no_context():
     detector = ContextDetector()
     result = detector.detect_context(text, entity_span)
 
-    assert result["negated"] == False, "Should not be negated"
-    assert result["historical"] == False, "Should not be historical"
-    assert result["family"] == False, "Should not be family"
-    assert result["hypothetical"] == False, "Should not be hypothetical"
+    assert not result["negated"], "Should not be negated"
+    assert not result["historical"], "Should not be historical"
+    assert not result["family"], "Should not be family"
+    assert not result["hypothetical"], "Should not be hypothetical"
 
 
 def test_context_window():
@@ -163,7 +163,7 @@ def test_context_window():
 
     # The window should capture "denies" which is before the entity
     result = detector.detect_negation(text, entity_span)
-    assert result == True, "Should detect negation even with surrounding text"
+    assert result, "Should detect negation even with surrounding text"
 
 
 def test_entity_not_found():
@@ -182,7 +182,7 @@ def test_entity_not_found():
         entity_span = (start, end)
         # This shouldn't happen in our tests since we're careful
         detector = ContextDetector()
-        result = detector.detect_context(text, entity_span)
+        detector.detect_context(text, entity_span)
         # The result may be unexpected since entity isn't actually in the text
 
 
@@ -198,7 +198,7 @@ def test_case_insensitivity():
     detector = ContextDetector()
     result = detector.detect_negation(text, entity_span)
 
-    assert result == True, "Should detect negation even with uppercase 'DENIES'"
+    assert result, "Should detect negation even with uppercase 'DENIES'"
 
 
 if __name__ == "__main__":

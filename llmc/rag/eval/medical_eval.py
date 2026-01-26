@@ -37,7 +37,7 @@ class MedicalEvaluator:
             )
 
         recalls = []
-        for pred_list, true_list in zip(predictions, ground_truth):
+        for pred_list, true_list in zip(predictions, ground_truth, strict=False):
             # Take top k predictions
             top_k_pred = pred_list[:k]
 
@@ -77,7 +77,7 @@ class MedicalEvaluator:
             )
 
         reciprocal_ranks = []
-        for pred_list, true_list in zip(predictions, ground_truth):
+        for pred_list, true_list in zip(predictions, ground_truth, strict=False):
             true_set = set(true_list)
 
             # Find the rank of the first relevant document
@@ -116,7 +116,7 @@ class MedicalEvaluator:
             )
 
         precisions = []
-        for pred_list, true_list in zip(predictions, ground_truth):
+        for pred_list, true_list in zip(predictions, ground_truth, strict=False):
             # Take top k predictions
             top_k_pred = pred_list[:k]
 
@@ -151,7 +151,7 @@ class MedicalEvaluator:
             )
 
         average_precisions = []
-        for pred_list, true_list in zip(predictions, ground_truth):
+        for pred_list, true_list in zip(predictions, ground_truth, strict=False):
             true_set = set(true_list)
 
             relevant_count = 0

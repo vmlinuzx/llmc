@@ -84,7 +84,7 @@ class RMTARunner:
             start_time = time.monotonic()
             try:
                 # Using pytest to run the tests
-                result = subprocess.run(
+                subprocess.run(
                     ["python3", "-m", "pytest", str(test.path)],
                     capture_output=True,
                     text=True,

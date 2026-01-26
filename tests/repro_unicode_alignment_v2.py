@@ -1,10 +1,11 @@
-import sys
 from pathlib import Path
+import sys
 
 # Add project root to sys.path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from llmc.rlm.nav.treesitter_nav import TreeSitterNav
+
 
 def test_unicode_alignment():
     print("Starting Unicode test...")

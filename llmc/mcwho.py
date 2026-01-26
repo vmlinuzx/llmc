@@ -149,7 +149,7 @@ def _print_edge_list(
         console.print("  [dim](none)[/dim]")
         return
     
-    for i, edge in enumerate(edges[:max_show]):
+    for _i, edge in enumerate(edges[:max_show]):
         source = edge.get("source") or edge.get("src") or ""
         target = edge.get("target") or edge.get("dst") or ""
         
@@ -241,7 +241,7 @@ def _run_who(
     # Legacy JSON Path: slow linear scans
     graph_data = _load_graph(repo_root)
     nodes = graph_data["entities"]
-    edges = graph_data["relations"]
+    graph_data["relations"]
 
 
 @app.command()

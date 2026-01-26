@@ -174,7 +174,7 @@ def z_score_fuse_scores(
 
         normalized_routes[route_name] = [
             (r["slice_id"], z, r)
-            for r, z in zip(results, z_scores)
+            for r, z in zip(results, z_scores, strict=False)
         ]
 
     # Merge with weights
@@ -229,7 +229,7 @@ def rrf_fuse_scores(
     # So if doc is rank 1 in r1 and rank 5 in r2, we keep r1's metadata.
     merged_objs: dict[str, tuple[int, dict[str, Any]]] = {}  # slice_id -> (best_rank, obj)
 
-    for route_name, results in route_results.items():
+    for _route_name, results in route_results.items():
         for i, res in enumerate(results):
             rank = i + 1
             slice_id = res["slice_id"]

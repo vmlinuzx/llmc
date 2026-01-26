@@ -42,7 +42,8 @@ def _iter_directory(
         sidecar_available = True
     except ImportError:
         sidecar_available = False
-        is_sidecar_eligible = lambda x: False
+        def is_sidecar_eligible(x):
+            return False
     
     exclude_dirs = get_exclude_dirs(repo_root)
     for root, dirs, files in os.walk(directory):

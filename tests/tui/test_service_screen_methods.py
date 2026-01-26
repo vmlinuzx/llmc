@@ -31,7 +31,7 @@ class TestServiceScreenMethods:
 
     def test_get_registered_repos_fallback(self, tmp_path):
         """Test fallback to file reading when ServiceState raises ImportError."""
-        screen = ServiceScreen()
+        ServiceScreen()
 
         fake_state_file = tmp_path / "rag-service.json"
         data = {"repos": ["/fallback/repo"]}

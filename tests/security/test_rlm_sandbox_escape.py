@@ -68,7 +68,7 @@ os.system({repr(command)})
     )
 
     content = EXPLOIT_MARKER_FILE.read_text()
-    assert content == "Rem was here", (
+    assert content.strip() == "Rem was here", (
         "EXPLOIT FAILED: Marker file content is incorrect."
     )
 

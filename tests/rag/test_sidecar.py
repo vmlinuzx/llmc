@@ -236,7 +236,7 @@ class TestPdfToMarkdown:
             import sys
             sys.modules['fitz'].open = MagicMock(return_value=mock_doc)
 
-            converter = PdfToMarkdown()
+            PdfToMarkdown()
 
             # This will use our mocked fitz
             with patch('llmc.rag.sidecar.fitz', sys.modules['fitz'], create=True):

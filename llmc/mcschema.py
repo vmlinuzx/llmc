@@ -720,7 +720,7 @@ def _print_schema(schema: dict, terse: bool = False, rich: bool = False) -> None
         console.print()
         console.print("[bold]central_symbols:[/bold] [dim](load-bearing, touch with care)[/dim]")
         for sym in schema["central_symbols"][:10]:
-            score = sym.get("score", 0)
+            sym.get("score", 0)
             symbol = sym.get("symbol", "")
             file_path = sym.get("file", "")
             # Truncate long symbols
@@ -1147,7 +1147,6 @@ def main():
     """Entry point."""
     # Handle bare invocation - default to schema subcommand
     # But allow explicit subcommands like 'manifest', 'graph'
-    known_subcommands = {"schema", "graph", "manifest"}
     
     if len(sys.argv) == 1:
         # Bare invocation -> default to schema

@@ -1,5 +1,6 @@
 from llmc.rlm.sandbox.intercept import extract_tool_calls, rewrite_ast
 
+
 def test_multiple_calls_per_line():
     code = "x = nav_ls('.'); y = nav_ls('..')"
     allowed = {"nav_ls"}

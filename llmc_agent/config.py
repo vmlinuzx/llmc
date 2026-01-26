@@ -14,14 +14,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
-import sys
-from typing import Any
 
 # tomli for Python < 3.11, else tomllib
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    import tomli as tomllib
+import tomllib
+from typing import Any
 
 
 @dataclass
