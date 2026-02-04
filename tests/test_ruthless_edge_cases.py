@@ -385,6 +385,22 @@ def test_classify_query_triple_backticks_in_string():
     print(f"Backticks in string -> {result}")
     # Should NOT be detected as code fence
     # This might be a bug!
+    assert result["route_name"] != "code"
+
+
+def test_classify_query_triple_backticks_in_string_with_newline():
+    """Triple backticks in string with newline - incorrectly detected as fence previously"""
+    # Use text that doesn't trigger other code heuristics (no keywords like 'print' or assignments)
+    query = 'The output shows " ```\nlog\n``` " in the logs.'
+    result = classify_query(query)
+    print(f"Backticks in string w/ newline -> {result}")
+
+    # Should NOT be detected as code fence
+    reasons = result.get("reasons", [])
+    assert not any("fenced-code" in r for r in reasons), f"Detected as fence: {reasons}"
+
+    # Should likely be docs since it has no code signals
+    assert result["route_name"] == "docs"
 
 
 def test_classify_query_malformed_code_fence():
