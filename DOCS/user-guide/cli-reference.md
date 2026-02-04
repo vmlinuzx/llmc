@@ -56,7 +56,10 @@ llmc-cli
 │   ├── plan          # Retrieval plan
 │   ├── inspect       # Deep dive
 │   ├── export        # Export RAG data
-│   └── enrich-status # Enrichment metrics
+│   ├── enrich-status # Enrichment metrics
+│   ├── file-descriptions # Generate file-level descriptions
+│   ├── repair-logs   # Repair corrupt JSONL ledger files
+│   └── schema-check  # Check/migrate schema versions
 │
 ├── docs              # LLMC documentation
 │   ├── readme
@@ -69,6 +72,33 @@ llmc-cli
 │
 └── test              # Testing tools
     └── mcp           # MCP compliance testing
+```
+
+---
+
+### `llmc-cli debug file-descriptions`
+Generate stable file-level descriptions for mcgrep and LLM context.
+
+```bash
+llmc-cli debug file-descriptions
+```
+
+---
+
+### `llmc-cli debug repair-logs`
+Repair corrupt JSONL ledger files.
+
+```bash
+llmc-cli debug repair-logs
+```
+
+---
+
+### `llmc-cli debug schema-check`
+Check and optionally migrate schema versions for all registered repos.
+
+```bash
+llmc-cli debug schema-check
 ```
 
 ---
@@ -789,6 +819,7 @@ llmc-cli debug graph
 | `llmc enrich-status` | `llmc-cli debug enrich-status` |
 | `llmc docs generate` | `llmc-cli docs generate` |
 | `llmc docs status` | `llmc-cli docs status` |
+| `llmc file-descriptions` | `llmc-cli debug file-descriptions` |
 
 ---
 
