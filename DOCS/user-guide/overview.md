@@ -96,7 +96,7 @@ echo 'export PATH="$HOME/src/llmc/scripts:$PATH"' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-After that, commands like `llmc-rag-service`, `llmc-rag-repo`, and `llmc-rag-daemon` should be available from any shell.
+After that, the `llmc-cli` command (and its alias `llmc`) should be available from any shell.
 
 ### 3.2. First-time Configuration
 
@@ -130,14 +130,14 @@ This is the simplest "I want this working in one repo" flow.
 Tell LLMC that a repo exists and should have a workspace.
 
 ```bash
-llmc-rag-repo add /home/you/src/your-repo
+llmc repo register /home/you/src/your-repo
 ```
 
 You can list and inspect registered repos:
 
 ```bash
-llmc-rag-repo list --json
-llmc-rag-repo inspect /home/you/src/your-repo
+llmc repo list --json
+llmc debug inspect /home/you/src/your-repo
 ```
 
 This sets up `.llmc/rag` under your repo and writes to the global registry.
@@ -147,17 +147,16 @@ This sets up `.llmc/rag` under your repo and writes to the global registry.
 Use the high-level service wrapper to kick off background refresh cycles:
 
 ```bash
-llmc-rag-service register /home/you/src/your-repo
-llmc-rag-service start --interval 300 --daemon
+llmc service start --daemon
 ```
 
-- `register` tells the service which repos to manage.
+- `llmc repo register` already tells the service which repos to manage.
 - `start` launches the refresh loop (foreground by default; add `--daemon` to background it).
 
 Check status:
 
 ```bash
-llmc-rag-service status
+llmc service status
 ```
 
 You should see whether the service is running and which repos are managed.
@@ -312,11 +311,11 @@ RAG Nav is the layer that sits on top of core RAG and graph data and answers que
 
 Typical commands (names may vary by version, but conceptually):
 
-- `llmc-rag-nav status` - report index and graph freshness for a repo.
-- `llmc-rag-nav build-graph` - rebuild the schema graph and mark it fresh.
-- `llmc-rag-nav search` - metadata-driven search over files and entities.
-- `llmc-rag-nav where-used` - show symbol usages.
-- `llmc-rag-nav lineage` - show upstream/downstream relationships.
+- `llmc analytics status` - report index and graph freshness for a repo.
+- `llmc analytics build-graph` - rebuild the schema graph and mark it fresh.
+- `llmc analytics search` - metadata-driven search over files and entities.
+- `llmc analytics where-used` - show symbol usages.
+- `llmc analytics lineage` - show upstream/downstream relationships.
 
 The **freshness envelope** behavior is important:
 
@@ -485,9 +484,8 @@ If you are reading this and wondering "what do I do right now?", here is the sho
 1. Install LLMC and add `scripts/` to your `PATH`.
 2. Pick one repo you care about.
 3. Run:
-   - `llmc-rag-repo add /path/to/repo`
-   - `llmc-rag-service register /path/to/repo`
-   - `llmc-rag-service start --interval 300 --daemon`
+   - `llmc repo register /path/to/repo`
+   - `llmc service start --daemon`
 4. Let it run for a while.
 5. Use the TUI or RAG search CLI to ask questions about that repo.
 
