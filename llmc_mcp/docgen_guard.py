@@ -32,6 +32,7 @@ from pathlib import Path
 import tempfile
 import time
 
+from .docgen_engine import DocgenEngine
 from .maasl import MAASL, ResourceDescriptor
 
 
@@ -80,6 +81,8 @@ class DocgenCoordinator:
         self.repo_root = Path(repo_root).resolve()
         self.docs_dir = self.repo_root / docs_dir
         self.docs_dir.mkdir(parents=True, exist_ok=True)
+
+        self.engine = DocgenEngine()
 
         # Circular buffer for status tracking (thread-safe due to deque)
         self._history: deque[DocgenResult] = deque(maxlen=self.BUFFER_SIZE)
@@ -157,8 +160,6 @@ class DocgenCoordinator:
         """
         Generate documentation content for a source file.
 
-        This is a STUB implementation. Replace with actual docgen engine.
-
         Args:
             source_path: Absolute path to source file
             source_hash: SHA256 hash of source file
@@ -173,6 +174,13 @@ class DocgenCoordinator:
             else source.name
         )
 
+        # Read source code
+        try:
+            source_code = source.read_text(encoding="utf-8")
+            generated_body = self.engine.generate(source_code, str(source))
+        except Exception as e:
+            generated_body = f"*Error reading source:* {e}"
+
         # Header with SHA256
         content = f"{self.SHA_HEADER_PREFIX} {source_hash} -->\n"
         content += f"# Documentation: {rel_path}\n\n"
@@ -182,7 +190,7 @@ class DocgenCoordinator:
         content += "## Overview\n\n"
         content += f"*Auto-generated documentation for `{source.name}`.*\n\n"
         content += "## Contents\n\n"
-        content += "TODO: Integrate with actual docgen engine.\n"
+        content += generated_body
 
         return content
 
