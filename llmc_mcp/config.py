@@ -49,6 +49,7 @@ class McpToolsConfig:
     # Blacklist is just asking nicely - not real security.
     # Real security: Docker (untrusted) or host_mode (trusted).
     run_cmd_blacklist: list[str] = field(default_factory=list)
+    run_cmd_allowlist: list[str] | None = None
     executables: dict[str, str] = field(default_factory=dict)
     read_timeout: int = 10
     exec_timeout: int = 30
@@ -340,6 +341,9 @@ def load_config(config_path: str | Path | None = None) -> McpConfig:
         cfg.tools.enable_run_cmd = tools.get("enable_run_cmd", cfg.tools.enable_run_cmd)
         cfg.tools.run_cmd_blacklist = tools.get(
             "run_cmd_blacklist", cfg.tools.run_cmd_blacklist
+        )
+        cfg.tools.run_cmd_allowlist = tools.get(
+            "run_cmd_allowlist", cfg.tools.run_cmd_allowlist
         )
         cfg.tools.executables = tools.get("executables", cfg.tools.executables)
         cfg.tools.read_timeout = tools.get("read_timeout", cfg.tools.read_timeout)
