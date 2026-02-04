@@ -33,5 +33,3 @@ llmc-cli tui
 ---
 
 ## See Also
-
-- [TUI Style Guide](../../development/tui-style.md) — For contributors

@@ -11,5 +11,7 @@ _Generated: 2025-12-16 16:14_
 | [`te`](te.md) | Tool Envelope - intelligent command wrapper |
 | [`llmc-chat`](llmc-chat.md) | Chat agent CLI (also: bx) |
 | [`mcgrep`](mcgrep.md) | Semantic grep with RAG context |
-
----
+| [`llmc repo`](llmc-repo.md) | Repository management |
+| [`llmc analytics`](llmc-analytics.md) | Search and Analytics |
+| [`llmc service`](llmc-service.md) | Background Service |
+| [`llmc debug`](llmc-debug.md) | Diagnostics and Manual Workflows |
