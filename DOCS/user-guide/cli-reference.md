@@ -1,7 +1,7 @@
 # LLMC Unified CLI Reference
 
-**Version:** 0.6.0  
-**Last Updated:** 2025-12-04
+**Version:** 0.9.0
+**Last Updated:** 2025-05-24
 
 ---
 
@@ -215,7 +215,7 @@ Show version information and repository status.
 ```bash
 llmc-cli --version
 # Output:
-# LLMC v0.6.0
+# LLMC v0.9.0
 # Root: /home/user/src/myproject
 # Config: Found
 ```
