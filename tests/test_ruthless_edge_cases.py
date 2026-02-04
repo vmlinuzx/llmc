@@ -19,16 +19,24 @@ from llmc.routing.query_type import classify_query
 
 def test_classify_query_none_input():
     """What happens with None input? Should this crash or handle gracefully?"""
-    try:
-        result = classify_query(None)
-        # If it doesn't crash, what does it return?
-        print(f"Result for None: {result}")
-        assert "route_name" in result
-        assert "confidence" in result
-        assert "reasons" in result
-    except Exception as e:
-        print(f"None input caused exception: {type(e).__name__}: {e}")
-        # This might be a bug - should handle gracefully
+    result = classify_query(None)
+    # If it doesn't crash, what does it return?
+    print(f"Result for None: {result}")
+    assert "route_name" in result
+    assert "confidence" in result
+    assert "reasons" in result
+    assert result["route_name"] == "docs"
+    assert "empty-or-none-input" in result["reasons"]
+
+
+def test_classify_query_none_input_with_context():
+    """None input but with strong tool context hint"""
+    # Even if text is None, tool context should win
+    context = {"tool_id": "code_search"}
+    result = classify_query(None, tool_context=context)
+    print(f"None input + code context: {result}")
+    assert result["route_name"] == "code"
+    assert "tool-context=code" in result["reasons"]
 
 
 def test_classify_query_empty_string():

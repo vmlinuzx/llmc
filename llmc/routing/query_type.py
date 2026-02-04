@@ -19,12 +19,6 @@ def classify_query(
         text = ""
     if not isinstance(text, str):
         text = str(text)
-    if not text.strip():
-        return {
-            "route_name": "docs",
-            "confidence": 0.2,
-            "reasons": ["empty-or-none-input"],
-        }
 
     # 1. Tool/context hint (highest priority) - Phase 4 Bugfix
     if tool_context and "tool_id" in tool_context:
@@ -43,6 +37,13 @@ def classify_query(
                     "confidence": 1.0,
                     "reasons": ["tool-context=erp"],
                 }
+
+    if not text.strip():
+        return {
+            "route_name": "docs",
+            "confidence": 0.2,
+            "reasons": ["empty-or-none-input"],
+        }
 
     # Load config
     cfg = load_routing_config()
