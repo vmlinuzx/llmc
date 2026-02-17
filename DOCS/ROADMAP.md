@@ -875,6 +875,74 @@ default = { input = 0.01, output = 0.03 }
 
 ---
 
+### 1.Z1 RLM Bug: llm_query Sub-Call Tool Disabled (P0) 🚨
+
+**Status:** 🔴 **DISCOVERED** (2026-01-26)  
+**Added:** 2026-01-26  
+**Source:** Code review of session.py - the "Recursive" in RLM was a lie
+
+**The Bug:**
+In `llmc/rlm/session.py`, lines 119 and 151, the `llm_query` tool is **completely commented out**:
+```python
+# "llm_query": self._make_llm_query(), # Phase 1: Disabled
+```
+
+This means:
+- ✅ Root LLM calls work (the outer session loop)
+- ❌ **NO** recursive sub-calls possible - RLM cannot query an LLM to help analyze complex problems
+- The "Recursive" in "Recursive Language Model" is **broken**
+
+**Root Cause:** Implementation was commented out during Phase 1 development and never re-enabled.
+
+**Fix:** Uncomment both lines (119 in `load_context`, 151 in `load_code_context`).
+
+**Impact:** RLM cannot perform deep recursive analysis. Single-turn only.
+
+**Effort:** 5 minutes | **Difficulty:** 🟢 Trivial
+
+---
+
+### 1.Z2 RLM Bug: Missing api_base + Local Model Failures (P0) 🚨
+
+**Status:** ✅ **FIXED** (2026-01-26)  
+**Added:** 2026-01-26  
+**Source:** AAR - End-to-end RLM testing session
+
+**The Bugs (Two Issues):**
+
+1. **No api_base support:**
+   - RLMConfig had no `api_base` field
+   - session.py didn't pass `api_base` to litellm calls
+   - Cloud providers with custom endpoints (GLM-4.7 at api.z.ai) were unusable
+
+2. **Local models ignore tool-calling protocol:**
+   - Expected: Python code blocks with `FINAL()` calls
+   - Actual: Conversational responses
+   - Local models (Ollama, llama.cpp) not trained for structured tool use
+   - Only cloud models (GPT-4, Claude, GLM-4.7) reliably work
+
+**What Was Fixed:**
+- ✅ Added `api_base` field to `RLMConfig` dataclass
+- ✅ Modified `session.py` to pass `api_base` to litellm.acompletion()
+- ✅ Added `--dump-prompts` flag for debugging
+- ✅ Documented which models work (cloud) vs don't (local)
+
+**Files Modified:**
+- `llmc/rlm/config.py` - Added api_base parameter
+- `llmc/rlm/session.py` - Added api_base in litellm calls
+- `llmc/commands/rlm.py` - Added --dump-prompts flag
+
+**Remaining:** Need to test with funded GLM-4.7 account (rate limited on free tier).
+
+**Lessons Learned:**
+- Local models suck at tool calling
+- Always support custom API endpoints
+- `--dump-prompts` is essential for debugging LLM protocols
+
+**Effort:** ~2 hours | **Difficulty:** 🟡 Medium
+
+---
+
 ### 1.Z RLM Phase 1.2 - MCP Tool Integration (P1)
 
 **Status:** 📋 **PLANNED**  
@@ -1078,3 +1146,43 @@ Allows RLM to "unit test" documentation against code (e.g., Doc says "timeout is
 - [ ] Experiment: Drift detection between Code and Docs
 
 **Effort:** High (Research) | **Difficulty:** 🟣 Hard / Novel
+
+---
+
+### 5.3 RLM Overnight Batch Testing (Zero-Cost Agentic Testing) 🌙
+
+**Status:** 📋 **RESEARCH BACKLOG**  
+**Added:** 2026-01-26  
+**Source:** RLM local model validation session - GLM-4.5-Air succeeded at complex analysis
+
+**The Vision:**
+Leverage local models (GLM-4.7-Flash 30B, GLM-4.5-Air 110B) on Athena for overnight batch agentic testing runs. Zero API cost enables exhaustive testing that would be prohibitively expensive via cloud endpoints.
+
+**Validated Capability (2026-01-26):**
+- GLM-4.5-Air successfully analyzed `session.py` for race conditions
+- 4 LLM turns with tool calling, 103.2 seconds, ~$0.09 equivalent (free locally)
+- Proper sampling params critical: `min_p=0.01`, `top_k=40`, `repetition_penalty=1.0`
+
+**Use Cases:**
+| Use Case | Description |
+|----------|-------------|
+| Security Sweep | Race condition/TOCTOU analysis across entire codebase |
+| RLM Protocol Validation | Test prompt structures, verify tool calling reliability |
+| Training Data Factory | Generate labeled examples for fine-tuning |
+| Regression Suite | Model behavior consistency across quant levels |
+| Code Review Automation | Overnight code review of PR diffs |
+
+**GLM-4.7-Flash 30B Potential:**
+- ~17-25 GB (fits easily on Strix Halo)
+- ~3-4x faster than 110B variant
+- Supposedly excellent at tool calling
+- Could process 1000+ files per night
+
+**Research Track:**
+- [ ] Benchmark GLM-4.7-Flash 30B on RLM protocol compliance
+- [ ] Build batch runner script (parallel file analysis)
+- [ ] Results aggregation and reporting
+- [ ] Integration with Emilia orchestrator for parallel runs
+
+**Effort:** Medium | **Difficulty:** 🟢 Easy (infrastructure exists)
+

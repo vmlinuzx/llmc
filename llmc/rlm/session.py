@@ -13,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import time
+import inspect
 from uuid import uuid4
 
 # Use LLMC's existing backend - single call surface
@@ -78,7 +79,6 @@ class RLMSession:
         # Initialize sandbox
         self.sandbox = create_sandbox(
             backend=self.config.sandbox_backend,
-            
             max_output_chars=self.config.max_print_chars,
             timeout_seconds=self.config.code_timeout_seconds,
             blocked_builtins=self.config.blocked_builtins,
@@ -117,7 +117,7 @@ class RLMSession:
         self._injected_tools = {
             "context_slice": lambda start, length=10000: context[start : start + length],
             "context_search": self._make_context_search(context),
-            # "llm_query": self._make_llm_query(), # Phase 1: Disabled
+            "llm_query": self._make_llm_query(),  # Recursive sub-calling enabled
         }
         for name, func in self._injected_tools.items():
             self.sandbox.register_callback(name, func)
@@ -126,20 +126,23 @@ class RLMSession:
 
     def load_code_context(self, source: str | Path, language: str | None = None) -> dict:
         """Load code context with semantic navigation."""
+        source_path = None
         if isinstance(source, Path):
-            #SECURITY: Check file size before reading to prevent DoS
+            # SECURITY: Check file size before reading to prevent DoS
             file_size = source.stat().st_size
-            max_bytes = getattr(self.config, 'max_file_bytes', 10 * 1024 * 1024)  # 10MB default
+            max_bytes = getattr(self.config, "max_file_bytes", 10 * 1024 * 1024)  # 10MB default
             if file_size > max_bytes:
                 raise ValueError(
                     f"File too large: {file_size:,} bytes (max {max_bytes:,}). "
                     f"Use context parameter with truncated text instead."
                 )
+            source_path = source
             source_text = source.read_text()
         else:
             source_text = source
 
-        self.nav = TreeSitterNav(source_text, language=language, config=self.config)
+        # Pass Path to TreeSitterNav so source_path is preserved
+        self.nav = TreeSitterNav(source_path or source_text, language=language, config=self.config)
         self.context_meta = self.nav.get_info()
 
         self.sandbox.start()
@@ -149,7 +152,7 @@ class RLMSession:
         nav_tools = create_nav_tools(self.nav)
         self._injected_tools = {
             **nav_tools,
-            # "llm_query": self._make_llm_query(), # Phase 1: Disabled
+            "llm_query": self._make_llm_query(),  # Recursive sub-calling enabled
         }
         for name, func in self._injected_tools.items():
             self.sandbox.register_callback(name, func)
@@ -170,7 +173,7 @@ class RLMSession:
                     line = context[: match.start()].count("\n") + 1
                     results.append(
                         {
-                            "text": match.group(0)[:self.config.match_preview_chars],
+                            "text": match.group(0)[: self.config.match_preview_chars],
                             "line": line,
                             "start": match.start(),
                         }
@@ -187,10 +190,12 @@ class RLMSession:
 
         session = self
 
-        def llm_query(prompt: str, max_tokens: int = 1024) -> str:
+        async def llm_query(prompt: str, max_tokens: int = 1024) -> str:
             """Query sub-LLM (governed by budget)."""
             # Estimate tokens
-            estimated_input = int(len(prompt) / self.config.chars_per_token * self.config.token_safety_multiplier)
+            estimated_input = int(
+                len(prompt) / self.config.chars_per_token * self.config.token_safety_multiplier
+            )
             estimated_output = min(max_tokens, 1000)
 
             try:
@@ -206,17 +211,26 @@ class RLMSession:
                 depth = budget.enter_subcall()
 
                 try:
-                    # Use LLMC backend (not direct litellm)
-                    # NOTE: LiteLLMCore doesn't have completion_sync in the analysis
-                    # We'll use completion() which should be synchronous
                     import litellm
 
-                    response = litellm.completion(
-                        model=self.config.sub_model,
-                        messages=[{"role": "user", "content": prompt}],
-                        max_tokens=max_tokens,
-                        temperature=self.config.sub_temperature,
-                    )
+                    kwargs = {
+                        "model": self.config.sub_model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": max_tokens,
+                        "temperature": self.config.sub_temperature,
+                    }
+                    if self.config.sub_min_p is not None:
+                        kwargs["min_p"] = self.config.sub_min_p
+                    if self.config.sub_top_k is not None:
+                        kwargs["top_k"] = self.config.sub_top_k
+                    if self.config.sub_repetition_penalty is not None:
+                        kwargs["repetition_penalty"] = self.config.sub_repetition_penalty
+                    if self.config.stop_strings:
+                        kwargs["stop"] = self.config.stop_strings
+                    if self.config.api_base:
+                        kwargs["api_base"] = self.config.api_base
+
+                    response = await litellm.acompletion(**kwargs)
 
                     content = response.choices[0].message.content
                     input_tokens = response.usage.prompt_tokens
@@ -234,8 +248,8 @@ class RLMSession:
                         "sub_call",
                         {
                             "depth": depth,
-                            "prompt_preview": prompt[:self.config.prompt_preview_chars],
-                            "response_preview": content[:self.config.response_preview_chars],
+                            "prompt_preview": prompt[: self.config.prompt_preview_chars],
+                            "response_preview": content[: self.config.response_preview_chars],
                             "tokens": input_tokens + output_tokens,
                         },
                     )
@@ -252,7 +266,7 @@ class RLMSession:
 
     async def run(self, task: str, max_turns: int | None = None) -> RLMResult:
         """Execute RLM loop with governed root calls."""
-        
+
         limit_turns = max_turns if max_turns is not None else self.config.max_turns
 
         # Generate prompt from actual injected tools
@@ -287,7 +301,9 @@ class RLMSession:
 
             # Estimate root call cost
             prompt_text = "\n".join(m.get("content", "") for m in messages)
-            estimated_input = int(len(prompt_text) / self.config.chars_per_token * self.config.token_safety_multiplier)
+            estimated_input = int(
+                len(prompt_text) / self.config.chars_per_token * self.config.token_safety_multiplier
+            )
             estimated_output = 2000  # Conservative for root
 
             try:
@@ -299,17 +315,48 @@ class RLMSession:
                     call_type="root",
                 )
 
-                # Use litellm async API
                 import litellm
 
-                response = await litellm.acompletion(
-                    model=self.config.root_model,
-                    messages=messages,
-                    max_tokens=self.config.root_max_tokens,
-                    temperature=self.config.root_temperature,
-                )
+                kwargs = {
+                    "model": self.config.root_model,
+                    "messages": messages,
+                    "max_tokens": self.config.root_max_tokens,
+                    "temperature": self.config.root_temperature,
+                }
+                if self.config.root_min_p is not None:
+                    kwargs["min_p"] = self.config.root_min_p
+                if self.config.root_top_p is not None:
+                    kwargs["top_p"] = self.config.root_top_p
+                if self.config.root_top_k is not None:
+                    kwargs["top_k"] = self.config.root_top_k
+                if self.config.root_repetition_penalty is not None:
+                    kwargs["repetition_penalty"] = self.config.root_repetition_penalty
+                if self.config.stop_strings:
+                    kwargs["stop"] = self.config.stop_strings
+                if self.config.api_base:
+                    kwargs["api_base"] = self.config.api_base
+
+                import os
+
+                if os.getenv("RLM_DUMP_PROMPTS"):
+                    with open(os.getenv("RLM_DUMP_PROMPTS"), "a") as f:
+                        f.write(f"\n{'=' * 80}\n")
+                        f.write(f"ROOT CALL - Turn {turn}\n")
+                        f.write(f"{'=' * 80}\n")
+                        for msg in messages:
+                            f.write(f"\n[{msg['role'].upper()}]\n")
+                            f.write(f"{msg['content']}\n")
+                        f.write(f"\n{'=' * 80}\n\n")
+
+                response = await litellm.acompletion(**kwargs)
 
                 assistant_message = response.choices[0].message.content
+
+                if os.getenv("RLM_DUMP_PROMPTS"):
+                    with open(os.getenv("RLM_DUMP_PROMPTS"), "a") as f:
+                        f.write(f"[ASSISTANT RESPONSE]\n")
+                        f.write(f"{assistant_message}\n")
+                        f.write(f"\n{'=' * 80}\n\n")
 
                 # Record root usage
                 self.budget.record_usage(
@@ -368,17 +415,20 @@ class RLMSession:
                     "nav_read",
                     "nav_search",
                     "nav_info",
+                    "llm_query",
                 }
-                
+
                 sites, errors = extract_tool_calls(code, intercept_whitelist)
 
                 if errors:
-                    exec_results.append({
-                        "success": False,
-                        "stdout": None,
-                        "stderr": None,
-                        "error": "\n".join(errors)
-                    })
+                    exec_results.append(
+                        {
+                            "success": False,
+                            "stdout": None,
+                            "stderr": None,
+                            "error": "\n".join(errors),
+                        }
+                    )
                     continue
 
                 injections = []
@@ -387,24 +437,29 @@ class RLMSession:
                     tool_func = self._injected_tools.get(site.tool_name)
                     if not tool_func:
                         # Should not happen if whitelist subset of injected
-                        exec_results.append({
-                            "success": False,
-                            "stdout": None,
-                            "stderr": None,
-                            "error": f"Tool {site.tool_name} not available"
-                        })
+                        exec_results.append(
+                            {
+                                "success": False,
+                                "stdout": None,
+                                "stderr": None,
+                                "error": f"Tool {site.tool_name} not available",
+                            }
+                        )
                         failed = True
                         break
 
                     try:
-                        val = tool_func(*site.args, **site.kwargs)
+                        result = tool_func(*site.args, **site.kwargs)
+                        val = await result if inspect.iscoroutine(result) else result
                     except Exception as e:
-                        exec_results.append({
-                            "success": False,
-                            "stdout": None,
-                            "stderr": None,
-                            "error": f"Tool execution error in {site.tool_name}: {e}"
-                        })
+                        exec_results.append(
+                            {
+                                "success": False,
+                                "stdout": None,
+                                "stderr": None,
+                                "error": f"Tool execution error in {site.tool_name}: {e}",
+                            }
+                        )
                         failed = True
                         break
                     else:
@@ -412,11 +467,10 @@ class RLMSession:
                         inj_name = f"__rlm_icpt_{self.session_id}_{self._interception_counter}"
                         self.sandbox.inject_variable(inj_name, val)
                         injections.append(inj_name)
-                        
-                        self._log_trace("tool_intercepted", {
-                            "tool": site.tool_name, 
-                            "injected_as": inj_name
-                        })
+
+                        self._log_trace(
+                            "tool_intercepted", {"tool": site.tool_name, "injected_as": inj_name}
+                        )
 
                 if failed:
                     continue
@@ -425,12 +479,14 @@ class RLMSession:
                     try:
                         code = rewrite_ast(code, sites, injections)
                     except Exception as e:
-                        exec_results.append({
-                            "success": False,
-                            "stdout": None,
-                            "stderr": None,
-                            "error": f"AST rewrite failed: {e}"
-                        })
+                        exec_results.append(
+                            {
+                                "success": False,
+                                "stdout": None,
+                                "stderr": None,
+                                "error": f"AST rewrite failed: {e}",
+                            }
+                        )
                         continue
 
                 result = self.sandbox.execute(code)
@@ -440,7 +496,8 @@ class RLMSession:
                     {
                         "code_preview": code[:300],
                         "success": result.success,
-                        "has_final": result.final_answer is not None, "error": result.error,
+                        "has_final": result.final_answer is not None,
+                        "error": result.error,
                     },
                 )
 
@@ -452,7 +509,9 @@ class RLMSession:
                 exec_results.append(
                     {
                         "success": result.success,
-                        "stdout": result.stdout[:self.config.stdout_preview_chars] if result.stdout else None,
+                        "stdout": result.stdout[: self.config.stdout_preview_chars]
+                        if result.stdout
+                        else None,
                         "stderr": result.stderr[:500] if result.stderr else None,
                         "error": result.error,
                     }

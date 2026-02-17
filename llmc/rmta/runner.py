@@ -15,6 +15,7 @@ class TestResult:
     duration_ms: int
     error: str | None = None
 
+
 @dataclass
 class RMTAReport:
     results: list[TestResult] = field(default_factory=list)
@@ -69,6 +70,7 @@ class TestCase:
             return parts[1]
         return "unknown"
 
+
 @dataclass
 class RMTARunner:
     mode: Literal["quick", "standard", "ruthless"]
@@ -88,7 +90,7 @@ class RMTARunner:
                     ["python3", "-m", "pytest", str(test.path)],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 passed = True
                 error = None
@@ -98,34 +100,36 @@ class RMTARunner:
 
             duration_ms = int((time.monotonic() - start_time) * 1000)
 
-            results.append(TestResult(
-                name=test.name,
-                tool=test.tool,
-                passed=passed,
-                duration_ms=duration_ms,
-                error=error
-            ))
+            results.append(
+                TestResult(
+                    name=test.name,
+                    tool=test.tool,
+                    passed=passed,
+                    duration_ms=duration_ms,
+                    error=error,
+                )
+            )
 
             if self.fail_fast and not passed:
                 break
 
-        return RMTAReport(results=results, mode=self.mode)
+return RMTAReport(results=results, mode=self.mode)
 
-    def _discover_tests(self) -> list[TestCase]:
-        """Discover tests based on mode and tool filter."""
-        base_dir = Path(__file__).parent.parent.parent / "tests" / "ruthless"
+     def _discover_tests(self) -> list[TestCase]:
+         base_dir = Path(__file__).parent.parent.parent / "tests" / "ruthless"
 
-        if self.mode == "quick":
-            # There are no smoke tests, so I'll just grab a few tests to act as smoke tests.
-            pattern = "test_mcgrep.py"
-        elif self.mode == "standard":
-            pattern = "test_*.py"
-        else:  # ruthless
-            pattern = "**/*.py"
+         if self.mode == "quick":
+             quick_tests = ["test_boxxy_agent.py", "test_fts5_migration.py"]
+             tests = [base_dir / t for t in quick_tests if (base_dir / t).exists()]
+             return [TestCase(path=t) for t in tests]
 
-        tests = list(base_dir.glob(pattern))
+         pattern = "**/*.py"
+         if self.mode == "standard":
+             pattern = "test_*.py"
 
-        if self.tools:
-            tests = [t for t in tests if any(tool in t.name for tool in self.tools)]
+         tests = list(base_dir.glob(pattern))
 
-        return [TestCase(path=t) for t in tests]
+         if self.tools:
+             tests = [t for t in tests if any(tool in t.name for tool in self.tools)]
+
+         return [TestCase(path=t) for t in tests]

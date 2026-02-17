@@ -376,12 +376,13 @@ def common(
     pass
 
 
-if __name__ == "__main__":
-    app()
-
 # ============================================================================
 # RLM - Recursive Language Model
 # ============================================================================
 from llmc.commands import rlm as rlm_commands
 
 app.add_typer(rlm_commands.app, name="rlm")
+
+
+if __name__ == "__main__":
+    app()

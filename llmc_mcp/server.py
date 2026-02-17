@@ -368,6 +368,52 @@ TOOLS: list[Tool] = [
             "required": ["query"],
         },
     ),
+    # Skeleton tools - token-efficient code views
+    Tool(
+        name="rag_skeleton_file",
+        description="Get skeleton (signatures-only) view of a source file. Removes implementations, keeps function/class signatures and docstrings. Ideal for understanding code architecture with minimal tokens.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "file_path": {
+                    "type": "string",
+                    "description": "Absolute path to the source file",
+                },
+                "repo_root": {
+                    "type": "string",
+                    "description": "Repository root path for validation",
+                },
+            },
+            "required": ["file_path", "repo_root"],
+        },
+    ),
+    Tool(
+        name="rag_skeleton_repo",
+        description="Get skeleton view of multiple files in a repository. Returns combined signatures for all Python files. Massive token savings for codebase orientation.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_root": {
+                    "type": "string",
+                    "description": "Repository root path",
+                },
+                "max_files": {
+                    "type": "integer",
+                    "description": "Maximum files to process (default 100)",
+                    "default": 100,
+                },
+                "paths": {
+                    "type": "string",
+                    "description": "Optional comma-separated subdirectory filter (e.g. 'llmc/rag,llmc_mcp')",
+                },
+                "max_tokens": {
+                    "type": "integer",
+                    "description": "Optional token budget - truncates at file boundaries if exceeded",
+                },
+            },
+            "required": ["repo_root"],
+        },
+    ),
     # L2 LinuxOps Tools
     Tool(
         name="linux_proc_list",
@@ -700,6 +746,9 @@ class LlmcMcpServer:
             "inspect": self._handle_inspect,
             "rag_stats": self._handle_rag_stats,
             "rag_plan": self._handle_rag_plan,
+            # Skeleton tools
+            "rag_skeleton_file": self._handle_skeleton_file,
+            "rag_skeleton_repo": self._handle_skeleton_repo,
             # L2 LinuxOps
             "linux_proc_list": self._handle_proc_list,
             "linux_proc_kill": self._handle_proc_kill,
@@ -1466,6 +1515,41 @@ class LlmcMcpServer:
 
         except Exception as e:
             return [TextContent(type="text", text=json.dumps({"error": str(e)}))]
+
+    async def _handle_skeleton_file(self, args: dict) -> list[TextContent]:
+        """Get skeleton view of a single file."""
+        import json
+
+        from llmc_mcp.tools.skeleton import rag_skeleton_file
+
+        file_path = args.get("file_path", "")
+        repo_root = args.get("repo_root", "")
+
+        if not file_path:
+            return [TextContent(type="text", text='{"error": "file_path is required"}')]
+        if not repo_root:
+            return [TextContent(type="text", text='{"error": "repo_root is required"}')]
+
+        result = rag_skeleton_file(file_path, repo_root)
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    async def _handle_skeleton_repo(self, args: dict) -> list[TextContent]:
+        """Get skeleton view of entire repo or filtered paths."""
+        import json
+
+        from llmc_mcp.tools.skeleton import rag_skeleton_repo
+
+        repo_root = args.get("repo_root", "")
+        max_files = args.get("max_files", 100)
+        paths_str = args.get("paths")
+        max_tokens = args.get("max_tokens")
+
+        if not repo_root:
+            return [TextContent(type="text", text='{"error": "repo_root is required"}')]
+
+        paths = paths_str.split(",") if paths_str else None
+        result = rag_skeleton_repo(repo_root, max_files, paths, max_tokens)
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     async def _handle_read_file(self, args: dict) -> list[TextContent]:
         """Read file handler."""

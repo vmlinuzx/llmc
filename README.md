@@ -1,140 +1,104 @@
 <div align="center">
 
-  # LLMC: Large Language Model Compressor
+  # LLMC: LLM Client Research Lab
 
-  **Stop burning money on LLM tokens.**
+  **Making models smarter through client-side innovation.**
   <br>
-  Get 70-95% cost reduction through local RAG, intelligent routing, and containerized security.
+  A research testbed for exploring techniques that enhance LLM performance without touching model weights.
 
   [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
   [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-  [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](tests/)
 
 </div>
 
 ---
 
-## ⚡ What is LLMC?
+## What is LLMC?
 
-LLMC is a **local-first RAG (Retrieval Augmented Generation) engine** and intelligent router designed to drastically reduce the cost of using Large Language Models with your codebase.
+LLMC is a **learning testbed** for researching and experimenting with client-side techniques that make LLMs smarter, faster, and more capable—without retraining or fine-tuning.
 
-Instead of sending your entire codebase to Claude or GPT-4, LLMC indexes your code locally, finds the exact relevant snippets (functions, classes, docs), and sends **only what matters**.
+The core thesis: **What happens between your code and the model matters as much as the model itself.**
 
-```mermaid
-graph LR
-    A[User Query] --> B(LLMC Router);
-    B --> C{Local Index};
-    C -->|Search| D[Relevant Context];
-    D -->|Trim & Pack| E[Optimized Prompt];
-    E --> F[LLM API];
-    F --> G[Answer];
-    style B fill:#f9f,stroke:#333,stroke-width:2px
-    style E fill:#bfb,stroke:#333,stroke-width:2px
-```
+### Research Areas
 
-## 🚀 Quick Start
+| Area | What We're Exploring |
+|------|---------------------|
+| **RLM (Recursive Language Models)** | Agentic sub-calls for 80-90% context reduction while maintaining reasoning depth |
+| **Intelligent Routing** | Cascading from cheap local models → cloud fallbacks based on task complexity |
+| **Context Engineering** | What to send, how to pack it, when to truncate |
+| **Tool Orchestration** | MCP server patterns, security policies, egress controls |
+| **Code Navigation** | AST-based indexing vs semantic search—when each wins |
 
-Get up and running in seconds.
+---
 
-### 1. Install
+## Current Focus: RLM
+
+The flagship experiment is **Recursive Language Models**—using agentic sub-calls to navigate and analyze codebases instead of stuffing context windows.
+
 ```bash
-# One-line install
-curl -sSL https://raw.githubusercontent.com/vmlinuzx/llmc/main/install.sh | bash
+# Deep analysis with 80-90% fewer tokens than reading files directly
+llmc-cli rlm query "Trace the auth flow from API to database" --file auth.py
 
-# Or via pip
-pip install "git+https://github.com/vmlinuzx/llmc.git#egg=llmcwrapper[rag,tui,agent]"
+# Via MCP tool
+{
+  "name": "rlm_query",
+  "arguments": {
+    "task": "Why is this causing a race condition?",
+    "path": "session_manager.py"
+  }
+}
 ```
 
-### 2. Index Your Code
+**Why it works:** Instead of semantic similarity (RAG), RLM actually *reads*, *navigates*, and *reasons*. It follows imports, understands call graphs, and returns synthesized answers.
+
+---
+
+## Quick Start
+
 ```bash
-cd /path/to/your/project
-llmc-cli repo register .
-```
+# Install
+pip install -e ".[rag,mcp]"
 
-### 3. Save Money
-```bash
-# Search without using ANY tokens
-llmc-cli search "authentication middleware"
+# Index a repo
+llmc-cli repo register /path/to/project
 
-# Launch the visual dashboard
-llmc-cli tui
+# Run an RLM query
+llmc-cli rlm query "Explain the core architecture" --budget 0.50
 ```
 
 ---
 
-## ✨ Key Features
+## Project Structure
 
-| Feature | Description |
-| :--- | :--- |
-| **💸 Massive Savings** | Reduces token usage by 70-95% by sending only relevant context. |
-| **🔒 Security First** | **New in v0.7.0:** "Hybrid Mode" for trusted clients (host access) vs. Container Isolation for untrusted LLMs. |
-| **🧠 Polyglot RAG** | Smart parsing (TreeSitter) for Python, TS, JS, Go, Java, and technical docs. |
-| **🕸️ GraphRAG** | Understands your code structure (imports, calls, inheritance) to find related files automatically. |
-| **🖥️ TUI Dashboard** | Terminal UI to monitor indexing, search results, and costs. ⚠️ *Work in progress — expect rough edges.* |
-| **🔌 MCP Support** | Full Model Context Protocol server to integrate seamlessly with Claude Desktop. |
-
----
-
-## 🔍 Deep Dive
-
-<details>
-<summary><strong>🛠️ Core RAG Engine</strong></summary>
-
-*   **Local SQLite Index:** Stores text + metadata without external dependencies.
-*   **Smart Embeddings:** Caches embeddings to avoid re-computing unchanged files.
-*   **Context Trimmer:** Packs the most relevant spans into a fixed token budget.
-*   **Enrichment:** Uses small local models to tag and summarize code for better retrieval.
-
-</details>
-
-<details>
-<summary><strong>🛡️ Security & MCP</strong></summary>
-
-*   **Hybrid Mode:** Trusted clients get direct host access (~76% cheaper than docker overhead).
-*   **Container Isolation:** Untrusted inputs run in Docker/nsjail.
-*   **Defense in Depth:** Even if an LLM is "jailbroken" by prompt injection, it can't escape the container.
-
-</details>
-
-<details>
-<summary><strong>📊 Analytics & Routing</strong></summary>
-
-*   **Intelligent Failover:** Cascades from Local → Cheap Cloud → Premium Models.
-*   **Cost Tracking:** Hard budget caps to prevent surprise bills.
-*   **Rate Limiting:** Automatic token bucket throttling for API providers.
-
-</details>
+```
+llmc/
+├── rlm/           # Recursive Language Model engine
+├── rag/           # Legacy RAG system (still useful for docs)
+├── llmc_mcp/      # MCP server and tools
+├── scripts/       # Utilities and benchmarks
+├── tests/         # Test suite
+└── DOCS/          # Documentation
+```
 
 ---
 
-## 📚 Documentation
+## Philosophy
 
-Full documentation is available in the [`DOCS/`](DOCS/index.md) directory:
+This is a **learning environment**, not a production framework. Expect:
 
-- **[Getting Started](DOCS/getting-started/installation.md)** — Installation and quickstart
-- **[User Guide](DOCS/user-guide/configuration.md)** — Configuration and daily usage
-- **[Operations](DOCS/operations/daemon.md)** — Running the daemon and MCP integration
-- **[Architecture](DOCS/architecture/index.md)** — System design and internals
-- **[Reference](DOCS/reference/cli/index.md)** — CLI, config, and MCP tool reference
+- Experiments that get abandoned
+- Breaking changes when we find better approaches  
+- Code that prioritizes understanding over polish
+- Documentation that explains *why* not just *how*
 
----
-
-## 📜 History
-
-Originally created by David Carroll (the worst paragliding pilot in the TX Panhandle) after burning through his weekly API limits in days. This tool was born from the necessity to code more while spending less.
+The goal is discovery, not stability.
 
 ---
 
-## 🤝 Contributing
+## History
 
-We welcome PRs! Please check `CONTRIBUTING.md` before starting.
-
-1.  Fork the repo
-2.  Create your feature branch (`git checkout -b feature/amazing-feature`)
-3.  Commit your changes (`git commit -m 'Add some amazing feature'`)
-4.  Push to the branch (`git push origin feature/amazing-feature`)
-5.  Open a Pull Request
+Created by David Carroll after burning through API limits too fast and asking: *"What if the client was smarter?"*
 
 ---
 
-_Current Release: v0.9.1 "Back From Vacation"_
+_Current experiments: RLM v1.0, MCP Hospital-Grade Security, Dialectical Testing_

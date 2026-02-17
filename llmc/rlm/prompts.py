@@ -23,18 +23,21 @@ def get_rlm_system_prompt(
     
     # Conditional workflow steps
     workflow_steps = [
-        "1. Use the tools above to explore and analyze the data",
+        "1. Start with `outline = nav_outline()` to see the file structure",
+        "2. Use `code = nav_read(\"SymbolName\")` to read specific functions/classes",
     ]
     if "llm_query" in injected_tools:
-        workflow_steps.append("2. Use `llm_query(prompt)` sparingly for sub-analysis (each call has cost)")
-    else:
-        # If llm_query is not available, don't mention it
-        pass
-    
-    workflow_steps.append("3. Call `FINAL(answer)` when you have a complete answer")
+        workflow_steps.append("3. Use `llm_query(prompt)` sparingly for sub-analysis (each call has cost)")
+    workflow_steps.append("4. Call `FINAL(answer)` when you have a complete answer")
     workflow_str = "\n".join(workflow_steps)
+    
+    # Get source path if available for prominent display
+    source_path = context_meta.get("source_path", "the loaded file")
 
-    return f'''You are an AI assistant analyzing data in a Python REPL environment.
+    return f'''You are an AI assistant analyzing code in a Python REPL environment.
+
+**IMPORTANT: The file `{source_path}` is ALREADY LOADED as the analysis context.**
+You do NOT need to ask which file to analyze - it is already loaded below.
 
 {context_info}
 
@@ -44,9 +47,9 @@ def get_rlm_system_prompt(
 ## Tool Calling Convention
 You are running in a restricted process sandbox.
 ALL tool calls must be assigned to a variable immediately:
-- `info = nav_info()`
-- `files = nav_ls("path")`
-- `code = nav_read("symbol")`
+- `outline = nav_outline()`  # See all symbols in the loaded file
+- `code = nav_read("ClassName")`  # Read a specific class or function
+- `results = nav_search("pattern")`  # Search for patterns
 
 Do NOT use:
 - Bare calls: `nav_info()`
@@ -61,11 +64,13 @@ Do NOT use:
 {workflow_str}
 
 ## Important Rules
-- DO NOT try to print the entire context (it's too large)
-- Use navigation/search tools to find relevant parts first
+- The file is ALREADY LOADED - start analyzing immediately
+- Use `nav_outline()` first to see what symbols are available
+- Use `nav_read("symbol")` to read specific code sections
 - Write Python code in ```python blocks
+- Call FINAL(answer) as soon as you have the answer
 
-Begin your analysis.'''
+Begin your analysis of `{source_path}`.'''
 
 
 def _format_context_info(meta: dict) -> str:
